@@ -75,6 +75,7 @@
     flex: 0 0 auto; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
     border-radius: 999px; padding: 6px 12px; font: 500 13.5px/1.2 var(--font-body); cursor: pointer;
   }
+  .tab-group { flex: 0 0 auto; align-self: center; font: 500 10.5px/1 var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 0 2px 0 8px; }
   .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .tab:focus-visible, .seg button:focus-visible, select:focus-visible, .linkish:focus-visible, tbody tr:focus-visible, canvas:focus-visible {
     outline: 2px solid var(--accent); outline-offset: 2px;
@@ -127,8 +128,8 @@
 <div class="wrap">
   <header>
     <span class="eyebrow">Underfoot · art direction · real-time 3D</span>
-    <h1>Ten game art styles for one ant nest</h1>
-    <p class="lede">Every panel is a live Three.js diorama built from the same scene data: the same nest, the same ants, the same spider. Only the art style changes. Drag a panel to tilt the camera and see the nest in depth.</p>
+    <h1>Game art styles for one ant nest</h1>
+    <p class="lede">Every panel is a live Three.js diorama built from the same scene data: the same nest, the same ants, the same spider. Only the art style changes. The retro-console family comes first, grown from the PS1 favourite; the other directions follow. Drag a panel to tilt the camera.</p>
   </header>
 
   <details class="matrix" id="matrix" open>
@@ -207,6 +208,15 @@
 <script src="vendor/BokehPass.js"></script>
 <script src="scene.js"></script>
 <script src="core.js"></script>
+<script src="retro.js"></script>
+<script src="style_ps1.js"></script>
+<script src="style_ps1crt.js"></script>
+<script src="style_n64.js"></script>
+<script src="style_saturn.js"></script>
+<script src="style_ps2.js"></script>
+<script src="style_ds.js"></script>
+<script src="style_quake.js"></script>
+<script src="style_onebit.js"></script>
 <script src="style_lowpoly.js"></script>
 <script src="style_toon.js"></script>
 <script src="style_claymation.js"></script>
@@ -215,20 +225,19 @@
 <script src="style_hd2d.js"></script>
 <script src="style_glow.js"></script>
 <script src="style_antfarm.js"></script>
-<script src="style_ps1.js"></script>
 <script src="style_papercraft.js"></script>
 <script>
 (function () {
   const U3 = window.U3, scene = window.UF_SCENE, T = window.THREE;
   const ids = U3.order.slice();
-  const DEFAULT_COMPARE = ids.slice(0, 4);
+  const DEFAULT_COMPARE = ['ps1', 'ps1crt', 'n64', 'ps2'].filter((id) => U3.styles[id]);
   const state = { view: 'compare', style: ids[0], zoom: 'fit', speed: 1, compare: DEFAULT_COMPARE.slice(), orbit: { yaw: 0, pitch: 0 }, sway: false };
 
   try {
     const saved = JSON.parse(localStorage.getItem('uf3d-styles') || 'null');
     if (saved) {
       if (saved.zoom) state.zoom = saved.zoom;
-      if (Array.isArray(saved.compare)) state.compare = saved.compare.filter((id) => U3.styles[id]).slice(0, 4);
+      if (saved.v === 2 && Array.isArray(saved.compare)) state.compare = saved.compare.filter((id) => U3.styles[id]).slice(0, 4);
     }
   } catch (e) { /* storage unavailable */ }
   while (state.compare.length < 4) state.compare.push(ids[state.compare.length % ids.length]);
@@ -238,7 +247,7 @@
   else if (U3.styles[hash]) { state.view = 'single'; state.style = hash; }
 
   function save() {
-    try { localStorage.setItem('uf3d-styles', JSON.stringify({ zoom: state.zoom, compare: state.compare })); } catch (e) {}
+    try { localStorage.setItem('uf3d-styles', JSON.stringify({ v: 2, zoom: state.zoom, compare: state.compare })); } catch (e) {}
   }
 
   // ------------------------------------------------------------ renderer
@@ -282,7 +291,18 @@
     tabs.appendChild(b);
   }
   addTab('compare', 'Compare 2×2');
-  ids.forEach((id) => addTab(id, U3.styles[id].meta.label));
+  let lastFamily = null;
+  ids.forEach((id) => {
+    const fam = U3.styles[id].meta.family || 'other';
+    if (fam !== lastFamily) {
+      const d = document.createElement('span');
+      d.className = 'tab-group';
+      d.textContent = fam === 'retro' ? 'Retro consoles' : 'Other directions';
+      tabs.appendChild(d);
+      lastFamily = fam;
+    }
+    addTab(id, U3.styles[id].meta.label);
+  });
 
   // ------------------------------------------------------------ views
   const views = [];

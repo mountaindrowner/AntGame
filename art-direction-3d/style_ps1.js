@@ -11,6 +11,7 @@
   };
 
   const meta = {
+    family: 'retro',
     label: 'PS1 retro',
     tagline: 'A lost 1998 PlayStation game: wobbling polygons, swimming textures, dithered candlelight in the tunnels and a spider you don’t want to meet.',
     refs: 'MediEvil, Ape Escape, Spyro, Bugs Bunny: Lost in Time, Puppet Combo and Haunted PS1 indies, Lunacid',
