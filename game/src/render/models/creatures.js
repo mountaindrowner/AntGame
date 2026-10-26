@@ -129,38 +129,3 @@ export function antGeometry(plan, frame) {
 export function planFor(caste) {
   return caste === 'soldier' || caste === 'venom' ? 'soldier' : 'worker';
 }
-
-// Spider: 8 legs that arch high, two frames (rest, foreleg raised).
-export function spiderGeometry(raised) {
-  const parts = [];
-  parts.push(ellipsoid([-7, 3.5, 0], [7, 5.5, 6], 1, [7, 5]));
-  parts.push(ellipsoid([1.5, 1.2, 0], [4.2, 3.2, 3.6], 1, [6, 4]));
-  const fwd = [11, 5, -3.5, -10];
-  for (let side = -1; side <= 1; side += 2) {
-    for (let i = 0; i < 4; i++) {
-      const hip = V(3 - i * 1.4, 0.4, side * 1.6);
-      const reach = fwd[i] - hip.x;
-      const up = raised && i === 0 ? 5 : 0;
-      const knee = V(hip.x + reach * 0.35, 8 + up, side * 6.5);
-      const ankle = V(hip.x + reach * 0.8, 1 + up * 0.8, side * 12);
-      const foot = V(hip.x + reach * (raised && i === 0 ? 1.15 : 1), -FOOT * 2.6 + up, side * 14);
-      parts.push(strut(hip, knee, 0.6, 0.8));
-      parts.push(strut(knee, ankle, 0.5, 0.8));
-      parts.push(strut(ankle, foot, 0.35, 0.8));
-    }
-  }
-  // Pedipalps and four eyes (pale so they catch light).
-  for (let side = -1; side <= 1; side += 2) {
-    parts.push(strut(V(5, 0, side * 1), V(7, -2, side * 1.6), 0.45, 0.8));
-    parts.push(ellipsoid([5.2, 2.6, side * 1.0], [0.7, 0.7, 0.7], 4, [4, 3]));
-    parts.push(ellipsoid([4.6, 3.6, side * 2.0], [0.45, 0.45, 0.45], 4, [4, 3]));
-  }
-  const g = mergeGeometries(parts.map((p) => p.toNonIndexed()));
-  g.computeVertexNormals();
-  return g;
-}
-export const SPIDER_FOOT = FOOT * 2.6;
-
-export function caterpillarSegment() {
-  return tint(new THREE.SphereGeometry(1, 6, 4).toNonIndexed(), 1);
-}

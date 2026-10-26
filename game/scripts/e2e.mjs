@@ -165,6 +165,56 @@ try {
     await shot('room-' + r.key);
   }
   await sim(() => { window.UNDERFOOT.app.focus = null; });
+
+  // Yard showcase: every food, dew, a treat, the spider and the caterpillar
+  // around the entrance, for reviewing the models.
+  await sim(() => {
+    const { app, SIM, ui } = window.UNDERFOOT;
+    app.reset();
+    const s = app.s, w = s.world, q = s.queen;
+    SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s);
+    for (const k of Object.keys(s.seen)) s.seen[k] = true;
+    for (const k of ['dig', 'nest', 'surface', 'soil', 'cap', 'rain', 'raid', 'dew', 'cat', 'spider', 'grit', 'protein', 'cavein', 'treat']) s.seen[k] = true;
+    s.seen.intro = 'done';
+    s.player.inNest = false;
+    ui.closeMenu();
+    s.items = [];
+    const put = (dx, dy, kind, type, amt) => { if (!w.blocked[(w.ey + dy) * SIM.W + w.ex + dx]) s.items.push({ x: w.ex + dx, y: w.ey + dy, kind, type, amt }); };
+    put(-3, -2, 'food', 'crumb', 9); put(-1, -2, 'food', 'seed', 20); put(1, -2, 'food', 'berry', 12); put(3, -2, 'food', 'popcorn', 14);
+    put(-3, 2, 'food', 'jellybean', 40); put(0, 3, 'food', 'cookie', 35); put(3, 2, 'food', 'gummy', 50);
+    put(-2, -4, 'water', 'dew', 8); put(2, -4, 'water', 'dew', 4);
+    s.spider = { x: (w.ex + 6.5) * SIM.T, y: (w.ey - 5.5) * SIM.T, hp: 150, maxHp: 150, bite: 0, legs: 1, route: [[(w.ex + 6.5) * SIM.T, (w.ey - 12) * SIM.T]], stuck: 0 };
+    s.cat = { x: (w.ex - 5.5) * SIM.T, y: (w.ey + 5.5) * SIM.T, hp: 30, maxHp: 30, wander: 30, gx: (w.ex - 5.5) * SIM.T, gy: (w.ey - 6) * SIM.T };
+    s.spiderRespawn = 999; s.itemTimer = -999; s.dewTimer = 0;
+    app.zoomMul = 0.85;
+  });
+  await page.waitForTimeout(1200);
+  await shot('09-yard');
+  await page.waitForTimeout(700);
+  await shot('09b-yard');
+  await sim(() => { window.UNDERFOOT.app.zoomMul = 2.2; });
+  await page.waitForTimeout(500);
+  await shot('10-yard-food');
+  // Close-ups of the two big creatures, walking past the entrance.
+  await sim(() => {
+    const { app, SIM } = window.UNDERFOOT, s = app.s, w = s.world, T = SIM.T;
+    s.items = [];
+    s.spider = null;
+    s.cat = { x: (w.ex + 2.5) * T, y: (w.ey - 2.5) * T, hp: 30, maxHp: 30, wander: 30, gx: (w.ex - 6) * T, gy: (w.ey - 4) * T };
+    app.zoomMul = 1.6;
+  });
+  await page.waitForTimeout(3500);
+  await shot('11-caterpillar');
+  await sim(() => {
+    const { app, SIM } = window.UNDERFOOT, s = app.s, w = s.world, T = SIM.T;
+    s.cat = null;
+    s.spider = { x: (w.ex - 5) * T, y: (w.ey - 5) * T, hp: 150, maxHp: 150, bite: 0, legs: 1, route: [[(w.ex + 9) * T, (w.ey - 5) * T]], stuck: 0 };
+    app.zoomMul = 1.1;
+  });
+  await page.waitForTimeout(1300);
+  await shot('12-spider');
+  await page.waitForTimeout(250);
+  await shot('12b-spider');
 } catch (e) {
   errors.push('test: ' + e.message);
 }

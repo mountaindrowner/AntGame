@@ -4,10 +4,11 @@
 export const EXPL = {
   dig: ['You are the queen', 'This is the underground, seen from the side. Tap the dirt next to the queen to dig. She has 30 digs of energy. Go at least two cells down, then press Build nest. Everything in this game costs food, so dig less and save energy.'],
   nest: ['The nest', 'Tap any dirt next to a tunnel to order a dig; the faint dots show where you can. Builders chip it away a quarter at a time. Press Build to see every room, its size and cost; pick one and tap a green cell to place it. The yellow ant is you: taps on tunnels walk you; the top cell leads outside.'],
-  surface: ['Outside', 'Tap to walk, hold to keep walking. Yellow dots are food, blue is water, gray is grit (pebbles), red is protein (meat). Stand on one and press Pick up, then carry it to the dark hole. Carrying lays a scent trail; other ants follow trails to what you found.'],
-  dew: ['Dew', 'Blue drops near the nest for one minute, every two minutes. Every egg costs 1 water. A Cistern raises your water cap from 10 to 60. The big blue puddle is permanent but far.'],
-  cat: ['Caterpillar', 'The green one is harmless and worth 40 protein, which Soldiers and the Barracks need. Hold Recruit to call about 8 ants, walk them onto it, and they will bite it down. Then haul the red meat home.'],
-  spider: ['Spider', 'It hunts anything within three tiles and bites once every two seconds. Run. Thirty ants or five Venom ants can kill it. Its fang unlocks Venom ants at the queen.'],
+  surface: ['Outside', 'Tap to walk, hold to keep walking. Food is crumbs, seeds, berries and popcorn; dew beads are water; gray pebbles are grit; red meat is protein. Stand on one and press Pick up, then carry it to the dark hole. Carrying lays a scent trail; other ants follow trails to what you found.'],
+  dew: ['Dew', 'Beads of dew on the grass near the nest, for one minute every two minutes. Every egg costs 1 water. A Cistern raises your water cap from 10 to 60. The big blue puddle is permanent but far.'],
+  cat: ['Caterpillar', 'The big fuzzy one is harmless and worth 40 protein, which Soldiers and the Barracks need. Hold Recruit to call about 8 ants, walk them onto it, and they will bite it down. Then haul the red meat home.'],
+  treat: ['A treat', 'Something sweet fell into the yard. It is worth 35 to 50 food, but an ant carries 5 at a time, so lay a trail home or Recruit a crew to strip it fast.'],
+  spider: ['Spider', 'It roams the whole yard, passes the nest every so often, and sometimes wanders off into the next area. It hunts anything within three tiles and bites once every two seconds. Run. Thirty ants or five Venom ants can kill it. Its fang unlocks Venom ants at the queen.'],
   raid: ['Rival raid', 'The red-ringed hole at the far end is a rival colony. When it has more soldiers than you it sends four to your entrance to steal food. A Soldier patrolling near your door halves what they take. To win, put six fighters on their entrance for five seconds.'],
   rain: ['Rain', 'Trails wash away and foragers go home. If a Cistern exists it fills. If no Builder is inside when the rain ends, the lowest level caves in.'],
   cavein: ['Cave-in', 'A tunnel collapsed. Each dug level needs one Builder inside to keep it shored up. Builders repair collapses by themselves. If you are inside and stuck, tap the collapsed cell next to you to dig through.'],
@@ -22,8 +23,8 @@ export const EXPL = {
 export const HELP = `
 <div class="row head"><strong>Help</strong><button class="x" data-close="1">Close</button></div>
 <div class="h"><b>Goal</b> Grow the colony, then kill the rival queen: six fighters on the red-ringed hole with no rival soldiers near it for five seconds.</div>
-<div class="h"><b>Food</b> Yellow crumbs and tan seeds. Every ant eats 1 a minute, soldiers 2. The top bar shows income vs upkeep. Food store raises the cap from 20 to 150.</div>
-<div class="h"><b>Water</b> Blue. Dew for one minute every two minutes, plus one permanent puddle. Every egg costs 1. Cistern raises the cap to 60 and fills in rain.</div>
+<div class="h"><b>Food</b> Bread crumbs, seeds, berries, popcorn. Now and then a treat drops (jelly bean, cookie, gummy bear) worth 35 to 50. Every ant eats 1 a minute, soldiers 2. The top bar shows income vs upkeep. Food store raises the cap from 20 to 150.</div>
+<div class="h"><b>Water</b> Dew beads for one minute every two minutes, plus one permanent puddle. Every egg costs 1. Cistern raises the cap to 60 and fills in rain.</div>
 <div class="h"><b>Protein</b> Red meat from kills (caterpillar 40, spider 40). Pays for Soldiers, Venom ants, Barracks.</div>
 <div class="h"><b>Stone</b> Gray pebbles. Pays for Food store, Cistern, Workshop, queen upgrades.</div>
 <div class="h"><b>Digging and building</b> Tap dirt next to a tunnel to order a dig (faint dots mark the frontier). Builders break each cell a quarter at a time and spread across orders. Topsoil is 14 rows; packed soil below needs a Workshop; clay below that needs a queen upgrade too. Every 40 dug cells need one builder inside or tunnels cave in. Tap a dug cell to see which rooms fit the pocket around it; each room lists its size (Barracks 6×3, Workshop 5×4, Cistern 4×4, Store 5×3, Hatchery and Nursery 4×3). Press Build for the catalog: every room with size, cost and status; pick one and green cells show where it fits. Tools: Fill tunnel packs dirt back, Remove room tears one out for half its cost.</div>
@@ -43,6 +44,6 @@ export const INTRO = [
   { text: 'Press Build nest. She hollows out a chamber around herself.', done: s => s.queen.placed },
   { text: 'She lays one egg from her own body. It hatches as you.', done: s => !!s.player.ant },
   { text: 'You are a Forager. Tap the cell above you to climb the shaft, then tap the top cell to go outside.', done: s => !s.player.inNest },
-  { text: 'Find a yellow crumb. Tap it, press Pick up, then carry it to the dark hole.', done: s => s.colony.delivered.reduce((a,b)=>a+b,0) > 0 },
+  { text: 'Find some food, like a bread crumb. Tap it, press Pick up, then carry it to the dark hole.', done: s => s.colony.delivered.reduce((a,b)=>a+b,0) > 0 },
   { text: 'That is the loop: food in, eggs out. Next: tap Nest, tap the queen, lay a Builder. Tap dirt to order digs. Press Build to see every room with its size and cost; pick one and tap a green cell to place it. Pinch to zoom.', btn: 'Done' },
 ];

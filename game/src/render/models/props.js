@@ -30,15 +30,3 @@ export const PROPS = {
   dome: colored(new THREE.SphereGeometry(1, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2)),
   gem: colored(new THREE.OctahedronGeometry(1, 0)),
 };
-
-// Which prop and colour a sim item draws as.
-export function itemLook(f, COLORS) {
-  if (f.kind === 'water') {
-    if (f.type === 'puddle') return { geo: PROPS.puddle, color: COLORS.water, r: Math.min(14, 6 + f.amt * 0.12), flat: true };
-    return { geo: PROPS.dew, color: COLORS.water, r: Math.min(6, 2.2 + f.amt * 0.2) };
-  }
-  if (f.kind === 'grit') return { geo: PROPS.pebble, color: COLORS.grit, r: 2.6 };
-  if (f.kind === 'protein') return { geo: PROPS.meat, color: COLORS.protein, r: Math.min(6, 2.5 + f.amt * 0.08) };
-  if (f.type === 'seed') return { geo: PROPS.seed, color: COLORS.seed, r: Math.min(4.5, 1.8 + f.amt * 0.15) };
-  return { geo: PROPS.crumb, color: COLORS.food, r: Math.min(5, 2 + f.amt * 0.16) };
-}

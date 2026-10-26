@@ -2,6 +2,46 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 26: creatures, food and the yard plan (build 7.3)
+
+Mark asked for:
+- **Spider:** about twice as big, with more detail and a walking animation. It should roam between areas, but definitely pass the nest every now and then.
+- **Caterpillar:** about twice as big and long, with a fuzzy texture and a walking animation.
+- **Dew:** should look like dew, not spots.
+- **Food:** recognisable kinds, plus the occasional high-quality drop such as candy.
+- **The yard:** start planning all of it.
+
+What changed:
+- **The spider roams.** This is a sim change.
+  - It walks from landmark to landmark across the whole patch.
+  - Every third leg it walks an arc 5.5 tiles from the nest. It can't come closer than 4.5 tiles (was 6).
+  - After a few legs it sometimes walks off an edge "into the next area" for 40–80 s, then walks back in from a random edge with the health it left with.
+  - After a death it also walks in from an edge, no longer appearing mid-map.
+  - Its bite reach grew with its body (0.9 → 1.3 tiles).
+- **New spider model** (`game/src/render/models/bugs.js`): a wolf spider at 2.6× scale (was 1.3×).
+  - A pale stripe and speckles on the abdomen, and banded thorax and legs.
+  - Eight eyes with glints, plus fangs, pedipalps and spinnerets.
+  - Four-segment legs with bristles.
+  - Walking is an 8-frame alternating gait, with knees solved by IK and frames advanced by distance travelled so the feet plant instead of sliding.
+  - It turns smoothly, breathes when still, and lifts a foreleg now and then.
+- **New caterpillar model:** a woolly bear (black–rust–black) of 10 shaggy segments, each a jittered core with pale-tipped bristles, true legs at the front and prolegs at the back.
+  - The body follows the path the head took.
+  - A wave of lifting, bunching segments rolls forward as it crawls.
+  - It is about 75 px long (was about 40). Ants can bite it from 1.8 tiles (was 1.2).
+- **Food has kinds** (`game/src/render/models/food.js`, `FOODS` in the sim):
+  - **Everyday food:** bread crumb (5–10), sunflower seed (20), raspberry (10–14), popcorn (12–16). Each has its own shape and colours.
+  - **Treats:** a jelly bean (40), cookie piece (35) or gummy bear (50) drops on about 1 in 16 food spawns, one at a time. Treats sparkle, and the drop raises a message and a one-time explainer.
+  - Ants carry a piece of whatever they picked up.
+- **Dew looks like dew:** clusters of clear, glinting beads, one hanging off a grass blade. The puddle has a lighter rim.
+- **Copy:** the hints and Help no longer say "yellow crumbs" or "the green one"; they describe the new food, the fuzzy caterpillar and the roaming spider.
+- **The yard plan is a draft:** `docs/YARD.md`. The specs only list the six yard areas in one line each. The draft adds:
+  - a map with the house to the north and a start in the south-east corner
+  - each area's look, food, creatures, hazard, mechanic and payoff
+  - which creatures roam between areas
+  - a food catalog and a build order
+
+  Three questions there are for Mark.
+
 ## Oct 26: builders cost time, rounded tunnels (build 7.2)
 
 Mark: no CRT filter, and the wobble is "maybe a little bit too jittery". He liked the rounded tunnels in the mockups. Builders "break every brick that they're in contact with", bricks break before builders reach them, and rooms start building before anyone arrives: "Make it so it costs time."

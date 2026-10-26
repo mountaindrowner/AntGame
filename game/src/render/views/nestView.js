@@ -10,6 +10,7 @@ import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { PROPS } from '../models/props.js';
+import { carryLook } from '../models/food.js';
 import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
 import { MotionTracker, idlePose } from '../motion.js';
 import { antColor, hudShift } from './surfaceView.js';
@@ -220,7 +221,8 @@ export class NestView {
       const fx = climbing ? 0 : (a.dx < 0 ? -1 : 1), fy = climbing ? (a.dy > 0 ? -1 : 1) : 0;
       tmpV.x += fx * 6.4 * k;
       tmpV.y += fy * 6.4 * k;
-      this.props.pushAt('carry', PROPS.crumb, tmpV, Q_ID, 1.6 * k, a.kind === 'water' ? COLORS.water : a.kind === 'grit' ? COLORS.grit : a.kind === 'protein' ? COLORS.protein : COLORS.food);
+      const c = carryLook(a.kind, a.itype, COLORS);
+      this.props.pushAt(c.key, c.geo, tmpV, Q_ID, 1.6 * k * c.r, c.color);
     }
   }
 

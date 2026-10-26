@@ -24,7 +24,7 @@ game/
 │   ├── main.js             boot, shared app state, fixed-step loop, render loop, autosave
 │   ├── config.js           tunables: save key, PS1 pixel size, cameras, creature scale, colours
 │   ├── sim/
-│   │   └── sim.js          the simulation (build 6, plus build 7.2's builder rules). No DOM.
+│   │   └── sim.js          the simulation (build 6, plus builder rules, food kinds, a roaming spider). No DOM.
 │   ├── game/
 │   │   └── save.js         localStorage save/load (reads build 6 v5 saves)
 │   ├── render/
@@ -33,7 +33,9 @@ game/
 │   │   │   ├── materials.js  Lambert + vertex snapping + affine texture mapping
 │   │   │   └── textures.js   procedural nearest-filtered textures and the palette
 │   │   ├── models/
-│   │   │   ├── creatures.js  low-poly ants (3 walk frames per body plan), spider, caterpillar
+│   │   │   ├── creatures.js  low-poly ants (3 walk frames per body plan)
+│   │   │   ├── bugs.js       the wolf spider (8-frame gait) and the woolly bear caterpillar
+│   │   │   ├── food.js       each food kind, treats, dew beads; what an ant carries
 │   │   │   ├── crowd.js      instanced batches: hundreds of ants in a few draw calls
 │   │   │   ├── props.js      items, eggs and furniture primitives
 │   │   │   └── roomDecor.js  each room's wall pattern and live decorations
@@ -76,6 +78,7 @@ game/
 - **Layout:** the HUD hint no longer runs under the right-hand buttons.
 - **Desktop:** the mouse wheel zooms.
 - **Builders (sim):** each builder works one job, only once it is standing there; one builder per brick, up to three per room; soil takes 6/12/20 builder-seconds.
+- **Food and creatures (sim):** food has kinds (crumb, seed, berry, popcorn) and rare treats worth 35–50; the spider roams the patch, passes the nest, and leaves and returns through the edges.
 - **Tunnels:** drawn as smooth rounded shapes over the same cell grid; a brick being dug visibly erodes.
 - **Saves:** the save key is now `underfoot-v6`; v5 saves from build 6 still load.
 

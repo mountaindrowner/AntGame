@@ -125,7 +125,7 @@ export function createUI(app) {
     if (!a) return 'Waiting for the next hatchling.';
     if (P().inNest) return app.view === 'nest' ? 'Walk up the shaft and tap the top cell to go outside. Tap the queen to lay eggs; press Build to add rooms.' : 'Your ant is inside. Tap Nest view.';
     if (a.carry) return 'Carry it to the dark hole. Your trail lays itself.';
-    if (s.t < 180 && c.store < 8) return 'Tap a yellow crumb to walk there, then Pick up. Hold to keep walking.';
+    if (s.t < 180 && c.store < 8) return 'Tap a crumb or seed to walk there, then Pick up. Hold to keep walking.';
     if (c.water < 3) return 'Water is low. Blue dew appears every two minutes; the big puddle is always out there. Eggs need water.';
     if (!c.eggQueue.length && !c.eggs.length && c.store >= 4) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
     if (P().hunger < 35) return 'You are hungry. Go home, or stand by a forager carrying food.';

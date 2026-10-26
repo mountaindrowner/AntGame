@@ -9,14 +9,24 @@ import { CAMERA, COLORS, RENDER, ANT_SCALE } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
-import { antGeometry, planFor, spiderGeometry, caterpillarSegment, FOOT, SPIDER_FOOT, WALK_FRAMES } from '../models/creatures.js';
-import { PROPS, itemLook } from '../models/props.js';
+import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
+import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS } from '../models/bugs.js';
+import { PROPS } from '../models/props.js';
+import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
 
 const { W, H, T, CASTES } = SIM;
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
+const tmpQ2 = new THREE.Quaternion();
+const ZAX = new THREE.Vector3(0, 0, 1);
+const SPIDER_SCALE = 2.6;
+// Caterpillar: segment size and spacing (px), and the crawl wave.
+const CAT = { r: 5.6, head: 5.2, gap: 7, lift: 2.6, waveLen: 12 };
+const CAT_KIND = ['head', 'black', 'black', 'rust', 'rust', 'rust', 'rust', 'rust', 'black', 'black'];
+const CAT_LEGS = [null, 'true', 'true', 'true', null, null, 'pro', 'pro', 'pro', 'pro'];
+const wrapAngle = (a) => a - Math.PI * 2 * Math.floor((a + Math.PI) / (Math.PI * 2));
 
 // Fraction of the screen height to move the camera so the subject sits in
 // the middle of the area between the top HUD and the bottom bar.
@@ -53,18 +63,29 @@ export class SurfaceView {
     this.creatureMat = psx({ vertexColors: true });
     this.crowd = new Crowd(this.dyn, this.creatureMat);
     this.items = new Crowd(this.dyn, psx({ vertexColors: true }));
+    this.water = new Crowd(this.dyn, psx({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false, emissive: '#1c4466' }));
+    this.glints = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
     this.marks = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false }));
 
-    this.spiderRest = spiderGeometry(false);
-    this.spiderUp = spiderGeometry(true);
-    this.spider = new THREE.Mesh(this.spiderRest, psx({ vertexColors: true, color: '#4b3324' }));
-    this.spiderHead = { x: 0, y: 0, yaw: 0 };
-    this.cat = [];
-    const catGeo = caterpillarSegment();
-    for (let i = 0; i < 6; i++) {
-      const m = new THREE.Mesh(catGeo, psx({ vertexColors: true, color: i % 2 ? '#7fb24a' : '#9ccb5a' }));
-      this.cat.push(m);
-    }
+    // Spider: a baked walk cycle advanced by distance travelled, so feet
+    // plant instead of sliding.
+    this.spiderWalk = Array.from({ length: SPIDER_FRAMES }, (_, i) => spiderGeometry(i));
+    this.spiderRest = spiderGeometry(-1);
+    this.spiderUp = spiderGeometry(-2);
+    this.spider = new THREE.Mesh(this.spiderRest, psx({ vertexColors: true }));
+    this.spiderHead = { x: 0, y: 0, yaw: 0, aim: 0, phase: 0, moved: -9, seen: false };
+    // Caterpillar: segments follow the path the head took, with a wave of
+    // lifting segments rolling forward as it crawls.
+    const catMat = psx({ vertexColors: true });
+    const segGeo = new Map();
+    this.cat = CAT_KIND.map((kind, i) => {
+      const key = kind + CAT_LEGS[i];
+      if (!segGeo.has(key)) segGeo.set(key, caterpillarSegment(kind, CAT_LEGS[i]));
+      return new THREE.Mesh(segGeo.get(key), catMat);
+    });
+    this.catPath = [];
+    this.catAnim = { phase: 0, moved: -9 };
+    this.lastT = 0;
     this.bars = [this._bar(), this._bar()];
     this.dyn.add(this.spider, ...this.cat, ...this.bars.map((b) => b.group));
 
@@ -263,9 +284,9 @@ export class SurfaceView {
       // Still ants stand and breathe instead of walking on the spot.
       this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
       if (a.carry) {
-        const c = itemLook({ kind: a.kind, type: a.kind === 'food' ? 'crumb' : a.kind, amt: 1 }, COLORS);
-        tmpV.set(a.x + a.dx * 6.4 * k, FOOT * k + 0.2, a.y + a.dy * 6.4 * k);
-        this.items.pushAt('carry' + a.kind, c.geo === PROPS.puddle ? PROPS.dew : c.geo, tmpV, tmpQ, 1.6 * k, c.color);
+        const c = carryLook(a.kind, a.itype, COLORS);
+        tmpV.set(a.x + a.dx * 6.4 * k, FOOT * k * 0.7, a.y + a.dy * 6.4 * k);
+        (c.water ? this.water : this.items).pushAt(c.key, c.geo, tmpV, tmpQ, 1.6 * k * c.r, c.color);
       }
       if (a.follow) {
         tmpV.set(a.x, 0.6, a.y);
@@ -273,12 +294,25 @@ export class SurfaceView {
       }
     };
     this.items.begin();
+    this.water.begin();
+    this.glints.begin();
     for (const f of s.items) {
       if (f.amt <= 0) continue;
       const L = itemLook(f, COLORS);
-      tmpV.set((f.x + 0.5) * T, L.flat ? 0.3 : L.r * 0.6, (f.y + 0.5) * T);
-      tmpQ.setFromAxisAngle(UP, (f.x * 7 + f.y * 13) % 6);
-      this.items.pushAt(f.kind + f.type, L.geo, tmpV, tmpQ, L.r, L.color);
+      const cx = (f.x + 0.5) * T, cz = (f.y + 0.5) * T, spin = (f.x * 7 + f.y * 13) % 6;
+      if (L.dew) { this._dew(f, L, cx, cz, spin, t); continue; }
+      tmpV.set(cx, L.water ? 0.3 : (L.lift || 0) * L.r + 0.15, cz);
+      tmpQ.setFromAxisAngle(UP, spin);
+      (L.water ? this.water : this.items).pushAt(L.key, L.geo, tmpV, tmpQ, L.r, L.color);
+      // Treats glint so they read as something special from across the yard.
+      if (L.treat) {
+        const tw = Math.max(0, Math.sin(t * 2.4 + f.x));
+        if (tw > 0.2) {
+          tmpV.set(cx - L.r * 0.4, L.r * 1.6 + 2, cz - L.r * 0.2);
+          tmpQ2.copy(this.camera.quaternion).multiply(tmpQ.setFromAxisAngle(ZAX, t * 0.8));
+          this.glints.pushAt('star', FOOD.star, tmpV, tmpQ2, 9 * tw, '#ffffff');
+        }
+      }
     }
     for (const a of s.ants) {
       if (a.isPlayer || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'dead') continue;
@@ -296,35 +330,15 @@ export class SurfaceView {
     }
     this.crowd.end();
     this.items.end();
+    this.water.end();
+    this.glints.end();
     this.marks.end();
     this.motion.sweep();
 
-    // Spider: heading from its motion, a foreleg raised every two seconds.
-    const sp = s.spider;
-    this.spider.visible = !!sp;
-    this.bars[0].group.visible = false;
-    if (sp) {
-      const h = this.spiderHead;
-      const dx = sp.x - h.x, dy = sp.y - h.y;
-      if (dx * dx + dy * dy > 0.04) h.yaw = Math.atan2(-dy, dx);
-      h.x = sp.x; h.y = sp.y;
-      this.spider.geometry = (s.t % 2) < 0.3 ? this.spiderUp : this.spiderRest;
-      this.spider.position.set(sp.x, SPIDER_FOOT * 1.3, sp.y);
-      const sb = Math.sin(t * 1.9);
-      this.spider.scale.set(1.3, 1.3 * (1 + 0.03 * sb), 1.3 * (1 + 0.02 * sb));
-      this.spider.rotation.set(0, h.yaw, 0);
-      this._placeBar(this.bars[0], sp.x, sp.y, 34, sp.hp / sp.maxHp, '#e4524a');
-    }
-    // Caterpillar: a wiggling chain of segments.
-    const ct = s.cat;
-    this.bars[1].group.visible = false;
-    this.cat.forEach((m, i) => {
-      m.visible = !!ct;
-      if (!ct) return;
-      m.position.set(ct.x - i * 5.2, 4.2 + Math.abs(Math.sin(s.t * 4 + i)) * 1.2, ct.y + Math.sin(s.t * 4 + i) * 1.6);
-      m.scale.setScalar(i === 0 ? 4.6 : 4.2 - i * 0.2);
-    });
-    if (ct) this._placeBar(this.bars[1], ct.x - 10, ct.y, 18, ct.hp / ct.maxHp, '#8fd36b');
+    const fdt = Math.min(0.1, Math.max(0, t - this.lastT));
+    this.lastT = t;
+    this._spider(s, t, fdt);
+    this._caterpillar(s, t, fdt);
 
     // Weather and light.
     const raining = s.rain.on;
@@ -356,6 +370,101 @@ export class SurfaceView {
     this.scene.fog.far = dist * 2.4 + 200;
 
     if (raining) this._updateRain(t);
+  }
+
+  // Dew: beads on and around a grass blade, each with an unlit shine.
+  _dew(f, L, cx, cz, spin, t) {
+    tmpQ.setFromAxisAngle(UP, spin);
+    tmpV.set(cx, 0, cz);
+    this.items.pushAt('blade', FOOD.blade, tmpV, tmpQ, 2.4, '#ffffff');
+    // One bead hangs near the blade's tip, the rest sit in the grass.
+    const spots = [[0, 6.4, 3.0, 0.8], [-3.4, 0, 1.2, 1], [2.8, 0, -1.8, 0.85], [-0.8, 0, -3.6, 0.7]];
+    const cs = Math.cos(spin), sn = Math.sin(spin);
+    for (let i = 0; i < L.beads; i++) {
+      const [ox, oy, oz, k] = spots[i];
+      const r = L.r * k * (1 + 0.03 * Math.sin(t * 2 + i + f.x));
+      const x = cx + ox * cs + oz * sn, z = cz - ox * sn + oz * cs;
+      tmpV.set(x, oy, z);
+      this.water.pushAt('bead', FOOD.bead, tmpV, tmpQ, r, '#ffffff');
+      tmpV.set(x - r * 0.35, oy + r * 1.35, z + r * 0.3);
+      this.glints.pushAt('shine', FOOD.shine, tmpV, tmpQ, r * 0.26, '#ffffff');
+    }
+  }
+
+  // Spider: turns smoothly, walks a gait synced to distance, rests and
+  // breathes when still, and now and then lifts a foreleg to taste the air.
+  _spider(s, t, fdt) {
+    const sp = s.spider, h = this.spiderHead;
+    this.spider.visible = !!sp;
+    this.bars[0].group.visible = false;
+    if (!sp) { h.seen = false; return; }
+    const dx = sp.x - h.x, dy = sp.y - h.y, d = Math.hypot(dx, dy);
+    if (!h.seen || d > 60) { h.seen = true; h.yaw = h.aim; }
+    else if (d > 0.05) { h.aim = Math.atan2(-dy, dx); h.phase += d / (SPIDER_STRIDE * SPIDER_SCALE); h.moved = t; }
+    h.x = sp.x; h.y = sp.y;
+    h.yaw += wrapAngle(h.aim - h.yaw) * Math.min(1, fdt * 7);
+    const walking = t - h.moved < 0.2;
+    const frame = Math.floor(h.phase * SPIDER_FRAMES) % SPIDER_FRAMES;
+    this.spider.geometry = walking ? this.spiderWalk[frame] : (s.t % 4) < 0.5 ? this.spiderUp : this.spiderRest;
+    const bob = walking ? Math.abs(Math.sin(h.phase * Math.PI * 2)) * 0.5 : 0;
+    this.spider.position.set(sp.x, (SPIDER_FOOT + bob) * SPIDER_SCALE, sp.y);
+    const sb = walking ? 0 : Math.sin(t * 1.9);
+    this.spider.scale.set(SPIDER_SCALE, SPIDER_SCALE * (1 + 0.03 * sb), SPIDER_SCALE * (1 + 0.02 * sb));
+    this.spider.rotation.set(0, h.yaw, 0);
+    this._placeBar(this.bars[0], sp.x, sp.y, 62, sp.hp / sp.maxHp, '#e4524a');
+  }
+
+  // Caterpillar: the head is the sim position; the body follows its trail.
+  _caterpillar(s, t, fdt) {
+    const ct = s.cat, path = this.catPath, A = this.catAnim;
+    this.bars[1].group.visible = false;
+    this.cat.forEach((m) => (m.visible = !!ct));
+    if (!ct) { path.length = 0; return; }
+    const need = CAT.gap * CAT_SEGMENTS + 20;
+    if (!path.length || Math.hypot(path[0][0] - ct.x, path[0][1] - ct.y) > 40) {
+      // First sight: lay the body out straight behind where it is heading.
+      path.length = 0;
+      const hx = (ct.gx ?? ct.x + 1) - ct.x, hy = (ct.gy ?? ct.y) - ct.y, hl = Math.hypot(hx, hy) || 1;
+      for (let i = 0; i * 4 < need; i++) path.push([ct.x - (hx / hl) * i * 4, ct.y - (hy / hl) * i * 4]);
+    } else {
+      const d = Math.hypot(path[0][0] - ct.x, path[0][1] - ct.y);
+      if (d > 0.8) { path.unshift([ct.x, ct.y]); A.phase += d / CAT.waveLen; A.moved = t; }
+    }
+    // Trim the trail to what the body needs.
+    let len = 0;
+    for (let i = 1; i < path.length; i++) {
+      len += Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]);
+      if (len > need) { path.length = i + 1; break; }
+    }
+    const crawling = t - A.moved < 0.4;
+    // Walk along the trail placing segments; lifted ones bunch up.
+    let seg = 0, want = 0, acc = 0, prev = [ct.x, ct.y];
+    const pts = [];
+    const lift = (i) => (crawling ? Math.max(0, Math.sin(A.phase * Math.PI * 2 + i * 0.75)) : 0);
+    for (let i = 0; i <= path.length && seg < CAT_SEGMENTS; i++) {
+      const cur = i === 0 ? [ct.x, ct.y] : path[i - 1];
+      const l = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]);
+      while (seg < CAT_SEGMENTS && acc + l >= want) {
+        const u = l ? (want - acc) / l : 0;
+        pts.push([prev[0] + (cur[0] - prev[0]) * u, prev[1] + (cur[1] - prev[1]) * u]);
+        want += CAT.gap * (1 - 0.18 * lift(seg));
+        seg++;
+      }
+      acc += l;
+      prev = cur;
+    }
+    while (pts.length < CAT_SEGMENTS) { const p = pts[pts.length - 1] || [ct.x, ct.y]; pts.push([p[0] - CAT.gap, p[1]]); }
+    const breathe = crawling ? 0 : Math.sin(t * 1.6);
+    this.cat.forEach((m, i) => {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(CAT_SEGMENTS - 1, i + 1)];
+      const yaw = Math.atan2(-(a[1] - b[1]), a[0] - b[0]);
+      const r = i === 0 ? CAT.head : CAT.r * (i > 7 ? 1 - (i - 7) * 0.08 : 1);
+      const up = lift(i) * CAT.lift;
+      m.position.set(pts[i][0], r * (i === 0 ? 0.9 : 1.05) + up, pts[i][1]);
+      m.rotation.set(0, yaw || 0, i === 0 ? -0.15 + up * 0.04 : 0);
+      m.scale.set(r, r * (1 + 0.04 * breathe), r * (1 + 0.03 * breathe));
+    });
+    this._placeBar(this.bars[1], pts[4][0], pts[4][1], 22, ct.hp / ct.maxHp, '#8fd36b');
   }
 
   _updateRain(t) {
