@@ -137,7 +137,7 @@ export class SurfaceView {
         const tx = x / 8, ty = y / 8;
         const gv = grassN(tx * 0.18, ty * 0.18) + grassN(tx * 0.6, ty * 0.6) * 0.35;
         const ramp = gv > 0.12 ? grass : dirt;
-        const v = (r() - 0.5) * 0.9 + gv * 0.6 + 0.5;
+        const v = (r() - 0.5) * 0.4 + gv * 0.6 + 0.5;
         c.fillStyle = ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(v * ramp.length)))];
         c.fillRect(x, y, 1, 1);
       }

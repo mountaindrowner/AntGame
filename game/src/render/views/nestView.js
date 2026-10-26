@@ -101,7 +101,8 @@ export class NestView {
     this.key.position.set(-0.3, 0.6, 1);
     this.scene.add(this.hemi, this.key);
 
-    this.soilMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(3 + i, ramp, { size: 32, stones: [3, 6, 2][i], repeat: [1 / 48, 1 / 48] }) }));
+    // Few, soft stones: a busy high-contrast fleck across the whole cutaway tires the eye.
+    this.soilMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(3 + i, ramp, { size: 32, stones: [2, 3, 1][i], stone: [shade(ramp[1], 1.25), shade(ramp[2], 1.35)], repeat: [1 / 48, 1 / 48] }) }));
     this.sideMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(13 + i, ramp.map((c) => shade(c, 0.5)), { size: 16, repeat: [1 / 24, 1 / 24] }) }));
     this.soil = new THREE.Group();
     this.scene.add(this.soil);

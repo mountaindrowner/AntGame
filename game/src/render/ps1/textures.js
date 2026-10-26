@@ -46,7 +46,7 @@ export function canvasTexture(w, h, draw, { repeat = null, wrap = true } = {}) {
 }
 
 // Speckled texture from a ramp of colours, with optional pebbles and a band.
-export function rampTexture(seed, colors, { size = 32, stones = 0, band = null, speckle = 0.35, stone = ['#8a8274', '#b4ac9c'], repeat = null } = {}) {
+export function rampTexture(seed, colors, { size = 32, stones = 0, band = null, speckle = 0.18, stone = ['#8a8274', '#b4ac9c'], repeat = null } = {}) {
   return canvasTexture(size, size, (g) => {
     const r = rng(seed), n = noise2(seed);
     const k = 8 / size;

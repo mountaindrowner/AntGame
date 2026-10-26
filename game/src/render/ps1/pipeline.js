@@ -32,7 +32,7 @@ export class PS1Pipeline {
       minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, type: THREE.HalfFloatType,
     });
     this.post = new THREE.ShaderMaterial({
-      uniforms: { tFrame: { value: this.target.texture }, levels: { value: RENDER.colorLevels }, dither: { value: 1 } },
+      uniforms: { tFrame: { value: this.target.texture }, levels: { value: RENDER.colorLevels }, dither: { value: RENDER.dither } },
       vertexShader: VERT, fragmentShader: FRAG, depthTest: false, depthWrite: false,
     });
     this.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.post);
@@ -45,9 +45,11 @@ export class PS1Pipeline {
   }
 
   // cssW × cssH is the on-screen size; the framebuffer is that divided by
-  // the PS1 pixel size.
+  // the PS1 pixel size, rounded so each PS1 pixel covers a whole number of
+  // device pixels (uneven pixel widths shimmer as things move).
   resize(cssW, cssH) {
-    const px = RENDER.pixelSize;
+    const dpr = window.devicePixelRatio || 1;
+    const px = Math.max(1, Math.round(RENDER.pixelSize * dpr)) / dpr;
     const w = Math.max(64, Math.round(cssW / px)), h = Math.max(64, Math.round(cssH / px));
     if (w === this.width && h === this.height) return false;
     this.width = w;

@@ -5,9 +5,10 @@ export const SAVE_KEY = 'underfoot-v6';
 export const LEGACY_SAVE_KEYS = ['underfoot-poc-v5'];
 
 export const RENDER = {
-  pixelSize: 2.25, // CSS px per PS1 pixel
+  pixelSize: 1.75, // CSS px per PS1 pixel (was 2.25; rounded so pixels land on whole device pixels)
   snapDivisor: 1, // vertex snap grid = framebuffer / this (1 = per pixel; 2 wobbled too much)
-  colorLevels: 31, // 15-bit colour: 32 levels per channel
+  colorLevels: 48, // levels per channel (31 was true 15-bit; 48 softens banding)
+  dither: 0.5, // ordered-dither strength (1 = full PS1 grain)
   animFps: 10, // walk cycles step like a busy PS1 frame
 };
 

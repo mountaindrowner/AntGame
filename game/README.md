@@ -60,14 +60,14 @@ game/
 
 - **The sim never imports the renderer, the UI or the DOM.** Views read sim state and never write it. Input and UI change state only through the sim's public API (`queueEgg`, `toggleDigOrder`, `queueRoom`, …) or the player fields build 6 already used (`tx/ty`, `ntx/nty`, `mark`, `holding`).
 - **Adding a room or caste:** add it in `sim.js` (`ROOMS`/`CASTES` and their effects) and its copy in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js` (`WALLS` and `DRESS`); castes get a colour in `config.js` (`COLORS`).
-- **Tuning the look** is all in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (more or less wobble), `colorLevels` (dither depth), `animFps`, plus the camera and creature-scale settings.
+- **Tuning the look** is all in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (more or less wobble), `colorLevels` and `dither` (grain), `animFps`, plus the camera and creature-scale settings.
 
 ## How the PS1 look is made
 
-1. **Low resolution.** The canvas is the framebuffer, at the CSS size divided by `pixelSize` (2.25 by default, about 173×375 on a phone). The browser upscales it with `image-rendering: pixelated`. This is the look and also the cheapest thing a phone can draw.
+1. **Low resolution.** The canvas is the framebuffer, at the CSS size divided by `pixelSize` (1.75 by default, rounded to whole device pixels; about 223×482 on a phone). The browser upscales it with `image-rendering: pixelated`. This is the look and also the cheapest thing a phone can draw.
 2. **Vertex snapping.** Every material rounds clip-space positions to the framebuffer's pixel grid (`snapDivisor` 1), so polygons wobble as the camera moves.
 3. **Affine textures.** UVs interpolate without perspective correction, so 16–32 px textures swim across big faces.
-4. **15-bit colour.** One post pass converts to sRGB and quantises to 32 levels per channel with a 4×4 Bayer dither.
+4. **Reduced colour.** One post pass converts to sRGB and quantises to 48 levels per channel with a half-strength 4×4 Bayer dither (`colorLevels`, `dither`; 31 and 1 give true 15-bit grain).
 5. **Stepped animation.** Walk cycles have three baked frames advanced at 10 fps; the camera and simulation stay smooth.
 
 ## Differences from build 6
