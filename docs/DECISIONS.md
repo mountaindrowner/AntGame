@@ -2,6 +2,44 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 26: first full playtest (build 7.5)
+
+Mark asked for a few gameplay loops: how it plays, how it feels, how far you get.
+
+**How it was played:**
+- **`game/scripts/playtest.mjs`:** a bot that plays only through the UI's actions (tap to walk, Pick up, Recruit, the queen sheet, digs, the catalog). It ran 20–45 minutes per style: sensible, military-first, a forager rush on the rival nest, and idle.
+- **A real-time phone-size browser session:** about 4.5 minutes per run, playing with real taps.
+
+**How far it goes (sensible play):**
+- First food at 0:23.
+- 10 ants at about 3:30.
+- All six rooms and the 60-ant cap by about 10:00.
+- The rival queen dies between 30:00 and 37:00.
+
+**Regressions from build 7.3, fixed:**
+- **The roaming spider massacred the colony.** It killed 42–61 ants per 20 minutes; build 7.2 lost 0–6. It patrolled 4.5 tiles from the nest, where foragers are, and lone guards charged it.
+  - It now walks past at 7.5 tiles and doesn't hunt on the way unless an ant walks into it.
+  - The nest exclusion is back to 6 tiles and its reach to 1.1 tiles.
+  - Guards only attack it as a crew of five or more; recruited and led ants still fight.
+  - For the first four minutes it keeps 12 tiles away.
+
+  Result: 0–11 deaths per 20 minutes.
+- **The opening.**
+  - In the browser the spider killed the player 33 seconds after hatching, before any warning, because the warning card waited for the intro to end. It can now show during the intro.
+  - A treat card interrupted the intro before the first hatch. Treats now wait three minutes.
+
+**Small bugs, fixed:**
+- **Rooms that cost more food than the cap** (Barracks 30, Workshop 25, against a cap of 20) showed "short on: 30 food" forever. A military-first run sat at 20 ants and 0 rooms for 35 minutes. The catalog now says "needs a Food store first (food cap 20)".
+- **Foragers stopped fetching stone at 30, but the last queen upgrade needs 40.** They now fetch enough for the next upgrade.
+
+**Found, not fixed (for Mark):**
+1. **Tap-to-walk has no pathfinding.** Tap past a rock and your ant walks into it and stops. This is the biggest feel problem in hands-on play.
+2. **You can win with zero soldiers.** The siege counts any recruited follower, so 7–14 foragers marched onto the rival entrance win at about 7:00–11:00.
+3. **A long mid-game plateau.** Everything is built and capped by about 10:00. From then until the win around 30:00 there is no new goal, and protein piles up unused (300–440).
+4. **The 80-ant level starves.** After the last upgrade, upkeep outruns income: food went from 148 to 7 and stayed down.
+5. **A new player ant takes over the next egg, whatever its caste.** A Builder you paid for can hatch as your Forager body instead.
+6. **The first deliveries are wasted.** Food starts at the cap (20/20), so early trips add nothing until eggs use it up.
+
 ## Oct 26: a softer PS1 (build 7.4)
 
 Mark: "I like our graphics, but they are kind of rough to look at… so it's not so hard on the eyes, so fuzzy and so abrasive." This is a small polish, not a style change.

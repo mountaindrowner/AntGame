@@ -4,7 +4,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 
-test('spider passes the nest, keeps 4.5 tiles off it, and leaves and returns', () => {
+// The sim's creatures use Math.random; seed it so the test is repeatable.
+function seeded(a) { return () => { a |= 0; a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+test('spider passes the nest, keeps 4.5 tiles off it, and leaves and returns', (t) => {
+  const real = Math.random;
+  Math.random = seeded(12);
+  t.after(() => { Math.random = real; });
   const s = SIM.create(7), w = s.world, T = SIM.T;
   let minD = Infinity, passes = 0, near = false, left = 0, back = 0, away = false;
   for (let i = 0; i < 20 * 900; i++) {

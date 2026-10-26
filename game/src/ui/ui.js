@@ -47,6 +47,9 @@ export function createUI(app) {
         const e = s.events.shift();
         if (EXPL[e] && !['dig', 'nest', 'surface'].includes(e)) { showExplainer(e); if (app.menu === 'info') return; }
       }
+      // The spider warning can't wait for the intro to finish.
+      const a0 = P().ant;
+      if (a0 && !P().inNest && s.spider && Math.hypot(a0.x - s.spider.x, a0.y - s.spider.y) < 9 * T) showExplainer('spider');
       return;
     }
     if (s.phase === 'dig') showExplainer('dig');
@@ -92,7 +95,9 @@ export function createUI(app) {
         const R = ROOMS[k];
         const have = SIM.roomOf(s, k), queued = c.buildQueue.some((j) => j.room === k);
         const fits = app.anyFit(R.w, R.h), pay = SIM.canPay(c, R.cost);
-        const status = have ? 'built' : queued ? 'being built' : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(R.cost) : 'ready to place';
+        // A cost above the food cap can never be paid: say what unlocks it.
+        const overCap = (R.cost.food || 0) > c.cap;
+        const status = have ? 'built' : queued ? 'being built' : overCap ? `needs a Food store first (food cap ${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(R.cost) : 'ready to place';
         h += `<button data-place="${k}" ${have || queued || !fits || !pay ? 'disabled' : ''}><b>${R.name} · ${R.w}×${R.h}</b><i>${SIM.costText(R.cost)} · ${R.desc}</i><i>${status}</i></button>`;
       }
       h += `</div><div class="t" style="margin-top:10px">Tools</div><div class="btns">`;

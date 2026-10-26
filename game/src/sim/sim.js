@@ -246,7 +246,8 @@ function wanted(s, a){
   if (c.store < c.cap) want.food = 1;
   if (!a.team && c.water < c.waterCap*0.6) want.water = 1.2;
   want.protein = 1.5;
-  if (!a.team && (a.caste==='builder' || c.store > c.cap*0.6) && c.grit < 30) want.grit = 0.8;
+  // Enough stone for the next queen upgrade, never less than 30.
+  if (!a.team && (a.caste==='builder' || c.store > c.cap*0.6) && c.grit < Math.max(30, (QUEEN_UP[s.queen.level] || {}).grit || 0)) want.grit = 0.8;
   return want;
 }
 function nearestItem(s, a, r, want){ let best=null, bd=r; for (const f of s.items){ if (f.amt<=0 || !want[f.kind]) continue; const d = Math.hypot(f.x-a.tx, f.y-a.ty)/want[f.kind]; if (d < bd){ bd = d; best = f; } } return best; }
@@ -279,7 +280,7 @@ function tick(s, dt){
   if (s.dew && s.dewTimer > 60){ s.dew = false; s.dewTimer = 0; s.items = s.items.filter(f => f.type !== 'dew'); }
   tickRain(s, dt); tickMaintenance(s, dt);
   s.itemTimer += dt; if (s.itemTimer > 9){ s.itemTimer = 0; const w2 = s.world; const nearOurs = s.items.filter(f=>f.kind==='food' && Math.hypot(f.x-w2.ex,f.y-w2.ey) < 20).length, nearRival = s.items.filter(f=>f.kind==='food' && Math.hypot(f.x-w2.rx,f.y-w2.ry) < 20).length;
-    if (nearOurs < 16){ const it = spawnItem(s, 'food', pickFood(s, true)); if (it && FOODS[it.type].treat){ s.events.push('treat'); if (!P.msg) P.msg = 'Something sweet dropped in the grass: a ' + FOODS[it.type].name + ', worth ' + it.amt + ' food. Bring a crew.'; } }
+    if (nearOurs < 16){ const it = spawnItem(s, 'food', pickFood(s, s.t > 180)); if (it && FOODS[it.type].treat){ s.events.push('treat'); if (!P.msg) P.msg = 'Something sweet dropped in the grass: a ' + FOODS[it.type].name + ', worth ' + it.amt + ' food. Bring a crew.'; } }
     if (nearRival < 9) spawnItem(s, 'food', pickFood(s, false), null, true); if (s.items.filter(f=>f.kind==='grit').length < 4) spawnItem(s, 'grit', 'pebble'); if (!s.items.some(f=>f.type==='puddle')) spawnItem(s, 'water', 'puddle', 20); }
   s.items = s.items.filter(f => f.amt > 0);
   stepSpider(s, dt); if (!s.spider){ if (s.spiderAway){ s.spiderAway.t -= dt; if (s.spiderAway.t <= 0){ spiderEnter(s, s.spiderAway.hp); s.spiderAway = null; } } else { s.spiderRespawn -= dt; if (s.spiderRespawn <= 0){ spiderEnter(s, 150); s.spiderRespawn = 120; } } }
@@ -287,6 +288,9 @@ function tick(s, dt){
   // buckets for combat
   const buckets = new Map();
   for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const k = a.tx+','+a.ty; let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(a); }
+  // Fighters near the spider, per team: guards only take it on as a crew.
+  const spiderCrew = [0, 0];
+  if (s.spider) for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; if ((CASTES[a.caste].fight >= 3 || a.follow) && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 4*T) spiderCrew[a.team]++; }
   const enemiesNear = (a, r) => { const out = []; for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){ const b = buckets.get((a.tx+dx)+','+(a.ty+dy)); if (b) for (const o of b) if (o.team !== a.team && o.state !== 'dead') out.push(o); } return out; };
   for (const a of s.ants){
     if (a.state === 'dead') continue;
@@ -297,7 +301,8 @@ function tick(s, dt){
     const aggressive = C.fight >= 3 || a.follow || a.state === 'raid';
     // spider / enemies
     if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y);
-      if (sd < 3.5*T){ if (aggressive){ if (a.state !== 'follow' && a.state !== 'raid') a.state = 'fight'; a.goal = 'spider'; } else if (a.state !== 'fight'){ a.flee = 2; } } }
+      const brave = a.follow || a.state === 'raid' || (a.state === 'fight' && a.goal === 'spider') || spiderCrew[a.team] >= 5;
+      if (sd < 3.5*T){ if (aggressive && brave){ if (a.state !== 'follow' && a.state !== 'raid') a.state = 'fight'; a.goal = 'spider'; } else if (a.state !== 'fight'){ a.flee = 2; } } }
     const en = enemiesNear(a, aggressive ? 1 : 2);
     if (en.length){
       if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=1 && Math.abs(o.ty-a.ty)<=1); if (o){ o.hp -= C.fight*dt; if (o.hp <= 0) killAnt(s, o, a.team ? 'rival' : 'war'); } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
@@ -569,14 +574,16 @@ function rivalBrain(s, dt){
 
 // The spider roams the whole yard: landmark to landmark, past our nest every
 // few legs, and now and then off the edge into the next area for a while.
-const SPIDER_REACH = 1.3*T, CAT_REACH = 1.8*T;
-const spiderNearNest = (s, x, y) => Math.hypot(x/T - (s.world.ex+0.5), y/T - (s.world.ey+0.5)) < 4.5 || Math.hypot(x/T - (s.world.rx+0.5), y/T - (s.world.ry+0.5)) < 4;
+const SPIDER_REACH = 1.1*T, CAT_REACH = 1.8*T;
+// For the first four minutes it keeps well away, so the opening is safe to learn.
+const spiderNearNest = (s, x, y) => Math.hypot(x/T - (s.world.ex+0.5), y/T - (s.world.ey+0.5)) < (s.t < 240 ? 12 : 6) || Math.hypot(x/T - (s.world.rx+0.5), y/T - (s.world.ry+0.5)) < 4;
 function spiderPlan(s, sp){
   const w = s.world; sp.legs = (sp.legs||0) + 1; sp.route = [];
-  if (sp.legs % 3 === 0){ // pass the nest along an arc 5.5 tiles out
+  sp.passing = false;
+  if (sp.legs % 3 === 0 && s.t >= 240){ // stroll past the nest along an arc 7.5 tiles out, not hunting
     const a0 = Math.random()*Math.PI*2, dir = Math.random() < 0.5 ? 1 : -1;
-    for (let k=0;k<5;k++){ const a = a0 + dir*k*0.6; sp.route.push([(w.ex+0.5+Math.cos(a)*5.5)*T, (w.ey+0.5+Math.sin(a)*5.5)*T]); }
-    return;
+    for (let k=0;k<5;k++){ const a = a0 + dir*k*0.5; sp.route.push([(w.ex+0.5+Math.cos(a)*7.5)*T, (w.ey+0.5+Math.sin(a)*7.5)*T]); }
+    sp.passing = true; return;
   }
   if (sp.legs > 4 && Math.random() < 0.3){ // wander off into the next area
     const side = Math.floor(Math.random()*4), u = 0.2 + Math.random()*0.6;
@@ -585,7 +592,7 @@ function spiderPlan(s, sp){
   }
   for (let tries=0; tries<60; tries++){
     const x = 2+Math.floor(Math.random()*(W-4)), y = 2+Math.floor(Math.random()*(H-4));
-    if (w.blocked[idx(x,y)] || w.home[idx(x,y)] < 7 || w.rhome[idx(x,y)] < 5) continue;
+    if (w.blocked[idx(x,y)] || w.home[idx(x,y)] < (s.t < 240 ? 14 : 7) || w.rhome[idx(x,y)] < 5) continue;
     if (Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) < 10*T) continue;
     sp.route.push([(x+0.5)*T, (y+0.5)*T]); return;
   }
@@ -601,7 +608,8 @@ function spiderEnter(s, hp){
 function stepSpider(s, dt){
   const sp = s.spider; if (!sp) return;
   const free = sp.leaving || sp.entering;
-  let target = null, bd = 3*T;
+  // Passing the nest it only strikes at ants that walk right into it.
+  let target = null, bd = sp.passing ? 1.5*T : 3*T;
   if (!free) for (const a of s.ants){ if (a.state==='dead'||a.state==='in'||a.state==='build'||a.state==='nest') continue; const d = Math.hypot(a.x-sp.x, a.y-sp.y); if (d < bd){ bd = d; target = a; } }
   if (!sp.route || !sp.route.length) spiderPlan(s, sp);
   let gx, gy;

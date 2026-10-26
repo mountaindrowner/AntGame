@@ -11,6 +11,7 @@ npm run dev        # http://localhost:5173, and on your LAN for testing on a pho
 npm test           # headless simulation tests (no browser)
 npm run test:e2e   # builds, serves and plays the opening in headless Chromium (needs Playwright)
 npm run build      # static site in dist/, deployable anywhere (relative paths)
+node scripts/playtest.mjs sensible 7 40   # a bot plays 40 minutes through the UI's actions and reports milestones
 ```
 
 On a phone: run `npm run dev`, then open the "Network" URL Vite prints from a phone on the same Wi-Fi.
@@ -52,8 +53,10 @@ game/
 │   │   └── ui.css
 │   └── input/
 │       └── pointer.js      tap, hold to walk, pinch, drag; raycasts into the active view
-├── tests/                  node:test checks on the sim (sim.test.js, builders.test.js)
-└── scripts/e2e.mjs         browser playthrough with screenshots
+├── tests/                  node:test checks on the sim (sim, builders, creatures)
+└── scripts/
+    ├── e2e.mjs             browser playthrough with screenshots
+    └── playtest.mjs        headless bot that plays whole sessions (sensible, military, cheese, idle)
 ```
 
 ### Rules that keep it maintainable
