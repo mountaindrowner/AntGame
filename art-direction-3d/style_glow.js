@@ -5,7 +5,7 @@
   const T = window.THREE, U3 = window.U3;
 
   const P = {
-    skyTop: '#060A1C', skyLow: '#16244A', soil: ['#131C33', '#0F1529', '#171230'], back: '#060912',
+    skyTop: '#060A1C', skyLow: '#16244A', soil: ['#33487E', '#2A3B6C', '#3A2F6E'], back: '#1A2446',
     rim: '#5CC8FF', fungus: '#3CF2D2', fungus2: '#B46BFF', moss: '#7CFF8A', scent: '#C6FF5E',
     ant: '#05060A', antEye: '#8AF6FF', majorEye: '#FFB45A', queenGlow: '#FF8A3D', egg: '#FFF0C2',
     food: '#FFC14D', spiderEye: '#FF3DA8', firefly: '#E8FF7A',
@@ -117,7 +117,7 @@
     }));
     sky.position.set(0, U3.Y(scene.groundY) + 1200, -3000);
     root.add(sky);
-    const floor = new T.Mesh(new T.PlaneGeometry(6000, 3000), new T.MeshStandardMaterial({ color: '#0B1020', roughness: 1 }));
+    const floor = new T.Mesh(new T.PlaneGeometry(6000, 3000), new T.MeshStandardMaterial({ color: '#04060D', roughness: 1 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, U3.Y(scene.groundY) - 1, -DEPTH - 1500);
     root.add(floor);
@@ -150,7 +150,7 @@
     const breathing = [];
     const emissive = (c, k) => new T.MeshStandardMaterial({ color: '#000000', emissive: c, emissiveIntensity: k || 1.6, roughness: 0.5 });
     const stemMat = new T.MeshStandardMaterial({ color: '#1B2A30', emissive: '#1D6E66', emissiveIntensity: 0.6, roughness: 0.6 });
-    const capA = emissive(P.fungus, 1.8), capB = emissive(P.fungus2, 1.8), mossMat = emissive(P.moss, 1.2);
+    const capA = emissive(P.fungus, 1.15), capB = emissive(P.fungus2, 1.25), mossMat = emissive(P.moss, 0.9);
     breathing.push(capA, capB, mossMat);
     const capGeo = new T.SphereGeometry(1, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
     const mushroom = (x, y, z, s, mat) => {
@@ -178,13 +178,13 @@
     });
     const lights = [];
     [[205, 214, P.fungus], [520, 214, P.fungus], [300, 344, P.fungus2], [560, 344, P.fungus], [366, 392, P.fungus2]].forEach(([x, y, c]) => {
-      const l = new T.PointLight(c, 1.4, 140, 1.8);
+      const l = new T.PointLight(c, 2.2, 190, 1.6);
       l.position.set(U3.X(x), U3.Y(y), -DEPTH + 18);
       root.add(l);
       lights.push(l);
     });
     const threadMat = new T.MeshBasicMaterial({ color: '#7FD9FF', transparent: true, opacity: 0.35 });
-    const beadMat = emissive('#9FF4FF', 2.4);
+    const beadMat = emissive('#9FF4FF', 1.5);
     breathing.push(beadMat);
     for (let i = 0; i < 70; i++) {
       const x = 130 + r() * 470, y = scene.groundY + 30 + r() * 300;
@@ -195,7 +195,7 @@
       const th = new T.Mesh(new T.CylinderGeometry(0.15, 0.15, len, 3), threadMat);
       th.position.set(U3.X(x), U3.Y(cy) - len / 2, z);
       root.add(th);
-      const b = new T.Mesh(new T.SphereGeometry(0.75, 8, 6), beadMat);
+      const b = new T.Mesh(new T.SphereGeometry(1.1, 10, 8), beadMat);
       b.position.set(U3.X(x), U3.Y(cy) - len, z);
       root.add(b);
     }
@@ -242,7 +242,7 @@
     const crumb = new T.Mesh(new T.DodecahedronGeometry(5, 1), emissive(P.food, 0.7));
     crumb.position.set(U3.X(lay.crumb.x), U3.Y(lay.crumb.y) + 4, lay.crumb.z);
     root.add(crumb);
-    const eggMat = new T.MeshStandardMaterial({ color: '#2A2418', emissive: P.egg, emissiveIntensity: 0.9, roughness: 0.4 });
+    const eggMat = new T.MeshStandardMaterial({ color: '#2A2418', emissive: P.egg, emissiveIntensity: 0.55, roughness: 0.4 });
     const eggs = lay.eggs.map((e) => {
       const m = new T.Mesh(new T.SphereGeometry(1, 14, 10), eggMat);
       m.position.set(U3.X(e.x), U3.Y(e.y) + 4.4 + e.row * 7, e.z);
@@ -297,7 +297,7 @@
     const moon = new T.DirectionalLight('#7FA8FF', 0.7);
     moon.position.set(200, 500, -400);
     root.add(moon);
-    const front = new T.DirectionalLight('#2A3C7A', 0.35);
+    const front = new T.DirectionalLight('#5A78D0', 0.55);
     front.position.set(-100, 120, 600);
     root.add(front);
 
@@ -307,7 +307,7 @@
     // faint outer bloom quantises into visible blocks once gamma lifts it.
     const composer = new T.EffectComposer(env.renderer, new T.WebGLRenderTarget(16, 16, { type: T.HalfFloatType }));
     composer.addPass(new T.RenderPass(root, rig.camera));
-    const bloom = new T.UnrealBloomPass(new T.Vector2(256, 256), 1.2, 0.45, 0.4);
+    const bloom = new T.UnrealBloomPass(new T.Vector2(256, 256), 0.95, 0.5, 0.38);
     [bloom.renderTargetBright].concat(bloom.renderTargetsHorizontal, bloom.renderTargetsVertical).forEach((t) => { t.texture.type = T.HalfFloatType; });
     composer.addPass(bloom);
     composer.addPass(new T.ShaderPass(FinalShader));
@@ -320,7 +320,7 @@
         const es = 1 + 0.04 * (0.5 - 0.5 * Math.cos(t * Math.PI));
         eggs.forEach((m) => m.scale.set(3.4 * es, 4.6 * es, 3.4 * es));
         breathing.forEach((m, i) => { m.emissiveIntensity = m.userData.base || (m.userData.base = m.emissiveIntensity); m.emissiveIntensity = m.userData.base * (0.85 + 0.15 * Math.sin(t * 1.3 + i)); });
-        lights.forEach((l, i) => { l.intensity = 1.4 * (0.85 + 0.15 * Math.sin(t * 1.3 + i * 2)); });
+        lights.forEach((l, i) => { l.intensity = 2.2 * (0.85 + 0.15 * Math.sin(t * 1.3 + i * 2)); });
         const pos = moteGeo.attributes.position;
         const L = path.getLength();
         moteSeed.forEach(([u, ox, oy], i) => {
