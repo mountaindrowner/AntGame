@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Underfoot Style Sheet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Fredoka:wght@500;600&family=Rye&family=Alfa+Slab+One&family=DM+Sans:opsz,wght@9..40,500&family=Caveat:wght@600&family=Patrick+Hand&family=Bangers&family=Inter:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  /* Layout: a proofing desk. Quiet blue-grey chrome so no style is flattered
+     by the page around it; blue-pencil accent marks the active choice. */
+  :root {
+    --bg: #E8EAEE;
+    --surface: #F6F7F9;
+    --ink: #1D2026;
+    --muted: #5E6470;
+    --line: #CDD1D9;
+    --accent: #2B59C3;
+    --accent-ink: #FFFFFF;
+    --chip: #DDE3F2;
+    --stage: #D5D9E0;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+    --font-display: "IM Fell English", Georgia, "Times New Roman", serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #15171B; --surface: #1E2127; --ink: #E9EBEF; --muted: #9AA1AE;
+      --line: #333843; --accent: #8FB0FF; --accent-ink: #0E1630; --chip: #26304A;
+      --stage: #0F1114; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #15171B; --surface: #1E2127; --ink: #E9EBEF; --muted: #9AA1AE;
+    --line: #333843; --accent: #8FB0FF; --accent-ink: #0E1630; --chip: #26304A;
+    --stage: #0F1114; color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.5 var(--font-body);
+  }
+  .wrap {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-block: 20px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: grid;
+    gap: 18px;
+  }
+  .wrap > * { min-width: 0; }
+  header { display: grid; gap: 4px; }
+  h1 {
+    margin: 0;
+    font: 400 clamp(28px, 4vw, 40px)/1.1 var(--font-display);
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+  }
+  .lede { margin: 0; color: var(--muted); max-width: 68ch; }
+  .eyebrow {
+    font: 500 11px/1 var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  details.matrix {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  details.matrix > summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    font-weight: 600;
+    list-style-position: inside;
+  }
+  .table-scroll { overflow-x: auto; padding: 0 16px 14px; }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: 13.5px; }
+  th, td { text-align: left; padding: 7px 10px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font: 500 11px/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-top: 0; }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover td, tbody tr:focus-visible td { background: var(--chip); }
+  tbody tr.is-current td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+  td:first-child { font-weight: 600; white-space: nowrap; }
+
+  .toolbar {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    background: var(--bg);
+    padding-block: 8px;
+    display: grid;
+    gap: 8px;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto;
+    height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg);
+  }
+  .tabs {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: thin;
+  }
+  .tab {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font: 500 13.5px/1.2 var(--font-body);
+    cursor: pointer;
+  }
+  .tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: 0.5; }
+  .tab .dot.full { background: var(--accent); opacity: 1; }
+  .tab[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .tab[aria-selected="true"] .dot { background: var(--accent-ink); opacity: 0.9; }
+  .tab:focus-visible, .seg button:focus-visible, select:focus-visible, .linkish:focus-visible, tbody tr:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .seg button {
+    border: 0; background: transparent; color: var(--ink);
+    font: 500 12.5px/1 var(--font-mono); padding: 7px 10px; cursor: pointer;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--chip); color: var(--ink); font-weight: 600; }
+  .ctl-label { font: 500 11px/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .ctl { display: inline-flex; gap: 8px; align-items: center; }
+
+  .single { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+  @media (max-width: 960px) { .single { grid-template-columns: minmax(0, 1fr); } }
+  .stage {
+    background: var(--stage);
+    border-radius: 10px;
+    padding: 10px;
+    overflow-x: auto;
+    min-width: 0;
+  }
+  .stage canvas { display: block; margin: 0 auto; border-radius: 3px; max-width: none; }
+  .stage.fit canvas { max-width: 100%; }
+
+  .info {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+  .info h2 { margin: 0; font: 600 19px/1.25 var(--font-body); }
+  .info .tagline { margin: 0; color: var(--muted); }
+  .info dl { margin: 0; display: grid; gap: 10px; }
+  .info dt { font: 500 11px/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .info dd { margin: 2px 0 0; font-size: 14px; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sw { display: inline-flex; align-items: center; gap: 6px; font: 400 11.5px/1.2 var(--font-mono); background: var(--bg); border-radius: 6px; padding: 3px 7px 3px 3px; }
+  .sw i { width: 16px; height: 16px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0,0,0,0.15); }
+  .status { justify-self: start; font: 500 11px/1 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 5px 8px; border-radius: 999px; background: var(--chip); }
+
+  .compare { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 620px) { .compare { grid-template-columns: minmax(0, 1fr); } }
+  .compare.fixed { grid-template-columns: repeat(2, max-content); overflow-x: auto; }
+  @media (max-width: 620px) { .compare.fixed { grid-template-columns: max-content; } }
+  .cell { display: grid; gap: 8px; min-width: 0; }
+  .cell-head { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .cell select {
+    font: 500 14px/1.2 var(--font-body); color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0;
+  }
+  .linkish { border: 0; background: none; color: var(--accent); font: 500 13px/1 var(--font-body); cursor: pointer; padding: 6px 2px; }
+  .cell .refs { margin: 0; font-size: 12.5px; color: var(--muted); }
+  .cell .stage { padding: 6px; }
+
+  .judge { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .judge h2 { margin: 0 0 6px; font: 600 16px/1.3 var(--font-body); }
+  .judge ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+  .foot { color: var(--muted); font-size: 13px; margin: 0; }
+  code { font: 400 0.92em var(--font-mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Underfoot · art direction</span>
+    <h1>One nest, ten ways to draw it</h1>
+    <p class="lede">Every panel draws the same scene data. Only the renderer changes. Use the zoom and slow-motion controls to test legibility and motion, or open the 2×2 view to put four styles side by side.</p>
+  </header>
+
+  <details class="matrix" id="matrix" open>
+    <summary>Comparison matrix</summary>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Style</th><th>Nearest games</th><th>Cost to produce</th><th>Phone legibility</th><th>Distinctiveness</th><th>Fits “biology stays real”</th></tr>
+        </thead>
+        <tbody id="matrix-body"></tbody>
+      </table>
+    </div>
+  </details>
+
+  <div class="toolbar">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Styles"></div>
+    <div class="controls">
+      <span class="ctl"><span class="ctl-label">Zoom</span>
+        <span class="seg" id="zoom">
+          <button type="button" data-zoom="fit" aria-pressed="true">Fit</button>
+          <button type="button" data-zoom="1" aria-pressed="false">1×</button>
+          <button type="button" data-zoom="0.6" aria-pressed="false">0.6×</button>
+        </span>
+      </span>
+      <span class="ctl"><span class="ctl-label">Speed</span>
+        <span class="seg" id="speed">
+          <button type="button" data-speed="1" aria-pressed="true">Normal</button>
+          <button type="button" data-speed="0.25" aria-pressed="false">Slow ¼</button>
+          <button type="button" data-speed="0" aria-pressed="false">Pause</button>
+        </span>
+      </span>
+    </div>
+  </div>
+
+  <section id="single-view" class="single">
+    <div class="stage fit" id="single-stage"><canvas id="single-canvas" aria-label="Scene render"></canvas></div>
+    <aside class="info" id="info"></aside>
+  </section>
+
+  <section id="compare-view" class="compare" hidden></section>
+
+  <section class="judge">
+    <h2>What to judge</h2>
+    <ol>
+      <li>Can you tell worker, major, queen and carrying apart at 1× and at 0.6× zoom?</li>
+      <li>Does the nest read as a place where ants live, rather than a diagram?</li>
+      <li>Does the scent trail read without a legend? (Only vector and HD pixel draw it.)</li>
+      <li>Is the spider scary, funny, or neither? Each style has a right answer.</li>
+      <li>Would you be happy looking at this for 20 hours?</li>
+    </ol>
+  </section>
+  <p class="foot">Scene: 720×480 world px. Renderers live in <code>render_&lt;style&gt;.js</code>; the scene is <code>scene.js</code>. “1×” shows one world px per CSS px; “Fit” scales to the column.</p>
+</div>
+
+<script src="scene.js"></script>
+<script src="common.js"></script>
+<script src="render_field-guide.js"></script>
+<script src="render_claymation.js"></script>
+<script src="render_woodcut.js"></script>
+<script src="render_vector.js"></script>
+<script src="render_storybook.js"></script>
+<script src="render_cut-paper.js"></script>
+<script src="render_hd-pixel.js"></script>
+<script src="render_pixel16.js"></script>
+<script src="render_rubber-hose.js"></script>
+<script src="render_macro.js"></script>
+<script>
+(function () {
+  const UF = window.UF, scene = window.UF_SCENE;
+  const ids = UF.order.slice();
+  const DEFAULT_COMPARE = ['field-guide', 'claymation', 'woodcut', 'vector'].filter((id) => UF.renderers[id]);
+  const state = { view: 'compare', style: ids[0], zoom: 'fit', speed: 1, compare: DEFAULT_COMPARE.slice() };
+
+  try {
+    const saved = JSON.parse(localStorage.getItem('uf-styles') || 'null');
+    if (saved) {
+      if (saved.zoom) state.zoom = saved.zoom;
+      if (Array.isArray(saved.compare)) state.compare = saved.compare.filter((id) => UF.renderers[id]).slice(0, 4);
+      while (state.compare.length < 4) state.compare.push(DEFAULT_COMPARE[state.compare.length] || ids[0]);
+    }
+  } catch (e) { /* storage unavailable */ }
+
+  const hash = (location.hash || '').slice(1);
+  if (hash === 'compare') state.view = 'compare';
+  else if (UF.renderers[hash]) { state.view = 'single'; state.style = hash; }
+
+  function save() {
+    try { localStorage.setItem('uf-styles', JSON.stringify({ zoom: state.zoom, compare: state.compare })); } catch (e) {}
+  }
+
+  // ------------------------------------------------------------ matrix
+  if (window.matchMedia && window.matchMedia('(max-width: 700px)').matches) document.getElementById('matrix').open = false;
+  const mBody = document.getElementById('matrix-body');
+  ids.forEach((id) => {
+    const m = UF.renderers[id].meta;
+    if (!m.matrix) return;
+    const tr = document.createElement('tr');
+    tr.tabIndex = 0;
+    tr.dataset.id = id;
+    [m.label].concat(m.matrix).forEach((v) => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      tr.appendChild(td);
+    });
+    tr.addEventListener('click', () => go('single', id));
+    tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go('single', id); } });
+    mBody.appendChild(tr);
+  });
+
+  // ------------------------------------------------------------ tabs
+  const tabs = document.getElementById('tabs');
+  function addTab(id, label, full) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tab';
+    b.role = 'tab';
+    b.dataset.id = id;
+    if (full != null) {
+      const d = document.createElement('span');
+      d.className = 'dot' + (full ? ' full' : '');
+      d.title = full ? 'Fully specified mockup' : 'Brief mockup';
+      b.appendChild(d);
+    }
+    b.appendChild(document.createTextNode(label));
+    b.addEventListener('click', () => go(id === 'compare' ? 'compare' : 'single', id));
+    tabs.appendChild(b);
+  }
+  addTab('compare', 'Compare 2×2', null);
+  ids.forEach((id) => addTab(id, UF.renderers[id].meta.label, UF.renderers[id].meta.status === 'full'));
+
+  // ------------------------------------------------------------ views
+  const views = [];
+  function makeView(canvas, stage, getId) {
+    const v = { canvas, stage, ctx: canvas.getContext('2d'), getId, lastKey: null, cssW: 0 };
+    views.push(v);
+    return v;
+  }
+  const single = makeView(document.getElementById('single-canvas'), document.getElementById('single-stage'), () => state.style);
+
+  const compareEl = document.getElementById('compare-view');
+  for (let i = 0; i < 4; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    const head = document.createElement('div');
+    head.className = 'cell-head';
+    const sel = document.createElement('select');
+    sel.id = 'compare-slot-' + i;
+    sel.setAttribute('aria-label', 'Style in panel ' + (i + 1));
+    ids.forEach((id) => {
+      const o = document.createElement('option');
+      o.value = id;
+      o.textContent = UF.renderers[id].meta.label;
+      sel.appendChild(o);
+    });
+    sel.value = state.compare[i];
+    sel.addEventListener('change', () => { state.compare[i] = sel.value; save(); renderCompareMeta(); dirtyAll(); });
+    const open = document.createElement('button');
+    open.type = 'button';
+    open.className = 'linkish';
+    open.textContent = 'Open';
+    open.addEventListener('click', () => go('single', state.compare[i]));
+    head.append(sel, open);
+    const stage = document.createElement('div');
+    stage.className = 'stage fit';
+    const c = document.createElement('canvas');
+    stage.appendChild(c);
+    const refs = document.createElement('p');
+    refs.className = 'refs';
+    cell.append(head, stage, refs);
+    compareEl.appendChild(cell);
+    const v = makeView(c, stage, () => state.compare[i]);
+    v.refs = refs;
+  }
+
+  function renderCompareMeta() {
+    views.slice(1).forEach((v) => {
+      const m = UF.renderers[v.getId()].meta;
+      v.refs.textContent = m.refs;
+      v.canvas.setAttribute('aria-label', m.label + ' render');
+    });
+  }
+
+  function renderInfo() {
+    const r = UF.renderers[state.style], m = r.meta;
+    const info = document.getElementById('info');
+    info.innerHTML = '';
+    const h = document.createElement('h2');
+    h.textContent = m.label;
+    const tl = document.createElement('p');
+    tl.className = 'tagline';
+    tl.textContent = m.tagline;
+    const st = document.createElement('span');
+    st.className = 'status';
+    st.textContent = m.status === 'full' ? 'Full spec' : m.status === 'placeholder' ? 'Not mocked in 2D' : 'Brief spec';
+    const dl = document.createElement('dl');
+    const add = (k, v) => {
+      if (!v) return;
+      const dt = document.createElement('dt');
+      dt.textContent = k;
+      const dd = document.createElement('dd');
+      if (v instanceof Node) dd.appendChild(v); else dd.textContent = v;
+      dl.append(dt, dd);
+    };
+    add('Reference games', m.refs);
+    if (m.palette && m.palette.length) {
+      const sw = document.createElement('div');
+      sw.className = 'swatches';
+      m.palette.forEach(([name, hex]) => {
+        const s = document.createElement('span');
+        s.className = 'sw';
+        const i = document.createElement('i');
+        i.style.background = hex;
+        s.append(i, document.createTextNode(name + ' ' + hex));
+        sw.appendChild(s);
+      });
+      add('Palette', sw);
+    }
+    add('Type', m.type);
+    add('Motion', m.motion);
+    add('Risks to check', m.risks);
+    add('Mockup notes', m.notes);
+    info.append(st, h, tl, dl);
+    single.canvas.setAttribute('aria-label', m.label + ' render');
+  }
+
+  function go(view, id) {
+    state.view = view;
+    if (view === 'single' && id && UF.renderers[id]) state.style = id;
+    try { history.replaceState(null, '', '#' + (view === 'compare' ? 'compare' : state.style)); } catch (e) {}
+    sync();
+  }
+
+  function sync() {
+    document.getElementById('single-view').hidden = state.view !== 'single';
+    compareEl.hidden = state.view !== 'compare';
+    tabs.querySelectorAll('.tab').forEach((b) => {
+      const on = state.view === 'compare' ? b.dataset.id === 'compare' : b.dataset.id === state.style;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      if (on) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+    mBody.querySelectorAll('tr').forEach((tr) => tr.classList.toggle('is-current', state.view === 'single' && tr.dataset.id === state.style));
+    document.querySelectorAll('#zoom button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.zoom === state.zoom)));
+    document.querySelectorAll('#speed button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.speed) === state.speed)));
+    compareEl.classList.toggle('fixed', state.zoom !== 'fit');
+    views.forEach((v) => v.stage.classList.toggle('fit', state.zoom === 'fit'));
+    if (state.view === 'single') renderInfo(); else renderCompareMeta();
+    layout();
+  }
+
+  document.getElementById('zoom').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.zoom = b.dataset.zoom; save(); sync();
+  });
+  document.getElementById('speed').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    state.speed = Number(b.dataset.speed); sync();
+  });
+
+  // ------------------------------------------------------------ sizing
+  function layout() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    views.forEach((v) => {
+      if (v.stage.offsetParent === null) return;
+      const cs = getComputedStyle(v.stage);
+      const avail = v.stage.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      let w = state.zoom === 'fit' ? Math.min(avail, 1080) : UF.W * Number(state.zoom);
+      w = Math.max(160, Math.floor(w));
+      const h = Math.round((w * UF.H) / UF.W);
+      const bw = Math.round(w * dpr), bh = Math.round(h * dpr);
+      if (v.canvas.width !== bw || v.canvas.height !== bh) { v.canvas.width = bw; v.canvas.height = bh; }
+      v.canvas.style.width = w + 'px';
+      v.canvas.style.height = h + 'px';
+      v.lastKey = null;
+    });
+  }
+  function dirtyAll() { views.forEach((v) => (v.lastKey = null)); }
+  if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(() => layout());
+    views.forEach((v) => ro.observe(v.stage));
+  }
+  window.addEventListener('resize', layout);
+
+  // ------------------------------------------------------------ fonts
+  const FONT_PROBES = [
+    '18px "IM Fell English"', 'italic 11px "IM Fell English"', '600 12px Fredoka', '13px Rye',
+    '13px "Alfa Slab One"', '500 11px "DM Sans"', '600 14px Caveat', '14px "Patrick Hand"',
+    '20px Bangers', '400 12px Inter', '500 12px Inter',
+  ];
+  if (document.fonts && document.fonts.load) {
+    Promise.allSettled(FONT_PROBES.map((f) => document.fonts.load(f))).then(() => {
+      UF.bakeEpoch++;
+      dirtyAll();
+    });
+  }
+
+  // ------------------------------------------------------------ loop
+  let t = 0, last = performance.now();
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduce && state.speed === 1) { state.speed = 0.25; }
+
+  function drawView(v) {
+    const r = UF.renderers[v.getId()];
+    if (!r || v.canvas.offsetParent === null) return;
+    const key = v.getId() + '|' + v.canvas.width + '|' + (r.fps ? Math.floor(t * r.fps + 1e-6) : t.toFixed(4));
+    if (key === v.lastKey) return;
+    v.lastKey = key;
+    const ctx = v.ctx;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, v.canvas.width, v.canvas.height);
+    const k = v.canvas.width / UF.W;
+    ctx.setTransform(k, 0, 0, k, 0, 0);
+    ctx.imageSmoothingEnabled = !r.meta.pixel;
+    try {
+      r.draw(ctx, scene, t);
+    } catch (err) {
+      console.error(r.id, err);
+      ctx.setTransform(k, 0, 0, k, 0, 0);
+      ctx.fillStyle = '#300';
+      ctx.fillRect(0, 0, UF.W, UF.H);
+      ctx.fillStyle = '#fbb';
+      ctx.font = '16px monospace';
+      ctx.fillText(r.id + ': ' + err.message, 20, 40);
+    }
+    ctx.restore();
+  }
+
+  function frame(now) {
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    t += dt * state.speed;
+    views.forEach(drawView);
+    requestAnimationFrame(frame);
+  }
+
+  sync();
+  requestAnimationFrame((n) => { last = n; frame(n); });
+
+  // Test hook: render a style at a fixed time (used by the screenshot script).
+  window.UF_drawAt = function (time) { state.speed = 0; t = time; dirtyAll(); views.forEach(drawView); };
+})();
+</script>
+</body>
+</html>
