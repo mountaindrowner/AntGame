@@ -125,7 +125,9 @@ export function createUI(app) {
       if (app.placing.kind === 'fill') return 'Fill: tap dug tunnel cells to queue them for packing. Tap again to undo. Cancel to stop.';
       return 'Remove: tap a room to tear it out. Cancel to stop.';
     }
+    if (s.lost) return 'The queen is dead. The colony is lost. Press Reset to found a new one.';
     if (s.won) return 'The rival queen is dead. Keep growing, or Reset for a fresh yard.';
+    if (app.areaBanner && app.areaBanner.until > performance.now()) return app.areaBanner.text;
     if (s.phase === 'dig') return q.energy > 0 ? `You are the queen. Tap the dirt next to her to dig (${q.energy} digs left). Two down, then Build nest.` : 'Out of energy. Tap Build nest.';
     if (!a) return 'Waiting for the next hatchling.';
     if (P().inNest) return app.view === 'nest' ? 'Walk up the shaft and tap the top cell to go outside. Tap the queen to lay eggs; press Build to add rooms.' : 'Your ant is inside. Tap Nest view.';
@@ -143,11 +145,14 @@ export function createUI(app) {
     const s = app.s, c = s.colony;
     const st = SIM.stats(s);
     const cap = SIM.queenCap(s.queen.level), nAnts = SIM.antCount(s);
-    el.stats.innerHTML = `🌾 ${Math.floor(c.store)}/${c.cap} · 💧 ${Math.floor(c.water)}/${c.waterCap} · 🥩 ${Math.floor(c.protein)} · 🪨 ${Math.floor(c.grit)}<br>🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} /min · ${app.fps} fps${s.rain.on ? ' · rain' : ''}${s.repairs.length ? ' · ' + s.repairs.length + ' cave-in' : ''}`;
+    el.stats.innerHTML = `🌾 ${Math.floor(c.store)}/${c.cap} · 💧 ${Math.floor(c.water)}/${c.waterCap} · 🥩 ${Math.floor(c.protein)} · 🪨 ${Math.floor(c.grit)}${s.queen.placed && s.queen.hp < 99.5 ? ` · 👑 ${Math.ceil(s.queen.hp)}` : ''}${s.rival.queenAlive && s.rival.qhp < 999 ? ` · rival queen ${Math.ceil(s.rival.qhp / 10)}%` : ''}<br>🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} /min · ${app.fps} fps${s.rain.on ? ' · rain' : ''}${s.repairs.length ? ' · ' + s.repairs.length + ' cave-in' : ''}`;
+    const a0 = P().ant;
     const it = introText();
     const istep = introStep() >= 0 ? INTRO[introStep()] : null;
     if (it) { const want = istep.btn ? `${it} <button class="next" id="intronext">${istep.btn}</button>` : it; if (el.msg.innerHTML !== want) el.msg.innerHTML = want; }
     else el.msg.textContent = hint();
+    // Crossing into another part of the yard: name it (and describe it the first time).
+    if (a0 && !P().inNest) { const ai = SIM.areaOf(s, a0.tx, a0.ty); if (ai !== app.lastArea) { if (app.lastArea != null) { const A = SIM.AREAS[ai]; const first = !s.seen['area' + ai]; s.seen['area' + ai] = true; app.areaBanner = { text: first ? `${A.name}. ${A.blurb}` : A.name, until: performance.now() + (first ? 6000 : 2500) }; } app.lastArea = ai; } }
     el.hungerBar.style.width = Math.max(0, P().hunger) + '%';
     el.hungerBar.style.background = P().hunger < 35 ? '#e4524a' : '#8fd36b';
     const lbl = SIM.actionLabel(s);

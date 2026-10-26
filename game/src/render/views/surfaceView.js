@@ -3,17 +3,17 @@
 // Y = 0. Static scenery is built once per world; creatures, items and scent
 // are redrawn from the sim every frame.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import SIM from '../../sim/sim.js';
 import { CAMERA, COLORS, RENDER, ANT_SCALE } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
-import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
+import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS } from '../models/bugs.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
+import { buildYardScenery, mowerMesh } from './yardScenery.js';
 
 const { W, H, T, CASTES } = SIM;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -86,8 +86,10 @@ export class SurfaceView {
     this.catPath = [];
     this.catAnim = { phase: 0, moved: -9 };
     this.lastT = 0;
+    this.mower = mowerMesh();
+    this.mower.visible = false;
     this.bars = [this._bar(), this._bar()];
-    this.dyn.add(this.spider, ...this.cat, ...this.bars.map((b) => b.group));
+    this.dyn.add(this.spider, this.mower, ...this.cat, ...this.bars.map((b) => b.group));
 
     // Rain: a box of falling streaks that follows the camera target.
     const n = 420, pos = new Float32Array(n * 6);
@@ -128,77 +130,9 @@ export class SurfaceView {
     this.scene.add(g);
     const w = s.world;
 
-    // Ground: one quad per tile so the snapping has vertices to wobble.
+    // The yard: ground, landmarks, walls, rocks and grass (yardScenery.js).
+    g.add(buildYardScenery(w));
     const gw = W * T, gh = H * T;
-    const grassN = noise2(5), r = rng(3);
-    const groundTex = canvasTexture(W * 8, H * 8, (c, cw, ch) => {
-      const dirt = PALETTE.dirt, grass = PALETTE.grass;
-      for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
-        const tx = x / 8, ty = y / 8;
-        const gv = grassN(tx * 0.18, ty * 0.18) + grassN(tx * 0.6, ty * 0.6) * 0.35;
-        const ramp = gv > 0.12 ? grass : dirt;
-        const v = (r() - 0.5) * 0.4 + gv * 0.6 + 0.5;
-        c.fillStyle = ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(v * ramp.length)))];
-        c.fillRect(x, y, 1, 1);
-      }
-      // Darker soil where rocks sit.
-      c.fillStyle = 'rgba(40,30,20,0.45)';
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (w.blocked[y * W + x]) c.fillRect(x * 8 - 1, y * 8 - 1, 10, 10);
-    }, { wrap: false });
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh, W, H).rotateX(-Math.PI / 2).translate(gw / 2, 0, gh / 2), psx({ map: groundTex }));
-    g.add(ground);
-
-    // Rocks on blocked tiles; the border becomes a wall of rocks and tall grass.
-    const rockParts = [];
-    const grassParts = [];
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      if (!w.blocked[y * W + x]) continue;
-      const border = x === 0 || y === 0 || x === W - 1 || y === H - 1;
-      if (border) {
-        for (let k = 0; k < 3; k++) {
-          const h = 18 + r() * 22;
-          const q = new THREE.PlaneGeometry(10, h).translate(0, h / 2, 0).rotateY(r() * Math.PI);
-          q.translate((x + r()) * T, 0, (y + r()) * T);
-          grassParts.push(q);
-        }
-        continue;
-      }
-      const rad = 7 + r() * 4;
-      const d = new THREE.DodecahedronGeometry(rad, 0).toNonIndexed();
-      d.scale(1, 0.55 + r() * 0.35, 1);
-      d.rotateY(r() * 3);
-      d.translate((x + 0.5) * T + (r() - 0.5) * 3, rad * 0.25, (y + 0.5) * T + (r() - 0.5) * 3);
-      rockParts.push(d);
-    }
-    // Scattered grass clumps for texture.
-    for (let i = 0; i < 260; i++) {
-      const x = 1 + r() * (W - 2), y = 1 + r() * (H - 2);
-      if (w.blocked[Math.floor(y) * W + Math.floor(x)]) continue;
-      if (Math.hypot(x - w.ex, y - w.ey) < 3 || Math.hypot(x - w.rx, y - w.ry) < 3) continue;
-      if (grassN(x * 0.18, y * 0.18) < 0.05) continue;
-      const h = 6 + r() * 7;
-      for (let k = 0; k < 2; k++) {
-        const q = new THREE.PlaneGeometry(7, h).translate(0, h / 2, 0).rotateY(k * Math.PI / 2 + r());
-        q.translate(x * T, 0, y * T);
-        grassParts.push(q);
-      }
-    }
-    if (rockParts.length) {
-      const rocks = new THREE.Mesh(mergeGeometries(rockParts), psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.08, 0.08] }) }));
-      rocks.geometry.computeVertexNormals();
-      g.add(rocks);
-    }
-    const grassTex = canvasTexture(16, 16, (c) => {
-      const rr = rng(8);
-      for (let x = 0; x < 16; x++) {
-        const h = 5 + Math.floor(rr() * 11);
-        c.fillStyle = rr() < 0.5 ? '#4f7a2e' : '#3a5e22';
-        c.fillRect(x, 16 - h, 1, h);
-      }
-    }, { wrap: false });
-    if (grassParts.length) {
-      g.add(new THREE.Mesh(mergeGeometries(grassParts), psx({ map: grassTex, alphaTest: 0.5, side: THREE.DoubleSide })));
-    }
 
     // Nest mounds: a ring of dug-out soil around a dark hole.
     this.holes = [];
@@ -299,9 +233,11 @@ export class SurfaceView {
     for (const f of s.items) {
       if (f.amt <= 0) continue;
       const L = itemLook(f, COLORS);
-      const cx = (f.x + 0.5) * T, cz = (f.y + 0.5) * T, spin = (f.x * 7 + f.y * 13) % 6;
+      // A treat being carried rides on its crew, just ahead of you.
+      const lifted = f.carried && f.px != null;
+      const cx = lifted ? f.px : (f.x + 0.5) * T, cz = lifted ? f.py : (f.y + 0.5) * T, spin = (f.x * 7 + f.y * 13) % 6;
       if (L.dew) { this._dew(f, L, cx, cz, spin, t); continue; }
-      tmpV.set(cx, L.water ? 0.3 : (L.lift || 0) * L.r + 0.15, cz);
+      tmpV.set(cx, L.water ? 0.3 : (L.lift || 0) * L.r + 0.15 + (lifted ? 5 + Math.abs(Math.sin(t * 9)) : 0), cz);
       tmpQ.setFromAxisAngle(UP, spin);
       (L.water ? this.water : this.items).pushAt(L.key, L.geo, tmpV, tmpQ, L.r, L.color);
       // Treats glint so they read as something special from across the yard.
@@ -335,6 +271,10 @@ export class SurfaceView {
     this.marks.end();
     this.motion.sweep();
 
+    // The mower sweeps the Lawn.
+    const mw = s.mower;
+    this.mower.visible = !!mw && mw.state === 'cut';
+    if (this.mower.visible) this.mower.position.set(60 * T, Math.abs(Math.sin(t * 30)) * 1.5, mw.y * T);
     const fdt = Math.min(0.1, Math.max(0, t - this.lastT));
     this.lastT = t;
     this._spider(s, t, fdt);
@@ -350,7 +290,9 @@ export class SurfaceView {
 
     // Camera: follow the player, or the nest entrance.
     const a = pa && !P.inNest ? pa : null;
-    const fx = a ? a.x : (w.ex + 0.5) * T, fy = a ? a.y : (w.ey + 0.5) * T;
+    // app.surfaceFocus (px) overrides, for screenshots and tours.
+    const sf = app.surfaceFocus;
+    const fx = sf ? sf.x : a ? a.x : (w.ex + 0.5) * T, fy = sf ? sf.y : a ? a.y : (w.ey + 0.5) * T;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
     const across = (CAMERA.surfaceTilesAcross * T) / app.zoomMul;

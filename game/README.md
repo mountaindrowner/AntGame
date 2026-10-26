@@ -25,7 +25,8 @@ game/
 │   ├── main.js             boot, shared app state, fixed-step loop, render loop, autosave
 │   ├── config.js           tunables: save key, PS1 pixel size, cameras, creature scale, colours
 │   ├── sim/
-│   │   └── sim.js          the simulation (build 6, plus builder rules, food kinds, a roaming spider). No DOM.
+│   │   ├── sim.js          the simulation (build 6, plus builder rules, food kinds, the fight to survive). No DOM.
+│   │   └── yard.js         the 3×3 yard: areas, landmarks, food tables, hazards, nest sites
 │   ├── game/
 │   │   └── save.js         localStorage save/load (reads build 6 v5 saves)
 │   ├── render/
@@ -44,7 +45,8 @@ game/
 │   │   │   └── contour.js    marching squares: a field → smooth outlines → THREE.Shapes
 │   │   ├── motion.js         moving vs still creatures (idle breathing, scraping, biting)
 │   │   └── views/
-│   │       ├── surfaceView.js  the yard: tilted top-down, scent overlay, weather
+│   │       ├── surfaceView.js  the yard: tilted top-down, creatures, items, scent overlay, weather
+│   │       ├── yardScenery.js  each area's ground and landmarks (rock, flowers, logs, sandbox, blanket…)
 │   │       └── nestView.js     the cutaway: rounded tunnels traced from nest cells, rooms, orders, queen
 │   ├── ui/
 │   │   ├── ui.js           HUD, hints, queen and build sheets, explainers, intro, buttons

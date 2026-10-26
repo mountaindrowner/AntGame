@@ -215,6 +215,37 @@ try {
   await shot('12-spider');
   await page.waitForTimeout(250);
   await shot('12b-spider');
+  // A tour of the yard: each of the nine areas from above.
+  await sim(() => { const { app } = window.UNDERFOOT, s = app.s; s.cat = null; s.spider = null; s.player.pending = false; s.colony.eggQueue.length = 0; s.colony.eggs.length = 0; app.zoomMul = 0.62; });
+  const areas = await sim(() => window.UNDERFOOT.SIM.AREAS.map((A, i) => ({ key: A.key, x: ((i % 3) * 40 + 20) * 16, y: (Math.floor(i / 3) * 40 + 20) * 16 })));
+  for (const A of areas) {
+    await sim((f) => { const { app } = window.UNDERFOOT; app.surfaceFocus = f; app.view = 'surface'; }, { x: A.x, y: A.y });
+    await page.waitForTimeout(600);
+    await shot('area-' + A.key);
+  }
+  // The mower crossing the Lawn.
+  await sim(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.mower, { state: 'cut', y: 92, t: 0 }); app.surfaceFocus = { x: 60 * 16, y: 92 * 16 }; app.zoomMul = 0.8; });
+  await page.waitForTimeout(500);
+  await shot('mower');
+  await sim(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.mower, { state: 'idle', next: 1e9 }); app.surfaceFocus = null; });
+  // A crew carrying a gummy bear home.
+  const carried = await sim(() => {
+    const { app, SIM } = window.UNDERFOOT, s = app.s, w = s.world, T = SIM.T;
+    s.player.pending = true; s.colony.eggQueue.push('forager');
+    for (let i = 0; i < 20 * 25 && !s.player.ant; i++) SIM.tick(s, 0.05);
+    const a = s.player.ant; if (!a) return 'no ant';
+    s.player.inNest = false; a.state = 'player'; a.x = (w.ex + 6.5) * T; a.y = (w.ey + 4.5) * T; a.tx = w.ex + 6; a.ty = w.ey + 4;
+    SIM.stress(s, 10); for (const o of s.ants) if (!o.isPlayer && !o.team) { o.x = a.x + (Math.random() - 0.5) * 30; o.y = a.y + (Math.random() - 0.5) * 30; o.tx = Math.floor(o.x / T); o.ty = Math.floor(o.y / T); }
+    SIM.recruit(s, 10);
+    s.items.push({ x: a.tx, y: a.ty, kind: 'food', type: 'gummy', amt: 50 });
+    SIM.doAction(s);
+    s.player.tx = (w.ex + 0.5) * T; s.player.ty = (w.ey + 0.5) * T;
+    app.view = 'surface'; app.zoomMul = 1.6;
+    return !!s.player.big;
+  });
+  console.log('crew lift'.padEnd(22), '|', carried);
+  await page.waitForTimeout(900);
+  await shot('crew-carry');
 } catch (e) {
   errors.push('test: ' + e.message);
 }

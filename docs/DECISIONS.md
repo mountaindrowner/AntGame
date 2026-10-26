@@ -2,6 +2,63 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 26: the fight to survive, and the 3×3 yard (build 8)
+
+Mark: "We have to add difficulty… depth. The colony is striving to survive. It's a fight. And the player choices are the things that actively fight that off." He also asked for the eight areas around our start, all on one map, with ours in the middle. The direction is written up in `docs/DEPTH.md`, the yard in `docs/YARD.md`.
+
+**The yard is one 120×120-tile map** (`game/src/sim/yard.js`, drawn by `yardScenery.js`): nine 40×40 areas, home in the middle.
+- **Patio:** the rival pavement ants.
+- **Flowerbed:** the spider's web.
+- **Woodpile:** dead bugs, a protein source.
+- **Spigot:** puddles that never dry.
+- **Compost:** apple cores, the richest food.
+- **Sandbox:** treats and antlion pits.
+- **Lawn:** seeds and the mower.
+- **Picnic blanket:** crumbs and treats.
+
+Each area has its own ground, landmarks, food table and regrowth rate. A brick wall closes the north side and a fence the rest.
+
+**Slice 1, "the fight":**
+- **Food near home runs out.** Home regrows 1.2 items a minute, and the store starts at 10. Foragers' range grows with the colony, and past it they follow your trails. Your trails are how the colony reaches far, rich ground.
+- **Fighters eat protein:** half a unit a minute each, and they starve without it. Hunts and Woodpile bugs now matter.
+- **Raids grow and can kill the queen.**
+  - They start at 6:00 with 3 soldiers and add one every 2.5 minutes.
+  - Unguarded raiders get into the nest and wound the queen (100 hp, healing 6 a minute).
+  - If she dies, the colony is lost.
+  - Soldiers patrolling the door turn raids away.
+- **Sieges are real battles.**
+  - Only fighters count, and Recruit calls fighters first.
+  - Eight fighters must hold the rival's door until their queen falls: 1,000 hp, healing 3 a second.
+  - Their soldiers come out to defend and fight harder at home.
+  - Their army is up to a third of their ants.
+- **Treats need a crew you lead:** 6–8 ants. Press Lift; the crew sets the pace, and too few drops it. If the store is full, the excess is wasted.
+- **Your ant walks around rocks.** Taps use pathfinding. This was the biggest feel complaint from the last playtest.
+- **Hazards:**
+  - The mower sweeps the whole Lawn every 4–6 minutes after a warning.
+  - Antlion pits pull ants in.
+  - The spider walks on paths, rests at its web, passes the nest every few legs (never camping the entrance), and sometimes goes over the fence.
+- **Feedback:**
+  - Area names appear as you cross into them, with a description the first time.
+  - The HUD shows queen and rival-queen health.
+  - Explainer cards for raids on the queen, starving soldiers, the mower, starvation and losing.
+  - Messages fade after 10 seconds.
+- **Saves:** the save format is v6 and the key is `underfoot-v7`. Older colonies can't load and start fresh.
+
+**Playtest results** (`scripts/playtest.mjs`; final round, 30–45 simulated minutes per run):
+
+| Strategy | Result |
+|---|---|
+| Sensible (4 seeds) | Won at 12:53, 14:15, 22:54, 31:21. Every run had at least one crisis: starvation (4–45 ants), raids on the queen (down to 77–84 hp), the mower (up to 7 ants), the spider. Each run lifted 2–6 treats and made 2–5 hunts. |
+| Forager rush | Can't win; no win in 30 minutes. In build 7.5 it won at 7:00–11:00. |
+| Hands-off | Stalls at 20 ants. Raids wear the queen down to 39 hp by 25:00. |
+
+The bot reacts instantly, so the fastest wins (about 13 minutes) are faster than a person will manage.
+
+**Known issues:**
+- The rival's economy is fragile: in some runs it collapses to 0 ants without being attacked.
+- The bot's soldiers-first build order never builds a Barracks; that's a bot bug, not the game.
+- In software rendering the yard costs some frame rate: 33–48 fps, against 44–60 before. Needs a real phone.
+
 ## Oct 26: first full playtest (build 7.5)
 
 Mark asked for a few gameplay loops: how it plays, how it feels, how far you get.

@@ -89,6 +89,28 @@ function popcorn() {
   return bake(parts);
 }
 
+// Apple core: a pinched waist of cream flesh, red skin top and bottom, a stem.
+function apple() {
+  const g = new THREE.CylinderGeometry(1, 1, 2.2, 9, 4);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = 0.45 + Math.abs(y) * 0.5; p.setXYZ(i, p.getX(i) * k, y, p.getZ(i) * k); }
+  const core = paint(g, (x, y) => (Math.abs(y) > 0.75 ? '#c8282e' : Math.abs(y) < 0.2 && Math.abs(x) < 0.2 ? '#4a2a14' : '#f2e2b0'));
+  const parts = [at(core.rotateZ(Math.PI / 2), 0, 0.95, 0)];
+  parts.push(at(paint(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 4).rotateZ(Math.PI / 2), '#5a3a1e'), 1.4, 1.0, 0));
+  return bake(parts);
+}
+
+// A dead beetle on its back: a shiny shell, legs in the air. Protein.
+function bug() {
+  const parts = [at(paint(new THREE.SphereGeometry(1, 8, 5).scale(1.3, 0.55, 0.9), (x, y) => (y > 0.2 ? '#2a3a2a' : '#1a221a')), 0, 0.5, 0)];
+  parts.push(at(paint(new THREE.SphereGeometry(0.45, 6, 4), '#141814'), 1.3, 0.5, 0));
+  for (let i = 0; i < 3; i++) for (const sz of [-1, 1]) {
+    const leg = new THREE.CylinderGeometry(0.07, 0.07, 0.9, 3).rotateX(sz * 0.6).translate(-0.5 + i * 0.5, 1.1, sz * 0.35);
+    parts.push(paint(leg, '#141814'));
+  }
+  return bake(parts);
+}
+
 // Jelly bean: a glossy bent bean with a pale shine.
 function jellybean(color, shine) {
   const g = new THREE.SphereGeometry(1, 10, 6);
@@ -137,7 +159,7 @@ function blade() {
   return bake([paint(g, (x, y) => (y > 2.5 ? '#7aa846' : '#4f7a2e'))]);
 }
 function puddle() {
-  return bake([paint(new THREE.CylinderGeometry(1, 1, 0.08, 14), (x, y, z) => { const r = Math.hypot(x, z); return r > 0.85 ? '#7ab8e0' : r > 0.4 ? '#4f97cf' : '#3f86c0'; })]);
+  return bake([paint(new THREE.CylinderGeometry(1, 1, 0.08, 16), (x, y, z) => { const r = Math.hypot(x, z); return r > 0.88 ? '#bfe6ff' : r > 0.55 ? '#5ab0f0' : '#3a8ee0'; })]);
 }
 
 export const FOOD = {
@@ -147,6 +169,8 @@ export const FOOD = {
   popcorn: popcorn(),
   jellybean: [jellybean('#d8283a', '#ff9aa4'), jellybean('#3aa040', '#a8f0a0'), jellybean('#f08a1e', '#ffd09a')],
   cookie: cookie(),
+  apple: apple(),
+  bug: bug(),
   gummy: [gummy('#e0283c', '#ff9aa8'), gummy('#f2b81e', '#fff0a0'), gummy('#3cb84a', '#b8f8b0')],
   bead: bead(),
   blade: blade(),
@@ -162,14 +186,16 @@ const TREAT_COLOR = { jellybean: '#e04050', cookie: '#c98a46', gummy: '#e85060' 
 export function itemLook(f, COLORS) {
   const v = (f.x * 7 + f.y * 13) >>> 0;
   if (f.kind === 'water') {
-    if (f.type === 'puddle') return { geo: FOOD.puddle, key: 'puddle', color: '#ffffff', r: Math.min(14, 6 + f.amt * 0.12), water: true };
+    if (f.type === 'puddle') return { geo: FOOD.puddle, key: 'puddle', color: '#ffffff', r: 10 + Math.min(f.amt, 40) * 0.45, water: true };
     return { dew: true, r: Math.min(5, 2.6 + f.amt * 0.3), beads: Math.max(1, Math.min(4, Math.ceil(f.amt / 2))) };
   }
   if (f.kind === 'grit') return { geo: PROPS.pebble, key: 'pebble', color: COLORS.grit, r: 2.6, lift: 0.6 };
+  if (f.kind === 'protein' && f.type === 'bug') return { geo: FOOD.bug, key: 'bug', color: '#ffffff', r: Math.min(5.5, 2.5 + f.amt * 0.2) };
   if (f.kind === 'protein') return { geo: PROPS.meat, key: 'meat', color: COLORS.protein, r: Math.min(6, 2.5 + f.amt * 0.08), lift: 0.6 };
   switch (f.type) {
     case 'seed': return { geo: FOOD.seed, key: 'seed', color: '#ffffff', r: Math.min(5.2, 2.8 + f.amt * 0.12) };
     case 'berry': return { geo: FOOD.berry, key: 'berry', color: '#ffffff', r: Math.min(5, 2.8 + f.amt * 0.17) };
+    case 'apple': return { geo: FOOD.apple, key: 'apple', color: '#ffffff', r: Math.min(6.5, 3.5 + f.amt * 0.12) };
     case 'popcorn': return { geo: FOOD.popcorn, key: 'popcorn', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.16) };
     case 'jellybean': return { geo: FOOD.jellybean[v % 3], key: 'jb' + (v % 3), color: '#ffffff', r: 5 + f.amt * 0.14, treat: true };
     case 'cookie': return { geo: FOOD.cookie, key: 'cookie', color: '#ffffff', r: 5 + f.amt * 0.15, treat: true };

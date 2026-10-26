@@ -34,7 +34,7 @@ const home = () => tapSurface((w.ex + 0.5) * T, (w.ey + 0.5) * T);
 let plan = { phase: 'out', target: null, since: 0, lastPick: 0 };
 
 function wantItem(f) {
-  if (f.amt <= 0) return 0;
+  if (f.amt <= 0 || f.carried || (SIM.FOODS[f.type] && SIM.FOODS[f.type].crew)) return 0;
   if (f.kind === 'food') return c.store < c.cap - 3 ? 1 : 0;
   if (f.kind === 'water') return c.water < c.waterCap * 0.7 ? 1.4 : 0;
   if (f.kind === 'protein') return 1.6;
@@ -49,6 +49,9 @@ function playSurface() {
   if (a.carry) { home(); return; }
   if (P.hunger < 30) { home(); plan.target = null; return; }
   if (spiderNear(a.x, a.y, 5)) { home(); plan.target = null; return; }
+  // Out of the Lawn when the mower starts.
+  const mowing = s.mower.state !== 'idle', inLawn = (x, y) => x >= 40 && x < 80 && y >= 78;
+  if (mowing && inLawn(a.tx, a.ty)) { home(); plan.target = null; return; }
   const t = plan.target;
   if (t && t.amt > 0 && !spiderNear((t.x + 0.5) * T, (t.y + 0.5) * T, 4)) {
     if (a.tx === t.x && a.ty === t.y) { SIM.doAction(s); plan.target = null; return; }
@@ -60,9 +63,10 @@ function playSurface() {
   for (const f of s.items) {
     const k = wantItem(f); if (!k) continue;
     if (spiderNear((f.x + 0.5) * T, (f.y + 0.5) * T, 4)) continue;
+    if (mowing && inLawn(f.x, f.y)) continue;
     const d = dist(f.x, f.y, a.tx, a.ty) + dist(f.x, f.y, w.ex, w.ey) * 0.5;
     const score = d / k / (f.amt >= 30 ? 2 : 1);
-    if (d < 22 && score < bd) { bd = score; best = f; }
+    if (d < 50 && score < bd) { bd = score; best = f; }
   }
   plan.target = best;
   if (best) tapSurface((best.x + 0.5) * T, (best.y + 0.5) * T);
@@ -71,8 +75,8 @@ function playSurface() {
 
 // ---------- the nest: eggs, digs, rooms, upgrades ----------
 const ORDER = {
-  sensible: ['hatchery', 'store', 'cistern', 'workshop', 'nursery', 'barracks'],
-  military: ['barracks', 'hatchery', 'store', 'cistern', 'workshop', 'nursery'],
+  sensible: ['hatchery', 'store', 'barracks', 'cistern', 'workshop', 'nursery'],
+  military: ['store', 'barracks', 'hatchery', 'cistern', 'workshop', 'nursery'],
   cheese: ['hatchery', 'store', 'cistern'],
   idle: ['hatchery', 'store'],
 };
@@ -134,38 +138,52 @@ function eggs() {
   else if (f < 4) want = 'forager';
   else if (b < Math.ceil(SIM.dugCount(s) / 40) + 1) want = 'builder';
   else if (SIM.roomOf(s, 'nursery') && nu < 1) want = 'nurse';
-  else if (SIM.roomOf(s, 'barracks') && so < f * (strategy === 'military' ? 0.6 : 0.35) && c.protein >= 2) want = c.trophies.spider && c.protein >= 3 ? 'venom' : 'soldier';
+  else if (SIM.roomOf(s, 'barracks') && so < Math.min(f * (strategy === 'military' ? 0.8 : 0.6), 3 + Math.floor(s.t / 120)) && c.protein >= 2) want = c.trophies.spider && c.protein >= 3 ? 'venom' : 'soldier';
   else want = 'forager';
   if (want && SIM.queueEgg(s, want)) note(`egg ${want}`);
 }
 
 // ---------- expeditions: caterpillar hunt, spider, siege ----------
-let mission = null;
+let mission = null, treat = null;
 function missions() {
   const a = ant(); if (!a || P.inNest) return;
   const followers = mine().filter((o) => o.follow).length;
   if (mission === 'cat' && !s.cat) { SIM.release(s); mission = null; note('caterpillar hunt over'); return; }
   if (mission === 'siege' && (s.won || followers < 4)) { SIM.release(s); mission = null; note('siege ended' + (s.won ? ' (won)' : '')); return; }
+  if (mission === 'treat') {
+    const t = treat;
+    if (!t || t.amt <= 0) { SIM.release(s); mission = null; note('treat ' + (P.big ? 'lost' : 'done')); treat = null; return; }
+    if (P.big) { home(); return 'busy'; }
+    if (followers < SIM.FOODS[t.type].crew - 1) { SIM.release(s); mission = null; treat = null; note('treat crew too small'); return; }
+    if (a.tx === t.x && a.ty === t.y) { SIM.doAction(s); if (P.big) note(`lifted ${t.type} with crew ${SIM.crewAt(s)}`); return 'busy'; }
+    tapSurface((t.x + 0.5) * T, (t.y + 0.5) * T); return 'busy';
+  }
   if (mission === 'cat') { tapSurface(s.cat.x, s.cat.y); return 'busy'; }
   if (mission === 'siege') { tapSurface((w.rx + 0.5) * T, (w.ry + 0.5) * T); return 'busy'; }
   const nearHome = dist(a.tx, a.ty, w.ex, w.ey) < 3;
   if (strategy === 'idle') return;
+  // A treat worth hauling: gather a crew at the nest and go get it.
+  const tr = s.items.find((f) => f.amt > 0 && SIM.FOODS[f.type] && SIM.FOODS[f.type].crew && !f.carried);
+  if (tr && nearHome && c.cap - c.store >= 25 && !spiderNear((tr.x + 0.5) * T, (tr.y + 0.5) * T, 6)) {
+    const need = SIM.FOODS[tr.type].crew, got = SIM.recruit(s, need + 2);
+    if (got >= need - 1) { mission = 'treat'; treat = tr; note(`treat run: ${tr.type} with ${got}`); return 'busy'; } SIM.release(s);
+  }
   // Hunt the caterpillar for protein when there is a crew to call.
   if (s.cat && c.protein < 10 && SIM.antCount(s) >= 10 && nearHome && !spiderNear(s.cat.x, s.cat.y, 6)) {
     const got = SIM.recruit(s, 10);
     if (got >= 6) { mission = 'cat'; note(`caterpillar hunt with ${got}`); return 'busy'; } SIM.release(s);
   }
   // Siege: cheese goes as soon as six will follow; others wait for an army.
-  const ready = strategy === 'cheese' ? SIM.antCount(s) >= 8 : fighters() >= 8;
+  const ready = strategy === 'cheese' ? SIM.antCount(s) >= 8 : fighters() >= 10;
   if (s.rival.queenAlive && ready && nearHome) {
-    const got = SIM.recruit(s, 14);
+    const got = SIM.recruit(s, 20);
     if (got >= 6) { mission = 'siege'; note(`siege with ${got} (${fighters()} fighters)`); return 'busy'; } SIM.release(s);
   }
 }
 
 // ---------- main loop ----------
 const minutes = +minArg;
-let think = 0, nestThink = 0, lastPlayerAnt = null, playerDeaths = 0, minute = 0;
+let qmin = 100, think = 0, nestThink = 0, lastPlayerAnt = null, playerDeaths = 0, minute = 0;
 const deathsBefore = {};
 for (let i = 0; i < minutes * 60 * 20; i++) {
   const before = new Map(s.ants.filter((a) => !a.team && a.state !== 'dead').map((a) => [a, [a.state, a.caste, a.follow, a.goal]]));
@@ -198,19 +216,22 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
   if (c.kills.caterpillar) mile('caterpillar killed'); if (c.kills.spider) mile('spider killed');
   if (s.queen.level >= 1) mile('queen level 1'); if (s.queen.level >= 2) mile('queen level 2');
   if (s.won) mile('WON: rival queen dead');
+  if (s.lost) mile('LOST: queen killed by raiders');
+  qmin = Math.min(qmin, s.queen.hp);
+  if (s.queen.hp < 60) mile('queen below 60 hp');
   if (!c.queenAlive) { mile('LOST: queen dead'); }
   if (s.t >= (minute + 1) * 60) {
     minute++;
     if (minute % 5 === 0) {
       const st = SIM.stats(s);
-      note(`[min ${minute}] ants ${SIM.antCount(s)}/${SIM.queenCap(s.queen.level)} ${JSON.stringify(st.byCaste)} food ${Math.round(c.store)}/${c.cap} water ${Math.round(c.water)}/${c.waterCap} prot ${c.protein} grit ${c.grit} rooms ${s.nest.rooms.length - 1} dug ${SIM.dugCount(s)} rival ${st.rival} income ${st.income} upkeep ${st.upkeep} deaths ${JSON.stringify(c.deaths)}`);
+      note(`[min ${minute}] ants ${SIM.antCount(s)}/${SIM.queenCap(s.queen.level)} ${JSON.stringify(st.byCaste)} food ${Math.round(c.store)}/${c.cap} water ${Math.round(c.water)}/${c.waterCap} prot ${Math.round(c.protein)} grit ${c.grit} queen ${Math.round(s.queen.hp)} rooms ${s.nest.rooms.length - 1} dug ${SIM.dugCount(s)} rival ${st.rival} income ${st.income} upkeep ${st.upkeep} deaths ${JSON.stringify(c.deaths)}`);
     }
   }
-  if (s.won && strategy === 'cheese' && s.t > 60 * 3) break;
+  if ((s.won || s.lost) && s.t > 60 * 3) break;
 }
-const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /marching/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
+const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), queenMinHp: Math.round(qmin), lost: s.lost, won: s.won, miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /marching/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
 console.log(JSON.stringify(out, null, 1));
-console.log(log.filter((l) => /\[min|placed|upgraded|hunt|siege|died/.test(l)).join('\n'));
+console.log(log.filter((l) => /\[min|placed|upgraded|hunt|siege|died|treat|lifted/.test(l)).join('\n'));
 const uniq = [...new Set(msgs.map((m) => m.slice(m.indexOf(' ') + 1)))];
 console.log('--- distinct messages:', uniq.length); console.log(uniq.slice(0, 40).join('\n'));
 if (process.env.WHY) { const g = {}; for (const d of whyLog) { const k = d.st + ' home~' + Math.min(20, Math.floor(d.home / 5) * 5) + (d.passing ? ' passing' : ''); g[k] = (g[k] || 0) + 1; } console.log(g); }
