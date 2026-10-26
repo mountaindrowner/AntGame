@@ -6,7 +6,7 @@ export const LEGACY_SAVE_KEYS = ['underfoot-poc-v5'];
 
 export const RENDER = {
   pixelSize: 2.25, // CSS px per PS1 pixel
-  snapDivisor: 2, // vertex snap grid = framebuffer / this
+  snapDivisor: 1, // vertex snap grid = framebuffer / this (1 = per pixel; 2 wobbled too much)
   colorLevels: 31, // 15-bit colour: 32 levels per channel
   animFps: 10, // walk cycles step like a busy PS1 frame
 };

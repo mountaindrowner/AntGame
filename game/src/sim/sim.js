@@ -22,7 +22,7 @@ const ROOMS = {
   workshop:{name:'Workshop', cost:{food:25, grit:10}, work:25, w:5, h:4, desc:'Builders dig packed soil and build 2× faster'},
 };
 const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop'];
-const SOIL = [ {name:'soft', work:4}, {name:'packed', work:8}, {name:'clay', work:14} ];
+const SOIL = [ {name:'soft', work:6}, {name:'packed', work:12}, {name:'clay', work:20} ];
 const soilTier = y => y < 14 ? 0 : y < 28 ? 1 : 2;
 const QUEEN_UP = [ {food:40, protein:10}, {food:80, protein:20, grit:20}, {food:150, protein:40, grit:40} ];
 const queenCap = lvl => 20 + 20*lvl;
@@ -365,11 +365,13 @@ function tickColony(s, c, dt){
     const P = s.player;
     if (P.pending && !P.ant && !c.eggs.length && !c.eggQueue.length && s.queen.placed){ c.eggQueue.push('forager'); P.msg = 'Waiting for the next hatchling. A free Forager egg was laid.'; }
     const ws = roomOf(s, 'workshop') ? 2 : 1;
-    if (c.buildQueue.length){ const job = c.buildQueue[0]; const builders = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.goal === 'job' && Math.hypot(a.nx - job.x - 0.5, a.ny - job.y - 0.5) < 2.5).length;
+    // Construction only advances for builders standing at their own job.
+    const atWork = key => s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === key).length;
+    if (c.buildQueue.length){ const job = c.buildQueue[0]; const builders = Math.min(ROOM_CREW, atWork('j'));
       job.progress += builders*ws*dt; const R = ROOMS[job.room];
       if (job.progress >= R.work){ c.buildQueue.shift(); finishRoom(s, job); } }
-    for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; const b = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.goal==='fill' && Math.hypot(a.nx - o.x - 0.5, a.ny - o.y - 0.5) < 1.6).length; o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
-    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; const b = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.goal==='dig' && Math.hypot(a.nx - o.ax - 0.5, a.ny - o.ay - 0.5) < 1.2).length; o.progress += b*ws*dt; if (o.progress >= o.need){ dig(s, o.x, o.y); s.nest.digOrders.splice(i,1); } }
+    for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
+    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ dig(s, o.x, o.y); s.nest.digOrders.splice(i,1); } }
   }
 }
 function finishRoom(s, job){
@@ -412,17 +414,16 @@ function tickInside(s, a, dt){
   if (a.state === 'nest') return; // player inside: handled in stepPlayer
   const c = col; const q = s.queen;
   if (!q.placed){ a.rest = 1; return; }
-  // decide job
-  const reps = s.repairs.filter(r => nestField(s, r.ax, r.ay)[nidx(SHAFT,0)] < 9999); const rep = reps.length ? reps[a.id % reps.length] : null; const job = c.buildQueue[0];
-  const ords = s.nest.digOrders.filter(o => nestField(s, o.ax, o.ay)[nidx(SHAFT,0)] < 9999); const ord = ords.length ? ords[a.id % ords.length] : null;
-  if (a.caste === 'builder' && rep){ a.state = 'build'; a.goal = 'repair'; a.ntx = rep.ax; a.nty = rep.ay; }
-  else if (a.caste === 'builder' && ord && (!job || a.id % 2 === 0)){ a.state = 'build'; a.goal = 'dig'; a.ntx = ord.ax; a.nty = ord.ay; }
-  else if (a.caste === 'builder' && s.nest.fillOrders.length){ const fo = s.nest.fillOrders[a.id % s.nest.fillOrders.length]; const adj = isDugNeighbor(s, fo.x, fo.y) || [fo.x, fo.y]; a.state = 'build'; a.goal = 'fill'; a.ntx = adj[0]; a.nty = adj[1]; }
-  else if (a.caste === 'builder' && job){ a.state = 'build'; a.goal = 'job'; a.ntx = job.x; a.nty = job.y; }
-  else if (a.state === 'build'){ a.state = 'in'; a.goal = null; }
+  // decide job: builders claim one task and keep it until it is finished
+  if (a.caste === 'builder'){
+    if (!builderTaskValid(s, a)) pickBuilderTask(s, a);
+    if (a.task){ a.state = 'build'; a.ntx = a.taskCell[0]; a.nty = a.taskCell[1]; }
+    else if (a.state === 'build'){ a.state = 'in'; a.goal = null; }
+  }
   if (a.state === 'in' && a.goal == null){ const [tx,ty] = roomTarget(s, a); a.ntx = tx; a.nty = ty; a.goal = 'idle'; }
-  // walk inside
+  // walk inside; work only counts once the builder stands on its own cell
   const arrived = nestStep(s, a, C.speed*0.8, dt);
+  a.atWork = a.state === 'build' && arrived && Math.floor(a.nx) === a.ntx && Math.floor(a.ny) === a.nty;
   if (a.state !== 'in') return;
   if (!arrived || a.goal === 'exit') return;
   a.rest -= dt; if (a.rest > 0) return;
@@ -436,6 +437,57 @@ function tickInside(s, a, dt){
     // walk to exit over following ticks; mark pending
     a.exitTo = go; }
   else a.rest = 2 + Math.random()*3;
+}
+// ---------- builder tasks ----------
+// One builder per dig, fill or repair order, up to three on a room. A dig
+// can only be worked from a dug neighbour, so chained orders wait their turn.
+const ROOM_CREW = 3;
+function reachable(s, x, y){ return nestField(s, x, y)[nidx(SHAFT,0)] < 9999; }
+function taskSpot(s, a, task){
+  const k = task[0];
+  if (k === 'j'){
+    const job = s.colony.buildQueue[0]; if (!job) return null;
+    // Spread the crew along the room's floor.
+    const crew = s.ants.filter(b => b !== a && b.task === 'j').length;
+    const x = job.x0 + Math.min(job.w-1, 1 + crew*2 % job.w), y = job.y0 + job.h - 1;
+    return s.nest.cells[nidx(x,y)] && reachable(s, x, y) ? [x, y] : (reachable(s, job.x, job.y) ? [job.x, job.y] : null);
+  }
+  const [x, y] = task.slice(1).split(',').map(Number);
+  if (k === 'f') return s.nest.cells[nidx(x,y)] && reachable(s, x, y) ? (isDugNeighbor(s, x, y) || [x, y]) : null;
+  const adj = isDugNeighbor(s, x, y); // dig or repair: stand on a dug cell next to it
+  return adj && reachable(s, adj[0], adj[1]) ? adj : null;
+}
+function taskExists(s, task){
+  const k = task[0]; if (k === 'j') return s.colony.buildQueue.length > 0;
+  const [x, y] = task.slice(1).split(',').map(Number);
+  const list = k === 'd' ? s.nest.digOrders : k === 'f' ? s.nest.fillOrders : s.repairs;
+  return list.some(o => o.x === x && o.y === y);
+}
+function builderTaskValid(s, a){
+  if (!a.task || !taskExists(s, a.task)) return false;
+  const spot = taskSpot(s, a, a.task); if (!spot) return false;
+  if (a.task[0] !== 'j') a.taskCell = spot; // a neighbour may have opened up nearer
+  return true;
+}
+function pickBuilderTask(s, a){
+  a.task = null; a.taskCell = null;
+  const claimed = new Map();
+  for (const b of s.ants) if (b !== a && b.task) claimed.set(b.task, (claimed.get(b.task)||0) + 1);
+  const cx = Math.floor(a.nx), cy = Math.floor(a.ny);
+  const best = (list, prefix, goal) => {
+    let pick = null, pd = Infinity;
+    for (const o of list){ const t = prefix + o.x + ',' + o.y; if (claimed.get(t)) continue;
+      const spot = taskSpot(s, a, t); if (!spot) continue;
+      const d = Math.abs(spot[0]-cx) + Math.abs(spot[1]-cy); if (d < pd){ pd = d; pick = { t, spot, goal }; } }
+    return pick;
+  };
+  const job = s.colony.buildQueue[0];
+  const room = job && (claimed.get('j')||0) < ROOM_CREW ? (() => { const spot = taskSpot(s, a, 'j'); return spot ? { t: 'j', spot, goal: 'job' } : null; })() : null;
+  const dig = best(s.nest.digOrders, 'd', 'dig');
+  const pick = best(s.repairs, 'r', 'repair')
+    || (room && (!dig || a.id % 2 === 1) ? room : null)
+    || dig || best(s.nest.fillOrders, 'f', 'fill') || room;
+  if (pick){ a.task = pick.t; a.taskCell = pick.spot; a.goal = pick.goal; }
 }
 function nestStep(s, a, speed, dt){
   // move a.nx,a.ny (cell coords, center = +0.5) toward a.ntx,a.nty along the dug field
@@ -466,7 +518,7 @@ function tickMaintenance(s, dt){
   c.wearT = (c.wearT || 0) + dt; if (c.wearT < 1) return; c.wearT = 0;
   const need = Math.ceil(dugCount(s)/40), b = buildersInside(s);
   if (b < need && Math.random() < 0.0045 * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. Every 40 dug cells need a builder inside to keep them shored up.'); }
-  for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i]; const n = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.goal==='repair' && Math.hypot(a.nx - rep.ax - 0.5, a.ny - rep.ay - 0.5) < 1.2).length; rep.progress += n; if (rep.progress >= 8){ dig(s, rep.x, rep.y); s.repairs.splice(i,1); } }
+  for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i]; const n = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y).length; rep.progress += n; if (rep.progress >= 8){ dig(s, rep.x, rep.y); s.repairs.splice(i,1); } }
 }
 function collapse(s, lowest){
   const n = s.nest; const cands = []; let maxy = 0;

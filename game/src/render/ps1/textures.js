@@ -80,7 +80,7 @@ export const PALETTE = {
     ['#4a3426', '#5e4434', '#6e5440', '#7e644c'], // packed
     ['#5a2a1c', '#7a3e2a', '#8a4a30', '#9a5a3a'], // clay
   ],
-  back: ['#5a3e28', '#64462e', '#6e4e34'], // lit nest wall: dark ants read against it
+  back: ['#3e2a1a', '#46301e', '#4e3624'], // nest wall: darker than the soil face so tunnels read; dark ants still show
   grass: ['#2e4a1a', '#3a5e22', '#4f7a2e', '#5e8a34'],
   dirt: ['#5e4026', '#6e4c2e', '#7e5a36', '#8a6a3c'],
   rock: ['#5a554c', '#6b655c', '#857e73', '#9a9488'],

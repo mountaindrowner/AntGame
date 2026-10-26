@@ -13,9 +13,68 @@ import { PROPS } from '../models/props.js';
 import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
 import { MotionTracker, idlePose } from '../motion.js';
 import { antColor, hudShift } from './surfaceView.js';
+import { shapesFromField } from '../geometry/contour.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS } = SIM;
 export const DEPTH = 22;
+const SOIL_STEP = 2; // px between field samples when tracing tunnel outlines
+const ROUND = 5; // corner radius of a dug cell
+const BLEND = 8; // how softly neighbouring cells merge
+
+// Signed distance to the dug space (negative inside), in nest px with y down.
+// Each dug cell is a rounded box; a brick being dug is a box that grows in
+// from the side its builder works from. Boxes merge with a smooth minimum,
+// which rounds inside corners as well as outside ones.
+function tunnelBoxes(s) {
+  const cells = s.nest.cells;
+  const boxes = Array.from({ length: NW * NH }, () => []);
+  for (let y = 0; y < NH; y++) for (let x = 0; x < NW; x++) {
+    if (cells[y * NW + x]) boxes[y * NW + x].push([(x + 0.5) * T, (y + 0.5) * T, T / 2, T / 2]);
+  }
+  // The shaft breaks through the surface.
+  boxes[SHAFT].push([(SHAFT + 0.5) * T, -T / 2, T / 2, T]);
+  for (const o of s.nest.digOrders) {
+    const q = Math.floor(Math.min(0.999, o.progress / o.need) * 4) / 4;
+    if (q <= 0) continue;
+    let ax = o.ax, ay = o.ay;
+    if (!(cells[ay * NW + ax] > 0)) {
+      const n = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dy]) => [o.x + dx, o.y + dy]).find(([x, y]) => x >= 0 && y >= 0 && x < NW && y < NH && cells[y * NW + x]);
+      if (!n) continue;
+      [ax, ay] = n;
+    }
+    const dx = o.x - ax, dy = o.y - ay; // direction the dig advances
+    const len = T * q;
+    const cx = (o.x + 0.5) * T - dx * (T - len) / 2, cy = (o.y + 0.5) * T - dy * (T - len) / 2;
+    boxes[o.y * NW + o.x].push([cx, cy, dx ? len / 2 : T / 2 - 1, dy ? len / 2 : T / 2 - 1]);
+  }
+  return boxes.flat();
+}
+
+// Sample the tunnel field on a grid (x0, y0, step, nx × ny). Each box only
+// touches the samples near it, so cost scales with the dug area, not the nest.
+export function tunnelGrid(s, x0, y0, step, nx, ny) {
+  const far = T * 2;
+  const grid = new Float32Array(nx * ny).fill(far);
+  const reach = ROUND + BLEND;
+  for (const b of tunnelBoxes(s)) {
+    const r = Math.min(ROUND, b[2], b[3]);
+    const i0 = Math.max(0, Math.floor((b[0] - b[2] - reach - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((b[0] + b[2] + reach - x0) / step));
+    const j0 = Math.max(0, Math.floor((b[1] - b[3] - reach - y0) / step)), j1 = Math.min(ny - 1, Math.ceil((b[1] + b[3] + reach - y0) / step));
+    for (let j = j0; j <= j1; j++) {
+      const qy = Math.abs(y0 + j * step - b[1]) - b[3] + r;
+      for (let i = i0; i <= i1; i++) {
+        const qx = Math.abs(x0 + i * step - b[0]) - b[2] + r;
+        const ox = qx > 0 ? qx : 0, oy = qy > 0 ? qy : 0;
+        const d = Math.min(Math.max(qx, qy), 0) + Math.sqrt(ox * ox + oy * oy) - r;
+        const k = j * nx + i, a = grid[k];
+        // Smooth minimum: merges neighbouring cells and rounds inside corners.
+        const h = Math.max(BLEND - Math.abs(a - d), 0) / BLEND;
+        grid[k] = Math.min(a, d) - h * h * BLEND * 0.25;
+      }
+    }
+  }
+  return grid;
+}
 const PROP_KEY = new Map(Object.entries(PROPS).map(([k, g]) => [g, k]));
 
 const tmpV = new THREE.Vector3();
@@ -42,7 +101,7 @@ export class NestView {
     this.scene.add(this.hemi, this.key);
 
     this.soilMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(3 + i, ramp, { size: 32, stones: [3, 6, 2][i], repeat: [1 / 48, 1 / 48] }) }));
-    this.sideMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(13 + i, ramp.map((c) => shade(c, 0.7)), { size: 16, repeat: [1 / 24, 1 / 24] }) }));
+    this.sideMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(13 + i, ramp.map((c) => shade(c, 0.5)), { size: 16, repeat: [1 / 24, 1 / 24] }) }));
     this.soil = new THREE.Group();
     this.scene.add(this.soil);
 
@@ -93,28 +152,41 @@ export class NestView {
     this.labels = [];
   }
 
-  // Soil blocks: a front face per dirt cell, side walls where a dug cell is next door.
+  // What the soil mesh depends on: the dug cells, plus how far each dig order
+  // has been chipped (in quarters), so tunnels visibly grow as builders work.
+  _soilSignature(s) {
+    let sig = String(s.nest.ver);
+    for (const o of s.nest.digOrders) sig += ';' + o.x + ',' + o.y + ',' + Math.floor(Math.min(0.999, o.progress / o.need) * 4);
+    return sig;
+  }
+
+  // Rounded tunnels: a smooth distance field around the dug cells (and the
+  // part-dug bricks) is traced into outlines, one per soil band, and
+  // extruded back to the nest wall. The grid underneath is unchanged.
   _rebuildSoil(s) {
     this.soil.children.forEach((m) => m.geometry.dispose());
     this.soil.clear();
-    const cells = s.nest.cells;
-    const fronts = [[], [], []], sides = [[], [], []];
-    const dug = (x, y) => x >= 0 && y >= 0 && x < NW && y < NH && cells[y * NW + x] > 0;
-    const quad = (arr, a, b, c, d, n) => arr.push(a, b, c, d, n);
-    for (let y = 0; y < NH; y++) for (let x = 0; x < NW; x++) {
-      if (cells[y * NW + x]) continue;
-      const tier = SIM.soilTier(y);
-      const x0 = x * T, x1 = x0 + T, y0 = -y * T, y1 = y0 - T;
-      quad(fronts[tier], [x0, y1, 0], [x1, y1, 0], [x1, y0, 0], [x0, y0, 0], [0, 0, 1]);
-      if (dug(x - 1, y)) quad(sides[tier], [x0, y1, -DEPTH], [x0, y1, 0], [x0, y0, 0], [x0, y0, -DEPTH], [-1, 0, 0]);
-      if (dug(x + 1, y)) quad(sides[tier], [x1, y1, 0], [x1, y1, -DEPTH], [x1, y0, -DEPTH], [x1, y0, 0], [1, 0, 0]);
-      if (dug(x, y - 1)) quad(sides[tier], [x0, y0, 0], [x1, y0, 0], [x1, y0, -DEPTH], [x0, y0, -DEPTH], [0, 1, 0]);
-      if (dug(x, y + 1)) quad(sides[tier], [x0, y1, -DEPTH], [x1, y1, -DEPTH], [x1, y1, 0], [x0, y1, 0], [0, -1, 0]);
+    const W = NW * T, H = NH * T;
+    // Sample the soil field once on the tracing grid; every band reads it.
+    const x0 = -4, y0 = -4, nx = Math.ceil((W + 8) / SOIL_STEP) + 1, ny = Math.ceil((H + 8) / SOIL_STEP) + 1;
+    const grid = tunnelGrid(s, x0, y0, SOIL_STEP, nx, ny);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const x = x0 + i * SOIL_STEP, y = y0 + j * SOIL_STEP, k = j * nx + i;
+      grid[k] = Math.max(-x, x - W, -y, y - H, -grid[k]);
     }
-    for (let t = 0; t < 3; t++) {
-      if (fronts[t].length) this.soil.add(new THREE.Mesh(quadsGeometry(fronts[t]), this.soilMats[t]));
-      if (sides[t].length) this.soil.add(new THREE.Mesh(quadsGeometry(sides[t]), this.sideMats[t]));
-    }
+    const soil = (x, y) => grid[Math.round((y - y0) / SOIL_STEP) * nx + Math.round((x - x0) / SOIL_STEP)];
+    const bands = [[-1e9, 14 * T], [14 * T, 28 * T], [28 * T, 1e9]];
+    bands.forEach(([top, bot], tier) => {
+      const f = (x, y) => Math.max(soil(x, y), top - y, y - bot);
+      // Trace only this band's rows (snapped to the shared grid).
+      const by0 = Math.max(y0, y0 + Math.floor((top - 6 - y0) / SOIL_STEP) * SOIL_STEP);
+      const by1 = Math.min(y0 + (ny - 1) * SOIL_STEP, y0 + Math.ceil((bot + 6 - y0) / SOIL_STEP) * SOIL_STEP);
+      const shapes = shapesFromField(f, [x0, by0, x0 + (nx - 1) * SOIL_STEP, by1], SOIL_STEP, 0.35, (x, y) => [x, -y]);
+      if (!shapes.length) return;
+      const g = new THREE.ExtrudeGeometry(shapes, { depth: DEPTH, bevelEnabled: false, steps: 1, curveSegments: 1 });
+      g.translate(0, 0, -DEPTH);
+      this.soil.add(new THREE.Mesh(g, [this.soilMats[tier], this.sideMats[tier]]));
+    });
   }
 
   setState(s) {
@@ -201,7 +273,8 @@ export class NestView {
   update(app, t, aspect) {
     const s = app.s;
     if (s !== this.state) this.setState(s);
-    if (s.nest.ver !== this.ver) { this.ver = s.nest.ver; this._rebuildSoil(s); }
+    const sig = this._soilSignature(s);
+    if (sig !== this.ver) { this.ver = sig; this._rebuildSoil(s); }
     const n = s.nest, q = s.queen, col = s.colony, P = s.player;
     const frameT = Math.floor(t * RENDER.animFps);
     this.labels = [];
@@ -233,13 +306,8 @@ export class NestView {
         if (adj) this._fill(x * T + T / 2 - 0.8, y * T + T / 2 - 0.8, 1.6, 1.6, '#c8a87c', 0.4);
       }
     }
-    // Dig orders chip away a quarter at a time.
-    const qd = [[0, 0], [1, 1], [1, 0], [0, 1]];
-    for (const o of n.digOrders) {
-      const k = Math.floor(Math.min(0.999, o.progress / o.need) * 4);
-      for (let i = 0; i < k; i++) this._fill(o.x * T + qd[i][0] * T / 2, o.y * T + qd[i][1] * T / 2, T / 2, T / 2, '#120a04', 0.3);
-      this._outline(o.x * T + 2, o.y * T + 2, T - 4, T - 4, '#ffdc78');
-    }
+    // Dig orders: the tunnel itself grows into the cell (see tunnelBoxes).
+    for (const o of n.digOrders) this._outline(o.x * T + 2, o.y * T + 2, T - 4, T - 4, '#ffdc78');
     for (const o of n.fillOrders) {
       const k = Math.min(1, o.progress / o.need);
       this._fill(o.x * T + 2, o.y * T + 2, T - 4, T - 4, k > 0.5 ? '#8a6040' : '#5a3e28', -DEPTH * 0.2);
@@ -364,29 +432,4 @@ export class NestView {
 function shade(hex, k) {
   const c = new THREE.Color(hex).multiplyScalar(k);
   return '#' + c.getHexString();
-}
-
-// Quads given as [a, b, c, d, normal] in sequence → one non-indexed geometry
-// with world-space UVs (so textures tile across cells).
-function quadsGeometry(list) {
-  const nq = list.length / 5;
-  const pos = new Float32Array(nq * 18), nor = new Float32Array(nq * 18), uv = new Float32Array(nq * 12);
-  for (let i = 0; i < nq; i++) {
-    const [a, b, c, d, nn] = list.slice(i * 5, i * 5 + 5);
-    const tri = [a, b, c, a, c, d];
-    tri.forEach((p, k) => {
-      pos.set(p, i * 18 + k * 3);
-      nor.set(nn, i * 18 + k * 3);
-      // Project onto the plane the face lies in for UVs.
-      const u = nn[0] !== 0 ? p[2] : p[0];
-      const v = nn[1] !== 0 ? p[2] : p[1];
-      uv[i * 12 + k * 2] = u;
-      uv[i * 12 + k * 2 + 1] = v;
-    });
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
-  g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  return g;
 }

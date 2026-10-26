@@ -24,7 +24,7 @@ game/
 │   ├── main.js             boot, shared app state, fixed-step loop, render loop, autosave
 │   ├── config.js           tunables: save key, PS1 pixel size, cameras, creature scale, colours
 │   ├── sim/
-│   │   └── sim.js          the simulation (build 6, unchanged apart from its export). No DOM.
+│   │   └── sim.js          the simulation (build 6, plus build 7.2's builder rules). No DOM.
 │   ├── game/
 │   │   └── save.js         localStorage save/load (reads build 6 v5 saves)
 │   ├── render/
@@ -37,10 +37,12 @@ game/
 │   │   │   ├── crowd.js      instanced batches: hundreds of ants in a few draw calls
 │   │   │   ├── props.js      items, eggs and furniture primitives
 │   │   │   └── roomDecor.js  each room's wall pattern and live decorations
+│   │   ├── geometry/
+│   │   │   └── contour.js    marching squares: a field → smooth outlines → THREE.Shapes
 │   │   ├── motion.js         moving vs still creatures (idle breathing, scraping, biting)
 │   │   └── views/
 │   │       ├── surfaceView.js  the yard: tilted top-down, scent overlay, weather
-│   │       └── nestView.js     the cutaway: soil rebuilt from nest cells, rooms, orders, queen
+│   │       └── nestView.js     the cutaway: rounded tunnels traced from nest cells, rooms, orders, queen
 │   ├── ui/
 │   │   ├── ui.js           HUD, hints, queen and build sheets, explainers, intro, buttons
 │   │   ├── copy.js         every player-facing string (verbatim from build 6)
@@ -48,7 +50,7 @@ game/
 │   │   └── ui.css
 │   └── input/
 │       └── pointer.js      tap, hold to walk, pinch, drag; raycasts into the active view
-├── tests/sim.test.js       node:test checks on the sim
+├── tests/                  node:test checks on the sim (sim.test.js, builders.test.js)
 └── scripts/e2e.mjs         browser playthrough with screenshots
 ```
 
@@ -61,25 +63,25 @@ game/
 ## How the PS1 look is made
 
 1. **Low resolution.** The canvas is the framebuffer, at the CSS size divided by `pixelSize` (2.25 by default, about 173×375 on a phone). The browser upscales it with `image-rendering: pixelated`. This is the look and also the cheapest thing a phone can draw.
-2. **Vertex snapping.** Every material rounds clip-space positions to a grid half the framebuffer's resolution, so polygons wobble as the camera moves.
+2. **Vertex snapping.** Every material rounds clip-space positions to the framebuffer's pixel grid (`snapDivisor` 1), so polygons wobble as the camera moves.
 3. **Affine textures.** UVs interpolate without perspective correction, so 16–32 px textures swim across big faces.
 4. **15-bit colour.** One post pass converts to sRGB and quantises to 32 levels per channel with a 4×4 Bayer dither.
 5. **Stepped animation.** Walk cycles have three baked frames advanced at 10 fps; the camera and simulation stay smooth.
 
 ## Differences from build 6
 
-- **Rendering:** Canvas 2D is replaced by the 3D PS1 renderer. The surface is a three-quarter top-down view; the nest is a side cutaway with real tunnel depth. The sim, controls, sheets, intro and explainers are the same.
+- **Rendering:** Canvas 2D is replaced by the 3D PS1 renderer. The surface is a three-quarter top-down view; the nest is a side cutaway with real tunnel depth. The controls, sheets, intro and explainers are the same.
 - **No browser dialogs:** `confirm()` dialogs (Reset, Remove room) became in-page sheets, because some hosts block browser dialogs.
 - **Copy:** two stale hints that still mentioned build 4's fixed room slots now point to the Build catalog.
 - **Layout:** the HUD hint no longer runs under the right-hand buttons.
 - **Desktop:** the mouse wheel zooms.
+- **Builders (sim):** each builder works one job, only once it is standing there; one builder per brick, up to three per room; soil takes 6/12/20 builder-seconds.
+- **Tunnels:** drawn as smooth rounded shapes over the same cell grid; a brick being dug visibly erodes.
 - **Saves:** the save key is now `underfoot-v6`; v5 saves from build 6 still load.
 
 ## Not done yet
 
-- A CRT filter option, which the art-direction mockups already include.
 - A PS1-styled HUD (font and panels); the HUD is still build 6's.
 - Audio.
-- Organic rounded tunnels.
 - Level of detail for 1,000+ ants.
 - Frame-rate numbers from a real phone. The `+200` button is the test, and the fps counter is in the HUD.
