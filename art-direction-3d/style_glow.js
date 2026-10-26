@@ -303,9 +303,12 @@
 
     const rig = U3.makeCamera({ fov: 30, pitch: 0.12, yaw: 0.1, zoom: 1.04, tz: -30 });
 
-    const composer = new T.EffectComposer(env.renderer);
+    // Everything before the final sRGB pass stays in half float: in 8 bits the
+    // faint outer bloom quantises into visible blocks once gamma lifts it.
+    const composer = new T.EffectComposer(env.renderer, new T.WebGLRenderTarget(16, 16, { type: T.HalfFloatType }));
     composer.addPass(new T.RenderPass(root, rig.camera));
-    const bloom = new T.UnrealBloomPass(new T.Vector2(256, 256), 1.25, 0.2, 0.42);
+    const bloom = new T.UnrealBloomPass(new T.Vector2(256, 256), 1.2, 0.45, 0.4);
+    [bloom.renderTargetBright].concat(bloom.renderTargetsHorizontal, bloom.renderTargetsVertical).forEach((t) => { t.texture.type = T.HalfFloatType; });
     composer.addPass(bloom);
     composer.addPass(new T.ShaderPass(FinalShader));
 
