@@ -2,6 +2,29 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 26: one continuous backyard, and a sketch of the whole yard (build 8.1)
+
+Mark: the areas are "patchy": stark lines between them, left to right and top to bottom. It should look like a natural backyard, one continuous space. He also asked for a flat 2D sketch of the whole yard, with today's map as about 10% of it, sketched but not built.
+
+- **Ground is one continuous yard.** Before, each 40×40 area painted its own ground, so neighbours met at a seam. Now:
+  - The whole yard shares one grass-and-dirt base.
+  - Each feature blends in around its own landmarks with soft, noisy edges: mulch around flowers and strawberries, sawdust around logs, mud around the tap, hose and puddles, dark soil around the compost, bare dirt around our entrance and the rock.
+  - The Lawn's mowed stripes fade toward its edges.
+  - Only man-made edges are sharp: the patio slabs, the sandbox frame, the blanket.
+  - Grass tufts follow the same blend instead of area lines.
+
+  The sim's areas are unchanged: they still decide food, hazards and names.
+- **The whole-yard sketch** is a Design canvas, "Underfoot Yard Map" (claude.ai). Every region is a separate shape, so it can be dragged around. Today's map is the dashed square, about 120×120 tiles of a roughly 400×380-tile yard.
+
+  The new regions:
+  - **Along the house:** the porch and back steps, and the grill and table.
+  - **West side:** the side yard and gate, the trash cans, the vegetable garden.
+  - **South-west:** the garden shed and the wild corner.
+  - **South:** the great lawn, with the swing set, kiddie pool, birdbath and bird feeder.
+  - **East and south-east:** the rock garden, the hedge row, the Oak, the leaf pile, the low wet strip, and the fire ant mound in the far corner.
+
+  Rival colonies follow the handoff's ladder: pavement ants (Patio, built), odorous house ants (trash cans), Argentine ants (vegetable garden), carpenter ants (the Oak), and fire ants (the mound, the finale). Not built; for Mark to rework.
+
 ## Oct 26: the fight to survive, and the 3×3 yard (build 8)
 
 Mark: "We have to add difficulty… depth. The colony is striving to survive. It's a fight. And the player choices are the things that actively fight that off." He also asked for the eight areas around our start, all on one map, with ours in the middle. The direction is written up in `docs/DEPTH.md`, the yard in `docs/YARD.md`.

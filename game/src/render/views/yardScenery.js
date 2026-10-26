@@ -3,7 +3,7 @@
 // that tower over the ants, the yard's walls, rocks and grass.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { AREAS, AREA, GRID } from '../../sim/yard.js';
+import { AREA } from '../../sim/yard.js';
 import { psx } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 
@@ -25,45 +25,77 @@ const RAMPS = {
 };
 const pick = (ramp, v) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(v * ramp.length)))];
 
-function groundTexture(w) {
-  const S = 8, cw = w.W * S, ch = w.H * S;
+// One continuous backyard: a grass-and-dirt base everywhere, with each
+// feature's ground blended in around its landmarks (mulch around flowers,
+// sawdust around logs, mud around the tap and puddles, dark soil around the
+// compost). Only man-made edges are sharp: patio slabs, sandbox, blanket.
+const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+function featureFields(w) {
+  const W = w.W, H = w.H, n = noise2(23);
+  const field = () => new Float32Array(W * H);
+  const F = { mulch: field(), bark: field(), mud: field(), compost: field(), sand: field(), slab: field(), stripe: field(), dirt: field() };
+  const pts = (kind) => w.landmarks.filter((l) => l.kind === kind);
+  const flowers = [...pts('flower').map((l) => [l.x + 0.5, l.y + 0.5]), ...pts('strawberry').map((l) => [l.x0 + 1, l.y0 + 1]), ...pts('web').map((l) => [l.x + 0.5, l.y + 2])];
+  const logs = pts('log'), heap = pts('heap')[0], sb = w.sandbox;
+  const wet = [...w.puddles.map(([x, y]) => [x + 0.5, y + 0.5, 3]), ...pts('hose').map((l) => [l.x, l.y, l.r]), ...pts('spigot').map((l) => [l.x0 + l.w, l.y0 + l.h / 2, 2])];
+  const rect = (l, x, y) => Math.hypot(Math.max(l.x0 - x, 0, x - (l.x0 + l.w)), Math.max(l.y0 - y, 0, y - (l.y0 + l.h)));
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, cx = x + 0.5, cy = y + 0.5, j = n(cx * 0.15, cy * 0.15) * 2.5; // wobble every edge
+    let d = 1e9; for (const [px, py] of flowers) d = Math.min(d, Math.hypot(cx - px, cy - py));
+    F.mulch[i] = smooth(8, 3, d + j);
+    d = 1e9; for (const l of logs) d = Math.min(d, rect(l, cx, cy));
+    F.bark[i] = smooth(5, 0.5, d + j * 0.6);
+    d = 1e9; for (const [px, py, r] of wet) d = Math.min(d, Math.hypot(cx - px, cy - py) - r);
+    F.mud[i] = smooth(7, 1, d + j);
+    if (heap) F.compost[i] = smooth(9, 1, Math.hypot(cx - heap.x, cy - heap.y) - heap.r + j);
+    // Sand stays inside the frame, with a little kicked out through the gaps.
+    const inBox = cx > sb.x0 + 1 && cx < sb.x1 && cy > sb.y0 + 1 && cy < sb.y1;
+    F.sand[i] = inBox ? 1 : smooth(2.5, 0, rect({ x0: sb.x0, y0: sb.y0, w: sb.x1 - sb.x0 + 1, h: sb.y1 - sb.y0 + 1 }, cx, cy) + j * 0.4) * 0.35;
+    // Patio slabs: a laid rectangle around the rival's crack.
+    F.slab[i] = cx > 2 && cx < 35 && cy > 1 && cy < 33 ? 1 : 0;
+    // The Lawn's mowed stripes fade out toward its edges.
+    const edge = Math.min(cx - 40, 80 - cx, cy - 80, 120 - cy);
+    F.stripe[i] = smooth(0, 8, edge + j);
+    // Bare, trodden dirt around our entrance and the big rock.
+    F.dirt[i] = Math.max(smooth(9, 3, Math.hypot(cx - w.ex - 0.5, cy - w.ey - 0.5) + j), smooth(4, 0.5, rect({ x0: 54, y0: 50, w: 13, h: 6 }, cx, cy) + j));
+  }
+  return F;
+}
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+function groundTexture(w, F) {
+  const S = 8, cw = w.W * S, ch = w.H * S, W = w.W, H = w.H;
   const n1 = noise2(5), n2 = noise2(11), r = rng(3);
   const bl = w.blanket;
+  // Bilinear sample of a tile field at a texel.
+  const at = (f, tx, ty) => {
+    const fx = Math.max(0, Math.min(W - 1.001, tx - 0.5)), fy = Math.max(0, Math.min(H - 1.001, ty - 0.5));
+    const x0 = Math.floor(fx), y0 = Math.floor(fy), u = fx - x0, v = fy - y0, i = y0 * W + x0;
+    return (f[i] * (1 - u) + f[i + 1] * u) * (1 - v) + (f[i + W] * (1 - u) + f[i + W + 1] * u) * v;
+  };
   return canvasTexture(cw, ch, (c) => {
     const img = c.createImageData(cw, ch), d = img.data;
     for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
-      const tx = x / S, ty = y / S, sp = (r() - 0.5) * 0.4;
-      // Area edges wander a little so the yard doesn't look like a grid.
-      const wx = tx + n1(tx * 0.12, ty * 0.12) * 2.5, wy = ty + n1(ty * 0.12 + 40, tx * 0.12) * 2.5;
-      const ai = Math.max(0, Math.min(GRID - 1, Math.floor(wy / AREA))) * GRID + Math.max(0, Math.min(GRID - 1, Math.floor(wx / AREA)));
-      const g = AREAS[ai].ground, nv = n2(tx * 0.2, ty * 0.2);
-      let p;
-      if (g === 'home' || (g === 'picnic' && !(tx >= bl.x0 && tx < bl.x0 + bl.w && ty >= bl.y0 && ty < bl.y0 + bl.h))) {
-        const gv = n1(tx * 0.18, ty * 0.18) + n1(tx * 0.6, ty * 0.6) * 0.35;
-        p = pick(gv > 0.12 ? RAMPS.grass : RAMPS.dirt, sp + gv * 0.6 + 0.5);
-      } else if (g === 'picnic') {
-        const check = (Math.floor(tx / 2) + Math.floor(ty / 2)) % 2, weave = (x % 4 === 0 || y % 4 === 0) ? 0.9 : 1;
-        p = (check ? [184, 50, 58] : [236, 228, 216]).map((v) => v * weave * (1 + sp * 0.2));
-        if (Math.abs(tx - bl.x0) < 0.3 || Math.abs(tx - bl.x0 - bl.w) < 0.3 || Math.abs(ty - bl.y0) < 0.3 || Math.abs(ty - bl.y0 - bl.h) < 0.3) p = [150, 40, 44];
-      } else if (g === 'lawn') {
-        const stripe = Math.floor(tx / 4) % 2 ? 0.12 : -0.05;
-        p = pick(RAMPS.lawn, 0.5 + sp + nv * 0.25 + stripe);
-        if (n2(tx * 0.5 + 9, ty * 0.5) > 0.55) p = r() < 0.03 ? [236, 236, 228] : [74, 140, 58];
-      } else if (g === 'slab') {
+      const tx = x / S, ty = y / S, sp = (r() - 0.5) * 0.4, nv = n2(tx * 0.2, ty * 0.2);
+      // Base: grass with patches of dirt, the same everywhere.
+      const gv = n1(tx * 0.12, ty * 0.12) + n1(tx * 0.5, ty * 0.5) * 0.3 + 0.32 - at(F.dirt, tx, ty) * 0.7;
+      let p = pick(gv > 0.12 ? RAMPS.grass : RAMPS.dirt, sp + gv * 0.6 + 0.5);
+      let k = at(F.stripe, tx, ty);
+      if (k > 0) { p = mix(p, pick(RAMPS.lawn, 0.5 + sp + nv * 0.25 + (Math.floor(tx / 4) % 2 ? 0.12 : -0.05)), k * 0.85); if (k > 0.5 && n2(tx * 0.5 + 9, ty * 0.5) > 0.55) p = r() < 0.03 ? [236, 236, 228] : [74, 140, 58]; }
+      if ((k = at(F.mulch, tx, ty)) > 0) p = mix(p, r() < 0.02 ? [138, 90, 58] : pick(RAMPS.mulch, 0.5 + sp + nv * 0.3), k);
+      if ((k = at(F.bark, tx, ty)) > 0) p = mix(p, r() < 0.02 ? [196, 168, 120] : pick(RAMPS.bark, 0.5 + sp + nv * 0.3), k);
+      if ((k = at(F.mud, tx, ty)) > 0) { const m = pick(RAMPS.mud, 0.5 + sp + nv * 0.4); p = mix(p, nv > 0.45 ? m.map((v) => v * 0.8) : m, k); }
+      if ((k = at(F.compost, tx, ty)) > 0) { const q = r(); p = mix(p, q < 0.012 ? [200, 104, 42] : q < 0.022 ? [106, 138, 42] : q < 0.028 ? [200, 168, 58] : pick(RAMPS.compost, 0.5 + sp + nv * 0.3), k); }
+      if ((k = at(F.sand, tx, ty)) > 0) p = mix(p, pick(RAMPS.sand, 0.5 + sp * 0.8 + Math.sin(ty * 1.3 + nv * 4) * 0.12), k);
+      if (at(F.slab, tx, ty) > 0.5) {
         const sx = Math.floor(tx / 6), sy = Math.floor(ty / 6), tint = (((sx * 7 + sy * 13) % 5) - 2) * 0.04;
         p = pick(RAMPS.slab, 0.5 + sp * 0.6 + tint);
         if (tx % 6 < 0.25 || ty % 6 < 0.25) p = [74, 70, 64];
-      } else if (g === 'sand') {
-        p = pick(RAMPS.sand, 0.5 + sp * 0.8 + Math.sin(ty * 1.3 + nv * 4) * 0.12);
-      } else if (g === 'mud') {
-        p = pick(RAMPS.mud, 0.5 + sp + nv * 0.4);
-        if (nv > 0.45) p = p.map((v) => v * 0.8); // wet, darker mud
-      } else if (g === 'compost') {
-        p = pick(RAMPS.compost, 0.5 + sp + nv * 0.3);
-        const k = r(); if (k < 0.012) p = [200, 104, 42]; else if (k < 0.022) p = [106, 138, 42]; else if (k < 0.028) p = [200, 168, 58];
-      } else {
-        p = pick(RAMPS[g === 'mulch' ? 'mulch' : 'bark'], 0.5 + sp + nv * 0.3);
-        if (r() < 0.02) p = g === 'mulch' ? [138, 90, 58] : [196, 168, 120];
+      }
+      if (tx >= bl.x0 && tx < bl.x0 + bl.w && ty >= bl.y0 && ty < bl.y0 + bl.h) {
+        const check = (Math.floor(tx / 2) + Math.floor(ty / 2)) % 2, weave = (x % 4 === 0 || y % 4 === 0) ? 0.9 : 1;
+        p = (check ? [184, 50, 58] : [236, 228, 216]).map((v) => v * weave * (1 + sp * 0.2));
+        if (Math.abs(tx - bl.x0) < 0.3 || Math.abs(tx - bl.x0 - bl.w) < 0.3 || Math.abs(ty - bl.y0) < 0.3 || Math.abs(ty - bl.y0 - bl.h) < 0.3) p = [150, 40, 44];
       }
       const o = (y * cw + x) * 4;
       d[o] = p[0]; d[o + 1] = p[1]; d[o + 2] = p[2]; d[o + 3] = 255;
@@ -120,7 +152,8 @@ export function buildYardScenery(w) {
   const r = rng(17);
 
   // Ground: one quad per tile so the vertex snapping has something to wobble.
-  g.add(new THREE.Mesh(new THREE.PlaneGeometry(gw, gh, W, H).rotateX(-Math.PI / 2).translate(gw / 2, 0, gh / 2), psx({ map: groundTexture(w) })));
+  const F = featureFields(w);
+  g.add(new THREE.Mesh(new THREE.PlaneGeometry(gw, gh, W, H).rotateX(-Math.PI / 2).translate(gw / 2, 0, gh / 2), psx({ map: groundTexture(w, F) })));
 
   // Tiles that belong to a landmark, so plain rocks aren't drawn under them.
   const own = new Uint8Array(W * H);
@@ -293,12 +326,14 @@ export function buildYardScenery(w) {
     const x = 1 + r() * (W - 2), y = 1 + r() * (H - 2), ti = Math.floor(y) * W + Math.floor(x);
     if (w.blocked[ti] || w.pit[ti]) continue;
     if (Math.hypot(x - w.ex, y - w.ey) < 3 || Math.hypot(x - w.rx, y - w.ry) < 3) continue;
-    const ground = AREAS[w.area[ti]].ground;
-    if (ground === 'lawn') { if (r() < 0.75) clump(x, y, 14 + r() * 16, 8); continue; }
-    if (ground === 'home' || ground === 'picnic' || ground === 'mulch') {
-      if (ground === 'picnic' && x >= w.blanket.x0 && x < w.blanket.x0 + w.blanket.w && y >= w.blanket.y0 && y < w.blanket.y0 + w.blanket.h) continue;
-      if (gn(x * 0.18, y * 0.18) > 0.05 && r() < 0.25) clump(x, y, 6 + r() * 7, 7);
-    }
+    // Tall and thick where the Lawn's stripes are, sparse on open ground,
+    // none on beds, sawdust, mud, compost, sand or slabs.
+    const bare = Math.max(F.mulch[ti], F.bark[ti], F.mud[ti], F.compost[ti], F.sand[ti], F.slab[ti], F.dirt[ti]);
+    if (bare > 0.5) continue;
+    if (x >= w.blanket.x0 && x < w.blanket.x0 + w.blanket.w && y >= w.blanket.y0 && y < w.blanket.y0 + w.blanket.h) continue;
+    const lawn = F.stripe[ti];
+    if (r() < 0.75 * lawn) { clump(x, y, 14 + r() * 16, 8); continue; }
+    if (gn(x * 0.18, y * 0.18) > 0.05 && r() < 0.25) clump(x, y, 6 + r() * 7, 7);
   }
   if (grassParts.length) g.add(new THREE.Mesh(mergeGeometries(grassParts), psx({ map: grassTex, alphaTest: 0.5, side: THREE.DoubleSide })));
   return g;

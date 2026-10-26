@@ -41,6 +41,18 @@ Mark asked for our start in the middle with eight areas around it, as one map. E
 - **Woolly bear caterpillar:** appears in the Lawn, the Compost or the Flowerbed.
 - **Rival pavement ants:** a nest in the Patio cracks. They grow to 60 and raid harder over time.
 
+## The whole yard (sketch)
+
+Today's map is about 10% of the full backyard. A flat sketch of the rest is on a Design canvas, "Underfoot Yard Map" (claude.ai, in Mark's artifacts). Its regions can be dragged around to rework the layout.
+
+- **Along the house:** the porch and back steps, the grill.
+- **West:** the side yard and gate, the trash cans (odorous house ants), the vegetable garden (aphids, Argentine ants).
+- **South-west:** the garden shed (fertilizer, bug spray, a centipede), the wild corner (weeds, a toad).
+- **South:** the great lawn (swing set, kiddie pool, birdbath, bird feeder, moles).
+- **East and south-east:** the rock garden, the hedge row, the Oak (carpenter ants), the leaf pile, the low wet strip, the fire ant mound.
+
+The ground is painted as one continuous yard. Features blend in around their landmarks, and only man-made edges are sharp.
+
 ## Next for the yard
 
 - Aphids in the Flowerbed to farm for honeydew (Sugar), with ladybugs eating them.
