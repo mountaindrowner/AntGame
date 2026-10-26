@@ -1,0 +1,43 @@
+// Tunables for the app layer. Simulation constants live in sim/sim.js.
+
+export const SAVE_KEY = 'underfoot-v6';
+// Earlier saves the sim can still read (same save format).
+export const LEGACY_SAVE_KEYS = ['underfoot-poc-v5'];
+
+export const RENDER = {
+  pixelSize: 2.25, // CSS px per PS1 pixel
+  snapDivisor: 2, // vertex snap grid = framebuffer / this
+  colorLevels: 31, // 15-bit colour: 32 levels per channel
+  animFps: 10, // walk cycles step like a busy PS1 frame
+};
+
+export const CAMERA = {
+  surfaceTilesAcross: 13, // default surface zoom (phone portrait)
+  surfacePitch: 0.95, // radians from horizontal
+  nestCellsAcross: 13,
+  zoomMin: 0.45,
+  zoomMax: 2.6,
+};
+
+// Palette shared by both views. Hex is sRGB.
+// Creatures draw larger than their sim radius so castes read on a phone.
+export const ANT_SCALE = { surface: 1.5, nest: 1.5, queen: 2.4, queenPerLevel: 0.3 };
+
+export const COLORS = {
+  ourAnt: '#2a1a14',
+  builder: '#5a4430',
+  nurse: '#7a6040',
+  soldier: '#140c08',
+  venom: '#5a2d6b',
+  rivalAnt: '#a8463a',
+  rivalSoldier: '#7a1f15',
+  player: '#ffd34d',
+  queen: '#5e2c1e',
+  food: '#f2c440',
+  seed: '#c9a24a',
+  water: '#6cb8ea',
+  grit: '#9a948c',
+  protein: '#c0483a',
+  trail: '#8ce66e',
+  alarm: '#e6463a',
+};

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#120a05">
+<title>Underfoot</title>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="labels"></div>
+<div id="top">
+  <div id="stats">…</div>
+  <div id="hunger"><div id="hungerbar"></div></div>
+  <div id="msg"></div>
+</div>
+<div id="bar2">
+  <button id="viewbtn">Nest</button>
+  <button id="help">Help</button>
+  <button id="zoom">Zoom</button>
+  <button id="stress">+200</button>
+  <button id="reset">Reset</button>
+</div>
+<div id="sheet" class="hidden"></div>
+<div id="bar">
+  <button id="act" class="primary">Pick up</button>
+  <button id="mark">Mark trail</button>
+  <button id="recruit">Recruit</button>
+  <button id="release" disabled>Release</button>
+  <button id="enter" class="hidden" style="grid-column: 1 / -1; min-height: 40px; padding: 8px;">Enter nest</button>
+</div>
+<div id="barn" class="hidden">
+  <button id="buildnest" class="primary">Build nest</button>
+  <button id="queenbtn" class="primary">Queen</button>
+  <button id="levelbtn">Build</button>
+  <button id="exitnest">Exit nest</button>
+</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
