@@ -660,7 +660,7 @@
     m.onBeforeCompile = (sh) => {
       sh.vertexShader = sh.vertexShader.replace(
         '#include <begin_vertex>',
-        '#include <begin_vertex>\n  transformed += normalize(objectNormal) * ' + width.toFixed(3) + ' / length(modelMatrix[0].xyz);'
+        '#include <begin_vertex>\n  transformed += normalize(normal) * ' + width.toFixed(3) + ' / length(modelMatrix[0].xyz);'
       );
     };
     return m;
