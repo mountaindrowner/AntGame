@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 26: first phone feedback (build 7.1)
+
+Mark, playing on his phone: the grass blinked and clipped with the nest hole; ants that aren't moving should stay still, maybe with a slight breathing animation; start giving each room its own decorations.
+
+- **Hole flicker fixed.** The green scent overlay was drawn over the nest hole, and the near-coplanar layers (ground, scent, hole) z-fought as the vertices snapped. The hole now sits above the overlay in a fixed draw order with polygon offsets, and is wide enough to cover the mound's opening.
+- **Still ants hold still.** The renderer tracks each creature's movement. An ant that hasn't moved for 0.25 s switches to a standing pose and breathes, its body swelling about 4%. Builders on a job scrape (a slow two-frame cycle) and fighters bite (a fast one). The queen and the spider breathe too.
+- **Every room has its own look** (`game/src/render/models/roomDecor.js`): a painted back wall plus props that react to the colony.
+  - **Queen's chamber:** a woven fungal wall, a moss bed, her shed wings pinned up as a trophy, a glow-worm lamp and a petal rug.
+  - **Hatchery:** straw walls, straw bowls under the eggs, a warming stone that glows, and condensation beads.
+  - **Food store:** carved seed niches that fill with stock, heaps that grow, and a sugar crystal once it is half full.
+  - **Cistern:** wet stone, a pool that rises with water, a floating leaf, and drips falling from roots.
+  - **Nursery:** silk walls, wriggling larvae in silk cradles, a row of pupae, and silk threads.
+  - **Barracks:** tally marks on the wall, a thorn weapon rack, a beetle-husk training dummy, a leaf banner, and sleeping soldiers.
+  - **Workshop:** stone-block walls, a stone workbench with a leaf on it, a twig bundle, a stone stack that grows with stone stock, and sawdust.
+- Eggs now pulse gently. The dots marking where you can dig are smaller and fainter.
+
 ## Oct 26: the game starts (`game/`)
 
 Mark: "Let's build the game starting with our file structure and then building using ps1."

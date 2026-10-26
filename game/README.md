@@ -35,7 +35,9 @@ game/
 │   │   ├── models/
 │   │   │   ├── creatures.js  low-poly ants (3 walk frames per body plan), spider, caterpillar
 │   │   │   ├── crowd.js      instanced batches: hundreds of ants in a few draw calls
-│   │   │   └── props.js      items, eggs, room dressing primitives
+│   │   │   ├── props.js      items, eggs and furniture primitives
+│   │   │   └── roomDecor.js  each room's wall pattern and live decorations
+│   │   ├── motion.js         moving vs still creatures (idle breathing, scraping, biting)
 │   │   └── views/
 │   │       ├── surfaceView.js  the yard: tilted top-down, scent overlay, weather
 │   │       └── nestView.js     the cutaway: soil rebuilt from nest cells, rooms, orders, queen
@@ -53,7 +55,7 @@ game/
 ### Rules that keep it maintainable
 
 - **The sim never imports the renderer, the UI or the DOM.** Views read sim state and never write it. Input and UI change state only through the sim's public API (`queueEgg`, `toggleDigOrder`, `queueRoom`, …) or the player fields build 6 already used (`tx/ty`, `ntx/nty`, `mark`, `holding`).
-- **Adding a room or caste:** add it in `sim.js` (`ROOMS`/`CASTES` and their effects), add its copy in `ui/copy.js`, then dress it in `nestView._decorate` and colour it in `config.js` (`COLORS`).
+- **Adding a room or caste:** add it in `sim.js` (`ROOMS`/`CASTES` and their effects) and its copy in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js` (`WALLS` and `DRESS`); castes get a colour in `config.js` (`COLORS`).
 - **Tuning the look** is all in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (more or less wobble), `colorLevels` (dither depth), `animFps`, plus the camera and creature-scale settings.
 
 ## How the PS1 look is made

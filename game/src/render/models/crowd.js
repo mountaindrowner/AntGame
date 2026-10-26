@@ -59,6 +59,12 @@ export class Crowd {
     this.push(key, geometry, tmpM, color);
   }
 
+  // Non-uniform scale (breathing, squash).
+  pushAtScale(key, geometry, pos, quat, sx, sy, sz, color) {
+    tmpM.compose(pos, quat, tmpS.set(sx, sy, sz));
+    this.push(key, geometry, tmpM, color);
+  }
+
   end() {
     this.batches.forEach((b) => {
       b.mesh.count = b.n;

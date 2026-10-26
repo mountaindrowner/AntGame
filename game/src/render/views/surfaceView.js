@@ -11,6 +11,7 @@ import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/texture
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, spiderGeometry, caterpillarSegment, FOOT, SPIDER_FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { PROPS, itemLook } from '../models/props.js';
+import { MotionTracker, idlePose } from '../motion.js';
 
 const { W, H, T, CASTES } = SIM;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -76,6 +77,7 @@ export class SurfaceView {
     this.rain.frustumCulled = false;
     this.scene.add(this.rain);
 
+    this.motion = new MotionTracker();
     this.target = new THREE.Vector3();
     this.raycaster = new THREE.Raycaster();
     this.static = null;
@@ -184,8 +186,12 @@ export class SurfaceView {
       // Open-topped ring of spoil, so an ant standing in the hole stays visible.
       const mound = new THREE.Mesh(new THREE.CylinderGeometry(11, 20, 4, 9, 1, true), psx({ map: moundTex, side: THREE.DoubleSide }));
       mound.position.set((hx + 0.5) * T, 2, (hy + 0.5) * T);
-      const hole = new THREE.Mesh(new THREE.CircleGeometry(10, 9).rotateX(-Math.PI / 2), psxBasic({ color: '#120a05' }));
-      hole.position.set((hx + 0.5) * T, 0.25, (hy + 0.5) * T);
+      // The hole sits above the scent overlay and always draws after it, so
+      // trail colour never shows inside it and the two never z-fight.
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(11.6, 9).rotateX(-Math.PI / 2), psxBasic({ color: '#120a05', polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
+      hole.position.set((hx + 0.5) * T, 1.2, (hy + 0.5) * T);
+      hole.renderOrder = 3;
+      mound.renderOrder = 3;
       const ring = new THREE.Mesh(new THREE.RingGeometry(18, 22, 12).rotateX(-Math.PI / 2), psxBasic({ color: '#8a2a1e', transparent: true, opacity: 0.8 }));
       ring.position.set((hx + 0.5) * T, 0.6, (hy + 0.5) * T);
       ring.visible = rival;
@@ -200,8 +206,9 @@ export class SurfaceView {
     this.scentTex.flipY = false;
     const overlay = new THREE.Mesh(
       new THREE.PlaneGeometry(gw, gh, W, H).rotateX(-Math.PI / 2).translate(gw / 2, 0.4, gh / 2),
-      psxBasic({ map: this.scentTex, transparent: true, depthWrite: false }, { affine: false })
+      psxBasic({ map: this.scentTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }, { affine: false })
     );
+    overlay.renderOrder = 1;
     // PlaneGeometry's v runs bottom-up; the sim's rows run top-down.
     overlay.geometry.attributes.uv.array.forEach((v, i, arr) => { if (i % 2) arr[i] = 1 - v; });
     g.add(overlay);
@@ -246,11 +253,15 @@ export class SurfaceView {
     const ant = (a, color, scaleMul) => {
       const C = CASTES[a.caste];
       const k = (C.r / 2.2) * (scaleMul || 1) * ANT_SCALE.surface;
-      const frame = (frameT + a.id) % WALK_FRAMES;
+      const moving = this.motion.moving(a.id, a.x, a.y, t);
+      const idle = moving ? null : idlePose(a, t);
+      const frame = idle ? idle.frame : (frameT + a.id) % WALK_FRAMES;
+      const b = idle ? idle.breathe : 0;
       const plan = planFor(a.caste);
       tmpQ.setFromAxisAngle(UP, Math.atan2(-a.dy, a.dx));
       tmpV.set(a.x, FOOT * k, a.y);
-      this.crowd.pushAt(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k, color);
+      // Still ants stand and breathe instead of walking on the spot.
+      this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
       if (a.carry) {
         const c = itemLook({ kind: a.kind, type: a.kind === 'food' ? 'crumb' : a.kind, amt: 1 }, COLORS);
         tmpV.set(a.x + a.dx * 6.4 * k, FOOT * k + 0.2, a.y + a.dy * 6.4 * k);
@@ -286,6 +297,7 @@ export class SurfaceView {
     this.crowd.end();
     this.items.end();
     this.marks.end();
+    this.motion.sweep();
 
     // Spider: heading from its motion, a foreleg raised every two seconds.
     const sp = s.spider;
@@ -298,7 +310,8 @@ export class SurfaceView {
       h.x = sp.x; h.y = sp.y;
       this.spider.geometry = (s.t % 2) < 0.3 ? this.spiderUp : this.spiderRest;
       this.spider.position.set(sp.x, SPIDER_FOOT * 1.3, sp.y);
-      this.spider.scale.setScalar(1.3);
+      const sb = Math.sin(t * 1.9);
+      this.spider.scale.set(1.3, 1.3 * (1 + 0.03 * sb), 1.3 * (1 + 0.02 * sb));
       this.spider.rotation.set(0, h.yaw, 0);
       this._placeBar(this.bars[0], sp.x, sp.y, 34, sp.hp / sp.maxHp, '#e4524a');
     }

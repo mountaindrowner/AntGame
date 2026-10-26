@@ -20,6 +20,15 @@ export const PROPS = {
   box: colored(new THREE.BoxGeometry(1, 1, 1)),
   cone: colored(new THREE.ConeGeometry(1, 1, 6)),
   quad: colored(new THREE.PlaneGeometry(1, 1)),
+  cyl: colored(new THREE.CylinderGeometry(1, 1, 1, 6)),
+  // Room furniture.
+  torus: colored(new THREE.TorusGeometry(1, 0.38, 4, 9).rotateX(Math.PI / 2)),
+  thorn: colored(new THREE.ConeGeometry(0.35, 1, 4)),
+  leaf: colored(new THREE.SphereGeometry(1, 6, 3).scale(1, 0.12, 0.45)),
+  larva: colored(new THREE.TorusGeometry(1, 0.5, 4, 7, Math.PI * 1.35)),
+  wing: colored(new THREE.SphereGeometry(1, 7, 3).scale(1, 0.32, 0.06)),
+  dome: colored(new THREE.SphereGeometry(1, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2)),
+  gem: colored(new THREE.OctahedronGeometry(1, 0)),
 };
 
 // Which prop and colour a sim item draws as.

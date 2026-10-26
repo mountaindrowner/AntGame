@@ -6,15 +6,17 @@ import * as THREE from 'three';
 import SIM from '../../sim/sim.js';
 import { CAMERA, COLORS, RENDER, ANT_SCALE } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
-import { rampTexture, canvasTexture, rng, PALETTE } from '../ps1/textures.js';
+import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { PROPS } from '../models/props.js';
+import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
+import { MotionTracker, idlePose } from '../motion.js';
 import { antColor, hudShift } from './surfaceView.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS } = SIM;
 export const DEPTH = 22;
-const ROOM_COL = { queen: '#6a4a7a', hatchery: '#7a6a3a', store: '#8a7a3a', cistern: '#3a6a8a', nursery: '#7a5a6a', barracks: '#5a3a3a', workshop: '#5a5a3a' };
+const PROP_KEY = new Map(Object.entries(PROPS).map(([k, g]) => [g, k]));
 
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -26,6 +28,7 @@ const QZ_UP = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1)
 const QZ_DN = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 2);
 const Q_LEFT = new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI);
 const Q_ID = new THREE.Quaternion();
+const tmpE = new THREE.Euler();
 
 export class NestView {
   constructor() {
@@ -68,6 +71,10 @@ export class NestView {
     this.crowd = new Crowd(this.dyn, psx({ vertexColors: true }));
     this.props = new Crowd(this.dyn, psx({ vertexColors: true }));
     this.overlay = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false }, { snap: false }));
+    this.panels = new THREE.Group();
+    this.scene.add(this.panels);
+    this.panelSig = '';
+    this.motion = new MotionTracker();
     this.queenMesh = new THREE.Mesh(antGeometry('queen', -1), psx({ vertexColors: true, color: COLORS.queen }));
     this.dyn.add(this.queenMesh);
     this.roomLights = [];
@@ -117,11 +124,14 @@ export class NestView {
   }
 
   // Ants inside: walking in profile, or climbing the back wall in a shaft.
-  _pushAnt(a, color, scaleMul, frameT) {
+  _pushAnt(a, color, scaleMul, frameT, t) {
     const C = CASTES[a.caste];
     const k = (C.r / 2.2) * (scaleMul || 1) * ANT_SCALE.nest;
     const plan = planFor(a.caste);
-    const frame = (frameT + a.id) % WALK_FRAMES;
+    const moving = this.motion.moving(a.id, a.nx, a.ny, t);
+    const idle = moving ? null : idlePose(a, t);
+    const frame = idle ? idle.frame : (frameT + a.id) % WALK_FRAMES;
+    const breathe = idle ? idle.breathe : 0;
     const x = a.nx * T, yc = -a.ny * T;
     const climbing = Math.abs(a.dy) > Math.abs(a.dx) + 0.05;
     if (climbing) {
@@ -132,7 +142,8 @@ export class NestView {
       const floorY = -(Math.floor(a.ny) + 1) * T;
       tmpV.set(x, floorY + FOOT * k, -DEPTH * 0.45);
     }
-    this.crowd.pushAt(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k, color);
+    // Breathing: the body swells a little, mostly upward.
+    this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * breathe), k * (1 + 0.04 * breathe), k * (1 + 0.025 * breathe), color);
     if (a.carry) {
       const fx = climbing ? 0 : (a.dx < 0 ? -1 : 1), fy = climbing ? (a.dy > 0 ? -1 : 1) : 0;
       tmpV.x += fx * 6.4 * k;
@@ -161,45 +172,29 @@ export class NestView {
     this.overlay.push('q', PROPS.quad, tmpM, color);
   }
 
-  _prop(geo, key, x, y, z, sx, sy, sz, color, rotY = 0) {
-    tmpV.set(x, y, z);
-    tmpQ.setFromAxisAngle(Y_AXIS, rotY);
-    tmpM.compose(tmpV, tmpQ, tmpS.set(sx, sy, sz));
-    this.props.push(key, geo, tmpM, color);
+  // Place a prop: world position, per-axis scale, colour, optional Euler rotation.
+  _put(geo, p, sc, color, rot) {
+    tmpV.set(p[0], p[1], p[2]);
+    if (rot) tmpQ.setFromEuler(tmpE.set(rot[0], rot[1], rot[2])); else tmpQ.identity();
+    tmpM.compose(tmpV, tmpQ, tmpS.set(sc[0], sc[1], sc[2]));
+    this.props.push(PROP_KEY.get(geo), geo, tmpM, color);
   }
 
-  // Procedural room dressing, scaled by live colony numbers.
-  _decorate(r, col, t) {
-    const rw = r.w || 4, rh = r.h || 3;
-    const x = r.x0 * T, W2 = rw * T, floor = -(r.y0 + rh) * T, z = -DEPTH * 0.7;
-    if (r.key === 'store') {
-      const fill = Math.min(1, col.store / Math.max(1, col.cap));
-      const n = rw * 2, piles = Math.max(1, Math.round(fill * n));
-      for (let i = 0; i < n; i++) this._prop(PROPS.cone, 'cone', x + 5 + (i * (W2 - 10)) / (n - 1), floor + 3, z, 4, 6, 4, i < piles ? COLORS.food : '#5a4a2a');
-    } else if (r.key === 'cistern') {
-      const lvl = Math.min(1, col.water / Math.max(1, col.waterCap));
-      const h = Math.max(0.5, (rh * T - 8) * lvl);
-      this._prop(PROPS.box, 'box', x + W2 / 2, floor + h / 2, z + 2, W2 - 6, h, DEPTH * 0.6, COLORS.water);
-      for (const px of [x + 3, x + W2 - 3]) this._prop(PROPS.box, 'box', px, floor + (rh * T - 6) / 2, z, 2, rh * T - 6, 2, '#5a4a3a');
-    } else if (r.key === 'barracks') {
-      for (let i = 0; i < rw; i++) {
-        const px = x + 8 + (i * (W2 - 16)) / Math.max(1, rw - 1);
-        this._prop(PROPS.egg, 'egg', px, floor + 3, z, 3.2, 2.6, 2.6, '#2a1a14');
-        this._prop(PROPS.box, 'box', px - 3, floor + 9, z - 3, 0.8, 18, 0.8, '#8a6a4a', 0.2);
-      }
-    } else if (r.key === 'hatchery') {
-      const rr = rng(r.x0 * 31 + r.y0);
-      for (let i = 0; i < rw * 4; i++) this._prop(PROPS.box, 'box', x + 3 + rr() * (W2 - 6), floor + 0.6, z + (rr() - 0.5) * 8, 4, 0.8, 1, '#c9a860', rr() * 3);
-    } else if (r.key === 'nursery') {
-      for (let i = 0; i < rw; i++) {
-        const px = x + 8 + (i * (W2 - 16)) / Math.max(1, rw - 1);
-        this._prop(PROPS.egg, 'egg', px, floor + 2.4, z, 5, 3, 3.5, '#e8c9d2');
-      }
-    } else if (r.key === 'workshop') {
-      for (let i = 0; i < 4; i++) this._prop(PROPS.pebble, 'pebble', x + 6 + i * 6, floor + 2, z, 2.6, 2.6, 2.6, COLORS.grit, i);
-      for (let i = 0; i < 3; i++) this._prop(PROPS.box, 'box', x + W2 - 6 - i * 5, floor + 9, z - 2, 1.2, 18, 1.2, '#8a6a3a', 0.15 + i * 0.1);
-    } else if (r.key === 'queen') {
-      this._prop(PROPS.egg, 'egg', x + W2 / 2, floor, z, W2 * 0.36, 5, DEPTH * 0.35, '#4a3528');
+  // Painted back wall per room, rebuilt when rooms change.
+  _rebuildPanels(rooms) {
+    const sig = rooms.map((r) => [r.key, r.x0, r.y0, r.w, r.h].join(',')).join(';');
+    if (sig === this.panelSig) return;
+    this.panelSig = sig;
+    this.panels.children.forEach((m) => m.geometry.dispose());
+    this.panels.clear();
+    for (const r of rooms) {
+      const rw = r.w || 4, rh = r.h || 3;
+      const g = new THREE.PlaneGeometry(rw * T, rh * T);
+      // Two wall tiles per cell keeps the texel size steady across room sizes.
+      g.attributes.uv.array.forEach((v, i, arr) => { arr[i] = v * (i % 2 ? rh : rw) * 0.5; });
+      const m = new THREE.Mesh(g, roomWallMaterial(r.key));
+      m.position.set((r.x0 + rw / 2) * T, -(r.y0 + rh / 2) * T, -DEPTH + 0.3);
+      this.panels.add(m);
     }
   }
 
@@ -217,12 +212,11 @@ export class NestView {
 
     // Room back panels, dressing and lamps.
     this.roomLights.forEach((l) => (l.intensity = 0));
+    this._rebuildPanels(n.rooms);
+    const put = (geo, p, sc, color, rot) => this._put(geo, p, sc, color, rot);
     n.rooms.forEach((r, i) => {
       const rw = r.w || 4, rh = r.h || 3;
-      tmpV.set((r.x0 + rw / 2) * T, -(r.y0 + rh / 2) * T, -DEPTH + 0.3);
-      tmpM.compose(tmpV, Q_ID, tmpS.set(rw * T, rh * T, 1));
-      this.props.push('panel', PROPS.quad, tmpM, ROOM_COL[r.key] || '#555555');
-      this._decorate(r, col, t);
+      dressRoom(r, { T, DEPTH, t, col, put });
       if (i < this.roomLights.length) {
         const l = this.roomLights[i];
         l.intensity = 1.4 + 0.12 * Math.sin(t * 9 + i * 2);
@@ -236,7 +230,7 @@ export class NestView {
       for (let y = 1; y < NH; y++) for (let x = 1; x < NW - 1; x++) {
         if (n.cells[y * NW + x]) continue;
         const adj = (x > 0 && n.cells[y * NW + x - 1]) || (x < NW - 1 && n.cells[y * NW + x + 1]) || (y > 0 && n.cells[(y - 1) * NW + x]) || (y < NH - 1 && n.cells[(y + 1) * NW + x]);
-        if (adj) this._fill(x * T + T / 2 - 1.2, y * T + T / 2 - 1.2, 2.4, 2.4, '#ffe6b4', 0.4);
+        if (adj) this._fill(x * T + T / 2 - 0.8, y * T + T / 2 - 0.8, 1.6, 1.6, '#c8a87c', 0.4);
       }
     }
     // Dig orders chip away a quarter at a time.
@@ -281,25 +275,27 @@ export class NestView {
     if (er) {
       col.eggs.forEach((e, i) => {
         const ex = er.x0 * T + 6 + (i % 5) * 11, ey = er.y0 * T + (er.h || 3) * T - 4 - Math.floor(i / 5) * 7;
-        this._prop(PROPS.egg, 'egg', ex, -ey + 2.4, -DEPTH * 0.35, 3.6, 3.2, 3, '#f3ead6');
+        const pulse = 1 + 0.04 * Math.sin(t * 3 + i);
+        this._put(PROPS.egg, [ex, -ey + 2.4, -DEPTH * 0.35], [3.6 * pulse, 3.2 * pulse, 3 * pulse], '#f3ead6');
         this._fill(ex - 3.5, ey + 1, 7 * Math.min(1, e.t / e.need), 1.4, '#8fd36b', 0.7);
       });
     }
     // Ants inside, then the player.
     for (const a of s.ants) {
       if (a.team || a.isPlayer || !(a.state === 'in' || a.state === 'build')) continue;
-      this._pushAnt(a, antColor(a), 1, frameT);
+      this._pushAnt(a, antColor(a), 1, frameT, t);
     }
     const pa = P.ant;
     if (pa && P.inNest) {
-      this._pushAnt(pa, COLORS.player, 1.2, frameT);
+      this._pushAnt(pa, COLORS.player, 1.2, frameT, t);
       if (P.ntx != null) this._outline(P.ntx * T + 2, P.nty * T + 2, T - 4, T - 4, '#ffffff', 0.7);
     }
     // Queen: grows with each upgrade; during the dig she shows where she can go.
     const qs = ANT_SCALE.queen + q.level * ANT_SCALE.queenPerLevel;
     const floorY = q.room ? -(q.room.y0 + (q.room.h || 3)) * T : -(q.y + 1) * T;
     this.queenMesh.position.set((q.x + 0.5) * T, floorY + FOOT * qs, -DEPTH * 0.5);
-    this.queenMesh.scale.setScalar(qs);
+    const qb = Math.sin(t * 1.6);
+    this.queenMesh.scale.set(qs * (1 + 0.01 * qb), qs * (1 + 0.035 * qb), qs * (1 + 0.02 * qb));
     this.queenMesh.quaternion.copy(Q_LEFT);
     if (s.phase === 'dig') {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -311,6 +307,7 @@ export class NestView {
     this.crowd.end();
     this.props.end();
     this.overlay.end();
+    this.motion.sweep();
 
     this.labels.push({ text: 'exit', x: (SHAFT + 0.5) * T, y: 12, z: 0, kind: 'hint' });
     this.labels.push({ text: 'packed soil · needs Workshop', x: 4, y: -14 * T - 2, z: 0, kind: 'band' });
@@ -322,7 +319,8 @@ export class NestView {
 
     // Camera: follow the player or the queen; drag pans vertically.
     const a = pa && P.inNest ? pa : null;
-    const fy = (a ? a.ny : q.y + 0.5) * T + app.panY;
+    // app.focus ({ x, y } in cells) points the camera somewhere specific.
+    const fy = (app.focus ? app.focus.y : a ? a.ny : q.y + 0.5) * T + app.panY;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
     const across = (CAMERA.nestCellsAcross * T * 1.06) / app.zoomMul;
@@ -333,7 +331,7 @@ export class NestView {
     const minY = -viewH / 2 + 90, maxY = NH * T - viewH / 2 + 60 - shift;
     const cy = maxY < minY ? (NH * T) / 2 : Math.max(minY, Math.min(maxY, fy - shift));
     const viewW = across;
-    const fx = a ? a.nx * T : (q.x + 0.5) * T;
+    const fx = (app.focus ? app.focus.x : a ? a.nx : q.x + 0.5) * T;
     const cx = viewW >= NW * T ? (NW * T) / 2 : Math.max(viewW / 2 - 20, Math.min(NW * T - viewW / 2 + 20, fx));
     this.target.lerp(tmpV.set(cx, -cy, -DEPTH / 2), this.camInit ? 0.2 : 1);
     this.camInit = true;

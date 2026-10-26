@@ -128,6 +128,43 @@ try {
   console.log('built'.padEnd(22), '|', JSON.stringify(built));
   await page.waitForTimeout(800);
   await shot('07-nest-built');
+
+  // Room showcase: every room laid out in one fresh nest, for reviewing the
+  // dressing. Render-only: the sim is paused and the layout is written directly.
+  await sim(() => {
+    const { app, SIM, ui } = window.UNDERFOOT;
+    app.reset();
+    const s = app.s, n = s.nest, NW = SIM.NW, q = s.queen;
+    SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s);
+    for (const k of ['dig', 'nest', 'surface', 'soil', 'cap', 'rain', 'raid', 'dew', 'cat', 'spider', 'grit', 'protein', 'cavein']) s.seen[k] = true;
+    s.seen.intro = 'done';
+    const set = (x, y, v) => { n.cells[y * NW + x] = v; };
+    for (let x = 1; x < 23; x++) { set(x, 4, 1); set(x, 10, 1); set(x, 14, 1); }
+    for (let y = 0; y < 15; y++) set(12, y, 1);
+    const rooms = [['hatchery', 2, 1, 4, 3], ['store', 16, 1, 5, 3], ['cistern', 2, 6, 4, 4], ['workshop', 8, 6, 5, 4], ['nursery', 15, 6, 4, 3], ['barracks', 3, 11, 6, 3]];
+    for (const [key, x0, y0, w, h] of rooms) {
+      for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) set(x, y, 2);
+      n.rooms.push({ x0, y0, w, h, key });
+    }
+    n.ver++;
+    Object.assign(s.colony, { store: 110, cap: 150, water: 40, waterCap: 60, grit: 24 });
+    s.colony.eggs = [{ caste: 'forager', t: 5, need: 20 }, { caste: 'builder', t: 15, need: 25 }, { caste: 'nurse', t: 2, need: 20 }];
+    s.player.inNest = true;
+    ui.closeMenu();
+    app.paused = true;
+    app.zoomMul = 0.62;
+    app.panY = 70;
+  });
+  await page.waitForTimeout(900);
+  await shot('08-rooms-all');
+  // Close-ups, one per room.
+  const rooms = await sim(() => window.UNDERFOOT.app.s.nest.rooms.map((r) => ({ key: r.key, x: r.x0 + r.w / 2, y: r.y0 + r.h / 2 })));
+  for (const r of rooms) {
+    await sim((f) => { const { app } = window.UNDERFOOT; app.zoomMul = 2.4; app.panY = 0; app.focus = f; }, { x: r.x, y: r.y });
+    await page.waitForTimeout(700);
+    await shot('room-' + r.key);
+  }
+  await sim(() => { window.UNDERFOOT.app.focus = null; });
 } catch (e) {
   errors.push('test: ' + e.message);
 }

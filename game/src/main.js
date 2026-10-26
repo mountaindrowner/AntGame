@@ -119,4 +119,4 @@ measureHud();
 requestAnimationFrame(frame);
 
 // For automated tests and debugging in the console.
-window.UNDERFOOT = { app, SIM, views, pipeline };
+window.UNDERFOOT = { app, SIM, views, pipeline, ui };
