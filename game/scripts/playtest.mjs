@@ -87,7 +87,7 @@ function roomPlan() {
   if (!next) return;
   const R = SIM.ROOMS[next];
   // A fitting pocket already dug? Place it when affordable (Build → tap a green cell).
-  for (let y = 1; y < 14; y++) for (let x = 1; x < NW - 1; x++) {
+  for (let y = 1; y < SIM.SOIL_TOP[1]; y++) for (let x = 1; x < NW - 1; x++) {
     const r = SIM.findRoomRect(s, x, y, R.w, R.h);
     if (r) {
       if (SIM.canPay(c, R.cost) && SIM.queueRoom(s, next, [x, y])) { note(`placed ${next}`); pocket = null; }
@@ -106,7 +106,7 @@ function roomPlan() {
 function choosePocket(key, R) {
   const n = s.nest, q = s.queen.room;
   let best = null, bd = Infinity;
-  for (let y0 = 1; y0 + R.h <= 14; y0++) for (let x0 = 1; x0 + R.w <= NW - 1; x0++) {
+  for (let y0 = 1; y0 + R.h <= SIM.SOIL_TOP[1]; y0++) for (let x0 = 1; x0 + R.w <= NW - 1; x0++) {
     let ok = true, touch = false;
     for (let y = y0 - 1; y <= y0 + R.h && ok; y++) for (let x = x0 - 1; x <= x0 + R.w; x++) {
       const inside = y >= y0 && y < y0 + R.h && x >= x0 && x < x0 + R.w;

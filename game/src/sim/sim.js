@@ -6,7 +6,11 @@ const W = AREA*BLOCK.cols, H = AREA*BLOCK.rows, T = 16; // surface tiles: the bu
 // Everything on the surface is twice as big as it was (yard.js SCALE), so
 // ants and creatures walk faster to keep trips from dragging.
 const SURF = 1.4;
-const NW = 24, NH = 40, SHAFT = 12;       // nest cutaway cells
+// Nest cutaway cells. The soil comes in bands, top down: a deep layer of
+// soft topsoil, then packed soil and clay, equally deep.
+const SOIL_ROWS = [20, 14, 14];
+const SOIL_TOP = [0, SOIL_ROWS[0], SOIL_ROWS[0] + SOIL_ROWS[1]];
+const NW = 24, NH = SOIL_ROWS.reduce((a, b) => a + b), SHAFT = 12;
 const N8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const N4 = [[1,0],[-1,0],[0,1],[0,-1]];
 const CASTES = {
@@ -48,7 +52,7 @@ const FOODS = {
 };
 const heavy = f => !!(FOODS[f.type] && FOODS[f.type].crew);
 const SOIL = [ {name:'soft', work:6}, {name:'packed', work:12}, {name:'clay', work:20} ];
-const soilTier = y => y < 14 ? 0 : y < 28 ? 1 : 2;
+const soilTier = y => y < SOIL_TOP[1] ? 0 : y < SOIL_TOP[2] ? 1 : 2;
 const QUEEN_UP = [ {food:40, protein:10}, {food:80, protein:20, grit:20}, {food:150, protein:40, grit:40} ];
 const queenCap = lvl => 20 + 20*lvl;
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -953,14 +957,14 @@ function stats(s){
 }
 // ---------- save / load ----------
 function serialize(s){
-  return JSON.stringify({ v: 8, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
+  return JSON.stringify({ v: 9, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders }, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest }, nextId: s.nextId,
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
 }
 function deserialize(json){
-  const d = JSON.parse(json); if (d.v !== 8) throw new Error('old save'); const s = create(d.seed);
+  const d = JSON.parse(json); if (d.v !== 9) throw new Error('old save'); const s = create(d.seed);
   s.t = d.t; s.colony = d.colony; s.rival = d.rival; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen || {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
@@ -969,7 +973,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
+return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
 })();
 export default SIM;
 export { SIM };

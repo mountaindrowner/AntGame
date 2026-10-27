@@ -2,6 +2,15 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: deeper topsoil (build 10.1)
+
+Mark, on the nest: "First soil should be deeper, and all others are equal."
+
+- **Soft topsoil is now 20 rows deep (was 14).** Packed soil and clay below it are 14 rows each. Clay was 12 rows, because the nest stopped at row 40. The nest is now 48 rows deep.
+- **One place for it.** The bands are `SOIL_ROWS = [20, 14, 14]` in `sim.js`. The nest view's soil bands and their labels, the dig rules, the bot and the help text all read from it.
+- **Effect:** more of the early nest is cheap to dig before a Workshop is needed. In two 20-minute bot games, both built every room and reached 60 ants.
+- **Saves:** format v9, under `underfoot-v10`. Older saves don't load, because the nest grid changed size.
+
 ## Oct 27: the first ring of new regions (build 10)
 
 Mark, on the yard map: "That's a great space, let's start building."

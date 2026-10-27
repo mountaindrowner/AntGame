@@ -16,7 +16,7 @@ import { MotionTracker, idlePose } from '../motion.js';
 import { antColor, hudShift } from './surfaceView.js';
 import { shapesFromField } from '../geometry/contour.js';
 
-const { NW, NH, T, SHAFT, CASTES, ROOMS } = SIM;
+const { NW, NH, T, SHAFT, CASTES, ROOMS, SOIL_TOP } = SIM;
 export const DEPTH = 22;
 const SOIL_STEP = 2; // px between field samples when tracing tunnel outlines
 const ROUND = 5; // corner radius of a dug cell
@@ -177,7 +177,7 @@ export class NestView {
       grid[k] = Math.max(-x, x - W, -y, y - H, -grid[k]);
     }
     const soil = (x, y) => grid[Math.round((y - y0) / SOIL_STEP) * nx + Math.round((x - x0) / SOIL_STEP)];
-    const bands = [[-1e9, 14 * T], [14 * T, 28 * T], [28 * T, 1e9]];
+    const bands = [[-1e9, SOIL_TOP[1] * T], [SOIL_TOP[1] * T, SOIL_TOP[2] * T], [SOIL_TOP[2] * T, 1e9]];
     bands.forEach(([top, bot], tier) => {
       const f = (x, y) => Math.max(soil(x, y), top - y, y - bot);
       // Trace only this band's rows (snapped to the shared grid).
@@ -381,8 +381,8 @@ export class NestView {
     this.motion.sweep();
 
     this.labels.push({ text: 'exit', x: (SHAFT + 0.5) * T, y: 12, z: 0, kind: 'hint' });
-    this.labels.push({ text: 'packed soil · needs Workshop', x: 4, y: -14 * T - 2, z: 0, kind: 'band' });
-    this.labels.push({ text: 'clay · needs Workshop + queen upgrade', x: 4, y: -28 * T - 2, z: 0, kind: 'band' });
+    this.labels.push({ text: 'packed soil · needs Workshop', x: 4, y: -SOIL_TOP[1] * T - 2, z: 0, kind: 'band' });
+    this.labels.push({ text: 'clay · needs Workshop + queen upgrade', x: 4, y: -SOIL_TOP[2] * T - 2, z: 0, kind: 'band' });
 
     // Weather.
     this.scene.background.set(s.rain.on ? '#6f7f8f' : '#9bc7e6');
