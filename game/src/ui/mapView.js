@@ -1,4 +1,5 @@
-// The yard map: a photo of the yard from straight above (app.snapshotMap),
+// The yard map: a photo of the yard from straight above (app.snapshotMap,
+// pieced together region by region as each is first built near you),
 // under a fog of war that lifts where you have been (sim seenMap). Pinch,
 // scroll or double-tap to zoom, drag to pan, tap a spot for its region.
 import SIM from '../sim/sim.js';
@@ -39,7 +40,7 @@ export class MapView {
     this.app.paused = true;
     this.el.classList.remove('hidden');
     this.card.classList.add('hidden');
-    this.photo = this.app.snapshotMap(1600);
+    this.photo = this.app.snapshotMap();
     this.scaleK = this.photo.width / (w.W * T); // photo px per world px
     this.fog = this._fogCanvas(s);
     this._fit(true);

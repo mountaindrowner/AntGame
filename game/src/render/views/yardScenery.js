@@ -1,17 +1,18 @@
-// Static scenery for the whole yard, built once per world from the sim's
-// yard layout (sim/yard.js): the ground painted region by region, the
-// landmarks that tower over the ants, the house wall, rocks, grass and the
-// thicket where the unbuilt yard begins. Sizes are in px at SCALE 1 and
-// multiplied by S, so a soda can stands as tall as the yard is big.
+// The yard's scenery, built region by region as you come near it (YardScenery
+// below): each region's ground is painted, and its landmarks, stones and
+// grass are made, when the camera gets within a region of it, and thrown
+// away again when it is far behind (its ground kept as a small painting, so
+// distant regions don't go blank). Data comes from the sim's yard layout
+// (sim/yard.js). Sizes are in px at SCALE 1 and multiplied by S, so a soda
+// can stands as tall as the yard is big.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { AREA, SCALE as S } from '../../sim/yard.js';
-import { psx } from '../ps1/materials.js';
+import { AREA, AREAS, SCALE as S, areaBounds } from '../../sim/yard.js';
+import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 
 const T = 16;
 const col = new THREE.Color();
-const UP = new THREE.Vector3(0, 1, 0);
 
 // ---------- ground ----------
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -26,28 +27,45 @@ const RAMPS = {
   slab: ['#7a7670', '#84807a', '#8e8a84', '#98948c'].map(hex),
   soil: ['#2e1e12', '#3a2616', '#46301c', '#523a22'].map(hex),
   mat: ['#6a4a2a', '#7a5a32', '#8a6a3a', '#9a7842'].map(hex),
+  gravel: ['#6a645a', '#7e776a', '#958c7c', '#aaa290', '#5a544a'].map(hex),
+  deck: ['#7a7468', '#86806f', '#928b78', '#9c9581'].map(hex),
+  hedge: ['#1e1a10', '#2a2416', '#33301c', '#3e3a22'].map(hex),
+  oak: ['#2a4418', '#30501c', '#385a22', '#2a3a18'].map(hex),
+  wild: ['#3e4a22', '#4a5428', '#5a5a2e', '#4a3e24'].map(hex),
+  wet: ['#3a3226', '#463c2e', '#524636', '#5e5240'].map(hex),
+  leaf: ['#7a3a1e', '#9a4a22', '#b8642a', '#c88a30', '#6a4226'].map(hex),
+  mound: ['#6a3420', '#7a3e26', '#8a4a2e', '#9a5634'].map(hex),
 };
 const pick = (ramp, v) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(v * ramp.length)))];
+const shade = (hexc, k) => '#' + hex(hexc).map((v) => Math.round(v * k).toString(16).padStart(2, '0')).join('');
+// Colours for a region's ground seen from far off (before it's painted).
+export const GROUND_TINT = { slab: '#8e8a84', mulch: '#5a3622', bark: '#7c643e', mud: '#4e3e30', home: '#5a4a30', compost: '#362618', sand: '#cbb78e', lawn: '#3e6e24', picnic: '#9a8a70', soil: '#3a2616', grass: '#4a6e2a', long: '#3a6a22', gravel: '#8a8272', deck: '#86806f', hedge: '#2a3a1c', oak: '#30501c', wild: '#4a5428', wet: '#4a4032', leaf: '#9a4a22', mound: '#7a3e26' };
 
 // One continuous backyard: a grass-and-dirt base everywhere, with each
 // feature's ground blended in around its landmarks (mulch around flowers,
 // sawdust around logs, mud around the tap and puddles, dark soil around the
-// compost). Only man-made edges are sharp: patio slabs, sandbox, blanket.
+// compost). Only man-made edges are sharp: patio slabs, sandbox, blanket,
+// the deck and the doormat. Fields are worked out for one region (plus a
+// margin) at a time, from the landmarks near it.
 const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
-function featureFields(w) {
-  const W = w.W, H = w.H, n = noise2(23);
-  const field = () => new Float32Array(W * H);
-  const F = { mulch: field(), bark: field(), mud: field(), compost: field(), sand: field(), slab: field(), stripe: field(), dirt: field(), soil: field(), mat: field(), long: field(), clover: field() };
-  const pts = (kind) => w.landmarks.filter((l) => l.kind === kind);
-  const flowers = [...pts('flower').map((l) => [l.x + 0.5, l.y + 0.5]), ...pts('strawberry').map((l) => [l.x0 + l.w / 2, l.y0 + l.h / 2]), ...pts('web').map((l) => [l.x + 0.5, l.y + 2 * S])];
-  const logs = pts('log'), heap = pts('heap')[0], sb = w.sandbox, lawn = w.lawn, mats = pts('mat'), clovers = pts('clover'), lg = w.long;
+const GKINDS = ['gravel', 'deck', 'hedge', 'oak', 'wild', 'wet', 'leaf', 'mound', 'tall'];
+function* featureFields(w, L, b, out) {
+  const M = 3, x0 = b.x0 - M, y0 = b.y0 - M, FW = b.x1 - b.x0 + 1 + 2 * M, FH = b.y1 - b.y0 + 1 + 2 * M, n = noise2(23);
+  const field = () => new Float32Array(FW * FH);
+  const F = { x0, y0, FW, FH, mulch: field(), bark: field(), mud: field(), compost: field(), sand: field(), slab: field(), stripe: field(), dirt: field(), soil: field(), mat: field(), long: field(), clover: field(), g: {} };
+  for (const k of GKINDS) F.g[k] = field();
+  // Only what can reach this region matters.
+  const R = 22 * S, near = (x, y) => x > b.x0 - R && x < b.x1 + R && y > b.y0 - R && y < b.y1 + R;
+  const nearRect = (l) => l.x0 < b.x1 + R && l.x0 + l.w > b.x0 - R && l.y0 < b.y1 + R && l.y0 + l.h > b.y0 - R;
+  const flowers = L.flowers.filter(([x, y]) => near(x, y)), logs = L.logs.filter(nearRect), wet = L.wet.filter(([x, y]) => near(x, y));
+  const heap = L.heap, sb = w.sandbox, lawn = w.lawn, lg = w.long;
+  const slabs = w.slabs.filter(nearRect), mats = L.mats.filter(nearRect), soil = w.soil.filter(nearRect), clovers = L.clovers.filter(nearRect), dirts = w.dirt.filter(([x, y]) => near(x, y)), grounds = w.grounds.filter(nearRect);
   const inRect = (l, x, y) => x > l.x0 && x < l.x0 + l.w && y > l.y0 && y < l.y0 + l.h;
-  const wet = [...w.puddles.map(([x, y]) => [x + 0.5, y + 0.5, 3 * S]), ...pts('hose').map((l) => [l.x, l.y, l.r]), ...pts('spigot').map((l) => [l.x0 + l.w, l.y0 + l.h / 2, 2 * S])];
   const rect = (l, x, y) => Math.hypot(Math.max(l.x0 - x, 0, x - (l.x0 + l.w)), Math.max(l.y0 - y, 0, y - (l.y0 + l.h)));
   // Blends are measured in design units, so the edges keep their look at any SCALE.
   const sm = (e0, e1, d) => smooth(e0 * S, e1 * S, d);
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x, cx = x + 0.5, cy = y + 0.5, j = n(cx * 0.15 / S, cy * 0.15 / S) * 2.5 * S; // wobble every edge
+  for (let ly = 0; ly < FH; ly++) for (let lx = 0; lx < FW; lx++) {
+    const i = ly * FW + lx, cx = x0 + lx + 0.5, cy = y0 + ly + 0.5, j = n(cx * 0.15 / S, cy * 0.15 / S) * 2.5 * S; // wobble every edge
     let d = 1e9; for (const [px, py] of flowers) d = Math.min(d, Math.hypot(cx - px, cy - py));
     F.mulch[i] = sm(8, 3, d + j);
     d = 1e9; for (const l of logs) d = Math.min(d, rect(l, cx, cy));
@@ -58,44 +76,50 @@ function featureFields(w) {
     // Sand stays inside the frame, with a little kicked out through the gaps.
     const inBox = cx > sb.x0 + sb.t && cx < sb.x1 + 1 - sb.t && cy > sb.y0 + sb.t && cy < sb.y1 + 1 - sb.t;
     F.sand[i] = inBox ? 1 : sm(2.5, 0, rect({ x0: sb.x0, y0: sb.y0, w: sb.x1 - sb.x0 + 1, h: sb.y1 - sb.y0 + 1 }, cx, cy) + j * 0.4) * 0.35;
-    // Laid concrete: the patio around the rival's crack, the landing by the
-    // back steps, the pad under the grill. Doormat and garden beds are crisp too.
-    F.slab[i] = w.slabs.some((l) => inRect(l, cx, cy)) ? 1 : 0;
+    F.slab[i] = slabs.some((l) => inRect(l, cx, cy)) ? 1 : 0;
     F.mat[i] = mats.some((l) => inRect(l, cx, cy)) ? 1 : 0;
-    d = 1e9; for (const l of w.soil) d = Math.min(d, rect(l, cx, cy));
+    d = 1e9; for (const l of soil) d = Math.min(d, rect(l, cx, cy));
     F.soil[i] = smooth(1.2, 0, d + j * 0.15);
-    // The great lawn's long grass, fading in across its top edge.
-    F.long[i] = sm(-2, 4, cy - lg.y0 + j);
+    // The great lawn's long grass, fading in at its edges.
+    F.long[i] = sm(-2, 4, Math.min(cx - lg.x0, lg.x0 + lg.w - cx, cy - lg.y0, lg.y0 + lg.h - cy) + j);
     d = 1e9; for (const l of clovers) d = Math.min(d, rect(l, cx, cy));
     F.clover[i] = sm(6, 0, d + j);
     // The Lawn's mowed stripes fade out toward its edges.
     const edge = Math.min(cx - lawn.x0, lawn.x0 + lawn.w - cx, cy - lawn.y0, lawn.y0 + lawn.h - cy);
     F.stripe[i] = sm(0, 8, edge + j);
-    // Bare, trodden dirt around our entrance and the big rock.
-    // The trodden patch is ant-sized, so it doesn't grow with SCALE.
+    // Bare, trodden dirt around our entrance and the big rock (ant-sized, so it doesn't grow with SCALE).
     F.dirt[i] = Math.max(smooth(11, 4, Math.hypot(cx - w.ex - 0.5, cy - w.ey - 0.5) + j * 0.6), sm(4, 0.5, rect(w.bigrock, cx, cy) + j));
-    // Worn patches: under the swings, around molehills and the feeder pole.
-    for (const [px, py, r] of w.dirt) F.dirt[i] = Math.max(F.dirt[i], smooth(r, r * 0.4, Math.hypot(cx - px, cy - py) + j * 0.5));
+    for (const [px, py, r] of dirts) F.dirt[i] = Math.max(F.dirt[i], smooth(r, r * 0.4, Math.hypot(cx - px, cy - py) + j * 0.5));
+    // Ground patches of the rest of the yard: hard-edged or blended in.
+    for (const gp of grounds) {
+      const inside = Math.min(cx - gp.x0, gp.x0 + gp.w - cx, cy - gp.y0, gp.y0 + gp.h - cy);
+      const v = gp.soft ? smooth(-gp.soft * 0.5, gp.soft * 0.5, inside + j * (gp.soft > 3 ? 1 : 0.2)) : inside > 0 ? 1 : 0;
+      if (v > F.g[gp.kind][i]) F.g[gp.kind][i] = v;
+    }
+    if (lx === FW - 1 && ly % 8 === 7) yield;
   }
-  return F;
+  // Bilinear sample of a field at a point in world tiles.
+  F.at = (f, tx, ty) => {
+    const fx = Math.max(0, Math.min(FW - 1.001, tx - 0.5 - x0)), fy = Math.max(0, Math.min(FH - 1.001, ty - 0.5 - y0));
+    const xa = Math.floor(fx), ya = Math.floor(fy), u = fx - xa, v = fy - ya, i = ya * FW + xa;
+    return (f[i] * (1 - u) + f[i + 1] * u) * (1 - v) + (f[i + FW] * (1 - u) + f[i + FW + 1] * u) * v;
+  };
+  F.tile = (f, tx, ty) => f[(Math.floor(ty) - y0) * FW + (Math.floor(tx) - x0)];
+  out.F = F;
 }
 const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-// One region's worth of ground (x0, y0 and size in tiles), PX texels a tile.
+// One region's ground, PX texels a tile, painted a strip of rows at a time
+// (a generator: each yield is a strip) so loading never stalls a frame.
 const PX = 8;
-function groundTexture(w, F, x0, y0, tw, th) {
-  const cw = tw * PX, ch = th * PX, W = w.W, H = w.H;
-  const n1 = noise2(5), n2 = noise2(11), r = rng(3 + x0 * 7 + y0 * 13);
+function* paintGround(w, F, b, out) {
+  const x0 = b.x0, y0 = b.y0, tw = b.x1 - b.x0 + 1, th = b.y1 - b.y0 + 1, cw = tw * PX, ch = th * PX;
+  const n1 = noise2(5), n2 = noise2(11), r = rng(3 + x0 * 7 + y0 * 13), at = F.at, G = F.g;
   const bl = w.blanket;
-  // Bilinear sample of a tile field at a texel.
-  const at = (f, tx, ty) => {
-    const fx = Math.max(0, Math.min(W - 1.001, tx - 0.5)), fy = Math.max(0, Math.min(H - 1.001, ty - 0.5));
-    const xa = Math.floor(fx), ya = Math.floor(fy), u = fx - xa, v = fy - ya, i = ya * W + xa;
-    return (f[i] * (1 - u) + f[i + 1] * u) * (1 - v) + (f[i + W] * (1 - u) + f[i + W + 1] * u) * v;
-  };
-  return canvasTexture(cw, ch, (c) => {
-    const img = c.createImageData(cw, ch), d = img.data;
-    for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+  const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+  const g = c.getContext('2d'), img = g.createImageData(cw, ch), d = img.data;
+  for (let y = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++) {
       const tx = x0 + x / PX, ty = y0 + y / PX, ux = tx / S, uy = ty / S, sp = (r() - 0.5) * 0.4, nv = n2(ux * 0.2, uy * 0.2);
       // Base: grass with patches of dirt, the same everywhere.
       const gv = n1(ux * 0.12, uy * 0.12) + n1(ux * 0.5, uy * 0.5) * 0.3 + 0.32 - at(F.dirt, tx, ty) * 0.7;
@@ -107,15 +131,30 @@ function groundTexture(w, F, x0, y0, tw, th) {
       if ((k = at(F.mud, tx, ty)) > 0) { const m = pick(RAMPS.mud, 0.5 + sp + nv * 0.4); p = mix(p, nv > 0.45 ? m.map((v) => v * 0.8) : m, k); }
       if ((k = at(F.compost, tx, ty)) > 0) { const q = r(); p = mix(p, q < 0.012 ? [200, 104, 42] : q < 0.022 ? [106, 138, 42] : q < 0.028 ? [200, 168, 58] : pick(RAMPS.compost, 0.5 + sp + nv * 0.3), k); }
       if ((k = at(F.sand, tx, ty)) > 0) p = mix(p, pick(RAMPS.sand, 0.5 + sp * 0.8 + Math.sin(ty * 1.3 + nv * 4) * 0.12), k);
-      // The great lawn: deeper, unmown green, with clover in its patch.
+      // The great lawn: deeper, unmown green, with clover in its patches.
       if ((k = at(F.long, tx, ty)) > 0) p = mix(p, pick(RAMPS.lawn, 0.35 + sp + nv * 0.3), k * 0.55);
+      if ((k = at(G.tall, tx, ty)) > 0) p = mix(p, pick(RAMPS.lawn, 0.2 + sp + nv * 0.3), k * 0.6);
       if ((k = at(F.clover, tx, ty)) > 0 && n2(tx * 0.9, ty * 0.9) > 0.15) p = mix(p, r() < 0.02 ? [236, 232, 240] : n2(tx * 2.1, ty * 2.1) > 0.4 ? [104, 168, 72] : [78, 140, 56], k);
+      // The rest of the yard's grounds.
+      if ((k = at(G.oak, tx, ty)) > 0) p = mix(p, r() < 0.03 ? [120, 82, 40] : pick(RAMPS.oak, 0.5 + sp + nv * 0.4), k * 0.85);
+      if ((k = at(G.wild, tx, ty)) > 0) p = mix(p, pick(RAMPS.wild, 0.5 + sp * 1.4 + nv * 0.5), k * 0.8);
+      if ((k = at(G.hedge, tx, ty)) > 0) p = mix(p, r() < 0.04 ? [58, 84, 34] : pick(RAMPS.hedge, 0.5 + sp + nv * 0.3), k);
+      if ((k = at(G.wet, tx, ty)) > 0) { const m = pick(RAMPS.wet, 0.5 + sp + nv * 0.5); p = mix(p, nv > 0.5 && r() < 0.05 ? [90, 96, 100] : m, k); }
+      if ((k = at(G.leaf, tx, ty)) > 0) { const lv = n2(tx * 1.7 + 3, ty * 1.7); p = mix(p, pick(RAMPS.leaf, 0.5 + lv * 0.9 + sp), k * (lv > -0.2 ? 1 : 0.6)); }
+      if ((k = at(G.mound, tx, ty)) > 0) p = mix(p, pick(RAMPS.mound, 0.5 + sp + nv * 0.4), k);
+      if ((k = at(G.gravel, tx, ty)) > 0) p = mix(p, pick(RAMPS.gravel, r()), k);
       // Garden beds: dark, freshly turned soil in furrows.
       if ((k = at(F.soil, tx, ty)) > 0) p = mix(p, pick(RAMPS.soil, 0.45 + sp * 0.8 + Math.sin(ty * Math.PI / S) * 0.22), k);
       if (at(F.slab, tx, ty) > 0.5) {
         const sx = Math.floor(ux / 6), sy = Math.floor(uy / 6), tint = (((sx * 7 + sy * 13) % 5) - 2) * 0.04;
         p = pick(RAMPS.slab, 0.5 + sp * 0.6 + tint);
         if (tx % (6 * S) < 0.25 || ty % (6 * S) < 0.25) p = [74, 70, 64];
+      }
+      if (at(G.deck, tx, ty) > 0.5) {
+        // Deck boards: weathered grey planks with dark gaps.
+        const board = Math.floor(uy / 1.5), tint = ((board * 37) % 5 - 2) * 0.05;
+        p = pick(RAMPS.deck, 0.5 + sp * 0.5 + tint + Math.sin(ux * 2.1 + board) * 0.06);
+        if (uy % 1.5 < 0.12) p = [52, 48, 42];
       }
       if (at(F.mat, tx, ty) > 0.5) {
         // The doormat: coarse coir bristles in a dark border.
@@ -130,8 +169,16 @@ function groundTexture(w, F, x0, y0, tw, th) {
       const o = (y * cw + x) * 4;
       d[o] = p[0]; d[o + 1] = p[1]; d[o + 2] = p[2]; d[o + 3] = 255;
     }
-    c.putImageData(img, 0, 0);
-  }, { wrap: false });
+    if (y % 8 === 7) yield;
+  }
+  g.putImageData(img, 0, 0);
+  out.canvas = c;
+}
+function textureFrom(canvas) {
+  const t = new THREE.CanvasTexture(canvas);
+  t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
 // ---------- vertex-coloured parts ----------
@@ -149,87 +196,49 @@ function paint(geo, fn, seed = 1) {
   return g;
 }
 const at = (g, x, y, z) => g.translate(x, y, z);
+// Nudge vertices so a shape looks lumpy rather than machined.
+function lumpy(geo, amt, seed) {
+  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, r = rng(Math.floor(seed * 977) + 5);
+  for (let i = 0; i < p.count; i++) p.setXYZ(i, p.getX(i) + (r() - 0.5) * amt, p.getY(i) + (r() - 0.5) * amt * 0.6, p.getZ(i) + (r() - 0.5) * amt);
+  return g;
+}
 
 function flower(l, parts) {
-  const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, lean = (l.seed - 0.5) * 6;
-  parts.push(paint(at(new THREE.CylinderGeometry(1.1 * S, 1.6 * S, h, 5).translate(0, h / 2, 0).rotateZ(lean * 0.01), x, 0, z), '#3e6e26'));
+  const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, lean = (l.seed - 0.5) * 6, k2 = l.small ? 0.6 : 1;
+  parts.push(paint(at(new THREE.CylinderGeometry(1.1 * S * k2, 1.6 * S * k2, h, 5).translate(0, h / 2, 0).rotateZ(lean * 0.01), x, 0, z), '#3e6e26'));
   for (let k = 0; k < 2; k++) {
-    const leaf = new THREE.SphereGeometry(1, 6, 3).scale(9 * S, 0.8 * S, 3.2 * S).translate(9 * S, 0, 0).rotateY(k * 2.6 + l.seed * 3).rotateZ(0.35);
+    const leaf = new THREE.SphereGeometry(1, 6, 3).scale(9 * S * k2, 0.8 * S, 3.2 * S * k2).translate(9 * S * k2, 0, 0).rotateY(k * 2.6 + l.seed * 3).rotateZ(0.35);
     parts.push(paint(at(leaf, x, h * (0.3 + k * 0.22), z), '#4a8a2e'));
   }
   const hx = x + lean * h * 0.01, hy = h;
-  for (let k = 0; k < 6; k++) {
-    const a = (k / 6) * Math.PI * 2;
-    parts.push(paint(at(new THREE.SphereGeometry(1, 6, 3).scale(7 * S, 1.2 * S, 4 * S).translate(7 * S, 0, 0).rotateY(a), hx, hy, z), l.petal, k + 1));
+  for (let k = 0; k < (l.small ? 9 : 6); k++) {
+    const a = (k / (l.small ? 9 : 6)) * Math.PI * 2;
+    parts.push(paint(at(new THREE.SphereGeometry(1, 6, 3).scale(7 * S * k2, 1.2 * S, (l.small ? 2 : 4) * S).translate(7 * S * k2, 0, 0).rotateY(a), hx, hy, z), l.petal, k + 1));
   }
-  parts.push(paint(at(new THREE.SphereGeometry(4 * S, 6, 4).scale(1, 0.6, 1), hx, hy + S, z), '#d8a02a'));
+  parts.push(paint(at(new THREE.SphereGeometry(4 * S * k2, 6, 4).scale(1, 0.6, 1), hx, hy + S, z), '#d8a02a'));
 }
 
 function logGeo(l) {
-  const rad = l.h * T * 0.55, len = l.w * T;
-  const g = new THREE.CylinderGeometry(rad, rad, len, 10, 1).rotateZ(Math.PI / 2);
+  const rad = l.h * T * (l.twig ? 0.4 : 0.55), len = l.w * T;
+  const g = new THREE.CylinderGeometry(rad, rad, len, l.twig ? 6 : 10, 1).rotateZ(Math.PI / 2);
+  const bark = l.rot ? ['#4a4436', '#5a5242'] : ['#5a3e24', '#6e4c2e'];
   return paint(at(g, (l.x0 + l.w / 2) * T, rad * 0.9, (l.y0 + l.h / 2) * T), (x, y, z) => {
     const lx = x - (l.x0 + l.w / 2) * T;
     if (Math.abs(Math.abs(lx) - len / 2) < 0.5) { const rr = Math.hypot(y - rad * 0.9, z - (l.y0 + l.h / 2) * T); return Math.floor(rr / 4) % 2 ? '#c8a070' : '#b08a5a'; }
-    return Math.floor((Math.atan2(y - rad * 0.9, z - (l.y0 + l.h / 2) * T) + 4) * 3) % 2 ? '#5a3e24' : '#6e4c2e';
+    if (l.rot && Math.sin(lx * 0.05) > 0.6 && y > rad * 1.3) return '#4a6a2a'; // moss
+    return Math.floor((Math.atan2(y - rad * 0.9, z - (l.y0 + l.h / 2) * T) + 4) * 3) % 2 ? bark[0] : bark[1];
   }, l.x0 + l.y0);
 }
 
-// Merge geometries in blocks of the yard (CHUNK tiles a side), so the camera
-// only draws the blocks it can see instead of the whole yard every frame.
-const CHUNK = 40;
-function mergeByChunk(geos) {
-  const R = CHUNK * T, buckets = new Map();
-  for (const geo of geos) {
-    geo.computeBoundingBox();
-    const b = geo.boundingBox, k = Math.floor((b.min.x + b.max.x) / 2 / R) + ',' + Math.floor((b.min.z + b.max.z) / 2 / R);
-    if (!buckets.has(k)) buckets.set(k, []);
-    buckets.get(k).push(geo);
-  }
-  return [...buckets.values()].map((list) => mergeGeometries(list));
-}
+const WEB_MAT = new THREE.LineBasicMaterial({ color: '#f4f0ff', transparent: true, opacity: 0.55 });
+const TRAMP_MAT = psxBasic({ color: '#141418', transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide });
+const GROUND_ONLY = new Set(['lawn', 'blanket', 'mat', 'clover', 'wall', 'fence']);
 
-// ---------- the yard ----------
-export function buildYardScenery(w) {
-  const g = new THREE.Group();
-  const W = w.W, H = w.H, gw = W * T, gh = H * T;
-  const r = rng(17);
-
-  // Ground: one piece per region, so only what's near the camera is drawn,
-  // with a quad per tile so the vertex snapping has something to wobble.
-  const F = featureFields(w);
-  // Painting a region's ground takes a moment, so each one starts plain and is
-  // painted when the camera first comes near (refine), nearest first; home's
-  // is painted straight away.
-  const lazy = [];
-  for (let y0 = 0; y0 < H; y0 += AREA) for (let x0 = 0; x0 < W; x0 += AREA) {
-    const cw = Math.min(AREA, W - x0), ch = Math.min(AREA, H - y0);
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(cw * T, ch * T, cw, ch).rotateX(-Math.PI / 2).translate((x0 + cw / 2) * T, 0, (y0 + ch / 2) * T), psx({ color: '#4e6a2e' }));
-    g.add(mesh);
-    lazy.push({ mesh, cx: (x0 + cw / 2) * T, cz: (y0 + ch / 2) * T, paint: () => { mesh.material.dispose(); mesh.material = psx({ map: groundTexture(w, F, x0, y0, cw, ch) }); } });
-  }
-  g.userData.refine = (x, z, range = AREA * T * 1.6) => {
-    let best = null, bd = range;
-    for (const L of lazy) { if (L.done) continue; const d = Math.max(Math.abs(L.cx - x), Math.abs(L.cz - z)); if (d < bd) { bd = d; best = L; } }
-    if (best) { best.paint(); best.done = true; }
-    return !!best;
-  };
-  g.userData.refine((w.ex + 0.5) * T, (w.ey + 0.5) * T, Infinity);
-
-  // Past the thicket the yard goes on (not built yet): plain overgrown ground
-  // out to the fog, so the edge never shows open sky.
-  const M = 60 * S * T;
-  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(gw + M * 2, gh + M, 8, 8).rotateX(-Math.PI / 2).translate(gw / 2, -0.6, gh / 2 + M / 2), psx({ map: rampTexture(27, ['#2e4a1c', '#34521e', '#3a5a22', '#2a4418'], { size: 16, repeat: [(gw + M * 2) / 64, (gh + M) / 64] }) }));
-  g.add(beyond);
-
-  // Tiles that belong to a landmark, so plain rocks aren't drawn under them.
-  const own = new Uint8Array(W * H);
-  const claim = (x0, y0, ww, hh) => { for (let y = y0; y < y0 + hh; y++) for (let x = x0; x < x0 + ww; x++) if (x >= 0 && y >= 0 && x < W && y < H) own[y * W + x] = 1; };
-  const claimDisc = (cx, cy, rr) => { for (let y = Math.floor(cy - rr - 1); y <= cy + rr + 1; y++) for (let x = Math.floor(cx - rr - 1); x <= cx + rr + 1; x++) if (x >= 0 && y >= 0 && x < W && y < H && Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= rr + 0.5) own[y * W + x] = 1; };
-
-  const parts = [], decals = [], stoneParts = [], weeds = [];
-  for (const l of w.landmarks) {
-    switch (l.kind) {
+// Build one landmark's geometry into the region's buckets.
+function meshLandmark(l, w, ctx) {
+  const { parts, decals, stoneParts, extra, r } = ctx, W = w.W;
+  const claim = () => {}, claimDisc = () => {};
+  switch (l.kind) {
       case 'bigrock': {
         claim(l.x0, l.y0, l.w, l.h);
         for (let k = 0; k < 3; k++) {
@@ -258,7 +267,7 @@ export function buildYardScenery(w) {
         for (let k = 0; k < 3; k++) parts.push(paint(at(new THREE.SphereGeometry(6 * S, 7, 5).scale(1, 1.2, 1), cx + (k - 1) * 9 * S, 7 * S, cz + ((k % 2) * 8 - 4) * S), (x, y, z) => (y > 11 * S ? '#3e7a2a' : (Math.floor((x + z) / S) % 3 === 0 ? '#f0d070' : '#d02a3a')), k + 9));
         break;
       }
-      case 'log': claim(l.x0, l.y0, l.w, l.h); parts.push(logGeo(l)); break;
+      case 'log': parts.push(logGeo(l)); break;
       case 'spigot': {
         claim(l.x0, l.y0, l.w, l.h);
         parts.push(paint(at(new THREE.BoxGeometry(l.w * T, 90 * S, l.h * T), (l.x0 + l.w / 2) * T, 45 * S, (l.y0 + l.h / 2) * T), (x, y, z) => (Math.floor(y / (8 * S)) % 2 ? '#8a3a2a' : '#9a4632')));
@@ -311,11 +320,11 @@ export function buildYardScenery(w) {
         parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3 * S, (l.h - blade) * T, 6).rotateX(Math.PI / 2), cx, 4 * S, (l.y0 + blade + (l.h - blade) / 2) * T), '#f0c23a'));
         break;
       }
-      case 'pits':
-        for (const p of l.pits) {
-          decals.push(paint(at(new THREE.CircleGeometry(p.r * T + 6 * S, 14, 0, Math.PI * 2).rotateX(-Math.PI / 2), p.x * T, 0, p.y * T), (x, y, z) => { const d = Math.hypot(x - p.x * T, z - p.y * T) / (p.r * T + 6 * S); return d < 0.25 ? '#3a2c1c' : d < 0.55 ? '#7a6446' : d < 0.8 ? '#a8926a' : '#bca880'; }));
-        }
+      case 'pit': {
+        const p = l;
+        decals.push(paint(at(new THREE.CircleGeometry(p.r * T + 6 * S, 14, 0, Math.PI * 2).rotateX(-Math.PI / 2), p.x * T, 0, p.y * T), (x, y, z) => { const d = Math.hypot(x - p.x * T, z - p.y * T) / (p.r * T + 6 * S); return d < 0.25 ? '#3a2c1c' : d < 0.55 ? '#7a6446' : d < 0.8 ? '#a8926a' : '#bca880'; }));
         break;
+      }
       case 'can': {
         claim(l.x0, l.y0, l.w, l.h);
         const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, rad = l.w * T * 0.5;
@@ -332,27 +341,6 @@ export function buildYardScenery(w) {
         for (let k = 0; k < 6; k++) parts.push(paint(at(new THREE.SphereGeometry(1, 6, 3).scale(26 * S, 2 * S, 9 * S).translate(24 * S, 0, 0).rotateZ(0.5).rotateY(k * 1.05), l.x * T, (66 + k * 4) * S, l.y * T), '#3e7a2a', k));
         break;
       }
-      case 'wall': {
-        const brick = canvasTexture(32, 16, (c) => {
-          c.fillStyle = '#5a4a40'; c.fillRect(0, 0, 32, 16);
-          c.fillStyle = '#9a4632'; c.fillRect(1, 1, 14, 6); c.fillRect(17, 1, 14, 6);
-          c.fillStyle = '#8a3a2a'; c.fillRect(-7, 9, 14, 6); c.fillRect(9, 9, 14, 6); c.fillRect(25, 9, 14, 6);
-        }, { repeat: [gw / (64 * S), 6] });
-        g.add(new THREE.Mesh(new THREE.BoxGeometry(gw, 190 * S, T).translate(gw / 2, 95 * S, T / 2), psx({ map: brick })));
-        break;
-      }
-      case 'thicket': {
-        // Where the built yard ends: a wall of tall weeds two tiles deep,
-        // with more yard beyond it (the yard map shows what's planned).
-        const along = l.side === 's' ? W : H;
-        for (let i = 0; i < along; i += 0.5) for (let d = 0; d < 2.6; d += 0.7) {
-          const hgt = (40 + r() * 60 + (d > 1.2 ? 30 : 0)) * S, wd = (10 + r() * 8) * S;
-          const ax = l.side === 's' ? i : l.side === 'w' ? 2.4 - d : W - 2.4 + d, ay = l.side === 's' ? H - 2.4 + d : i;
-          weeds.push([ax, ay, hgt, wd]);
-        }
-        break;
-      }
-      // ---------- the ring (build 10) ----------
       case 'steps': {
         // Three wooden steps down from the back door, the top one against the wall.
         claim(l.x0, l.y0, l.w, l.h);
@@ -398,7 +386,10 @@ export function buildYardScenery(w) {
         }
         for (let k = 0; k < 4; k++) {
           const a = rs() * Math.PI * 2, ripe = rs() < 0.7;
-          parts.push(paint(at(new THREE.SphereGeometry(7 * S, 8, 6).scale(1, 0.85, 1), x + Math.cos(a) * 9 * S, h * (0.3 + rs() * 0.45), z + Math.sin(a) * 9 * S), (px, py) => (ripe ? (py > 0 && rs() < 0.1 ? '#f0604a' : '#d8282a') : '#7ab040'), 90 + k));
+          // Tomatoes are round and red; peppers hang long, yellow or green.
+          const fruit = l.fruit ? new THREE.SphereGeometry(5 * S, 8, 6).scale(1, 2, 1) : new THREE.SphereGeometry(7 * S, 8, 6).scale(1, 0.85, 1);
+          const colr = l.fruit === 'yellow' ? '#f0c020' : l.fruit === 'green' ? '#3e9a2a' : null;
+          parts.push(paint(at(fruit, x + Math.cos(a) * 9 * S, h * (0.3 + rs() * 0.45), z + Math.sin(a) * 9 * S), (px, py) => (colr || (ripe ? (py > 0 && rs() < 0.1 ? '#f0604a' : '#d8282a') : '#7ab040')), 90 + k));
         }
         break;
       }
@@ -428,8 +419,14 @@ export function buildYardScenery(w) {
         const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, top = 200 * S;
         parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3.5 * S, top, 6).translate(0, top / 2, 0), x, 0, z), '#3a3a36'));
         parts.push(paint(at(new THREE.BoxGeometry(44 * S, 4 * S, 44 * S), x, top, z), '#8a5e3a'));
-        parts.push(paint(at(new THREE.BoxGeometry(26 * S, 34 * S, 26 * S), x, top + 19 * S, z), (px, py, pz) => (Math.abs(px - x) > 12 * S || Math.abs(pz - z) > 12 * S ? '#c8a86a' : '#e8d8a8')));
-        parts.push(paint(at(new THREE.ConeGeometry(28 * S, 18 * S, 4).rotateY(Math.PI / 4), x, top + 45 * S, z), '#a8402a'));
+        if (l.suet) {
+          // A wire cage of suet: a pale block behind grey bars.
+          parts.push(paint(at(new THREE.BoxGeometry(22 * S, 22 * S, 10 * S), x, top + 13 * S, z), '#e8dcb8'));
+          for (let k = -2; k <= 2; k++) parts.push(paint(at(new THREE.BoxGeometry(1.4 * S, 26 * S, 12 * S), x + k * 5 * S, top + 13 * S, z), '#6a6a6a'));
+        } else {
+          parts.push(paint(at(new THREE.BoxGeometry(26 * S, 34 * S, 26 * S), x, top + 19 * S, z), (px, py, pz) => (Math.abs(px - x) > 12 * S || Math.abs(pz - z) > 12 * S ? '#c8a86a' : '#e8d8a8')));
+          parts.push(paint(at(new THREE.ConeGeometry(28 * S, 18 * S, 4).rotateY(Math.PI / 4), x, top + 45 * S, z), '#a8402a'));
+        }
         break;
       }
       case 'birdbath': {
@@ -490,74 +487,450 @@ export function buildYardScenery(w) {
           pts.push(cx + Math.cos(a0) * rr, cy + Math.sin(a0) * rr * 0.9, cz, cx + Math.cos(a1) * rr, cy + Math.sin(a1) * rr * 0.9, cz);
         }
         const lg = new THREE.BufferGeometry(); lg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-        g.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: '#f4f0ff', transparent: true, opacity: 0.55 })));
+        extra.push(new THREE.LineSegments(lg, WEB_MAT));
+        break;
+      }
+      // ---------- the rest of the yard (build 11) ----------
+      case 'trashcan': {
+        // A wheelie bin: a tapered body, a lid with a lip, a handle bar.
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 150 * S;
+        parts.push(paint(at(new THREE.CylinderGeometry(R, R * 0.86, h, 14).translate(0, h / 2, 0), x, 0, z), (px, py) => (Math.floor(py / (20 * S)) % 2 ? l.color : shade(l.color, 0.9)), 31));
+        parts.push(paint(at(new THREE.CylinderGeometry(R * 1.06, R * 1.06, 8 * S, 14), x, h + 4 * S, z), shade(l.color, 0.75), 32));
+        parts.push(paint(at(new THREE.BoxGeometry(R * 1.1, 5 * S, 5 * S), x, h + 10 * S, z - R * 0.7), '#2a2a2a'));
+        break;
+      }
+      case 'bag': {
+        // A tied rubbish sack (or a sack of fertiliser), slumped.
+        const x = l.x * T, z = l.y * T, R = l.r * T, g2 = lumpy(new THREE.SphereGeometry(R, 10, 7).scale(1, 0.7, 1), R * 0.12, l.x);
+        parts.push(paint(at(g2, x, R * 0.55, z), (px, py) => (l.color ? (py > R * 0.9 ? '#8a7a50' : l.color) : py > R * 0.95 ? '#3a3a3a' : '#1e1e22'), 33));
+        break;
+      }
+      case 'cooler': {
+        // A picnic cooler: blue body, white lid, a handle across.
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, h = 60 * S;
+        parts.push(paint(at(new THREE.BoxGeometry(l.w * T, h, l.h * T), cx, h / 2, cz), '#2a6ab8', 34));
+        parts.push(paint(at(new THREE.BoxGeometry(l.w * T * 1.04, 10 * S, l.h * T * 1.04), cx, h + 5 * S, cz), '#f2f2ee', 35));
+        parts.push(paint(at(new THREE.BoxGeometry(l.w * T * 0.6, 4 * S, 6 * S), cx, h + 13 * S, cz), '#d8d8d0'));
+        break;
+      }
+      case 'boulder': {
+        const st = new THREE.IcosahedronGeometry(1, 1), pos = st.attributes.position, rs = rng(Math.floor(l.seed * 1e6));
+        for (let i = 0; i < pos.count; i++) { const f = 0.78 + rs() * 0.4; pos.setXYZ(i, pos.getX(i) * f, pos.getY(i) * f, pos.getZ(i) * f); }
+        const R = l.r * T, hgt = R * (0.7 + rs() * 0.3);
+        st.scale(R * 1.05, hgt, R * 1.05).rotateY(rs() * 3);
+        stoneParts.push(at(st, l.x * T, hgt * 0.35, l.y * T));
+        break;
+      }
+      case 'succulent': case 'herb': case 'bush': {
+        // Rosettes of fat leaves (succulents), or rounded leafy bushes.
+        const x = l.x * T, z = l.y * T, R = l.r * T, rs = rng(Math.floor(l.seed * 1e6));
+        if (l.kind === 'succulent') {
+          for (let k = 0; k < 9; k++) { const a = k * 2.4; parts.push(paint(at(new THREE.ConeGeometry(R * 0.22, R * 0.9, 5).rotateZ(-1.0 + (k % 3) * 0.25).translate(R * 0.3, R * 0.25, 0).rotateY(a), x, 0, z), k % 2 ? '#6aa08a' : '#8ab89a', k)); }
+        } else {
+          const tint = l.kind === 'bush' ? ['#2e5a24', '#3a6a2a'] : [['#4aa048', '#5ab858'], ['#2e6a2e', '#3a7a34'], ['#7a8a6a', '#8a9a78']][l.kind2 || 0];
+          for (let k = 0; k < 6; k++) { const a = rs() * Math.PI * 2, d = rs() * R * 0.5; parts.push(paint(at(new THREE.IcosahedronGeometry(R * (0.45 + rs() * 0.25), 0), x + Math.cos(a) * d, R * (0.4 + rs() * 0.5), z + Math.sin(a) * d), tint[k % 2], k)); }
+        }
+        break;
+      }
+      case 'cactus': {
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 110 * S;
+        parts.push(paint(at(new THREE.CylinderGeometry(R * 0.7, R * 0.8, h, 8).translate(0, h / 2, 0), x, 0, z), (px, py, pz) => (Math.floor(Math.atan2(pz - z, px - x) * 4) % 2 ? '#3a7a3a' : '#2e6a30')));
+        for (const s2 of [-1, 1]) parts.push(paint(at(new THREE.CylinderGeometry(R * 0.4, R * 0.4, h * 0.35, 6).translate(0, h * 0.18, 0), x + s2 * R * 1.1, h * 0.4, z), '#3a7a3a'));
+        break;
+      }
+      case 'hedge': {
+        // A hedge: a dense mass of dark leafy domes, as tall as a fence.
+        const rs = rng(Math.floor(l.seed * 1e6)), n = Math.max(3, Math.round((l.w * l.h) / (5 * S * S)));
+        for (let k = 0; k < n; k++) {
+          const x = (l.x0 + rs() * l.w) * T, z = (l.y0 + rs() * l.h) * T, R = (3 + rs() * 2.5) * S * T, y = (60 + rs() * 90) * S;
+          parts.push(paint(at(new THREE.IcosahedronGeometry(R, 1).scale(1, 0.85, 1), x, y, z), (px, py) => (py > y + R * 0.4 ? '#3a6a2a' : py > y ? '#2e5a22' : '#22461a'), k + 40));
+        }
+        break;
+      }
+      case 'hosereel': {
+        const x = l.x * T, z = l.y * T, R = l.r * T;
+        parts.push(paint(at(new THREE.BoxGeometry(R * 1.6, 8 * S, R * 0.4), x, 4 * S, z), '#5a5a5a'));
+        for (let k = 0; k < 4; k++) parts.push(paint(at(new THREE.TorusGeometry(R * 0.75, 4 * S, 5, 16).rotateY(Math.PI / 2), x - R * 0.15 + k * 6 * S, R * 0.85, z), k % 2 ? '#2e8a3a' : '#3a9a46', k));
+        break;
+      }
+      case 'drainpipe': {
+        const x = l.x * T, z = l.y * T;
+        if (l.out) parts.push(paint(at(new THREE.CylinderGeometry(9 * S, 9 * S, 80 * S, 10).rotateX(Math.PI / 2), x, 9 * S, z), '#8a8a86'));
+        else { parts.push(paint(at(new THREE.CylinderGeometry(7 * S, 7 * S, 320 * S, 8).translate(0, 160 * S, 0), x, 0, z), '#9a9a96')); parts.push(paint(at(new THREE.CylinderGeometry(7 * S, 9 * S, 30 * S, 8).rotateX(-1.1), x, 12 * S, z + 12 * S), '#9a9a96')); }
+        break;
+      }
+      case 'squash': {
+        const x = l.x * T, z = l.y * T, R = l.r * T, rs = rng(Math.floor(l.seed * 1e6));
+        for (let k = 0; k < 5; k++) parts.push(paint(at(new THREE.SphereGeometry(1, 8, 4).scale(R * 0.75, 2 * S, R * 0.6).translate(R * 0.6, 0, 0).rotateZ(0.3).rotateY(k * 1.26 + rs()), x, 30 * S + k * 4 * S, z), k % 2 ? '#3a7a2a' : '#4a8a34', k));
+        parts.push(paint(at(new THREE.SphereGeometry(R * 0.38, 10, 7).scale(1.4, 0.9, 1), x + R * 0.3, R * 0.3, z - R * 0.2), (px, py) => (py > R * 0.45 ? '#f0a83a' : '#e08a2a'), 13));
+        break;
+      }
+      case 'stepstone': {
+        // A flat stepping stone, barely proud of the grass (you can walk on it).
+        const x = l.x * T, z = l.y * T, R = l.r * T, rs = rng(Math.floor(l.seed * 1e6));
+        const g2 = new THREE.CylinderGeometry(R, R * 1.02, 4 * S, 9).scale(1, 1, 0.8 + rs() * 0.3).rotateY(rs() * 3);
+        stoneParts.push(at(g2, x, 2 * S, z));
+        break;
+      }
+      case 'gnome': {
+        // A garden gnome: blue coat, white beard, pink face, a tall red hat.
+        const x = l.x * T, z = l.y * T, R = l.r * T;
+        parts.push(paint(at(new THREE.CylinderGeometry(R * 0.7, R, 70 * S, 10).translate(0, 35 * S, 0), x, 0, z), '#2a5ab0'));
+        parts.push(paint(at(new THREE.SphereGeometry(R * 0.55, 8, 6), x, 82 * S, z), '#f0c0a0'));
+        parts.push(paint(at(new THREE.ConeGeometry(R * 0.55, 30 * S, 8).translate(0, 15 * S, 0), x, 74 * S, z + R * 0.3), '#f4f4f0'));
+        parts.push(paint(at(new THREE.ConeGeometry(R * 0.6, 60 * S, 8).translate(0, 30 * S, 0), x, 90 * S, z), '#d02a2a'));
+        if (l.rod) parts.push(paint(at(new THREE.CylinderGeometry(1 * S, 1 * S, 120 * S, 4).rotateZ(-0.8).translate(0, 50 * S, 0), x + R, 40 * S, z), '#7a5a32'));
+        break;
+      }
+      case 'oak': {
+        // The Oak's trunk: wide at the foot, ribbed bark, up out of sight.
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 900 * S;
+        parts.push(paint(at(new THREE.CylinderGeometry(R * 0.82, R * 1.15, h, 18, 6).translate(0, h / 2, 0), x, 0, z), (px, py, pz) => (Math.floor(Math.atan2(pz - z, px - x) * 5 + py / (40 * S)) % 2 ? '#5a4632' : '#4a3a28'), 71));
+        break;
+      }
+      case 'root': {
+        const len = l.len * T, g2 = new THREE.CylinderGeometry(0.9 * S * T * 0.5, 1.5 * S * T * 0.5, len, 7).rotateZ(Math.PI / 2).translate(len / 2, 0, 0).rotateY(-l.a);
+        parts.push(paint(at(g2, l.x * T, 4 * S, l.y * T), (px, py) => (py > 6 * S ? '#6a5238' : '#4e3c28'), 72));
+        break;
+      }
+      case 'twig': parts.push(logGeo({ ...l, h: 1, twig: true })); break;
+      case 'shed': {
+        // The garden shed: plank walls, a door, a pitched roof of felt.
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, w2 = l.w * T, d2 = l.h * T, h = 240 * S;
+        parts.push(paint(at(new THREE.BoxGeometry(w2, h, d2).translate(0, h / 2, 0), cx, 0, cz), (px) => (Math.floor(px / (10 * S)) % 2 ? '#8a6a46' : '#7a5c3c'), 73));
+        parts.push(paint(at(new THREE.BoxGeometry(46 * S, 150 * S, 4 * S).translate(0, 75 * S, 0), cx, 0, cz + d2 / 2 + 2 * S), '#5a4430'));
+        // The roof: two slopes of overlapping shingle rows up to a ridge.
+        const run = d2 * 0.6, rise = 80 * S, slope = Math.hypot(run, rise), tilt = Math.atan2(rise, run), rows = 9;
+        for (const sd of [-1, 1]) for (let k = 0; k < rows; k++) {
+          const f = (k + 0.5) / rows, row = new THREE.BoxGeometry(w2 * 1.08, 3 * S, (slope / rows) * 1.15).rotateX(sd * tilt);
+          parts.push(paint(at(row, cx, h + rise * (1 - f), cz + sd * run * f), k % 2 ? '#5a4e48' : '#4a403c', 74 + k));
+        }
+        break;
+      }
+      case 'thistle': {
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h;
+        parts.push(paint(at(new THREE.CylinderGeometry(1.2 * S, 1.6 * S, h, 4).translate(0, h / 2, 0), x, 0, z), '#5a7a3a'));
+        for (let k = 0; k < 3; k++) parts.push(paint(at(new THREE.ConeGeometry(4 * S, 22 * S, 3).rotateZ(1.2).rotateY(k * 2.1 + l.seed * 4), x, h * (0.3 + k * 0.2), z), '#4a6a32', k));
+        if (!l.weed) { parts.push(paint(at(new THREE.SphereGeometry(7 * S, 6, 4), x, h, z), '#4a6a2a')); parts.push(paint(at(new THREE.ConeGeometry(7 * S, 12 * S, 8), x, h + 9 * S, z), '#a85ac0')); }
+        break;
+      }
+      case 'toadhole':
+        decals.push(paint(at(new THREE.CircleGeometry(l.r * T, 12).rotateX(-Math.PI / 2).scale(1.3, 1, 1), l.x * T, 0, l.y * T), (px, py, pz) => (Math.hypot((px - l.x * T) / 1.3, pz - l.y * T) < l.r * T * 0.6 ? '#140e08' : '#4a3a24')));
+        break;
+      case 'sprinkler': {
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T;
+        parts.push(paint(at(new THREE.CylinderGeometry(7 * S, 9 * S, 10 * S, 10), x, 5 * S, z), '#2a6a2a'));
+        parts.push(paint(at(new THREE.CylinderGeometry(2 * S, 2 * S, 22 * S, 6), x, 20 * S, z), '#b8b8b0'));
+        parts.push(paint(at(new THREE.BoxGeometry(26 * S, 3 * S, 4 * S), x, 31 * S, z), '#b8b8b0'));
+        break;
+      }
+      case 'trampoline': {
+        // Legs and a padded ring on the ground; the mat itself is see-through
+        // so an ant under it is never hidden.
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 160 * S;
+        for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3 * S, h, 6).translate(0, h / 2, 0), x + Math.cos(a) * R * 0.92, 0, z + Math.sin(a) * R * 0.92), '#2a2a2a', k)); }
+        parts.push(paint(at(new THREE.TorusGeometry(R, 9 * S, 5, 28).rotateX(Math.PI / 2), x, h, z), '#2a6ad8'));
+        const mat = new THREE.Mesh(new THREE.CircleGeometry(R * 0.9, 28).rotateX(-Math.PI / 2), TRAMP_MAT);
+        mat.position.set(x, h - 2 * S, z); extra.push(mat);
+        decals.push(paint(at(new THREE.CircleGeometry(R * 0.95, 24).rotateX(-Math.PI / 2), x, 0, z), '#2e4a20'));
+        break;
+      }
+      case 'ball': {
+        const x = l.x * T, z = l.y * T, R = l.r * T;
+        parts.push(paint(at(new THREE.IcosahedronGeometry(R, 1), x, R, z), (px, py, pz) => (Math.abs(Math.sin((px - x) * 0.02) * Math.cos((pz - z) * 0.02 + py * 0.01)) > 0.75 ? '#1a1a1a' : '#f4f4f0'), 75));
+        break;
+      }
+      case 'mushroom': {
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 30 * S + R * 0.8, rs = rng(Math.floor(l.seed * 1e6)), red = rs() < 0.5;
+        parts.push(paint(at(new THREE.CylinderGeometry(R * 0.3, R * 0.4, h, 7).translate(0, h / 2, 0), x, 0, z), '#efe6d2'));
+        parts.push(paint(at(new THREE.SphereGeometry(R, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.6, 1), x, h, z), () => (red ? (rs() < 0.2 ? '#f4f0e8' : '#c8302a') : (rs() < 0.2 ? '#e8d8b8' : '#b8946a')), 76));
+        break;
+      }
+      case 'barrow': {
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T;
+        parts.push(paint(at(new THREE.BoxGeometry(l.w * T, 16 * S, l.h * T), cx, 22 * S, cz), '#2a7ac8'));
+        parts.push(paint(at(new THREE.CylinderGeometry(9 * S, 9 * S, 5 * S, 10).rotateX(Math.PI / 2), cx + l.w * T * 0.55, 9 * S, cz), '#1a1a1a'));
+        break;
+      }
+      case 'frisbee': {
+        const x = l.x * T, z = l.y * T, R = l.r * T;
+        parts.push(paint(at(new THREE.TorusGeometry(R, 4 * S, 4, 22).rotateX(Math.PI / 2), x, 4 * S, z), '#e8402a'));
+        decals.push(paint(at(new THREE.CircleGeometry(R, 22).rotateX(-Math.PI / 2), x, 0, z), '#d8382a'));
+        break;
+      }
+      case 'bone': {
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, len = l.w * T;
+        parts.push(paint(at(new THREE.CylinderGeometry(6 * S, 6 * S, len, 8).rotateZ(Math.PI / 2), cx, 7 * S, cz), '#ece2cc'));
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(paint(at(new THREE.SphereGeometry(8 * S, 8, 6), cx + sx * len / 2, 8 * S, cz + sz * 6 * S), '#f0e8d6'));
+        break;
+      }
+      case 'truck': {
+        // A plastic toy dump truck: red cab, yellow tipper, fat black wheels.
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, w2 = l.w * T, d2 = l.h * T;
+        parts.push(paint(at(new THREE.BoxGeometry(w2 * 0.35, 50 * S, d2 * 0.9), cx - w2 * 0.3, 40 * S, cz), '#d8302a'));
+        parts.push(paint(at(new THREE.BoxGeometry(w2 * 0.6, 34 * S, d2), cx + w2 * 0.18, 44 * S, cz), '#f2c020'));
+        for (const fx of [-0.32, 0.3]) for (const fz of [-1, 1]) parts.push(paint(at(new THREE.CylinderGeometry(15 * S, 15 * S, 10 * S, 12).rotateX(Math.PI / 2), cx + w2 * fx, 15 * S, cz + fz * d2 * 0.5), '#1a1a1a'));
+        break;
+      }
+      case 'reed': {
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h;
+        for (let k = 0; k < 3; k++) parts.push(paint(at(new THREE.CylinderGeometry(0.8 * S, 1.4 * S, h * (0.7 + k * 0.15), 3).translate(0, h * (0.35 + k * 0.07), 0).rotateZ((k - 1) * 0.12).rotateY(l.seed * 6 + k), x, 0, z), k % 2 ? '#5a7a3a' : '#6a8a42', k));
+        if (l.seed > 0.4) parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3 * S, 22 * S, 6), x, h * 0.9, z), '#6a4228'));
+        break;
+      }
+      case 'slime':
+        for (const [x, y, a] of l.pts) decals.push(paint(at(new THREE.PlaneGeometry(26 * S * T / 16, 4 * S).rotateX(-Math.PI / 2).rotateY(a), x * T, 0, y * T), '#b8c0b4'));
+        break;
+      case 'leafheap': {
+        // A heap of fallen leaves: flat, overlapping, in autumn colours.
+        const x = l.x * T, z = l.y * T, R = l.r * T, rs = rng(Math.floor(l.seed * 1e6)), n = Math.round(10 * l.r);
+        const cols = ['#b8642a', '#9a4a22', '#c88a30', '#7a3a1e', '#a87a3a'];
+        for (let k = 0; k < n; k++) { const a = rs() * Math.PI * 2, d = Math.sqrt(rs()) * R, hh = Math.sqrt(Math.max(0, 1 - (d / R) ** 2)) * R * 0.5;
+          parts.push(paint(at(new THREE.SphereGeometry(1, 6, 3).scale(14 * S, 1.5 * S, 8 * S).rotateX((rs() - 0.5) * 0.8).rotateY(rs() * 6), x + Math.cos(a) * d, hh + 2 * S, z + Math.sin(a) * d), cols[k % cols.length], k)); }
+        break;
+      }
+      case 'firemound': {
+        // A fire-ant mound: crumbly red earth, entry holes, and its ants.
+        const x = l.x * T, z = l.y * T, R = l.r * T;
+        const g2 = lumpy(new THREE.SphereGeometry(R, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, l.big ? 0.5 : 0.4, 1), R * 0.06, l.x);
+        parts.push(paint(at(g2, x, 0, z), (px, py) => (py > R * 0.3 ? '#9a5232' : '#7a4028'), 77));
+        const holes = l.big ? 7 : 2;
+        for (let k = 0; k < holes; k++) { const a = k * 2.4, d = R * (0.2 + (k % 3) * 0.2); parts.push(paint(at(new THREE.CircleGeometry(4 * S, 8).rotateX(-Math.PI / 2), x + Math.cos(a) * d, R * (l.big ? 0.5 : 0.4) * Math.sqrt(Math.max(0.05, 1 - (d / R) ** 2)) + 0.5 * S, z + Math.sin(a) * d), '#1a0e08')); }
         break;
       }
       default: break;
     }
+}
+
+// Where a landmark sits (tiles), to file it under a region.
+function anchor(l) {
+  if (l.kind === 'grease') return [l.spots[0][0], l.spots[0][1]];
+  if (l.kind === 'slime') return [l.pts[0][0], l.pts[0][1]];
+  const mid = (c, c0, c1, len) => (c != null ? c : c0 + (len != null ? len : c1 != null ? c1 - c0 : 0) / 2);
+  return [mid(l.x, l.x0, l.x1, l.w), mid(l.y, l.y0, l.y1, l.h)];
+}
+
+// Tiles a landmark stands on, so plain rocks aren't drawn under it.
+function claimAll(w) {
+  const W = w.W, H = w.H, own = new Uint8Array(W * H);
+  const rect = (x0, y0, ww, hh) => { for (let y = Math.floor(y0); y < y0 + hh; y++) for (let x = Math.floor(x0); x < x0 + ww; x++) if (x >= 0 && y >= 0 && x < W && y < H) own[y * W + x] = 1; };
+  const disc = (cx, cy, rr) => { for (let y = Math.floor(cy - rr - 1); y <= cy + rr + 1; y++) for (let x = Math.floor(cx - rr - 1); x <= cx + rr + 1; x++) if (x >= 0 && y >= 0 && x < W && y < H && Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= rr + 0.5) own[y * W + x] = 1; };
+  for (const l of w.landmarks) {
+    if (l.kind === 'frame') rect(l.x0, l.y0, l.x1 - l.x0 + 1, l.y1 - l.y0 + 1);
+    else if (l.kind === 'root') for (let t = 0; t <= l.len; t += 0.5) disc(l.x + Math.cos(l.a) * t, l.y + Math.sin(l.a) * t, 1.5);
+    else if (l.x0 != null && l.w != null) rect(l.x0, l.y0, l.w, l.h);
+    else if (l.r != null && l.x != null) disc(l.x, l.y, l.r);
+    else if (l.x != null) rect(l.x, l.y, 1, 1);
+  }
+  return own;
+}
+
+const grassTex = () => canvasTexture(16, 16, (c) => {
+  const rr = rng(8);
+  for (let x = 0; x < 16; x++) { const h = 5 + Math.floor(rr() * 11); c.fillStyle = rr() < 0.5 ? '#4f7a2e' : '#3a5e22'; c.fillRect(x, 16 - h, 1, h); }
+}, { wrap: false });
+
+// ---------- the yard, region by region ----------
+// Regions within reach of the camera are built (nearest first, a slice of
+// work a frame), and those well beyond it are thrown away again, so only the
+// few around you are ever in memory. Reach is at least LOAD tiles, more when
+// the view shows more ground (zoomed out on a wide screen). A thrown-away
+// region keeps a small painting of its ground, for the view into the distance.
+const LOAD = AREA * 0.75, MAX_REACH = AREA * 1.25, SLACK = AREA * 0.55;
+const BUDGET = 6, RUSH = 24; // ms of building a frame: ahead of you, or already on screen
+export class YardScenery {
+  constructor(w) {
+    this.w = w;
+    this.group = new THREE.Group();
+    this.onLoaded = null; // (region index) once a region is fully built
+    const W = w.W, H = w.H, gw = W * T, gh = H * T;
+    this.mats = {
+      part: psx({ vertexColors: true }),
+      decal: psx({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
+      rock: psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.08, 0.08] }) }),
+      grass: psx({ map: grassTex(), alphaTest: 0.5, side: THREE.DoubleSide }),
+    };
+    // Lists the ground fields read, worked out once for the whole yard.
+    const pts = (kind) => w.landmarks.filter((l) => l.kind === kind);
+    this.L = {
+      flowers: [...pts('flower').filter((l) => !l.small).map((l) => [l.x + 0.5, l.y + 0.5]), ...pts('strawberry').map((l) => [l.x0 + l.w / 2, l.y0 + l.h / 2]), ...pts('web').map((l) => [l.x + 0.5, l.y + 2 * S])],
+      logs: pts('log'), heap: pts('heap')[0], mats: pts('mat'), clovers: pts('clover'),
+      wet: [...w.puddles.map(([x, y]) => [x + 0.5, y + 0.5, 3 * S]), ...pts('hose').map((l) => [l.x, l.y, l.r]), ...pts('spigot').map((l) => [l.x0 + l.w, l.y0 + l.h / 2, 2 * S])],
+    };
+    this.own = claimAll(w);
+    // Each region: its bounds, its landmarks, and its far-off ground.
+    this.regions = AREAS.map((A, i) => {
+      const b = areaBounds(i);
+      const far = new THREE.Mesh(new THREE.PlaneGeometry(AREA * T, AREA * T, 8, 8).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T), psx({ color: GROUND_TINT[A.ground] || GROUND_TINT.grass }));
+      this.group.add(far);
+      return { i, b, lms: [], far, near: null, small: null, job: null };
+    });
+    for (const l of w.landmarks) {
+      if (GROUND_ONLY.has(l.kind)) continue;
+      if (l.kind === 'pits') { for (const p of l.pits) this._file({ kind: 'pit', ...p }); continue; }
+      this._file(l);
+    }
+
+    // The house's brick wall along the top of the yard.
+    const wall = pts('wall')[0];
+    if (wall) {
+      const ww = wall.w * T, brick = canvasTexture(32, 16, (c) => {
+        c.fillStyle = '#5a4a40'; c.fillRect(0, 0, 32, 16);
+        c.fillStyle = '#9a4632'; c.fillRect(1, 1, 14, 6); c.fillRect(17, 1, 14, 6);
+        c.fillStyle = '#8a3a2a'; c.fillRect(-7, 9, 14, 6); c.fillRect(9, 9, 14, 6); c.fillRect(25, 9, 14, 6);
+      }, { repeat: [ww / (64 * S), 6] });
+      this.group.add(new THREE.Mesh(new THREE.BoxGeometry(ww, 190 * S, T).translate(wall.x0 * T + ww / 2, 95 * S, T / 2), psx({ map: brick })));
+    }
+    // A wooden fence round the rest: weathered boards on two rails.
+    const boards = canvasTexture(32, 32, (c) => {
+      for (let x = 0; x < 32; x += 8) { c.fillStyle = (x / 8) % 2 ? '#8a6e4a' : '#7e6444'; c.fillRect(x, 0, 7, 32); c.fillStyle = '#4a3a28'; c.fillRect(x + 7, 0, 1, 32); }
+      c.fillStyle = '#6a5438'; c.fillRect(0, 6, 32, 3); c.fillRect(0, 24, 32, 3);
+    });
+    const fh = 170 * S, fence = (x0, z0, len, along) => {
+      const t = boards.clone(); t.needsUpdate = true; t.repeat.set(len / (32 * S), 1);
+      const geo = along === 'x' ? new THREE.BoxGeometry(len, fh, 1.6 * T).translate(x0 + len / 2, fh / 2, z0) : new THREE.BoxGeometry(1.6 * T, fh, len).translate(x0, fh / 2, z0 + len / 2);
+      this.group.add(new THREE.Mesh(geo, psx({ map: t })));
+    };
+    for (const f of pts('fence')) {
+      if (f.side === 's') fence(0, gh - T, gw, 'x');
+      else if (f.side === 'n') fence(f.x0 * T, T, (f.x1 - f.x0) * T, 'x');
+      else fence(f.side === 'w' ? T : gw - T, 0, gh, 'z');
+    }
+    // Past the fence: the neighbours' grass out to the fog, so the edge
+    // never shows open sky. Past the wall: the house.
+    const M = 60 * S * T;
+    this.group.add(new THREE.Mesh(new THREE.PlaneGeometry(gw + M * 2, gh + M * 2, 8, 8).rotateX(-Math.PI / 2).translate(gw / 2, -0.6, gh / 2), psx({ map: rampTexture(27, ['#2e4a1c', '#34521e', '#3a5a22', '#2a4418'], { size: 16, repeat: [(gw + M * 2) / 64, (gh + M * 2) / 64] }) })));
+    if (wall) this.group.add(new THREE.Mesh(new THREE.BoxGeometry(wall.w * T, 420 * S, 300 * S).translate((wall.x0 + wall.w / 2) * T, 210 * S, -150 * S), psx({ color: '#b8ae9c' })));
   }
 
-  // Plain rocks on any other blocked tile.
-  const rockParts = [];
-  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
-    if (!w.blocked[y * W + x] || own[y * W + x]) continue;
-    const rad = 7 + r() * 4;
-    const d = new THREE.DodecahedronGeometry(rad, 0).toNonIndexed();
-    d.scale(1, 0.55 + r() * 0.35, 1);
-    d.rotateY(r() * 3);
-    d.translate((x + 0.5) * T + (r() - 0.5) * 3, rad * 0.25, (y + 0.5) * T + (r() - 0.5) * 3);
-    rockParts.push(d);
-  }
-  rockParts.push(...stoneParts.map((p) => (p.index ? p.toNonIndexed() : p)));
-  const rockMat = psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.08, 0.08] }) });
-  for (const geo of mergeByChunk(rockParts.map((p) => { p.deleteAttribute('normal'); p.deleteAttribute('uv'); return p; }))) {
-    // Planar UVs from world position, so every rock shares one stone texture.
-    const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
-    for (let i = 0; i < pos.count; i++) { uv[i * 2] = (pos.getX(i) + pos.getY(i) * 0.5) / 64; uv[i * 2 + 1] = (pos.getZ(i) + pos.getY(i) * 0.5) / 64; }
-    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    geo.computeVertexNormals();
-    g.add(new THREE.Mesh(geo, rockMat));
-  }
-  const partMat = psx({ vertexColors: true });
-  for (const geo of mergeByChunk(parts.map((p) => { if (!p.attributes.normal) p.computeVertexNormals(); return p; }))) {
-    geo.computeVertexNormals();
-    g.add(new THREE.Mesh(geo, partMat));
-  }
-  const decalMat = psx({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
-  for (const geo of mergeByChunk(decals)) {
-    const m = new THREE.Mesh(geo, decalMat);
-    m.position.y = 0.2;
-    m.renderOrder = 0;
-    g.add(m);
+  _file(l) {
+    const [x, y] = anchor(l), i = this.w.area[Math.max(0, Math.min(this.w.H - 1, Math.floor(y))) * this.w.W + Math.max(0, Math.min(this.w.W - 1, Math.floor(x)))];
+    this.regions[i].lms.push(l);
   }
 
-  // Grass: dense and tall on the Lawn, scattered on grassy ground elsewhere.
-  const grassTex = canvasTexture(16, 16, (c) => {
-    const rr = rng(8);
-    for (let x = 0; x < 16; x++) { const h = 5 + Math.floor(rr() * 11); c.fillStyle = rr() < 0.5 ? '#4f7a2e' : '#3a5e22'; c.fillRect(x, 16 - h, 1, h); }
-  }, { wrap: false });
-  const grassParts = [];
-  const gn = noise2(5);
-  const clump = (x, y, h, wd) => { for (let k = 0; k < 2; k++) { const q = new THREE.PlaneGeometry(wd, h).translate(0, h / 2, 0).rotateY(k * Math.PI / 2 + r()); q.translate(x * T, 0, y * T); grassParts.push(q); } };
-  for (let i = 0; i < (4200 * W * H) / 14400; i++) {
-    const x = 1 + r() * (W - 2), y = 1 + r() * (H - 2), ti = Math.floor(y) * W + Math.floor(x);
-    if (w.blocked[ti] || w.pit[ti]) continue;
-    if (Math.hypot(x - w.ex, y - w.ey) < 3 * S || Math.hypot(x - w.rx, y - w.ry) < 3 * S) continue;
-    // Tall and thick where the Lawn's stripes are, sparse on open ground,
-    // none on beds, sawdust, mud, compost, sand or slabs.
-    const bare = Math.max(F.mulch[ti], F.bark[ti], F.mud[ti], F.compost[ti], F.sand[ti], F.slab[ti], F.dirt[ti], F.soil[ti], F.mat[ti]);
-    if (bare > 0.5) continue;
-    if (x >= w.blanket.x0 && x < w.blanket.x0 + w.blanket.w && y >= w.blanket.y0 && y < w.blanket.y0 + w.blanket.h) continue;
-    const lawn = F.stripe[ti];
-    if (r() < 0.75 * lawn) { clump(x, y, (14 + r() * 16) * 1.5, 12); continue; }
-    if (r() < 0.6 * F.long[ti]) { clump(x, y, (20 + r() * 26) * 1.5, 13); continue; }
-    if (gn(x * 0.18 / S, y * 0.18 / S) > 0.05 && r() < 0.25) clump(x, y, (6 + r() * 7) * 1.5, 10);
+  // How far (tiles) a region is from a point: 0 inside it.
+  _dist(R, tx, ty) { const b = R.b; return Math.max(0, b.x0 - tx, tx - b.x1 - 1, b.y0 - ty, ty - b.y1 - 1); }
+
+  get loaded() { return this.regions.filter((R) => R.near).map((R) => R.i); }
+  get busy() { return this.regions.some((R) => R.job); }
+
+  // Call every frame with the camera's target (px) and how far (tiles) the
+  // view reaches from it.
+  update(x, z, view = 0, budget, reach) {
+    const tx = x / T, ty = z / T;
+    reach = reach ?? Math.min(MAX_REACH, Math.max(LOAD, view + 12));
+    for (const R of this.regions) if ((R.near || R.job) && this._dist(R, tx, ty) > reach + SLACK) this._unload(R);
+    // A hole on screen is filled faster than the ground ahead is prepared.
+    budget = budget ?? (this.regions.some((R) => !R.near && this._dist(R, tx, ty) < view) ? RUSH : BUDGET);
+    const t0 = performance.now();
+    while (performance.now() - t0 < budget) {
+      let R = this.regions.find((Q) => Q.job);
+      if (!R) {
+        let bd = reach;
+        for (const Q of this.regions) { if (Q.near) continue; const d = this._dist(Q, tx, ty); if (d < bd) { bd = d; R = Q; } }
+        if (!R) return;
+        R.job = this._build(R);
+      }
+      if (R.job.next().done) { R.job = null; if (this.onLoaded) this.onLoaded(R.i); }
+    }
   }
-  // The thicket at the yard's unbuilt edges.
-  for (const [x, y, h, wd] of weeds) clump(x, y, h, wd);
-  const grassMat = psx({ map: grassTex, alphaTest: 0.5, side: THREE.DoubleSide });
-  for (const geo of mergeByChunk(grassParts)) g.add(new THREE.Mesh(geo, grassMat));
-  return g;
+
+  // Build what's on screen round a point now (the first frame, a jump).
+  loadNow(x, z, view = AREA * 0.3) { this.update(x, z, view, Infinity, Math.min(MAX_REACH, view)); }
+
+  _unload(R) {
+    if (R.job) { R.job.return(); R.job = null; }
+    if (R.near) {
+      this.group.remove(R.near);
+      R.near.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && o.userData.own) { o.material.map.dispose(); o.material.dispose(); } });
+      R.near = null;
+    }
+    R.far.visible = true;
+  }
+
+  // One region, a slice at a time (each yield hands the frame back).
+  *_build(R) {
+    const w = this.w, b = R.b, W = w.W, r = rng(17 + R.i * 101), g = new THREE.Group();
+    const out = {};
+    yield* featureFields(w, this.L, b, out);
+    const F = out.F;
+    yield* paintGround(w, F, b, out);
+    const tex = textureFrom(out.canvas);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(AREA * T, AREA * T, AREA, AREA).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T), psx({ map: tex }));
+    ground.userData.own = true;
+    g.add(ground);
+    // Keep a small copy of the painting for when this region is far away.
+    if (!R.small) {
+      const c = document.createElement('canvas'); c.width = c.height = 160;
+      const cg = c.getContext('2d'); cg.imageSmoothingEnabled = true; cg.drawImage(out.canvas, 0, 0, 160, 160);
+      R.far.material.dispose(); R.far.material = psx({ map: textureFrom(c) }); R.small = c;
+    }
+    yield;
+    // Landmarks, merged by material.
+    const ctx = { parts: [], decals: [], stoneParts: [], extra: [], r };
+    for (let k = 0; k < R.lms.length; k++) { meshLandmark(R.lms[k], w, ctx); if (k % 8 === 7) yield; }
+    yield;
+    // Plain rocks on any blocked tile no landmark stands on.
+    for (let y = Math.max(1, b.y0); y <= Math.min(w.H - 3, b.y1); y++) for (let x = Math.max(2, b.x0); x <= Math.min(W - 3, b.x1); x++) {
+      if (!w.blocked[y * W + x] || this.own[y * W + x]) continue;
+      const rad = 7 + r() * 4, d = new THREE.DodecahedronGeometry(rad, 0).toNonIndexed();
+      d.scale(1, 0.55 + r() * 0.35, 1); d.rotateY(r() * 3);
+      ctx.stoneParts.push(d.translate((x + 0.5) * T + (r() - 0.5) * 3, rad * 0.25, (y + 0.5) * T + (r() - 0.5) * 3));
+    }
+    if (ctx.stoneParts.length) {
+      const geo = mergeGeometries(ctx.stoneParts.map((p) => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('normal'); if (p.attributes.uv) p.deleteAttribute('uv'); return p; }));
+      // Planar UVs from world position, so every rock shares one stone texture.
+      const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
+      for (let i = 0; i < pos.count; i++) { uv[i * 2] = (pos.getX(i) + pos.getY(i) * 0.5) / 64; uv[i * 2 + 1] = (pos.getZ(i) + pos.getY(i) * 0.5) / 64; }
+      geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      geo.computeVertexNormals();
+      g.add(new THREE.Mesh(geo, this.mats.rock));
+      yield;
+    }
+    if (ctx.parts.length) {
+      const geo = mergeGeometries(ctx.parts.map((p) => { p = p.index ? p.toNonIndexed() : p; if (p.attributes.normal) p.deleteAttribute('normal'); return p; }));
+      geo.computeVertexNormals();
+      g.add(new THREE.Mesh(geo, this.mats.part));
+      yield;
+    }
+    if (ctx.decals.length) {
+      const m = new THREE.Mesh(mergeGeometries(ctx.decals.map((p) => (p.index ? p.toNonIndexed() : p))), this.mats.decal);
+      m.geometry.computeVertexNormals();
+      m.position.y = 0.2;
+      g.add(m);
+    }
+    for (const e of ctx.extra) g.add(e);
+    yield;
+    // Grass: dense on the Lawn and in long grass, scattered on grassy ground,
+    // none on beds, sawdust, mud, compost, sand, slabs, boards or leaves.
+    const gn = noise2(5), quads = [];
+    const clump = (x, y, h, wd) => { for (let k = 0; k < 2; k++) { const q = new THREE.PlaneGeometry(wd, h).translate(0, h / 2, 0).rotateY(k * Math.PI / 2 + r()); q.translate(x * T, 0, y * T); quads.push(q); } };
+    const at2 = F.tile, G = F.g, bl = w.blanket;
+    for (let i = 0; i < 1900; i++) {
+      if (i % 400 === 399) yield;
+      const x = b.x0 + r() * AREA, y = b.y0 + r() * AREA, ti = Math.floor(y) * W + Math.floor(x);
+      if (x < 2 || y < 1 || x > W - 2 || y > w.H - 2 || w.blocked[ti] || w.pit[ti]) continue;
+      if (Math.hypot(x - w.ex, y - w.ey) < 3 * S || Math.hypot(x - w.rx, y - w.ry) < 3 * S) continue;
+      if (x >= bl.x0 && x < bl.x0 + bl.w && y >= bl.y0 && y < bl.y0 + bl.h) continue;
+      const bare = Math.max(at2(F.mulch, x, y), at2(F.bark, x, y), at2(F.mud, x, y), at2(F.compost, x, y), at2(F.sand, x, y), at2(F.slab, x, y), at2(F.dirt, x, y), at2(F.soil, x, y), at2(F.mat, x, y),
+        at2(G.gravel, x, y), at2(G.deck, x, y), at2(G.hedge, x, y), at2(G.leaf, x, y), at2(G.mound, x, y), at2(G.wet, x, y) * 0.5);
+      if (bare > 0.5) continue;
+      if (r() < 0.75 * at2(F.stripe, x, y)) { clump(x, y, (14 + r() * 16) * 1.5, 12); continue; }
+      const tall = Math.max(at2(F.long, x, y), at2(G.tall, x, y), at2(G.wild, x, y) * 0.8);
+      if (r() < 0.6 * tall) { clump(x, y, (20 + r() * 26) * 1.5, 13); continue; }
+      if (r() < 0.3 * at2(G.oak, x, y)) { clump(x, y, (8 + r() * 8) * 1.5, 10); continue; }
+      if (gn(x * 0.18 / S, y * 0.18 / S) > 0.05 && r() < 0.25) clump(x, y, (6 + r() * 7) * 1.5, 10);
+    }
+    if (quads.length) g.add(new THREE.Mesh(mergeGeometries(quads), this.mats.grass));
+    this.group.add(g);
+    R.near = g;
+    R.far.visible = false;
+  }
+
+  dispose() {
+    for (const R of this.regions) this._unload(R);
+    this.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+  }
 }
 
 // The Lawn's mower: a red deck with wheels, a blade's worth wide.

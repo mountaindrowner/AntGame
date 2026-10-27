@@ -1,8 +1,8 @@
 // Tunables for the app layer. Simulation constants live in sim/sim.js.
 
-export const SAVE_KEY = 'underfoot-v10';
+export const SAVE_KEY = 'underfoot-v11';
 // Earlier saves the sim can still read (same save format).
-export const LEGACY_SAVE_KEYS = []; // v9 and earlier predate the deeper topsoil (a 48-row nest) and can't load
+export const LEGACY_SAVE_KEYS = []; // v10 and earlier predate the whole yard (70 regions) and can't load
 
 export const RENDER = {
   pixelSize: 1, // CSS px per rendered pixel (was 1.75, then 2.25; whole device pixels)

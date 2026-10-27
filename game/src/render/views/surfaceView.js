@@ -1,7 +1,7 @@
 // The yard, top-down at a PS1 three-quarter angle. Sim surface coordinates
 // (x right, y down, in px) map to world X = x, Z = y on a ground plane at
-// Y = 0. Static scenery is built once per world; creatures, items and scent
-// are redrawn from the sim every frame.
+// Y = 0. Scenery is built region by region around the camera (yardScenery.js);
+// creatures, items and scent are redrawn from the sim every frame.
 import * as THREE from 'three';
 import SIM from '../../sim/sim.js';
 import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
@@ -13,11 +13,15 @@ import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
-import { buildYardScenery, mowerMesh } from './yardScenery.js';
+import { YardScenery, mowerMesh } from './yardScenery.js';
 import { sneaker } from '../models/sneaker.js';
 import { robin } from '../models/bird.js';
+import { toad, fallingAcorn } from '../models/toad.js';
 
-const { W, H, T, CASTES, AREA, FOOT: FOOT_STRIKE, BIRD } = SIM;
+const { W, H, T, CASTES, DROP, HUNT } = SIM;
+// The scent overlay covers a window this many tiles a side round the camera.
+const SW = 96;
+const TOAD = 48; // toad model scale (px a unit): about six tiles nose to tail
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -93,10 +97,19 @@ export class SurfaceView {
     this.bars = [this._bar(), this._bar()];
     this.dyn.add(this.spider, this.mower, ...this.cat, ...this.bars.map((b) => b.group));
 
-    // Visitors from above (sim strikes): a sneaker, a robin, and the shadow
-    // each casts first. Pooled; hidden when idle.
+    // Visitors (sim strikes): a sneaker, a falling acorn, a cloud of bug
+    // spray, a robin, a toad, and the shadow each casts first. Pooled;
+    // hidden when idle.
     this.shoes = [0, 1].map(() => { const g = sneaker(); g.scale.setScalar(0.5); g.visible = false; this.dyn.add(g); return g; });
     this.robins = [0, 1, 2].map(() => { const b = robin(); b.group.scale.setScalar(80); b.group.visible = false; this.dyn.add(b.group); return b; });
+    this.toads = [0, 1].map(() => { const b = toad(); b.group.scale.setScalar(TOAD); b.group.visible = false; this.dyn.add(b.group); return b; });
+    this.acorns = [0, 1].map(() => { const g = fallingAcorn(); g.scale.setScalar(2.6 * T); g.visible = false; this.dyn.add(g); return g; });
+    const puffMat = psxBasic({ color: '#e8eef0', transparent: true, opacity: 0.4, depthWrite: false });
+    this.sprays = [0, 1].map(() => {
+      const g = new THREE.Group();
+      for (let k = 0; k < 9; k++) { const a = k * 2.4, d = k ? 0.3 + (k % 3) * 0.22 : 0; const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42 + (k % 2) * 0.12, 1), puffMat.clone()); m.position.set(Math.cos(a) * d, 0.3 + (k % 4) * 0.12, Math.sin(a) * d); m.renderOrder = 4; g.add(m); }
+      g.visible = false; this.dyn.add(g); return g;
+    });
     this.shadows = [0, 1, 2, 3, 4].map(() => {
       const m = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), psxBasic({ color: '#0a0806', transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }));
       m.renderOrder = 2; m.visible = false; this.dyn.add(m); return m;
@@ -134,6 +147,7 @@ export class SurfaceView {
     this.state = s;
     this.camInit = false;
     if (this.static) {
+      this.scenery.dispose();
       this.scene.remove(this.static);
       this.static.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
     }
@@ -142,9 +156,11 @@ export class SurfaceView {
     this.scene.add(g);
     const w = s.world;
 
-    // The yard: ground, landmarks, walls, rocks and grass (yardScenery.js).
-    this.scenery = buildYardScenery(w);
-    g.add(this.scenery);
+    // The yard: ground, landmarks, walls, rocks and grass (yardScenery.js),
+    // built as the camera comes near each region.
+    this.scenery = new YardScenery(w);
+    this.scenery.onLoaded = (i) => { if (this.onRegionLoaded) this.onRegionLoaded(i); };
+    g.add(this.scenery.group);
 
     // Nest mounds: a ring of dug-out soil around a dark hole.
     this.holes = [];
@@ -166,36 +182,35 @@ export class SurfaceView {
       this.holes.push({ ring, rival, mound, hole });
     }
 
-    // Scent overlay: one texel per tile, written from the sim each frame.
-    this.scentData = new Uint8Array(W * H * 4);
-    this.scentTex = new THREE.DataTexture(this.scentData, W, H, THREE.RGBAFormat);
+    // Scent overlay: one texel per tile, for a window of tiles round the
+    // camera, rewritten from the sim each frame and moved with it.
+    this.scentData = new Uint8Array(SW * SW * 4);
+    this.scentTex = new THREE.DataTexture(this.scentData, SW, SW, THREE.RGBAFormat);
     this.scentTex.magFilter = this.scentTex.minFilter = THREE.NearestFilter;
     this.scentTex.flipY = false;
-    // One overlay piece per region, like the ground, so off-screen ones are culled.
-    const scentMat = psxBasic({ map: this.scentTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }, { affine: false });
-    for (let y0 = 0; y0 < H; y0 += AREA) for (let x0 = 0; x0 < W; x0 += AREA) {
-      const cw = Math.min(AREA, W - x0), ch = Math.min(AREA, H - y0);
-      const geo = new THREE.PlaneGeometry(cw * T, ch * T, cw, ch).rotateX(-Math.PI / 2).translate((x0 + cw / 2) * T, 0.4, (y0 + ch / 2) * T);
-      // Map this piece onto its part of the whole-yard scent texture.
-      // PlaneGeometry's v runs bottom-up; the sim's rows run top-down.
-      geo.attributes.uv.array.forEach((v, i, arr) => { arr[i] = i % 2 ? (y0 + (1 - v) * ch) / H : (x0 + v * cw) / W; });
-      const overlay = new THREE.Mesh(geo, scentMat);
-      overlay.renderOrder = 1;
-      g.add(overlay);
-    }
+    const geo = new THREE.PlaneGeometry(SW * T, SW * T, 32, 32).rotateX(-Math.PI / 2).translate((SW * T) / 2, 0.4, (SW * T) / 2);
+    // PlaneGeometry's v runs bottom-up; the sim's rows run top-down.
+    geo.attributes.uv.array.forEach((v, i, arr) => { if (i % 2) arr[i] = 1 - v; });
+    this.scent = new THREE.Mesh(geo, psxBasic({ map: this.scentTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }, { affine: false }));
+    this.scent.renderOrder = 1;
+    this.scent.frustumCulled = false;
+    g.add(this.scent);
   }
 
   // Only the tiles around the camera are rewritten each frame.
   _updateScent(s) {
     const d = this.scentData, tr = s.trail, al = s.alarm;
     const tc = new THREE.Color(COLORS.trail), ac = new THREE.Color(COLORS.alarm);
-    const R = 48, cx = Math.floor(this.target.x / T), cy = Math.floor(this.target.z / T);
-    for (let y = Math.max(0, cy - R); y < Math.min(H, cy + R); y++) for (let x = Math.max(0, cx - R); x < Math.min(W, cx + R); x++) {
-      const i = y * W + x, t = tr[i], a = al[i];
+    const x0 = Math.floor(this.target.x / T) - SW / 2, y0 = Math.floor(this.target.z / T) - SW / 2;
+    this.scent.position.set(x0 * T, 0, y0 * T);
+    d.fill(0);
+    for (let y = Math.max(0, y0); y < Math.min(H, y0 + SW); y++) for (let x = Math.max(0, x0); x < Math.min(W, x0 + SW); x++) {
+      const i = y * W + x, t = tr[i], a = al[i], o = (y - y0) * SW + (x - x0);
+      if (t <= 0.04 && a <= 0.08) continue;
       let rr = 0, gg = 0, bb = 0, aa = 0;
       if (t > 0.04) { rr = tc.r; gg = tc.g; bb = tc.b; aa = Math.min(0.7, t * 0.3); }
       if (a > 0.08) { const k = Math.min(0.6, a * 0.2); rr = rr * (1 - k) + ac.r * k; gg = gg * (1 - k) + ac.g * k; bb = bb * (1 - k) + ac.b * k; aa = Math.max(aa, k); }
-      d[i * 4] = rr * 255; d[i * 4 + 1] = gg * 255; d[i * 4 + 2] = bb * 255; d[i * 4 + 3] = aa * 255;
+      d[o * 4] = rr * 255; d[o * 4 + 1] = gg * 255; d[o * 4 + 2] = bb * 255; d[o * 4 + 3] = aa * 255;
     }
     this.scentTex.needsUpdate = true;
   }
@@ -321,6 +336,7 @@ export class SurfaceView {
     // Keep the player centred in the space the HUD leaves free.
     const viewH = (across / aspect) / Math.sin(CAMERA.surfacePitch);
     const shift = hudShift(app) * viewH;
+    const jump = !this.camInit;
     this.target.lerp(tmpV.set(fx, 0, fy - shift), this.camInit ? 0.18 : 1);
     this.camInit = true;
     const pitch = CAMERA.surfacePitch;
@@ -335,40 +351,74 @@ export class SurfaceView {
     this.scene.fog.far = dist * 2.4 + 200;
 
     if (raining) this._updateRain(t);
-    // Paint the ground of one more nearby region, if any is still plain.
-    this.scenery.userData.refine(this.target.x, this.target.z);
+    // Build the regions coming into reach (all of what's on screen at once
+    // after a jump), and drop those left far behind.
+    // app.sceneryFocus ({ x, y, view, now }) builds round another spot (the film's).
+    this.camera.updateMatrixWorld();
+    const lf = app.sceneryFocus, view = lf ? lf.view : this._viewReach(dist), lx = lf ? lf.x : this.target.x, lz = lf ? lf.y : this.target.z;
+    if (jump || (lf && lf.now)) { this.scenery.loadNow(lx, lz, view); if (lf) lf.now = false; }
+    this.scenery.update(lx, lz, view);
   }
 
-  // Feet and birds: each shows its shadow first, then comes down.
+  // Visitors: each shows itself first (a shadow, a hiss, a landing).
   _strikes(s, t, fdt) {
-    let shoe = 0, bird = 0, shadow = 0;
+    const n = { foot: 0, acorn: 0, spray: 0, bird: 0, toad: 0 }, pool = { foot: this.shoes, acorn: this.acorns, spray: this.sprays, bird: this.robins, toad: this.toads };
+    let shadow = 0;
+    const shade = (x, z, yaw, sx, sz, op) => { const sh = this.shadows[shadow++]; if (!sh) return; sh.visible = true; sh.position.set(x, 0.5, z); sh.rotation.set(0, -yaw, 0); sh.scale.set(sx, 1, sz); sh.material.opacity = op; };
     for (const st of s.strikes || []) {
-      const x = st.x * T, z = st.y * T, sh = this.shadows[shadow++];
-      if (st.kind === 'foot' && shoe < this.shoes.length) {
-        const g = this.shoes[shoe++], F = FOOT_STRIKE, k = Math.min(1, st.t / F.warn);
+      const P = pool[st.kind];
+      if (!P || n[st.kind] >= P.length) continue;
+      const it = P[n[st.kind]++], x = st.x * T, z = st.y * T;
+      const D = DROP[st.kind], B = HUNT[st.kind];
+      if (st.kind === 'foot') {
+        const k = Math.min(1, st.t / D.warn);
         let y;
         if (st.phase === 'warn') y = 1700 - 900 * k * k;
-        else if (st.phase === 'hold') y = Math.max(0, 800 * (1 - (st.t - F.warn) / 0.12));
-        else y = 1700 * Math.min(1, (st.t - F.warn - F.hold) / F.lift) ** 2;
-        g.visible = true; g.position.set(x, y, z); g.rotation.set(0, -st.yaw, 0);
+        else if (st.phase === 'hold') y = Math.max(0, 800 * (1 - (st.t - D.warn) / 0.12));
+        else y = 1700 * Math.min(1, (st.t - D.warn - D.hold) / D.lift) ** 2;
+        it.visible = true; it.position.set(x, y, z); it.rotation.set(0, -st.yaw, 0);
         if (st.phase === 'hold' && !st.shook) { st.shook = true; if (Math.hypot(x - this.target.x, z - this.target.z) < 30 * T) this.shake = 0.35; }
-        if (sh) { const near = 1 - Math.min(1, y / 1700); sh.visible = true; sh.position.set(x, 0.5, z); sh.rotation.set(0, -st.yaw, 0); sh.scale.set(F.a * T * (0.7 + 0.35 * near), 1, F.b * T * (0.7 + 0.35 * near)); sh.material.opacity = 0.12 + 0.45 * near; }
-      } else if (st.kind === 'bird' && bird < this.robins.length) {
-        const b = this.robins[bird++];
+        const near = 1 - Math.min(1, y / 1700);
+        shade(x, z, st.yaw, D.a * T * (0.7 + 0.35 * near), D.b * T * (0.7 + 0.35 * near), 0.12 + 0.45 * near);
+      } else if (st.kind === 'acorn') {
+        // Falls from out of sight, spinning, and lands where the shadow was
+        // (the sim then leaves an acorn there to eat).
+        const k = Math.min(1, st.t / D.warn), y = st.phase === 'warn' ? 1400 * (1 - k * k) : 0;
+        it.visible = st.phase === 'warn';
+        it.position.set(x, y, z); it.rotation.set(0.4 * Math.sin(st.t * 9), st.t * 7, 0);
+        if (st.phase === 'hold' && !st.shook) { st.shook = true; if (Math.hypot(x - this.target.x, z - this.target.z) < 20 * T) this.shake = 0.2; }
+        if (st.phase === 'warn') shade(x, z, 0, D.a * T * (0.5 + 0.5 * k), D.b * T * (0.5 + 0.5 * k), 0.1 + 0.4 * k);
+      } else if (st.kind === 'spray') {
+        // A cloud: a faint hiss of mist first, then thick, then it drifts off.
+        const k = st.phase === 'warn' ? Math.min(1, st.t / D.warn) : 1, fade = st.phase === 'lift' ? 1 - (st.t - D.warn - D.hold) / D.lift : 1;
+        const op = (st.phase === 'warn' ? 0.08 + 0.12 * k : 0.55) * Math.max(0, fade);
+        it.visible = true; it.position.set(x, 0, z);
+        it.scale.setScalar(D.a * T * (st.phase === 'warn' ? 0.5 + 0.4 * k : 1 + 0.15 * Math.sin(t * 3)));
+        it.children.forEach((m, i) => { m.material.opacity = op * (0.7 + 0.3 * Math.sin(t * 2 + i)); m.position.y = 0.3 + (i % 4) * 0.12 + 0.04 * Math.sin(t * 1.7 + i); });
+      } else if (B) {
+        // A robin flies down and up again; a toad hops in and out.
+        const fly = st.kind === 'bird', top = fly ? 700 : 260;
         let y = 0, flap = false;
-        if (st.phase === 'land') { const k = Math.min(1, st.t / BIRD.land); y = (1 - k) ** 2 * 700; flap = k < 0.95; }
-        else if (st.phase === 'leave') { const k = Math.max(0, (st.t - st.leaveAt) / BIRD.leave); y = k * k * 900; flap = k > 0; }
-        else if (st.hopAt != null && st.t - st.hopAt < 0.3) y = Math.sin(Math.PI * (st.t - st.hopAt) / 0.3) * 18;
+        if (st.phase === 'land') { const k = Math.min(1, st.t / B.land); y = (1 - k) ** 2 * top; flap = k < 0.95; }
+        else if (st.phase === 'leave') { const k = Math.max(0, (st.t - st.leaveAt) / B.leave); y = k * k * (fly ? 900 : 300); flap = k > 0; }
+        else if (st.hopAt != null && st.t - st.hopAt < 0.3) y = Math.sin(Math.PI * (st.t - st.hopAt) / 0.3) * (fly ? 18 : 40);
         const peck = st.peckAt != null && st.t - st.peckAt < 0.35 ? Math.sin(Math.PI * (st.t - st.peckAt) / 0.35) : 0;
-        b.group.visible = true; b.group.position.set(x, y, z); b.group.rotation.set(0, -st.yaw, 0);
-        b.body.rotation.z = -0.75 * peck;
-        b.head.rotation.z = -0.4 * peck;
-        for (const w of b.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 28) * 0.9) : w.s * 0.05;
-        if (sh) { const near = 1 - Math.min(1, y / 900); sh.visible = true; sh.position.set(x + Math.cos(st.yaw) * 20, 0.5, z + Math.sin(st.yaw) * 20); sh.rotation.set(0, 0, 0); sh.scale.set(56 * (0.6 + 0.4 * near), 1, 40 * (0.6 + 0.4 * near)); sh.material.opacity = 0.15 + 0.3 * near; }
+        it.group.visible = true; it.group.position.set(x, y, z); it.group.rotation.set(0, -st.yaw, 0);
+        if (fly) {
+          it.body.rotation.z = -0.75 * peck;
+          it.head.rotation.z = -0.4 * peck;
+          for (const w of it.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 28) * 0.9) : w.s * 0.05;
+        } else {
+          // The tongue shoots out to the ant it was after, and back.
+          it.tongue.visible = peck > 0;
+          if (peck > 0) it.tongue.scale.set(Math.max(0.4, ((st.peckD || 1) * T) / TOAD - 1.05) * peck, 1, 1);
+          it.body.scale.set(1, 1 + 0.06 * Math.sin(t * 5), 1); // throat pulsing
+        }
+        const near = 1 - Math.min(1, y / top);
+        shade(x + Math.cos(st.yaw) * (fly ? 20 : 10), z + Math.sin(st.yaw) * (fly ? 20 : 10), st.yaw, (fly ? 56 : 80) * (0.6 + 0.4 * near), (fly ? 40 : 60) * (0.6 + 0.4 * near), 0.15 + 0.3 * near);
       }
     }
-    for (let i = shoe; i < this.shoes.length; i++) this.shoes[i].visible = false;
-    for (let i = bird; i < this.robins.length; i++) this.robins[i].group.visible = false;
+    for (const k in pool) for (let i = n[k]; i < pool[k].length; i++) { const it = pool[k][i]; (it.group || it).visible = false; }
     for (let i = shadow; i < this.shadows.length; i++) this.shadows[i].visible = false;
   }
 
@@ -478,6 +528,18 @@ export class SurfaceView {
       pos[i * 6 + 3] = x - 2; pos[i * 6 + 4] = y - 14; pos[i * 6 + 5] = z;
     }
     this.rain.geometry.attributes.position.needsUpdate = true;
+  }
+
+  // How far (tiles, either axis) the ground on screen reaches from the
+  // camera's target: the farthest of the screen's corners, or the fog where
+  // a corner looks above the horizon.
+  _viewReach(dist) {
+    let d = 0;
+    for (const [x, y] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const p = this.pick(x, y), far = this.scene.fog.far;
+      d = Math.max(d, p ? Math.max(Math.abs(p.x - this.target.x), Math.abs(p.y - this.target.z)) : far);
+    }
+    return Math.min(d, this.scene.fog.far) / T;
   }
 
   // Screen NDC → sim surface px, or null.

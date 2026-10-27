@@ -18,8 +18,8 @@
 
 export const SCALE = 2;              // tiles per design unit (build 9: everything twice as big)
 export const AREA = 40 * SCALE;      // tiles per region side
-// The built block, in yard-map cells.
-export const BLOCK = { c0: 2, r0: 1, cols: 5, rows: 4 };
+// The built yard, in yard-map cells: everything but the house's row.
+export const BLOCK = { c0: 0, r0: 1, cols: 10, rows: 7 };
 
 // Per region: where it sits on the yard map, what grows there, how fast, and
 // what makes it dangerous. foods: [type, weight]; rate: items per minute;
@@ -108,6 +108,7 @@ export const AREAS = [
     blurb: 'Yellow flowers and seed clocks in the long grass.',
     challenge: 'Birds in the open grass', resource: 'Seeds', reward: 'Seeds on the wind',
     foods: [['seed', 6]], rate: 4, max: 16, treat: 0, start: 8, strike: { kind: 'bird', every: [55, 95] } },
+  ...WILD(),
 ];
 export const REGION = Object.fromEntries(AREAS.map((A, i) => [A.key, i]));
 
@@ -138,6 +139,99 @@ export const YARD_MAP = {
     { name: 'Fire ant mound', at: [8, 7, 2, 1], note: 'The last fight' },
   ],
 };
+
+// The rest of the yard (build 11). These regions lie dormant (no food grows,
+// nothing strikes) until you first walk into one, and their scenery loads
+// only when you come near.
+function WILD() {
+  const R = (key, at, name, short, ground, blurb, challenge, resource, reward, foods, rate, max, more) =>
+    Object.assign({ key, at, name, short, ground, blurb, challenge, resource, reward, foods, rate, max, treat: 0, start: Math.round(max * 0.5), dormant: true }, more);
+  const foot = (a, b) => ({ strike: { kind: 'foot', every: [a, b] } }), bird = (a, b) => ({ strike: { kind: 'bird', every: [a, b] } });
+  const toad = (a, b) => ({ strike: { kind: 'toad', every: [a, b] } }), acorn = (a, b) => ({ strike: { kind: 'acorn', every: [a, b] } });
+  const lawn = ['seed', 5], few = (t) => [t, 1];
+  const L = [];
+  // Along the house: trash cans, the porch, the cooler.
+  L.push(R('trash', [0, 1], 'The Trash Cans', 'Trash', 'gravel', 'Three bins by the side gate. Everything people throw away ends up here, in bits.',
+    'Feet, taking out the trash', 'Crumbs, popcorn, dead bugs, now and then a chip', 'The richest scraps in the yard', [['crumb', 5], ['popcorn', 3], ['bug', 2]], 6, 22, { treat: 0.15, treats: ['cookie', 'chip'], ...foot(40, 75) }));
+  L.push(R('porch', [1, 1], 'The Porch Corner', 'Porch', 'deck', 'Grey deck boards in the shade of the house, and a pot of geraniums.',
+    'Feet on the boards', 'Crumbs and popcorn', 'Crumbs, out of the rain', [['crumb', 5], ['popcorn', 2], ['seed', 1]], 4.5, 16, { treat: 0.08, treats: ['jellybean'], ...foot(45, 85) }));
+  L.push(R('cooler', [7, 1], 'The Cooler', 'Cooler', 'slab', 'A cooler by the table, sweating ice-melt onto the concrete.',
+    'Feet round the cooler', 'Ice-melt puddles, hot dog scraps, chips', 'Water and protein side by side', [['crumb', 3], ['popcorn', 3], ['hotdog', 2]], 4.5, 16, { treat: 0.15, treats: ['chip'], ...foot(45, 80) }));
+  // The rock garden and the hedge along the east fence.
+  L.push(R('rockgarden', [8, 1], 'The Rock Garden', 'Rocks', 'gravel', 'Boulders and succulents in raked gravel.',
+    'Robins on the rocks', 'Seeds, berries, a few dead bugs', 'Shelter between the boulders', [['seed', 4], ['berry', 1], ['bug', 1]], 3, 12, bird(55, 95)));
+  L.push(R('rockgarden2', [8, 2], 'The Rock Garden, South', 'Rocks', 'gravel', 'More boulders, and a cactus nobody waters.',
+    'Robins on the rocks', 'Seeds and dead bugs', 'Protein in the gravel', [['seed', 3], ['bug', 2]], 3, 12, bird(55, 95)));
+  for (let r = 1; r <= 6; r++) L.push(R('hedge' + r, [9, r], r === 1 ? 'The Hedge Row' : `The Hedge Row (${['', 'north', 'by the stones', 'by the Oak', 'east lawn', 'south'][r - 1] || r})`, 'Hedge', 'hedge',
+    'A dark, tangled hedge against the fence. Tunnels run through it.', 'A slow maze', 'Berries and dead bugs, safe from birds', 'Safe ground: nothing hunts in here', [['berry', 4], ['seed', 2], ['bug', 2]], 3, 12));
+  // The side yard down the west fence.
+  for (let r = 2; r <= 4; r++) L.push(R('side' + r, [0, r], r === 2 ? 'The Side Yard' : r === 3 ? 'The Side Yard Path' : 'The Side Yard, South', 'Side', 'gravel',
+    'A gravel path along the fence, where people walk round to the back.', 'Feet on the path', 'Crumbs and seeds', 'A quiet way south', [['seed', 3], ['crumb', 2], ['bug', 1]], 3, 12, foot(55, 95)));
+  // The rest of the vegetable garden.
+  L.push(R('peppers', [1, 2], 'Peppers and Squash', 'Peppers', 'soil', 'Pepper plants and the huge leaves of a squash vine.',
+    'Robins hunting the rows', 'Fallen pepper, seeds, aphids to milk', 'Honeydew that never runs out', [['tomato', 3], ['seed', 2]], 3.5, 14, bird(55, 95)));
+  L.push(R('herbs', [1, 3], 'The Herb Patch', 'Herbs', 'soil', 'Mint, basil and thyme. It smells so strong your trails fade faster.',
+    'Robins hunting the rows', 'Seeds, berries, aphids to milk', 'Honeydew', [['seed', 3], ['berry', 1]], 3, 12, bird(55, 95)));
+  // East of the feeder and the birdbath.
+  L.push(R('suet', [7, 2], 'The Suet Feeder', 'Suet', 'grass', 'A cage of suet on a post. Birds knock bits of it everywhere.',
+    'Birds, all day', 'Seed, and suet (protein)', 'Protein that falls from the sky', [['seed', 4], ['hotdog', 2]], 5, 18, bird(30, 55)));
+  L.push(R('stones', [7, 3], 'The Stepping Stones', 'Stones', 'grass', 'Flat stones laid across the grass to the Oak.',
+    'Feet on the stones', 'Crumbs and seeds', 'An easy road east', [['seed', 3], ['crumb', 2]], 3, 12, foot(50, 90)));
+  L.push(R('gnomes', [8, 3], 'The Garden Gnome', 'Gnome', 'grass', 'More stepping stones, and a gnome with a fishing rod.',
+    'Feet on the stones', 'Crumbs and seeds', 'A gnome to hide behind', [['seed', 3], ['crumb', 2]], 3, 12, foot(55, 95)));
+  // The Oak: two regions across, three down.
+  L.push(R('oakroots', [7, 4], 'The Oak Roots', 'Roots', 'oak', 'Great roots heave out of the ground under the Oak.',
+    'Falling acorns', 'Acorns (a crew of four), dead bugs', 'Acorns: big food from above', [['seed', 3], ['bug', 2], ['berry', 1]], 3, 12, acorn(35, 70)));
+  L.push(R('oak', [8, 4], 'The Oak', 'Oak', 'oak', 'The trunk of the Oak, wider than a house to an ant.',
+    'Falling acorns', 'Acorns, dead bugs', 'Acorns: big food from above', [['bug', 3], ['seed', 2]], 3, 12, acorn(30, 60)));
+  L.push(R('acorns', [7, 5], 'Acorn Drop', 'Acorns', 'oak', 'Where the Oak drops most of its acorns.',
+    'Falling acorns', 'Acorns everywhere', 'The most acorns in the yard', [['seed', 3], ['bug', 1]], 3, 12, acorn(25, 50)));
+  L.push(R('branches', [8, 5], 'Under the Branches', 'Branches', 'oak', 'Twigs and bark under the low branches.',
+    'Falling acorns', 'Dead bugs under the bark', 'Protein', [['bug', 3], ['seed', 2]], 3, 12, acorn(35, 70)));
+  L.push(R('oakeast', [7, 6], 'The Oak Shade', 'Shade', 'oak', 'Cool shade and roots, where the lawn gives up.',
+    'Falling acorns', 'Seeds and dead bugs', 'Shade and acorns', [['seed', 3], ['bug', 2]], 3, 12, acorn(40, 80)));
+  L.push(R('fallen', [8, 6], 'The Fallen Limb', 'Limb', 'oak', 'A dead limb the size of a fallen tower, soft with rot.',
+    'Falling acorns', 'Dead bugs in the rot', 'Protein for an army', [['bug', 4], ['seed', 1]], 3.5, 14, acorn(40, 80)));
+  // The garden shed and the wild corner down the west side.
+  L.push(R('shed', [0, 5], 'The Garden Shed', 'Shed', 'slab', 'A wooden shed with sacks of fertiliser. Someone sprays for bugs here.',
+    'Bug spray', 'Dead bugs, seeds, crumbs', 'Dead bugs by the dozen', [['bug', 3], ['seed', 2], ['crumb', 1]], 4, 16, { strike: { kind: 'spray', every: [50, 90] } }));
+  L.push(R('thistles', [0, 6], 'The Thistles', 'Thistles', 'wild', 'Weeds and thistles nobody cuts.',
+    'A toad', 'Seeds and berries', 'Thistle seed', [['seed', 4], ['berry', 2]], 3, 12, toad(60, 100)));
+  L.push(R('toadhole', [0, 7], 'The Toad Hole', 'Toad', 'wild', 'Damp weeds round a toad\'s burrow.',
+    'The toad lives here', 'Dead bugs and seeds', 'Protein, if you dare', [['bug', 3], ['seed', 2]], 3, 12, toad(30, 60)));
+  // The great lawn's lower rows.
+  const gl = [
+    ['sprinkler', [1, 4], 'The Sprinkler', 'Sprinkler', 'A sprinkler head in the grass, and puddles all round it.', 'Robins in the open', 'Seeds, and puddles', 'Water on the lawn'],
+    ['trampoline', [1, 5], 'The Trampoline', 'Trampoline', 'A trampoline on six legs, and its shade.', 'Feet', 'Crumbs and seeds', 'Treats dropped from above'],
+    ['soccer', [2, 5], 'The Soccer Ball', 'Ball', 'A leather ball left in the grass.', 'Running feet', 'Seeds and crumbs', 'Seeds'],
+    ['fairyring', [3, 5], 'The Fairy Ring', 'Mushrooms', 'A ring of mushrooms on the lawn.', 'Robins in the open', 'Seeds', 'Shelter in the ring'],
+    ['gnome', [4, 5], 'The Lawn Gnome', 'Gnome', 'A gnome on the lawn with a wheelbarrow.', 'Robins in the open', 'Seeds and berries', 'Seeds'],
+    ['frisbee', [5, 5], 'The Frisbee', 'Frisbee', 'A frisbee upside down, half full of rain.', 'Robins in the open', 'Seeds, and water in the frisbee', 'Water'],
+    ['bone', [6, 5], 'The Dog Bone', 'Bone', 'A chewed bone the dog forgot.', 'Robins in the open', 'Seeds and scraps (protein)', 'Protein'],
+    ['cloverhill', [1, 6], 'Clover Hill', 'Clover', 'A low rise thick with clover.', 'Robins in the open', 'Seeds and berries', 'Steady food'],
+    ['truck', [2, 6], 'The Toy Truck', 'Truck', 'A plastic dump truck stuck in the lawn.', 'Robins in the open', 'Seeds and crumbs', 'Seeds'],
+    ['bare', [3, 6], 'The Bare Patch', 'Bare', 'Where the grass died. Hot and open.', 'Robins in the open', 'Seeds', 'Seeds'],
+    ['longgrass', [4, 6], 'The Long Grass', 'Long', 'Grass so long it hides you from the birds.', 'Hard going', 'Seeds', 'Cover from birds'],
+    ['daisies', [5, 6], 'The Daisies', 'Daisies', 'White daisies in the lawn.', 'Robins in the open', 'Seeds and berries', 'Seeds'],
+    ['lawnedge', [6, 6], 'The Lawn\'s Edge', 'Edge', 'Where the lawn meets the Oak\'s shade, edged with stones.', 'Robins in the open', 'Seeds', 'Seeds'],
+  ];
+  for (const [key, at, name, short, blurb, ch, res, rew] of gl)
+    L.push(R(key, at, name, short, 'long', blurb, ch, res, rew, key === 'bone' ? [lawn, ['hotdog', 2]] : key === 'cloverhill' || key === 'gnome' || key === 'daisies' ? [lawn, few('berry')] : [lawn, few('crumb')], 3.5, 14,
+      key === 'trampoline' || key === 'soccer' ? foot(50, 90) : key === 'longgrass' ? {} : bird(55, 95)));
+  // The low wet strip along the back fence.
+  const wet = [['reeds', 1, 'The Reeds', 'Reeds', 'Reeds and rushes in black mud.'], ['slugs', 2, 'Slug Alley', 'Slugs', 'Slime trails everywhere. The slugs make good eating.'],
+    ['drain', 3, 'The Drain', 'Drain', 'A drainpipe empties here after every rain.'], ['mudflat', 4, 'The Mud Flats', 'Mud', 'Wide, sticky mud and still puddles.'], ['wetedge', 5, 'The Wet Edge', 'Wet', 'Where the wet strip dries into lawn.']];
+  for (const [key, c, name, short, blurb] of wet)
+    L.push(R(key, [c, 7], name, short, 'wet', blurb, 'A toad on the hunt', 'Slugs (protein), puddles', 'Water and protein', [['slug', 3], ['seed', 2]], 3.5, 12, toad(50, 90)));
+  // The leaf pile and the fire ants in the back corner.
+  L.push(R('leaves', [6, 7], 'The Leaf Pile', 'Leaves', 'leaf', 'Last autumn\'s leaves, heaped and rotting.', 'A toad under the leaves', 'Dead bugs and seeds', 'Protein in the rot', [['bug', 3], ['seed', 2], ['berry', 1]], 3.5, 14, toad(55, 95)));
+  L.push(R('leaves2', [7, 7], 'Deep in the Leaves', 'Leaves', 'leaf', 'The deep end of the leaf pile.', 'A toad under the leaves', 'Dead bugs', 'Protein', [['bug', 4], ['seed', 1]], 3.5, 14, toad(55, 95)));
+  L.push(R('fireout', [8, 7], 'Fire Ant Country', 'Fire ants', 'mound', 'Small mounds of red earth. Fire ants patrol here.',
+    'Fire ants sting anything that stops', 'Seeds, dead bugs', 'The way to the mound', [['seed', 3], ['bug', 3]], 3, 12, { sting: 0.5 }));
+  L.push(R('firemound', [9, 7], 'The Fire Ant Mound', 'Mound', 'mound', 'A great red mound in the corner. The last fight in the yard.',
+    'Swarms of stinging fire ants', 'Dead bugs, and whatever they have hoarded', 'The yard, when you are strong enough', [['bug', 4], ['seed', 2]], 3, 12, { sting: 1.2 }));
+  return L;
+}
 
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 
@@ -171,16 +265,18 @@ export function makeYard(seed) {
   const ex = O.x + u(60), ey = O.y + u(60), rx = O.x + u(17), ry = O.y + u(17);
   const clear = (x, y, r) => Math.hypot(O.x + x - ex, O.y + y - ey) < r || Math.hypot(O.x + x - rx, O.y + y - ry) < r;
 
-  // The house's brick wall to the north. The rest of the yard goes on past
-  // the other edges, but isn't built yet: a thicket of weeds closes it off.
+  // The house's brick wall to the north (the house is the yard map's top
+  // row, columns 1–8); a wooden fence round the rest of the yard.
   for (let x = 0; x < W; x++) blocked[idx(x, 0)] = 1;
   for (let k = 0; k < 2; k++) {
     for (let x = 0; x < W; x++) blocked[idx(x, H - 1 - k)] = 1;
     for (let y = 0; y < H; y++) { blocked[idx(k, y)] = 1; blocked[idx(W - 1 - k, y)] = 1; }
   }
   O.x = O.y = 0;
-  mark('wall', { x0: 0, y0: 0, w: W, h: 1 });
-  mark('thicket', { side: 'w' }); mark('thicket', { side: 'e' }); mark('thicket', { side: 's' });
+  const hx0 = (1 - BLOCK.c0) * AREA, hx1 = (9 - BLOCK.c0) * AREA;
+  mark('wall', { x0: hx0, y0: 0, w: hx1 - hx0, h: 1 });
+  mark('fence', { side: 'w' }); mark('fence', { side: 'e' }); mark('fence', { side: 's' });
+  mark('fence', { side: 'n', x0: 0, x1: hx0 }); mark('fence', { side: 'n', x0: hx1, x1: W });
 
   // ---------- the first nine (build 8), written across three regions from the Patio's corner ----------
   at('patio');
@@ -349,9 +445,143 @@ export function makeYard(seed) {
   at('dandelions');
   for (let i = 0; i < 40; i++) { const x = u(3) + Math.floor(rnd() * u(34)), y = u(3) + Math.floor(rnd() * u(34)); if (isBlocked(x, y)) continue; stamp(x, y, 1, 1); mark('dandelion', { x, y, h: (45 + rnd() * 45) * S, puff: rnd() < 0.4, seed: rnd() }); }
   scatterRocks(u(2), u(2), u(36), u(36), 3);
-  // The great lawn's long grass covers the whole row.
+
+  // ---------- the rest of the yard (build 11), region by region ----------
+  const grounds = []; // ground patches, world tiles: { kind, x0, y0, w, h, soft }
+  const ground = (kind, x0, y0, w, h, soft = 0) => grounds.push({ kind, x0: O.x + x0, y0: O.y + y0, w, h, soft });
+  const here = (key, kind, soft = 6) => { at(key); ground(kind, 0, 0, AREA, AREA, soft); };
+  const some = (n, x0, y0, w, h, fn) => { for (let i = 0, k = 0; i < n * 4 && k < n; i++) { const x = u(x0) + Math.floor(rnd() * u(w)), y = u(y0) + Math.floor(rnd() * u(h)); if (isBlocked(x, y) || isBlocked(x + 1, y) || isBlocked(x, y + 1)) continue; if (fn(x, y) !== false) k++; } };
+
+  // Trash cans by the side gate, on a gravel pad.
+  here('trash', 'gravel', 2);
+  for (const [x, y, c] of [[9, 12, '#5a6a5a'], [20, 9, '#3a4a6a'], [31, 13, '#6a6a62']]) { disc(u(x), u(y), u(4.5)); mark('trashcan', { x: u(x), y: u(y), r: u(4.5), color: c }); }
+  disc(u(14), u(24), u(2.5)); mark('bag', { x: u(14), y: u(24), r: u(2.5) });
+  scatterRocks(u(2), u(28), u(36), u(10), 2);
+  // The porch corner: deck boards, a pot, a chair.
+  at('porch'); ground('deck', 0, 1, AREA, u(18));
+  disc(u(8), u(6), u(3)); mark('pot', { x: u(8), y: u(6), r: u(3) });
+  mark('chair', { x: u(26), y: u(9), w: u(7), h: u(6), back: -1 });
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) disc(u(26) + sx * u(3), u(9) + sy * u(2.4), 1);
+  scatterRocks(u(2), u(22), u(36), u(16), 3);
+  // The cooler, sweating onto the concrete.
+  at('cooler'); slabs.push(shift({ x0: 0, y0: 1, w: u(30), h: u(26) }));
+  stamp(u(12), u(10), u(10), u(6)); mark('cooler', { x0: u(12), y0: u(10), w: u(10), h: u(6) });
+  for (const [x, y, a] of [[11, 18, 24], [20, 19, 20], [25, 14, 18]]) puddle(u(x), u(y), a);
+  mark('chair', { x: u(31), y: u(10), w: u(6), h: u(5), back: 1 });
+  for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) disc(u(31) + sx * u(2.5), u(10) + sy * u(2), 1);
+  // The rock garden: boulders and succulents in gravel.
+  for (const key of ['rockgarden', 'rockgarden2']) {
+    here(key, 'gravel', 5);
+    some(key === 'rockgarden' ? 6 : 5, 4, 4, 32, 32, (x, y) => { const r = u(2 + rnd() * 2.2); if (landmarks.some((l) => l.kind === 'boulder' && Math.hypot(l.x - O.x - x, l.y - O.y - y) < l.r + r + u(3))) return false; disc(x, y, r); mark('boulder', { x, y, r, seed: rnd() }); });
+    some(10, 3, 3, 34, 34, (x, y) => { disc(x, y, u(0.9)); mark('succulent', { x, y, r: u(0.9), seed: rnd() }); });
+    if (key === 'rockgarden2') { disc(u(28), u(28), u(1.2)); mark('cactus', { x: u(28), y: u(28), r: u(1.2) }); }
+  }
+  // The hedge: dense bushes against the fence, tunnels through them.
+  for (let r = 1; r <= 6; r++) {
+    here('hedge' + r, 'hedge', 4);
+    for (let y = 0; y < 40; y += 10) {
+      const gap = 3 + Math.floor(rnd() * 4);
+      stamp(u(14), u(y), u(26), u(10 - gap)); mark('hedge', { x0: u(14), y0: u(y), w: u(26), h: u(10 - gap), seed: rnd() });
+    }
+    some(3, 2, 4, 10, 32, (x, y) => { disc(x, y, u(1.2)); mark('bush', { x, y, r: u(1.2), seed: rnd() }); });
+  }
+  // The side yard: a gravel path down the middle, odds and ends by the fence.
+  for (let r = 2; r <= 4; r++) {
+    at('side' + r); ground('gravel', u(14), 0, u(12), AREA, 2);
+    if (r === 2) { disc(u(6), u(20), u(3.5)); mark('hosereel', { x: u(6), y: u(20), r: u(3.5) }); }
+    if (r === 3) { disc(u(6), u(14), u(4)); mark('trashcan', { x: u(6), y: u(14), r: u(4), color: '#2a6a3a' }); disc(u(33), u(28), u(3)); mark('pot', { x: u(33), y: u(28), r: u(3) }); }
+    if (r === 4) { stamp(u(3), u(6), u(2), u(2)); mark('drainpipe', { x: u(4), y: u(7) }); puddle(u(8), u(10), 26); disc(u(32), u(22), u(2.5)); mark('pot', { x: u(32), y: u(22), r: u(2.5) }); }
+    scatterRocks(u(28), u(2), u(10), u(36), 3);
+  }
+  // Peppers and squash; the herb patch. Beds like the rest of the garden.
+  at('peppers');
+  for (let k = 0; k < 3; k++) {
+    const by = 3 + k * 12.5;
+    soil.push(shift({ x0: u(4), y0: u(by), w: u(32), h: u(8) }));
+    for (let x = 7; x < 34; x += k === 2 ? 9 : 6.5) {
+      const tx = u(x + rnd() * 1.5), ty = u(by + 4 + (rnd() - 0.5) * 2);
+      if (k === 2) { if (!isBlocked(tx, ty)) { disc(tx, ty, u(2.2)); mark('squash', { x: tx, y: ty, r: u(2.2), seed: rnd() }); } continue; }
+      stamp(tx, ty, 1, 1); mark('tomato', { x: tx, y: ty, h: (90 + rnd() * 40) * S, seed: rnd(), fruit: rnd() < 0.5 ? 'yellow' : 'green' });
+      if (rnd() < 0.4 && !isBlocked(tx + 2, ty)) aphids.push([O.x + tx + 2, O.y + ty]);
+    }
+  }
+  at('herbs');
+  for (let k = 0; k < 3; k++) {
+    const by = 3 + k * 12.5;
+    soil.push(shift({ x0: u(4), y0: u(by), w: u(32), h: u(8) }));
+    for (let x = 7; x < 34; x += 4.5) {
+      const tx = u(x + rnd()), ty = u(by + 4 + (rnd() - 0.5) * 2);
+      if (isBlocked(tx, ty)) continue;
+      disc(tx, ty, u(1.3)); mark('herb', { x: tx, y: ty, r: u(1.3), seed: rnd(), kind2: k });
+      if (rnd() < 0.25 && !isBlocked(tx + u(2), ty)) aphids.push([O.x + tx + u(2), O.y + ty]);
+    }
+  }
+  // The suet feeder; the stepping stones and the gnome.
+  at('suet'); disc(u(20), u(20), 1.6); mark('feeder', { x: u(20), y: u(20), suet: true }); dirt.push([O.x + u(20), O.y + u(20), u(6)]); scatterRocks(u(2), u(2), u(36), u(36), 3);
+  for (const key of ['stones', 'gnomes']) {
+    at(key);
+    for (let i = 0; i < 6; i++) { const x = u(4 + i * 6.4), y = u(20 + Math.sin(i * 0.9 + (key === 'gnomes' ? 2 : 0)) * 6); mark('stepstone', { x, y, r: u(2.4), seed: rnd() }); }
+    if (key === 'gnomes') { disc(u(22), u(32), u(1.6)); mark('gnome', { x: u(22), y: u(32), r: u(1.6), rod: true }); }
+    scatterRocks(u(2), u(2), u(36), u(8), 2);
+  }
+  // The Oak: the trunk, roots spreading through the regions round it.
+  for (const key of ['oakroots', 'oak', 'acorns', 'branches', 'oakeast', 'fallen']) here(key, 'oak', 8);
+  at('oak'); disc(u(16), u(26), u(8)); mark('oak', { x: u(16), y: u(26), r: u(8) });
+  for (let k = 0; k < 7; k++) {
+    const a = k * 0.9 + rnd() * 0.4, len = u(10 + rnd() * 8);
+    mark('root', { x: u(16) + Math.cos(a) * u(7), y: u(26) + Math.sin(a) * u(7), a, len, seed: rnd() });
+    for (let d = 0; d < len; d += 1) { const x = Math.round(u(16) + Math.cos(a) * (u(7) + d)), y = Math.round(u(26) + Math.sin(a) * (u(7) + d)); stamp(x, y, 1, 1); }
+  }
+  at('oakroots');
+  for (let k = 0; k < 5; k++) { const a = Math.PI * (0.6 + rnd() * 0.8), x0 = u(36), y0 = u(30 + rnd() * 8), len = u(10 + rnd() * 14); mark('root', { x: x0, y: y0, a, len, seed: rnd() }); for (let d = 0; d < len; d += 1) stamp(Math.round(x0 + Math.cos(a) * d), Math.round(y0 + Math.sin(a) * d), 1, 1); }
+  at('branches'); some(6, 4, 4, 32, 32, (x, y) => { const w = u(3 + rnd() * 4); if (isBlocked(x + w, y)) return false; stamp(x, y, w, 1); mark('twig', { x0: x, y0: y, w, h: 1, seed: rnd() }); });
+  at('fallen'); stamp(u(4), u(16), u(30), u(4)); mark('log', { x0: u(4), y0: u(16), w: u(30), h: u(4), rot: true });
+  at('acorns'); scatterRocks(u(2), u(2), u(36), u(36), 2);
+  at('oakeast'); some(4, 4, 4, 32, 32, (x, y) => { const a = rnd() * Math.PI * 2, len = u(6 + rnd() * 6); mark('root', { x, y, a, len, seed: rnd() }); for (let d = 0; d < len; d++) stamp(Math.round(x + Math.cos(a) * d), Math.round(y + Math.sin(a) * d), 1, 1); });
+  // The garden shed.
+  at('shed'); slabs.push(shift({ x0: u(2), y0: u(4), w: u(28), h: u(28) }));
+  stamp(u(4), u(6), u(22), u(20)); mark('shed', { x0: u(4), y0: u(6), w: u(22), h: u(20) });
+  for (const [x, y] of [[30, 10], [33, 14]]) { disc(u(x), u(y), u(2.2)); mark('bag', { x: u(x), y: u(y), r: u(2.2), color: '#c8b070' }); }
+  disc(u(30), u(32), u(2.5)); mark('pot', { x: u(30), y: u(32), r: u(2.5) });
+  // The wild corner: thistles, weeds, the toad's hole.
+  here('thistles', 'wild'); some(18, 3, 3, 34, 34, (x, y) => { stamp(x, y, 1, 1); mark('thistle', { x, y, h: (60 + rnd() * 50) * S, seed: rnd() }); });
+  here('toadhole', 'wild'); mark('toadhole', { x: u(18), y: u(16), r: u(3) }); some(12, 3, 3, 34, 34, (x, y) => { if (Math.hypot(x - u(18), y - u(16)) < u(6)) return false; stamp(x, y, 1, 1); mark('thistle', { x, y, h: (40 + rnd() * 40) * S, seed: rnd(), weed: true }); });
+  // The great lawn's other regions: one thing in each.
+  at('sprinkler'); mark('sprinkler', { x: u(20), y: u(20) }); stamp(u(20), u(20), 1, 1); for (let k = 0; k < 6; k++) { const a = k * 1.05, d = 8 + rnd() * 8; puddle(Math.round(u(20) + Math.cos(a) * u(d)), Math.round(u(20) + Math.sin(a) * u(d)), 20 + Math.floor(rnd() * 10)); }
+  at('trampoline'); mark('trampoline', { x: u(20), y: u(20), r: u(12) }); for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; disc(u(20) + Math.cos(a) * u(11), u(20) + Math.sin(a) * u(11), 1.4); }
+  at('soccer'); disc(u(22), u(18), u(4)); mark('ball', { x: u(22), y: u(18), r: u(4) });
+  at('fairyring'); for (let k = 0; k < 11; k++) { const a = (k / 11) * Math.PI * 2, x = Math.round(u(20) + Math.cos(a) * u(11)), y = Math.round(u(20) + Math.sin(a) * u(11)), r = u(0.8 + rnd() * 0.8); disc(x, y, r); mark('mushroom', { x, y, r, seed: rnd() }); }
+  at('gnome'); disc(u(18), u(20), u(1.6)); mark('gnome', { x: u(18), y: u(20), r: u(1.6) }); stamp(u(24), u(19), u(5), u(3)); mark('barrow', { x0: u(24), y0: u(19), w: u(5), h: u(3) });
+  at('frisbee'); mark('frisbee', { x: u(20), y: u(22), r: u(4) }); puddle(u(20), u(22), 30);
+  at('bone'); stamp(u(16), u(20), u(8), u(2)); mark('bone', { x0: u(16), y0: u(20), w: u(8), h: u(2) });
+  at('cloverhill'); mark('clover', { x0: u(2), y0: u(2), w: u(36), h: u(36) }); some(14, 3, 3, 34, 34, (x, y) => { stamp(x, y, 1, 1); mark('dandelion', { x, y, h: (40 + rnd() * 40) * S, puff: rnd() < 0.3, seed: rnd() }); });
+  at('truck'); stamp(u(14), u(16), u(10), u(6)); mark('truck', { x0: u(14), y0: u(16), w: u(10), h: u(6) });
+  at('bare'); dirt.push([O.x + u(20), O.y + u(20), u(14)], [O.x + u(8), O.y + u(30), u(7)]); scatterRocks(u(4), u(4), u(32), u(32), 4);
+  at('longgrass'); ground('tall', 0, 0, AREA, AREA, 8);
+  at('daisies'); some(30, 3, 3, 34, 34, (x, y) => { stamp(x, y, 1, 1); mark('flower', { x, y, h: (35 + rnd() * 25) * S, petal: '#f8f6f0', seed: rnd(), small: true }); });
+  at('lawnedge'); for (let i = 0; i < 9; i++) { const x = u(36), y = u(2 + i * 4.3); stamp(x, y, u(2), u(3)); mark('stone', { x0: x, y0: y, w: u(2), h: u(3), seed: rnd() }); }
+  // The low wet strip: mud, puddles, reeds; slime; a drain.
+  for (const key of ['reeds', 'slugs', 'drain', 'mudflat', 'wetedge']) {
+    here(key, 'wet', key === 'wetedge' ? 10 : 5);
+    const n = key === 'mudflat' ? 6 : 3;
+    for (let k = 0; k < n; k++) puddle(u(4 + rnd() * 32), u(8 + rnd() * 26), 20 + Math.floor(rnd() * 14));
+    some(key === 'reeds' ? 22 : 8, 3, 3, 34, 34, (x, y) => { stamp(x, y, 1, 1); mark('reed', { x, y, h: (80 + rnd() * 80) * S, seed: rnd() }); });
+    if (key === 'drain') { stamp(u(18), u(36), u(4), u(3)); mark('drainpipe', { x: u(20), y: u(37), out: true }); }
+    if (key === 'slugs') mark('slime', { pts: Array.from({ length: 5 }, () => [O.x + u(4 + rnd() * 32), O.y + u(4 + rnd() * 32), rnd() * Math.PI]) });
+  }
+  // The leaf pile: heaps of leaves you can wade through, a few you can't.
+  for (const key of ['leaves', 'leaves2']) {
+    here(key, 'leaf', 6);
+    some(key === 'leaves' ? 3 : 5, 6, 6, 28, 28, (x, y) => { const r = u(2.5 + rnd() * 2); disc(x, y, r); mark('leafheap', { x, y, r, seed: rnd() }); });
+  }
+  // Fire ants: little mounds, then the great one in the corner.
+  here('fireout', 'mound', 8); some(5, 4, 4, 32, 32, (x, y) => { const r = u(1.6 + rnd()); disc(x, y, r); mark('firemound', { x, y, r }); });
+  here('firemound', 'mound', 6); disc(u(20), u(20), u(7)); mark('firemound', { x: u(20), y: u(20), r: u(7), big: true });
+  const stings = [...landmarks.filter((l) => l.kind === 'firemound')].map((l) => ({ x: l.x, y: l.y, r: l.r + (l.big ? u(9) : u(4)), power: l.big ? 1.2 : 0.5 }));
+
+  // The great lawn's long grass: columns 1–6, rows 4–6 of the yard map.
   O.x = O.y = 0;
-  const long = { x0: 0, y0: areaBounds(REGION.pool).y0, w: W, h: AREA };
+  const long = { x0: (1 - BLOCK.c0) * AREA, y0: (4 - BLOCK.r0) * AREA, w: 6 * AREA, h: 3 * AREA };
 
   // Loose stones: a rock is a landmark of its own, one to four tiles across.
   function scatterRocks(x0, y0, w, h, n) {
@@ -368,7 +598,7 @@ export function makeYard(seed) {
   // Nest sites and aphid spots stay open.
   for (const [nx, ny] of [[ex, ey], [rx, ry]]) for (let y = ny - 2; y <= ny + 2; y++) for (let x = nx - 2; x <= nx + 2; x++) blocked[idx(x, y)] = 0;
   for (const [x, y] of aphids) blocked[idx(x, y)] = 0;
-  return { W, H, S, blocked, area, pit, landmarks, pits, puddles, aphids, ex, ey, rx, ry, web, sandbox: sb, blanket: bl, lawn, long, slabs, soil, dirt, bigrock: big, rnd };
+  return { W, H, S, blocked, area, pit, landmarks, pits, puddles, aphids, ex, ey, rx, ry, web, sandbox: sb, blanket: bl, lawn, long, slabs, soil, dirt, grounds, stings, bigrock: big, rnd };
 }
 
 // A region's bounds, in tiles.

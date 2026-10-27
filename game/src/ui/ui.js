@@ -163,9 +163,9 @@ export function createUI(app) {
     if (el.sheet.innerHTML !== h) el.sheet.innerHTML = h;
   }
   // ---------------------------------------------------------- yard map
-  // The whole backyard: the nine built regions in the middle, the rest
-  // planned. Tap a region for its card: what's there, what it costs you.
-  const GROUND = { slab: '#8e8a84', mulch: '#7a4a2e', bark: '#8e764a', mud: '#5a4836', home: '#7a6446', compost: '#40301e', sand: '#c8b48a', lawn: '#46802a', picnic: '#b8323a', soil: '#4a3220', grass: '#55803a', long: '#3e6e2a' };
+  // The whole backyard as a plan: all 70 regions, greyed until you've been
+  // there. Tap a region for its card: what's there, what it costs you.
+  const GROUND = { slab: '#8e8a84', mulch: '#7a4a2e', bark: '#8e764a', mud: '#5a4836', home: '#7a6446', compost: '#40301e', sand: '#c8b48a', lawn: '#46802a', picnic: '#b8323a', soil: '#4a3220', grass: '#55803a', long: '#3e6e2a', gravel: '#8a8272', deck: '#86806f', hedge: '#2e4a22', oak: '#3a5a24', wild: '#5a6230', wet: '#3a3226', leaf: '#a85a2a', mound: '#8a4a2e' };
   function regionHere() {
     const s = app.s, a = P().ant;
     return a && !P().inNest ? SIM.areaOf(s, a.tx, a.ty) : SIM.areaOf(s, s.world.ex, s.world.ey);
@@ -188,7 +188,7 @@ export function createUI(app) {
     h += `</div>`;
     const A = SIM.AREAS[pickI], seen = s.seen['area' + pickI] || pickI === SIM.REGION.rock;
     h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
-    h += `<div class="note">${SIM.AREAS.length} regions built; the rest is planned.</div>`;
+    h += `<div class="note">${SIM.AREAS.length} regions. Grey ones you haven't explored yet.</div>`;
     el.sheet.innerHTML = h;
   }
   function openMap() { app.menu = 'map'; app.mapPick = null; el.sheet.classList.remove('hidden'); renderMap(); app.paused = true; }

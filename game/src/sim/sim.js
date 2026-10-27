@@ -49,6 +49,8 @@ const FOODS = {
   cookie:   {name:'cookie', amt:[35,35], treat:true, crew:6},
   gummy:    {name:'gummy bear', amt:[50,50], treat:true, crew:8},
   chip:     {name:'potato chip', amt:[30,30], treat:true, crew:4},
+  acorn:    {name:'acorn', amt:[30,30], treat:true, crew:4},
+  slug:     {name:'slug', amt:[20,26], protein:true},
 };
 const heavy = f => !!(FOODS[f.type] && FOODS[f.type].crew);
 const SOIL = [ {name:'soft', work:6}, {name:'packed', work:12}, {name:'clay', work:20} ];
@@ -158,8 +160,10 @@ function create(seed){
     rain: { t: 0, on: false, next: 240 }, repairs: [], seen: {}, events: [],
   };
   s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
-  // Every area starts with its own stock; home has the most, and it won't last.
-  for (let i=0;i<AREAS.length;i++) for (let k=0;k<AREAS[i].start;k++) spawnFood(s, i, false);
+  // Every area starts with its own stock; home has the most, and it won't
+  // last. The far regions lie dormant until you first walk into one.
+  s.active = AREAS.map(A => !A.dormant);
+  for (let i=0;i<AREAS.length;i++) if (s.active[i]) for (let k=0;k<AREAS[i].start;k++) spawnFood(s, i, false);
   reveal(s, w.ex, w.ey, SEE.home);
   for (let i=0;i<6;i++) spawnInArea(s, REGION.rock, 'grit', 'pebble');
   for (let i=0;i<4;i++) spawnInArea(s, REGION.woodpile, 'grit', 'pebble');
@@ -298,7 +302,7 @@ function deposit(s, a){
 }
 function killAnt(s, a, cause){
   if (a.state === 'dead') return; a.state = 'dead';
-  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
+  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
   if (!a.team){ const i = idx(Math.min(W-1,Math.max(0,Math.floor(a.x/T))), Math.min(H-1,Math.max(0,Math.floor(a.y/T)))); s.alarm[i] += 3; s.hot.add(i); }
   const c = colonyOf(s, a); c.deaths[cause] = (c.deaths[cause]||0) + 1;
 }
@@ -321,14 +325,16 @@ function tick(s, dt){
   tickRain(s, dt); tickMaintenance(s, dt);
   // Food grows back area by area at each area's own pace (yard.js), so the
   // ground near home runs thin and the rich food is far away.
-  for (let i=0;i<AREAS.length;i++){ const A = AREAS[i]; s.areaT[i] += dt*A.rate/60;
+  for (let i=0;i<AREAS.length;i++){ if (!s.active[i]) continue; const A = AREAS[i]; s.areaT[i] += dt*A.rate/60;
     if (s.areaT[i] >= 1){ s.areaT[i] -= 1; let n = 0; for (const f of s.items) if ((f.kind==='food'||f.kind==='protein') && f.amt > 0 && !f.max && w.area[idx(f.x,f.y)] === i) n++; if (n < A.max) spawnFood(s, i, s.t > 180); } }
   s.itemTimer += dt; if (s.itemTimer > 9){ s.itemTimer = 0;
     if (s.items.filter(f=>f.kind==='grit').length < 10) spawnInArea(s, Math.random() < 0.6 ? REGION.rock : REGION.woodpile, 'grit', 'pebble');
     for (const f of s.items) if (f.max) f.amt = Math.min(f.max, f.amt + 3); }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
-  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt);
-  s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest) reveal(s, pa.x/T, pa.y/T, SEE.player); }
+  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt);
+  s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player);
+    // Walking into a dormant region wakes it: its food appears and starts to grow.
+    const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); } } }
   stepSpider(s, dt); if (!s.spider){ if (s.spiderAway){ s.spiderAway.t -= dt; if (s.spiderAway.t <= 0){ spiderEnter(s, s.spiderAway.hp); s.spiderAway = null; } } else { s.spiderRespawn -= dt; if (s.spiderRespawn <= 0){ spiderEnter(s, 150); s.spiderRespawn = 120; } } }
   stepCat(s, dt); if (!s.cat){ s.catRespawn -= dt; if (s.catRespawn <= 0){ spawnCat(s); s.catRespawn = 90; } }
   // buckets for combat
@@ -719,7 +725,7 @@ function stepSpider(s, dt){
   for (const off of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]){
     const nx = sp.x + Math.cos(base+off)*speed*dt, ny = sp.y + Math.sin(base+off)*speed*dt;
     const tx = Math.floor(nx/T), ty = Math.floor(ny/T);
-    // The edge thicket is two tiles deep; a spider coming or going climbs through it.
+    // The fence is two tiles deep; a spider coming or going climbs over it.
     const inside = tx>1 && ty>0 && tx<W-2 && ty<H-2;
     if (inside ? s.world.blocked[idx(tx,ty)] : !free) continue;
     if (spiderNearNest(s, nx, ny)) continue;
@@ -829,15 +835,18 @@ function deliverBig(s){
 function findPath(s, sx, sy, gx, gy, avoid){
   const w = s.world, ok = (x, y) => walk(s, x, y) && w.pit[idx(x,y)] !== 2 && !(avoid && avoid(x, y));
   if (!ok(sx, sy)) return [[gx, gy]];
-  const prev = new Int32Array(W*H).fill(-1), q = new Int32Array(W*H); let qh = 0, qt = 0;
-  const start = idx(sx, sy); prev[start] = start; q[qt++] = start;
+  // Search a box round start and goal, not the whole yard.
+  const M = 48, bx0 = Math.max(0, Math.min(sx, gx) - M), by0 = Math.max(0, Math.min(sy, gy) - M), bw = Math.min(W, Math.max(sx, gx) + M + 1) - bx0, bh = Math.min(H, Math.max(sy, gy) + M + 1) - by0;
+  const inBox = (x, y) => x >= bx0 && y >= by0 && x < bx0 + bw && y < by0 + bh, li = (x, y) => (y - by0)*bw + (x - bx0);
+  const prev = new Int32Array(bw*bh).fill(-1), q = new Int32Array(bw*bh); let qh = 0, qt = 0;
+  const start = li(sx, sy); prev[start] = start; q[qt++] = start;
   let best = start, bd = Math.hypot(sx-gx, sy-gy);
-  while (qh < qt){ const i = q[qh++], x = i % W, y = (i - x) / W;
+  while (qh < qt){ const i = q[qh++], lx = i % bw, x = lx + bx0, y = (i - lx) / bw + by0;
     if (x === gx && y === gy){ best = i; bd = 0; break; }
-    for (const [dx,dy] of N8){ const nx = x+dx, ny = y+dy; if (!ok(nx, ny)) continue; if (dx && dy && (!ok(x+dx, y) || !ok(x, y+dy))) continue;
-      const j = idx(nx, ny); if (prev[j] >= 0) continue; prev[j] = i; q[qt++] = j;
+    for (const [dx,dy] of N8){ const nx = x+dx, ny = y+dy; if (!inBox(nx, ny) || !ok(nx, ny)) continue; if (dx && dy && (!ok(x+dx, y) || !ok(x, y+dy))) continue;
+      const j = li(nx, ny); if (prev[j] >= 0) continue; prev[j] = i; q[qt++] = j;
       const d = Math.hypot(nx-gx, ny-gy); if (d < bd){ bd = d; best = j; } } }
-  const tiles = []; for (let i = best; i !== start; i = prev[i]) tiles.push([i % W, Math.floor(i / W)]); tiles.reverse();
+  const tiles = []; for (let i = best; i !== start; i = prev[i]) tiles.push([i % bw + bx0, Math.floor(i / bw) + by0]); tiles.reverse();
   if (!tiles.length) return [[sx, sy]];
   // String-pull: from each anchor, jump to the farthest tile in clear sight.
   const out = []; let from = [sx, sy], k = 0;
@@ -877,61 +886,93 @@ function tickPits(s, dt){
   }
 }
 // ---------- feet and birds ----------
-// Some regions get visitors from above (AREAS[].strike): a shoe on the Back
-// Steps, at the Grill and the Swing Set; a robin over the vegetable garden,
-// the feeder, the birdbath and the great lawn. Each comes only while ants are
-// out in that region, and each shows its shadow first.
-const FOOT = { warn: 2.2, hold: 1.2, lift: 0.8, a: 9, b: 3.4 };   // footprint half-axes, in tiles
-const BIRD = { land: 1.4, peck: 1.3, pecks: 4, leave: 1.2, reach: 1.6, hop: 2.5, sight: 12, scare: 5 };
+// Some regions get visitors (AREAS[].strike), each showing itself first:
+// - things that come down (DROP): a shoe on the steps, the grill, the swings
+//   and the side path; an acorn under the Oak (it stays, a crew's worth of
+//   food); a cloud of bug spray at the shed. A shadow spreads, then it hits.
+// - hunters (HUNT): a robin over the garden, the feeder, the birdbath and
+//   the lawn; a toad in the wild corner, the wet strip and the leaves. It
+//   arrives, goes after the nearest ant a few times, and leaves. Five
+//   fighters round it chase it off.
+// Each comes only while ants are out in that region.
+const DROP = {
+  foot:  { warn: 2.2, hold: 1.2, lift: 0.8, a: 9, b: 3.4, cause: 'foot', msg: 'A shadow falls over you. Something is coming down: get out from under it!', ev: 'feet' },
+  acorn: { warn: 1.6, hold: 0.3, lift: 0.1, a: 2.4, b: 2.4, cause: 'acorn', msg: 'Something is falling out of the Oak! Get out from under the shadow.', ev: 'acorn' },
+  spray: { warn: 2.0, hold: 2.2, lift: 0.6, a: 6, b: 6, cause: 'spray', msg: 'A hiss from the shed: bug spray! Get out of the cloud.', ev: 'spray' },
+};
+const HUNT = {
+  bird: { land: 1.4, peck: 1.3, pecks: 4, leave: 1.2, reach: 1.6, hop: 2.5, sight: 12, scare: 5, cause: 'bird', name: 'robin', msg: 'A robin drops out of the sky to hunt. Run, or bring five soldiers to chase it off.', ev: 'bird' },
+  toad: { land: 1.0, peck: 1.7, pecks: 5, leave: 1.0, reach: 5, hop: 1.2, sight: 10, scare: 5, cause: 'toad', name: 'toad', msg: 'A toad! Its tongue reaches five tiles. Keep away, or bring five fighters.', ev: 'toad' },
+};
+const FOOT = DROP.foot, BIRD = HUNT.bird;
 const outside = a => a.state !== 'dead' && a.state !== 'in' && a.state !== 'build' && a.state !== 'nest';
-// Inside a foot's print (sx, sy in tiles, yaw in radians), scaled by k.
-const underFoot = (st, x, y, k) => { const dx = x - st.x, dy = y - st.y, c = Math.cos(st.yaw), n = Math.sin(st.yaw), u = (dx*c + dy*n)/(FOOT.a*k), v = (-dx*n + dy*c)/(FOOT.b*k); return u*u + v*v <= 1; };
+// Inside a drop's print (x, y in tiles), scaled by k.
+const underFoot = (st, x, y, k) => { const D = DROP[st.kind], dx = x - st.x, dy = y - st.y, c = Math.cos(st.yaw), n = Math.sin(st.yaw), u = (dx*c + dy*n)/(D.a*k), v = (-dx*n + dy*c)/(D.b*k); return u*u + v*v <= 1; };
 function tickStrikes(s, dt){
   if (!s.queen.placed) return;
   const w = s.world, P = s.player, pa = P.ant && !P.inNest ? P.ant : null;
   const out = new Map();
   for (const a of s.ants){ if (!outside(a)) continue; const r = w.area[idx(a.tx,a.ty)]; if (!out.has(r)) out.set(r, []); out.get(r).push(a); }
   // New visitors: each region's clock only runs while ants are about.
-  for (let i=0;i<AREAS.length;i++){ const st = AREAS[i].strike; if (!st || s.strikes.some(k => k.region === i)) continue;
+  for (let i=0;i<AREAS.length;i++){ const st = AREAS[i].strike; if (!st || !s.active[i] || s.strikes.some(k => k.region === i)) continue;
     const here = out.get(i); if (!here) continue;
     s.strikeT[i] -= dt; if (s.strikeT[i] > 0) continue;
     s.strikeT[i] = st.every[0] + Math.random()*(st.every[1] - st.every[0]);
     const t = here[Math.floor(Math.random()*here.length)], b = areaBounds(i);
     const x = Math.max(b.x0 + 3, Math.min(b.x1 - 3, t.x/T + (Math.random()-0.5)*4)), y = Math.max(b.y0 + 3, Math.min(b.y1 - 3, t.y/T + (Math.random()-0.5)*4));
-    s.strikes.push({ kind: st.kind, region: i, x, y, yaw: Math.random()*Math.PI*2, t: 0, phase: st.kind === 'foot' ? 'warn' : 'land', pecks: 0, next: 0 });
-    const near = pa && Math.hypot(pa.x/T - x, pa.y/T - y) < 14;
-    if (st.kind === 'foot'){ if (near){ s.events.push('feet'); P.msg = 'A shadow falls over you. Something is coming down: get out from under it!'; } }
-    else if (near){ s.events.push('bird'); P.msg = 'A robin drops out of the sky to hunt. Run, or bring five soldiers to chase it off.'; }
+    s.strikes.push({ kind: st.kind, region: i, x, y, yaw: Math.random()*Math.PI*2, t: 0, phase: DROP[st.kind] ? 'warn' : 'land', pecks: 0, next: 0 });
+    const K = DROP[st.kind] || HUNT[st.kind];
+    if (pa && Math.hypot(pa.x/T - x, pa.y/T - y) < 14){ s.events.push(K.ev); P.msg = K.msg; }
   }
   for (const st of s.strikes){
     st.t += dt;
-    if (st.kind === 'foot'){
+    const D = DROP[st.kind];
+    if (D){
       if (st.phase === 'warn'){
         // In the last second, as the shadow darkens, most ants under it run for its edge.
-        if (st.t > FOOT.warn - 1) for (const a of s.ants) if (outside(a) && !a.isPlayer && a.id % 3 && underFoot(st, a.x/T, a.y/T, 1.3)){ a.flee = Math.max(a.flee, 1.2); a.fleeFrom = { x: st.x*T, y: st.y*T }; }
-        if (st.t >= FOOT.warn){ st.phase = 'hold'; st.hit = true;
-          for (const a of s.ants) if (outside(a) && underFoot(st, a.x/T, a.y/T, 1)) killAnt(s, a, 'foot');
+        if (st.t > D.warn - 1) for (const a of s.ants) if (outside(a) && !a.isPlayer && a.id % 3 && underFoot(st, a.x/T, a.y/T, 1.3)){ a.flee = Math.max(a.flee, 1.2); a.fleeFrom = { x: st.x*T, y: st.y*T }; }
+        if (st.t >= D.warn){ st.phase = 'hold'; st.hit = true;
+          for (const a of s.ants) if (outside(a) && underFoot(st, a.x/T, a.y/T, 1)) killAnt(s, a, D.cause);
           if (s.cat && underFoot(st, s.cat.x/T, s.cat.y/T, 1)) s.cat.hp = 0;
-          if (s.spider && underFoot(st, s.spider.x/T, s.spider.y/T, 1)) s.spider.hp -= 60; }
-      } else if (st.phase === 'hold'){ if (st.t >= FOOT.warn + FOOT.hold) st.phase = 'lift'; }
-      else if (st.t >= FOOT.warn + FOOT.hold + FOOT.lift) st.done = true;
+          if (s.spider && underFoot(st, s.spider.x/T, s.spider.y/T, 1)) s.spider.hp -= 60;
+          // A fallen acorn stays where it lands: food for a crew of four.
+          if (st.kind === 'acorn'){ const x = Math.floor(st.x), y = Math.floor(st.y); if (walk(s, x, y) && !s.items.some(f => f.x === x && f.y === y)) s.items.push({ x, y, kind: 'food', type: 'acorn', amt: FOODS.acorn.amt[0] }); } }
+      } else if (st.phase === 'hold'){
+        // Spray lingers: anything wandering into the cloud dies too.
+        if (st.kind === 'spray') for (const a of s.ants) if (outside(a) && underFoot(st, a.x/T, a.y/T, 1)) killAnt(s, a, D.cause);
+        if (st.t >= D.warn + D.hold) st.phase = 'lift';
+      }
+      else if (st.t >= D.warn + D.hold + D.lift) st.done = true;
       continue;
     }
-    // A bird: lands, hops after the nearest ant and pecks, then flies off.
-    if (st.phase === 'land'){ if (st.t >= BIRD.land){ st.phase = 'hunt'; st.next = 0.4; } continue; }
-    if (st.phase === 'leave'){ if (st.t >= st.leaveAt + BIRD.leave) st.done = true; continue; }
+    // A hunter: arrives, goes after the nearest ant, then leaves.
+    const B = HUNT[st.kind];
+    if (st.phase === 'land'){ if (st.t >= B.land){ st.phase = 'hunt'; st.next = 0.4; } continue; }
+    if (st.phase === 'leave'){ if (st.t >= st.leaveAt + B.leave) st.done = true; continue; }
     let guards = 0; for (const a of s.ants) if (outside(a) && !a.team && (CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer) && Math.hypot(a.x/T - st.x, a.y/T - st.y) < 5) guards++;
-    if (guards >= BIRD.scare){ st.phase = 'leave'; st.leaveAt = st.t; if (pa && Math.hypot(pa.x/T - st.x, pa.y/T - st.y) < 14) P.msg = 'Your crew swarms the robin. It flaps off.'; continue; }
-    st.next -= dt; if (st.next > 0) continue; st.next = BIRD.peck;
-    let best = null, bd = BIRD.sight;
+    if (guards >= B.scare){ st.phase = 'leave'; st.leaveAt = st.t; if (pa && Math.hypot(pa.x/T - st.x, pa.y/T - st.y) < 14) P.msg = `Your crew swarms the ${B.name}. It gives up and goes.`; continue; }
+    st.next -= dt; if (st.next > 0) continue; st.next = B.peck;
+    let best = null, bd = B.sight;
     for (const a of s.ants){ if (!outside(a)) continue; const d = Math.hypot(a.x/T - st.x, a.y/T - st.y); if (d < bd){ bd = d; best = a; } }
     if (best){ st.yaw = Math.atan2(best.y/T - st.y, best.x/T - st.x);
-      if (bd <= BIRD.reach + 1.2){ killAnt(s, best, 'bird'); st.peckAt = st.t; }
-      else { const m = Math.min(BIRD.hop, bd - BIRD.reach); const nx = st.x + Math.cos(st.yaw)*m, ny = st.y + Math.sin(st.yaw)*m; if (walk(s, Math.floor(nx), Math.floor(ny))){ st.x = nx; st.y = ny; st.hopAt = st.t; } } }
+      if (bd <= B.reach + 1.2){ killAnt(s, best, B.cause); st.peckAt = st.t; st.peckD = bd; }
+      else { const m = Math.min(B.hop, bd - B.reach); const nx = st.x + Math.cos(st.yaw)*m, ny = st.y + Math.sin(st.yaw)*m; if (walk(s, Math.floor(nx), Math.floor(ny))){ st.x = nx; st.y = ny; st.hopAt = st.t; } } }
     else st.peckAt = st.t;
-    if (++st.pecks >= BIRD.pecks){ st.phase = 'leave'; st.leaveAt = st.t + 0.4; }
+    if (++st.pecks >= B.pecks){ st.phase = 'leave'; st.leaveAt = st.t + 0.4; }
   }
   s.strikes = s.strikes.filter(k => !k.done);
+}
+// Fire ants: the ground round their mounds stings anything that stays on it.
+function tickStings(s, dt){
+  const w = s.world; s.stingT = (s.stingT || 0) + dt; if (s.stingT < 0.5) return; const k = s.stingT; s.stingT = 0;
+  for (const z of w.stings) for (const a of s.ants){
+    if (!outside(a) || a.team) continue;
+    const d = Math.hypot(a.x/T - z.x, a.y/T - z.y); if (d > z.r) continue;
+    a.hp -= z.power * k * (a.isPlayer ? 0.6 : 1);
+    if (!a.isPlayer){ a.flee = Math.max(a.flee, 1); a.fleeFrom = { x: z.x*T, y: z.y*T }; }
+    else if (!s.stungWarned){ s.stungWarned = true; s.events.push('fireants'); s.player.msg = 'Fire ants! They sting anything on their ground. Keep moving, and keep out of the mound\'s red earth.'; }
+    if (a.hp <= 0) killAnt(s, a, 'fireants');
+  }
 }
 function recruit(s, n){
   const a = s.player.ant; if (!a || s.player.inNest) return 0; const w = s.world; let got = 0;
@@ -971,7 +1012,7 @@ function stats(s){
 }
 // ---------- save / load ----------
 function serialize(s){
-  return JSON.stringify({ v: 9, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
+  return JSON.stringify({ v: 10, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders }, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest }, nextId: s.nextId,
@@ -979,17 +1020,18 @@ function serialize(s){
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
 }
 function deserialize(json){
-  const d = JSON.parse(json); if (d.v !== 9) throw new Error('old save'); const s = create(d.seed);
+  const d = JSON.parse(json); if (d.v !== 10) throw new Error('old save'); const s = create(d.seed);
   s.t = d.t; s.colony = d.colony; s.rival = d.rival; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen || {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);
   s.lost = !!d.lost; if (d.mower) s.mower = d.mower; if (d.areaT) s.areaT = d.areaT; if (d.strikeT) s.strikeT = d.strikeT; s.player.big = s.player.ant && s.items.find(f => f.carried) || null;
+  if (d.active) s.active = d.active;
   if (d.seen && d.seen.length === s.seenMap.length) for (let i=0;i<d.seen.length;i++) s.seenMap[i] = d.seen.charCodeAt(i) === 49 ? 1 : 0;
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
+return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
 })();
 export default SIM;
 export { SIM };

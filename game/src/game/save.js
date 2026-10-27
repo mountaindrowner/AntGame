@@ -20,5 +20,15 @@ export function saveGame(s) {
 }
 
 export function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* ignore */ }
+  try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(MAP_KEY); } catch (e) { /* ignore */ }
+}
+
+// The yard map's photo, kept beside the save so explored regions still show
+// after a reload: a JPEG of the map canvas and which regions it holds.
+const MAP_KEY = SAVE_KEY + '-map';
+export function saveMap(canvas, done) {
+  try { localStorage.setItem(MAP_KEY, JSON.stringify({ img: canvas.toDataURL('image/jpeg', 0.72), done: [...done] })); } catch (e) { /* storage full or blocked */ }
+}
+export function loadMap() {
+  try { const m = JSON.parse(localStorage.getItem(MAP_KEY)); return m && m.img ? m : null; } catch (e) { return null; }
 }

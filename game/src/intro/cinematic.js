@@ -10,7 +10,7 @@ import { psx, psxBasic } from '../render/ps1/materials.js';
 import { COLORS, ANT_SCALE } from '../config.js';
 import { FilmSound } from './sound.js';
 import { sneaker } from '../render/models/sneaker.js';
-import { SCALE, REGION, areaBounds } from '../sim/yard.js';
+import { SCALE, REGION, AREA, areaBounds } from '../sim/yard.js';
 
 const T = 16;
 // Anchors in the yard (sim/yard.js design units from the Patio's corner, at
@@ -128,6 +128,10 @@ export class Cinematic {
     this.started = false;
     this.done = false;
     this.camera = new THREE.PerspectiveCamera(50, 1, 2, 9000);
+    // The yard's scenery is built round home, the patio and the flowerbed
+    // for the film's wide shots: streamed while the poster is up, the rest
+    // built at once when it rolls.
+    app.sceneryFocus = { x: L.x, y: L.z, view: AREA };
     this.cards = CARDS;
     this.shake = 0;
     this._build();
@@ -228,6 +232,7 @@ export class Cinematic {
   start() {
     if (this.started) return;
     this.started = true;
+    this.app.sceneryFocus.now = true;
     this.el.querySelector('.poster').classList.add('hidden');
     this.sound = new FilmSound();
     if (this.muted) this.sound.mute(true);
@@ -243,6 +248,7 @@ export class Cinematic {
     s.scene.remove(this.group);
     this.el.remove();
     document.body.classList.remove('cine-on');
+    this.app.sceneryFocus = null;
     this.onDone();
   }
 
@@ -276,7 +282,7 @@ export class Cinematic {
 
   // Recording: start without sound and advance exactly dt per call.
   step(dt) {
-    if (!this.started) { this.started = true; this.manual = true; this.el.querySelector('.poster').classList.add('hidden'); }
+    if (!this.started) { this.started = true; this.manual = true; this.app.sceneryFocus.now = true; this.el.querySelector('.poster').classList.add('hidden'); }
     this.t += dt;
     this._advance(dt);
   }

@@ -221,7 +221,7 @@ try {
   await shot('12-spider');
   await page.waitForTimeout(250);
   await shot('12b-spider');
-  // A tour of the yard: each of the nine areas from above.
+  // A tour of the yard: every region from above (each is built as the camera arrives).
   await sim(() => { const { app } = window.UNDERFOOT, s = app.s; s.cat = null; s.spider = null; s.player.pending = false; s.colony.eggQueue.length = 0; s.colony.eggs.length = 0; app.zoomMul = 0.62; });
   const areas = await sim(() => { const { SIM } = window.UNDERFOOT; return SIM.AREAS.map((A, i) => { const b = SIM.areaBounds(i); return { key: A.key, x: (b.x0 + b.x1 + 1) / 2 * SIM.T, y: (b.y0 + b.y1 + 1) / 2 * SIM.T }; }); });
   for (const A of areas) {

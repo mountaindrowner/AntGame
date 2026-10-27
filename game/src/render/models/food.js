@@ -131,6 +131,25 @@ function chip() {
   return bake([at(paint(g, (x, y, z, f) => (hash(f) < 0.15 ? '#c8902a' : '#f0c850')), 0, 0.35, 0), at(paint(g.clone().translate(0, -0.05, 0).rotateX(Math.PI), '#e0b040'), 0, 0.3, 0)]);
 }
 
+// An acorn on its side: a glossy brown nut in a scaly cap. A treat for a crew of four.
+function acorn() {
+  const parts = [at(paint(new THREE.SphereGeometry(0.75, 10, 7).scale(1.35, 1, 1), (x, y) => (x > 0.75 ? '#5a3a1a' : y > 0.35 ? '#b07a3e' : '#8a5a2a')), 0.15, 0.72, 0)];
+  parts.push(at(paint(new THREE.SphereGeometry(0.82, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).rotateZ(Math.PI / 2), (x, y, z, f) => (hash(f) < 0.5 ? '#6a5236' : '#5a4430')), -0.55, 0.72, 0));
+  parts.push(at(paint(new THREE.CylinderGeometry(0.06, 0.07, 0.35, 4).rotateZ(Math.PI / 2), '#4a3824'), -1.5, 0.72, 0));
+  return bake(parts);
+}
+// A slug: a long, glistening grey-brown body with two eye stalks. Protein.
+function slug() {
+  const g = new THREE.SphereGeometry(1, 12, 6).scale(1.8, 0.42, 0.55).toNonIndexed(), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i); p.setY(i, p.getY(i) * (1 - Math.max(0, -x - 0.6) * 0.35)); }
+  const parts = [at(paint(g, (x, y, z, f) => (y < -0.15 ? '#a8a090' : hash(f) < 0.12 ? '#8a7a5a' : x > 0.6 ? '#7a6a52' : '#6a5a44')), 0, 0.42, 0)];
+  for (const s of [-1, 1]) {
+    parts.push(paint(new THREE.CylinderGeometry(0.05, 0.06, 0.6, 4).rotateZ(-0.5).translate(1.75, 0.95, s * 0.15), '#6a5a44'));
+    parts.push(paint(new THREE.SphereGeometry(0.09, 5, 3).translate(1.9, 1.22, s * 0.15), '#2a2420'));
+  }
+  return bake(parts);
+}
+
 // A dead beetle on its back: a shiny shell, legs in the air. Protein.
 function bug() {
   const parts = [at(paint(new THREE.SphereGeometry(1, 8, 5).scale(1.3, 0.55, 0.9), (x, y) => (y > 0.2 ? '#2a3a2a' : '#1a221a')), 0, 0.5, 0)];
@@ -205,6 +224,8 @@ export const FOOD = {
   aphids: aphids(),
   hotdog: hotdog(),
   chip: chip(),
+  acorn: acorn(),
+  slug: slug(),
   bug: bug(),
   gummy: [gummy('#e0283c', '#ff9aa8'), gummy('#f2b81e', '#fff0a0'), gummy('#3cb84a', '#b8f8b0')],
   bead: bead(),
@@ -214,7 +235,7 @@ export const FOOD = {
   // A four-point sparkle that marks a treat.
   star: bake([paint(new THREE.PlaneGeometry(1, 0.16), '#ffffff'), paint(new THREE.PlaneGeometry(0.16, 1), '#ffffff'), paint(new THREE.PlaneGeometry(0.34, 0.34).rotateZ(Math.PI / 4), '#fff6c8')]),
 };
-const TREAT_COLOR = { jellybean: '#e04050', cookie: '#c98a46', gummy: '#e85060', chip: '#f0c850' };
+const TREAT_COLOR = { jellybean: '#e04050', cookie: '#c98a46', gummy: '#e85060', chip: '#f0c850', acorn: '#a8743a' };
 
 // Which geometry, colour and size an item draws as. variant picks colour
 // variants deterministically from the item's position.
@@ -226,6 +247,7 @@ export function itemLook(f, COLORS) {
   }
   if (f.kind === 'grit') return { geo: PROPS.pebble, key: 'pebble', color: COLORS.grit, r: 2.6, lift: 0.6 };
   if (f.kind === 'protein' && f.type === 'hotdog') return { geo: FOOD.hotdog, key: 'hotdog', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.12) };
+  if (f.kind === 'protein' && f.type === 'slug') return { geo: FOOD.slug, key: 'slug', color: '#ffffff', r: 6 };
   if (f.kind === 'protein' && f.type === 'bug') return { geo: FOOD.bug, key: 'bug', color: '#ffffff', r: Math.min(5.5, 2.5 + f.amt * 0.2) };
   if (f.kind === 'protein') return { geo: PROPS.meat, key: 'meat', color: COLORS.protein, r: Math.min(6, 2.5 + f.amt * 0.08), lift: 0.6 };
   switch (f.type) {
@@ -233,6 +255,7 @@ export function itemLook(f, COLORS) {
     case 'berry': return { geo: FOOD.berry, key: 'berry', color: '#ffffff', r: Math.min(5, 2.8 + f.amt * 0.17) };
     case 'tomato': return { geo: FOOD.tomato, key: 'tomato', color: '#ffffff', r: Math.min(6, 3.2 + f.amt * 0.13) };
     case 'aphids': return { geo: FOOD.aphids, key: 'aphids', color: '#ffffff', r: 3.6 + Math.min(f.amt, 20) * 0.08 };
+    case 'acorn': return { geo: FOOD.acorn, key: 'acorn', color: '#ffffff', r: 6, treat: true };
     case 'chip': return { geo: FOOD.chip, key: 'chip', color: '#ffffff', r: 6.5, treat: true };
     case 'apple': return { geo: FOOD.apple, key: 'apple', color: '#ffffff', r: Math.min(6.5, 3.5 + f.amt * 0.12) };
     case 'popcorn': return { geo: FOOD.popcorn, key: 'popcorn', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.16) };

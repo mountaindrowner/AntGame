@@ -88,10 +88,10 @@ body.cine-on #top, body.cine-on #bar, body.cine-on #bar2, body.cine-on #barn, bo
 
 /* The yard map: the whole backyard as a grid of regions. */
 /* The built middle gets more room than the planned yard around it. */
-#sheet .yard { display: grid; grid-template-columns: 0.7fr 0.7fr repeat(5, 1.4fr) repeat(3, 0.7fr); grid-template-rows: 24px repeat(4, 38px) repeat(3, 24px); gap: 2px; margin: 4px 0 10px; }
+#sheet .yard { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); grid-template-rows: 20px repeat(7, 34px); gap: 2px; margin: 4px 0 10px; }
 #sheet .yard .z { overflow-wrap: anywhere; border-radius: 4px; font-size: 8px; line-height: 1.05; padding: 2px; overflow: hidden; display: flex; align-items: center; justify-content: center; text-align: center; min-height: 0; min-width: 0; border: 1px dashed rgba(120,104,80,0.6); background: rgba(90,110,60,0.18); color: var(--mute); }
 #sheet .yard .z.house { background: #6a5446; color: #f1e8d6; border: 1px solid #4a3a30; font-size: 11px; font-weight: 700; }
-#sheet .yard button.z { overflow-wrap: normal; font-size: 8.5px; min-height: 0; padding: 1px; border-style: solid; border-color: rgba(0,0,0,0.25); color: #fff; font-weight: 700; text-shadow: 0 1px 1px rgba(0,0,0,0.7); position: relative; touch-action: manipulation; }
+#sheet .yard button.z { overflow-wrap: normal; font-size: 7.5px; letter-spacing: -0.2px; min-height: 0; padding: 1px; border-style: solid; border-color: rgba(0,0,0,0.25); color: #fff; font-weight: 700; text-shadow: 0 1px 1px rgba(0,0,0,0.7); position: relative; touch-action: manipulation; }
 #sheet .yard button.z.unseen { filter: saturate(0.35) brightness(0.8); }
 #sheet .yard button.z.here { outline: 3px solid #ffd34d; outline-offset: -1px; }
 #sheet .yard button.z.pick { box-shadow: inset 0 0 0 2px #fff; }

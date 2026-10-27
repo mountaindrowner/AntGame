@@ -8,9 +8,10 @@ import { NestView } from './render/views/nestView.js';
 import { createUI } from './ui/ui.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
-import { loadGame, saveGame, clearSave, NEW_GAME_SEED } from './game/save.js';
+import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED } from './game/save.js';
 import { Cinematic, renderScoreWav } from './intro/cinematic.js';
 import { uiScale } from './config.js';
+import { GROUND_TINT } from './render/views/yardScenery.js';
 import './ui/ui.css';
 
 const { NW, NH } = SIM;
@@ -36,6 +37,7 @@ const app = {
   insets: { top: 0, bottom: 0, h: 1 },
   reset() {
     clearSave();
+    this.mapFresh = true; // a new colony starts with an empty map
     this.s = SIM.create(NEW_GAME_SEED);
     this.s.seen.film = true; // the film plays once per player, not on every reset
     this.placing = null;
@@ -62,38 +64,109 @@ const labels = new LabelLayer(document.getElementById('labels'));
 
 // The opening film plays once for a new colony, and again from Help.
 let cine = null;
-// A photo of the whole yard from straight above, for the map: the real
-// scenery and whoever is out, drawn once each time the map opens. Returns a
-// canvas `px` wide. Fog and the PS1 vertex snapping are switched off for it.
-app.snapshotMap = (px = 1600) => {
-  const sv = views.surface, s = app.s, T = SIM.T, gw = s.world.W * T, gh = s.world.H * T;
-  if (sv.state !== s) sv.update(app, clock, pipeline.aspect);
-  const ph = Math.round((px * gh) / gw), r = pipeline.renderer;
-  const rtA = new THREE.WebGLRenderTarget(px, ph, { type: THREE.HalfFloatType, depthBuffer: true });
-  const rtB = new THREE.WebGLRenderTarget(px, ph);
-  const cam = new THREE.OrthographicCamera(-gw / 2, gw / 2, gh / 2, -gh / 2, 1, 8000);
-  cam.position.set(gw / 2, 4000, gh / 2); cam.up.set(0, 0, -1); cam.lookAt(gw / 2, 0, gh / 2);
-  const fog = sv.scene.fog, rain = sv.rain.visible, snap = pipeline.uniforms.uSnap.value.clone();
-  sv.scene.fog = null; sv.rain.visible = false; pipeline.uniforms.uSnap.value.set(1e5, 1e5);
-  r.setRenderTarget(rtA); r.render(sv.scene, cam);
-  // Linear to sRGB into an 8-bit target we can read back.
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
-    uniforms: { t: { value: rtA.texture } }, depthTest: false, depthWrite: false,
-    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-    fragmentShader: 'uniform sampler2D t; varying vec2 vUv; void main(){ vec3 c = clamp(texture2D(t, vUv).rgb, 0.0, 1.0); gl_FragColor = vec4(mix(c * 12.92, 1.055 * pow(c, vec3(1.0/2.4)) - 0.055, step(vec3(0.0031308), c)), 1.0); }',
-  }));
-  const qs = new THREE.Scene(); qs.add(quad);
-  r.setRenderTarget(rtB); r.render(qs, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
-  const buf = new Uint8Array(px * ph * 4);
-  r.readRenderTargetPixels(rtB, 0, 0, px, ph, buf);
+// The yard map is a photo from straight above, pieced together a region at
+// a time: each region is photographed (real scenery, no creatures) the first
+// time it is built near you, at MAP_K px a tile. Regions not photographed
+// yet show their ground's colour (you won't have seen them anyway).
+const MAP_K = 2;
+const photoQ = [];
+let mapFor = null;
+function mapCanvas() {
+  const s = app.s, w = s.world;
+  if (mapFor !== w) {
+    mapFor = w; photoQ.length = 0;
+    const c = (app.mapCanvas = document.createElement('canvas'));
+    c.width = w.W * MAP_K; c.height = w.H * MAP_K;
+    const g = c.getContext('2d');
+    g.fillStyle = '#2e4a1c'; g.fillRect(0, 0, c.width, c.height);
+    SIM.AREAS.forEach((A, i) => { const b = SIM.areaBounds(i); g.fillStyle = GROUND_TINT[A.ground] || GROUND_TINT.grass; g.fillRect(b.x0 * MAP_K, b.y0 * MAP_K, SIM.AREA * MAP_K, SIM.AREA * MAP_K); });
+    app.mapDone = new Set();
+    // Photos from earlier sessions of this colony.
+    const m = loadMap();
+    if (m && !app.mapFresh) {
+      const img = new Image();
+      // Only regions not photographed again already this session.
+      img.onload = () => {
+        if (mapFor !== w) return;
+        const k = img.width / c.width;
+        for (const i of m.done) {
+          if (app.mapDone.has(i)) continue;
+          const b = SIM.areaBounds(i), x = b.x0 * MAP_K, y = b.y0 * MAP_K, n = SIM.AREA * MAP_K;
+          g.drawImage(img, x * k, y * k, n * k, n * k, x, y, n, n);
+          app.mapDone.add(i);
+        }
+      };
+      img.src = m.img;
+    }
+    app.mapFresh = false;
+  }
+  return app.mapCanvas;
+}
+// Saved with the game, when a new photo has come in since last time.
+let mapSaved = 0;
+function saveMapIfNew() { if (app.mapDone && app.mapDone.size !== mapSaved) { mapSaved = app.mapDone.size; saveMap(app.mapCanvas, app.mapDone); } }
+views.surface.onRegionLoaded = (i) => { mapCanvas(); if (!app.mapDone.has(i) && !photoQ.includes(i)) photoQ.push(i); };
+
+// Only a region still built near you is photographed (one that's been thrown
+// away again is queued afresh when it's next built).
+const built = (i) => { const R = views.surface.scenery && views.surface.scenery.regions[i]; return !!(R && R.near); };
+
+// Render part of the yard (tiles) from straight above into a canvas px wide.
+// Rain, creatures, scent and the PS1 vertex snapping are switched off for it,
+// and the fog pushed out of reach (switching it off would make every
+// material compile again). The targets and the copy pass are kept.
+const shot = { px: 0, ph: 0 };
+function photo(x0, y0, tw, th, px, done) {
+  const sv = views.surface, T = SIM.T, ph = Math.round((px * th) / tw), r = pipeline.renderer;
+  if (shot.px !== px || shot.ph !== ph) {
+    if (shot.rtA) { shot.rtA.dispose(); shot.rtB.dispose(); }
+    Object.assign(shot, { px, ph, rtA: new THREE.WebGLRenderTarget(px, ph, { type: THREE.HalfFloatType, depthBuffer: true }), rtB: new THREE.WebGLRenderTarget(px, ph), buf: new Uint8Array(px * ph * 4) });
+    if (!shot.quad) {
+      // Linear to sRGB into an 8-bit target we can read back.
+      shot.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+        uniforms: { t: { value: null } }, depthTest: false, depthWrite: false,
+        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+        fragmentShader: 'uniform sampler2D t; varying vec2 vUv; void main(){ vec3 c = clamp(texture2D(t, vUv).rgb, 0.0, 1.0); gl_FragColor = vec4(mix(c * 12.92, 1.055 * pow(c, vec3(1.0/2.4)) - 0.055, step(vec3(0.0031308), c)), 1.0); }',
+      }));
+      shot.qs = new THREE.Scene(); shot.qs.add(shot.quad);
+      shot.qcam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    }
+    shot.quad.material.uniforms.t.value = shot.rtA.texture;
+  }
+  const cx = (x0 + tw / 2) * T, cz = (y0 + th / 2) * T;
+  const cam = new THREE.OrthographicCamera((-tw * T) / 2, (tw * T) / 2, (th * T) / 2, (-th * T) / 2, 1, 8000);
+  cam.position.set(cx, 4000, cz); cam.up.set(0, 0, -1); cam.lookAt(cx, 0, cz);
+  const fog = sv.scene.fog, near = fog.near, far = fog.far, rain = sv.rain.visible, dyn = sv.dyn.visible, scent = sv.scent && sv.scent.visible, snap = pipeline.uniforms.uSnap.value.clone();
+  fog.near = 1e8; fog.far = 1e9; sv.rain.visible = false; sv.dyn.visible = false; if (sv.scent) sv.scent.visible = false; pipeline.uniforms.uSnap.value.set(1e5, 1e5);
+  r.setRenderTarget(shot.rtA); r.render(sv.scene, cam);
+  r.setRenderTarget(shot.rtB); r.render(shot.qs, shot.qcam);
   r.setRenderTarget(null);
-  sv.scene.fog = fog; sv.rain.visible = rain; pipeline.uniforms.uSnap.value.copy(snap);
-  rtA.dispose(); rtB.dispose(); quad.geometry.dispose(); quad.material.dispose();
-  // GL rows run bottom-up.
-  const c = document.createElement('canvas'); c.width = px; c.height = ph;
-  const g = c.getContext('2d'), img = g.createImageData(px, ph);
-  for (let y = 0; y < ph; y++) img.data.set(buf.subarray((ph - 1 - y) * px * 4, (ph - y) * px * 4), y * px * 4);
-  g.putImageData(img, 0, 0);
+  fog.near = near; fog.far = far; sv.rain.visible = rain; sv.dyn.visible = dyn; if (sv.scent) sv.scent.visible = scent; pipeline.uniforms.uSnap.value.copy(snap);
+  const toCanvas = () => {
+    // GL rows run bottom-up.
+    const c = document.createElement('canvas'); c.width = px; c.height = ph;
+    const g = c.getContext('2d'), img = g.createImageData(px, ph), buf = shot.buf;
+    for (let y = 0; y < ph; y++) img.data.set(buf.subarray((ph - 1 - y) * px * 4, (ph - y) * px * 4), y * px * 4);
+    g.putImageData(img, 0, 0);
+    return c;
+  };
+  // Read back without stalling the frame when we can wait for it; one at a time.
+  if (done) { shot.busy = true; r.readRenderTargetPixelsAsync(shot.rtB, 0, 0, px, ph, shot.buf).then(() => { shot.busy = false; done(toCanvas()); }, () => { shot.busy = false; }); return null; }
+  r.readRenderTargetPixels(shot.rtB, 0, 0, px, ph, shot.buf);
+  return toCanvas();
+}
+// Photograph region i into the map: now (sync), or read back in the
+// background and pasted in when it arrives.
+app.photoRegion = (i, sync = true) => {
+  const b = SIM.areaBounds(i), c = mapCanvas(), w = app.s.world;
+  const paste = (img) => { if (mapFor !== w) return; c.getContext('2d').drawImage(img, b.x0 * MAP_K, b.y0 * MAP_K); app.mapDone.add(i); };
+  const img = photo(b.x0, b.y0, SIM.AREA, SIM.AREA, SIM.AREA * MAP_K, sync ? null : paste);
+  if (img) paste(img);
+};
+// The map as it stands, with any waiting photos taken first.
+app.snapshotMap = () => {
+  const c = mapCanvas();
+  while (photoQ.length) { const i = photoQ.shift(); if (built(i)) app.photoRegion(i); }
   return c;
 };
 
@@ -184,6 +257,8 @@ function frame(now) {
   view.update(app, clock, pipeline.aspect);
   pipeline.render(view.scene, view.camera);
   restore();
+  // One map photo a frame, for regions just built.
+  if (photoQ.length && view === views.surface && !shot.busy) { const i = photoQ.shift(); if (built(i)) app.photoRegion(i, false); }
   if (app.view === 'nest') {
     labels.set(views.nest.labels.map((l) => {
       const p = views.nest.project(l.x, l.y, l.z, cssW, cssH);
@@ -203,11 +278,11 @@ function frame(now) {
   hudT += dt;
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }
   saveT += dt;
-  if (saveT > 10) { saveT = 0; saveGame(app.s); }
+  if (saveT > 10) { saveT = 0; saveGame(app.s); saveMapIfNew(); }
   requestAnimationFrame(frame);
 }
 
-window.addEventListener('pagehide', () => saveGame(app.s));
+window.addEventListener('pagehide', () => { saveGame(app.s); saveMapIfNew(); });
 ui.update();
 measureHud();
 if (app.s.phase === 'dig' && !app.s.seen.film) app.playFilm();

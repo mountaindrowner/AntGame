@@ -2,6 +2,35 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: the whole yard, loaded in pieces (build 11)
+
+Mark: "Now let's take the time and thoughtfully build out the entire map area. Let's do it in separate chunks that load when you cross into the other areas for now."
+
+- **The whole yard is built: 70 regions, 800×560 tiles,** out to the fence. The 50 new ones follow the yard plan (`docs/YARD.md` has every region's contents):
+  - **Along the house:** the trash cans by the side gate, the porch, the cooler.
+  - **West:** the gravel side path, peppers and squash, the herb patch, the garden shed, the thistles and the toad's hole.
+  - **East:** the rock garden, the suet feeder, the stepping stones and gnomes, the Oak, its roots and fallen limb, and a hedge along the whole east fence.
+  - **South:** the great lawn (sprinkler, trampoline, toys, a fairy ring, daisies), the wet strip (reeds, slugs, a drain, mud), the leaf pile, and fire ant country in the far corner.
+  - About 600 landmarks of 40 new kinds, eight new kinds of ground (gravel, deck boards, hedge litter, oak shade, wild grass, wet mud, leaves, fire ant earth), and new food: fallen acorns (a crew of four) and slugs (protein).
+- **New dangers.** Each shows itself first, like feet and robins:
+  - **Toads** hunt the wild corner, the wet strip and the leaves. Each one flicks its tongue five tiles at the nearest ant, five times, then leaves. Five fighters drive it off.
+  - **Acorns** fall under the Oak. They kill what they land on and stay as food.
+  - **Bug spray** at the shed: a cloud that kills anything inside it for two seconds.
+  - **Fire ants:** their red earth stings our ants a little every half second.
+- **Chunks: the scenery is built a region at a time.** A region is built when the camera comes within ¾ of a region of it, and thrown away beyond 1.3 regions.
+  - Building is sliced into small steps, at most 6 ms a frame, so crossing into a new region never stalls. A region already on screen gets 24 ms a frame. Whatever is on screen after a jump is built at once.
+  - Zoomed out on a wide screen, the view can reach past that ring. The reach then grows to cover the ground on screen, up to 1¼ regions.
+  - The opening film builds the regions round home, the patio and the flowerbed while its poster is up.
+  - A region thrown away keeps a small painting of its ground for the distance.
+  - The scent overlay is now a 96-tile window that follows the camera, instead of a whole-yard texture uploaded every frame.
+  - Checked: touring all 70 regions leaves nothing behind (no geometry or textures leak). The busiest region is about 61k vertices; one takes about 0.4 s of work, spread over frames.
+- **The sim is not chunked,** only the drawing. All 70 regions are simulated, but the 50 new ones are **dormant** until you first walk into one: no food grows and nothing strikes there. When you enter, its starting food appears and it stays awake. Pathfinding searches a box round the start and goal instead of the whole yard. Scent fades only where there is some.
+- **The map is pieced together.** It can't photograph the whole yard at once any more, since most of it isn't built. Instead, each region is photographed the first time it is built near you, and the photos are kept, saved with the game, as one picture. The photo is read back asynchronously, because a plain read-back stalled the frame for seconds in the software renderer.
+- **Edges:** the thicket is gone. The house wall runs along the north; a board fence closes the rest, with the neighbours' grass beyond.
+- **Saves:** format v10, under `underfoot-v11`. Older saves don't load: the yard is a different size.
+- **Deferred:** the rival colonies the plan puts in the new regions (odorous house ants at the trash, Argentine ants in the garden, carpenter ants in the Oak, the fire ants as a real colony with a queen). For now the fire ants are stinging ground.
+- **Bots:** in seven 30-minute games all colonies survive, and five reach 40–60 ants. One wins, taking the rival queen at 27:53. The military bot builds no rooms, but it does the same on build 10.4: its barracks-first plan predates the deeper topsoil, so this is the bot, not the build.
+
 ## Oct 27: a compact HUD, and a real map with fog of war (build 10.4)
 
 Mark: "Minimize the menu items. Everything looks so big. The words on the bottom… should be symbols or something smaller… same thing with the food symbols up top. Maybe when you highlight over them or press them, it'll tell you… Real estate is massive in a game like this." And: "when I click on map, it's not just squares, but… a realistic version of the map… based on what I can see… a fog of war… I can zoom in on it."
