@@ -24,6 +24,8 @@ const RAMPS = {
   compost: ['#24180f', '#2c1e12', '#362618', '#40301e'].map(hex),
   sand: ['#c2ad84', '#cbb78e', '#d4c198', '#dccaa2'].map(hex),
   slab: ['#7a7670', '#84807a', '#8e8a84', '#98948c'].map(hex),
+  soil: ['#2e1e12', '#3a2616', '#46301c', '#523a22'].map(hex),
+  mat: ['#6a4a2a', '#7a5a32', '#8a6a3a', '#9a7842'].map(hex),
 };
 const pick = (ramp, v) => ramp[Math.max(0, Math.min(ramp.length - 1, Math.floor(v * ramp.length)))];
 
@@ -35,10 +37,11 @@ const smooth = (e0, e1, x) => { const t = Math.max(0, Math.min(1, (x - e0) / (e1
 function featureFields(w) {
   const W = w.W, H = w.H, n = noise2(23);
   const field = () => new Float32Array(W * H);
-  const F = { mulch: field(), bark: field(), mud: field(), compost: field(), sand: field(), slab: field(), stripe: field(), dirt: field() };
+  const F = { mulch: field(), bark: field(), mud: field(), compost: field(), sand: field(), slab: field(), stripe: field(), dirt: field(), soil: field(), mat: field(), long: field(), clover: field() };
   const pts = (kind) => w.landmarks.filter((l) => l.kind === kind);
   const flowers = [...pts('flower').map((l) => [l.x + 0.5, l.y + 0.5]), ...pts('strawberry').map((l) => [l.x0 + l.w / 2, l.y0 + l.h / 2]), ...pts('web').map((l) => [l.x + 0.5, l.y + 2 * S])];
-  const logs = pts('log'), heap = pts('heap')[0], sb = w.sandbox, lawn = w.lawn, sl = w.slabs;
+  const logs = pts('log'), heap = pts('heap')[0], sb = w.sandbox, lawn = w.lawn, mats = pts('mat'), clovers = pts('clover'), lg = w.long;
+  const inRect = (l, x, y) => x > l.x0 && x < l.x0 + l.w && y > l.y0 && y < l.y0 + l.h;
   const wet = [...w.puddles.map(([x, y]) => [x + 0.5, y + 0.5, 3 * S]), ...pts('hose').map((l) => [l.x, l.y, l.r]), ...pts('spigot').map((l) => [l.x0 + l.w, l.y0 + l.h / 2, 2 * S])];
   const rect = (l, x, y) => Math.hypot(Math.max(l.x0 - x, 0, x - (l.x0 + l.w)), Math.max(l.y0 - y, 0, y - (l.y0 + l.h)));
   // Blends are measured in design units, so the edges keep their look at any SCALE.
@@ -55,14 +58,24 @@ function featureFields(w) {
     // Sand stays inside the frame, with a little kicked out through the gaps.
     const inBox = cx > sb.x0 + sb.t && cx < sb.x1 + 1 - sb.t && cy > sb.y0 + sb.t && cy < sb.y1 + 1 - sb.t;
     F.sand[i] = inBox ? 1 : sm(2.5, 0, rect({ x0: sb.x0, y0: sb.y0, w: sb.x1 - sb.x0 + 1, h: sb.y1 - sb.y0 + 1 }, cx, cy) + j * 0.4) * 0.35;
-    // Patio slabs: a laid rectangle around the rival's crack.
-    F.slab[i] = cx > sl.x0 && cx < sl.x0 + sl.w && cy > sl.y0 && cy < sl.y0 + sl.h ? 1 : 0;
+    // Laid concrete: the patio around the rival's crack, the landing by the
+    // back steps, the pad under the grill. Doormat and garden beds are crisp too.
+    F.slab[i] = w.slabs.some((l) => inRect(l, cx, cy)) ? 1 : 0;
+    F.mat[i] = mats.some((l) => inRect(l, cx, cy)) ? 1 : 0;
+    d = 1e9; for (const l of w.soil) d = Math.min(d, rect(l, cx, cy));
+    F.soil[i] = smooth(1.2, 0, d + j * 0.15);
+    // The great lawn's long grass, fading in across its top edge.
+    F.long[i] = sm(-2, 4, cy - lg.y0 + j);
+    d = 1e9; for (const l of clovers) d = Math.min(d, rect(l, cx, cy));
+    F.clover[i] = sm(6, 0, d + j);
     // The Lawn's mowed stripes fade out toward its edges.
     const edge = Math.min(cx - lawn.x0, lawn.x0 + lawn.w - cx, cy - lawn.y0, lawn.y0 + lawn.h - cy);
     F.stripe[i] = sm(0, 8, edge + j);
     // Bare, trodden dirt around our entrance and the big rock.
     // The trodden patch is ant-sized, so it doesn't grow with SCALE.
     F.dirt[i] = Math.max(smooth(11, 4, Math.hypot(cx - w.ex - 0.5, cy - w.ey - 0.5) + j * 0.6), sm(4, 0.5, rect(w.bigrock, cx, cy) + j));
+    // Worn patches: under the swings, around molehills and the feeder pole.
+    for (const [px, py, r] of w.dirt) F.dirt[i] = Math.max(F.dirt[i], smooth(r, r * 0.4, Math.hypot(cx - px, cy - py) + j * 0.5));
   }
   return F;
 }
@@ -94,10 +107,20 @@ function groundTexture(w, F, x0, y0, tw, th) {
       if ((k = at(F.mud, tx, ty)) > 0) { const m = pick(RAMPS.mud, 0.5 + sp + nv * 0.4); p = mix(p, nv > 0.45 ? m.map((v) => v * 0.8) : m, k); }
       if ((k = at(F.compost, tx, ty)) > 0) { const q = r(); p = mix(p, q < 0.012 ? [200, 104, 42] : q < 0.022 ? [106, 138, 42] : q < 0.028 ? [200, 168, 58] : pick(RAMPS.compost, 0.5 + sp + nv * 0.3), k); }
       if ((k = at(F.sand, tx, ty)) > 0) p = mix(p, pick(RAMPS.sand, 0.5 + sp * 0.8 + Math.sin(ty * 1.3 + nv * 4) * 0.12), k);
+      // The great lawn: deeper, unmown green, with clover in its patch.
+      if ((k = at(F.long, tx, ty)) > 0) p = mix(p, pick(RAMPS.lawn, 0.35 + sp + nv * 0.3), k * 0.55);
+      if ((k = at(F.clover, tx, ty)) > 0 && n2(tx * 0.9, ty * 0.9) > 0.15) p = mix(p, r() < 0.02 ? [236, 232, 240] : n2(tx * 2.1, ty * 2.1) > 0.4 ? [104, 168, 72] : [78, 140, 56], k);
+      // Garden beds: dark, freshly turned soil in furrows.
+      if ((k = at(F.soil, tx, ty)) > 0) p = mix(p, pick(RAMPS.soil, 0.45 + sp * 0.8 + Math.sin(ty * Math.PI / S) * 0.22), k);
       if (at(F.slab, tx, ty) > 0.5) {
         const sx = Math.floor(ux / 6), sy = Math.floor(uy / 6), tint = (((sx * 7 + sy * 13) % 5) - 2) * 0.04;
         p = pick(RAMPS.slab, 0.5 + sp * 0.6 + tint);
         if (tx % (6 * S) < 0.25 || ty % (6 * S) < 0.25) p = [74, 70, 64];
+      }
+      if (at(F.mat, tx, ty) > 0.5) {
+        // The doormat: coarse coir bristles in a dark border.
+        p = pick(RAMPS.mat, 0.5 + sp * 1.4 + ((x + y * 3) % 5 === 0 ? 0.2 : 0));
+        if (at(F.mat, tx - S * 0.8, ty) < 0.5 || at(F.mat, tx + S * 0.8, ty) < 0.5 || at(F.mat, tx, ty - S * 0.8) < 0.5 || at(F.mat, tx, ty + S * 0.8) < 0.5) p = [58, 40, 26];
       }
       if (tx >= bl.x0 && tx < bl.x0 + bl.w && ty >= bl.y0 && ty < bl.y0 + bl.h) {
         const check = (Math.floor(ux / 2) + Math.floor(uy / 2)) % 2, weave = (x % 4 === 0 || y % 4 === 0) ? 0.9 : 1;
@@ -175,10 +198,23 @@ export function buildYardScenery(w) {
   // Ground: one piece per region, so only what's near the camera is drawn,
   // with a quad per tile so the vertex snapping has something to wobble.
   const F = featureFields(w);
+  // Painting a region's ground takes a moment, so each one starts plain and is
+  // painted when the camera first comes near (refine), nearest first; home's
+  // is painted straight away.
+  const lazy = [];
   for (let y0 = 0; y0 < H; y0 += AREA) for (let x0 = 0; x0 < W; x0 += AREA) {
     const cw = Math.min(AREA, W - x0), ch = Math.min(AREA, H - y0);
-    g.add(new THREE.Mesh(new THREE.PlaneGeometry(cw * T, ch * T, cw, ch).rotateX(-Math.PI / 2).translate((x0 + cw / 2) * T, 0, (y0 + ch / 2) * T), psx({ map: groundTexture(w, F, x0, y0, cw, ch) })));
+    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(cw * T, ch * T, cw, ch).rotateX(-Math.PI / 2).translate((x0 + cw / 2) * T, 0, (y0 + ch / 2) * T), psx({ color: '#4e6a2e' }));
+    g.add(mesh);
+    lazy.push({ mesh, cx: (x0 + cw / 2) * T, cz: (y0 + ch / 2) * T, paint: () => { mesh.material.dispose(); mesh.material = psx({ map: groundTexture(w, F, x0, y0, cw, ch) }); } });
   }
+  g.userData.refine = (x, z, range = AREA * T * 1.6) => {
+    let best = null, bd = range;
+    for (const L of lazy) { if (L.done) continue; const d = Math.max(Math.abs(L.cx - x), Math.abs(L.cz - z)); if (d < bd) { bd = d; best = L; } }
+    if (best) { best.paint(); best.done = true; }
+    return !!best;
+  };
+  g.userData.refine((w.ex + 0.5) * T, (w.ey + 0.5) * T, Infinity);
 
   // Past the thicket the yard goes on (not built yet): plain overgrown ground
   // out to the fog, so the edge never shows open sky.
@@ -316,6 +352,136 @@ export function buildYardScenery(w) {
         }
         break;
       }
+      // ---------- the ring (build 10) ----------
+      case 'steps': {
+        // Three wooden steps down from the back door, the top one against the wall.
+        claim(l.x0, l.y0, l.w, l.h);
+        for (let k = 0; k < 3; k++) {
+          const d = l.h * (3 - k) / 3, hgt = (70 + k * 70) * S;
+          parts.push(paint(at(new THREE.BoxGeometry(l.w * T, hgt, d * T), (l.x0 + l.w / 2) * T, hgt / 2, (l.y0 + d / 2) * T), (x, y, z) => (y > hgt - 5 * S ? (Math.floor(x / (12 * S)) % 2 ? '#b08a5a' : '#a27e50') : '#7a5a38'), 60 + k));
+        }
+        break;
+      }
+      case 'grill': {
+        // A kettle grill: three splayed legs, a black bowl, a domed lid with a handle.
+        const cx = l.x * T, cz = l.y * T, R = l.r * T, top = 180 * S;
+        for (let k = 0; k < 3; k++) {
+          const a = k * 2.1 + 0.4, fx = Math.cos(a) * R * 0.8, fz = Math.sin(a) * R * 0.8;
+          const len = Math.hypot(top - R * 0.4, R * 0.55), leg = new THREE.CylinderGeometry(1.6 * S, 1.6 * S, len, 5);
+          leg.translate(0, len / 2, 0).rotateZ(-Math.atan2(R * 0.55, top - R * 0.4)).rotateY(-a);
+          parts.push(paint(at(leg, cx + fx, 0, cz + fz), '#2a2a2a', k));
+        }
+        parts.push(paint(at(new THREE.SphereGeometry(R, 14, 7, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), cx, top, cz), '#1e1e1e', 81));
+        parts.push(paint(at(new THREE.SphereGeometry(R, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.75, 1), cx, top + 2 * S, cz), (x, y) => (y > top + R * 0.66 ? '#3a3a3a' : '#262626'), 82));
+        parts.push(paint(at(new THREE.BoxGeometry(14 * S, 4 * S, 4 * S), cx, top + R * 0.8, cz), '#8a6a46'));
+        break;
+      }
+      case 'table': case 'chair': {
+        // Patio furniture: four white legs and a top (a chair also has a back).
+        const cx = l.x * T, cz = l.y * T, hw = l.w * T / 2, hd = l.h * T / 2, top = (l.kind === 'table' ? 150 : 80) * S;
+        for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(paint(at(new THREE.CylinderGeometry(2.2 * S, 2.2 * S, top, 6), cx + sx * (hw - 4 * S), top / 2, cz + sz * (hd - 4 * S)), '#e8e4dc'));
+        parts.push(paint(at(new THREE.BoxGeometry(hw * 2, 6 * S, hd * 2), cx, top, cz), l.kind === 'table' ? (x, y, z) => (Math.floor((x - cx) / (10 * S)) % 2 ? '#f2eee6' : '#e4e0d6') : '#f0ece4'));
+        if (l.kind === 'chair') parts.push(paint(at(new THREE.BoxGeometry(hw * 2, 70 * S, 4 * S), cx, top + 35 * S, cz + l.back * hd), '#f0ece4'));
+        break;
+      }
+      case 'grease':
+        for (const [x, y, rr] of l.spots) decals.push(paint(at(new THREE.CircleGeometry(rr * T, 10).rotateX(-Math.PI / 2), x * T, 0, y * T), (px, py, pz) => (Math.hypot(px - x * T, pz - y * T) < rr * T * 0.6 ? '#2a2620' : '#4a463e')));
+        break;
+      case 'tomato': {
+        // A staked tomato plant: a thick stem, leaf sprays, red and green fruit.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, rs = rng(Math.floor(l.seed * 1e6));
+        parts.push(paint(at(new THREE.CylinderGeometry(1.8 * S, 2.4 * S, h, 6).translate(0, h / 2, 0), x, 0, z), '#4a7a2e'));
+        parts.push(paint(at(new THREE.CylinderGeometry(1 * S, 1 * S, h * 1.08, 4).translate(0, h * 0.54, 0), x + 4 * S, 0, z + 2 * S), '#a8885a'));
+        for (let k = 0; k < 5; k++) {
+          const leaf = new THREE.SphereGeometry(1, 6, 3).scale(14 * S, 2 * S, 6 * S).translate(11 * S, 0, 0).rotateY(k * 1.3 + rs() * 0.6).rotateZ(0.25);
+          parts.push(paint(at(leaf, x, h * (0.25 + k * 0.16), z), k % 2 ? '#3e7a2a' : '#4a8a30', k));
+        }
+        for (let k = 0; k < 4; k++) {
+          const a = rs() * Math.PI * 2, ripe = rs() < 0.7;
+          parts.push(paint(at(new THREE.SphereGeometry(7 * S, 8, 6).scale(1, 0.85, 1), x + Math.cos(a) * 9 * S, h * (0.3 + rs() * 0.45), z + Math.sin(a) * 9 * S), (px, py) => (ripe ? (py > 0 && rs() < 0.1 ? '#f0604a' : '#d8282a') : '#7ab040'), 90 + k));
+        }
+        break;
+      }
+      case 'beanpole': {
+        // A bean pole wound with a vine: leaves spiralling up, a few pods.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, rs = rng(Math.floor(l.seed * 1e6));
+        parts.push(paint(at(new THREE.CylinderGeometry(1.4 * S, 1.8 * S, h, 5).translate(0, h / 2, 0), x, 0, z), '#9a7a4e'));
+        for (let k = 0; k < 9; k++) {
+          const a = k * 1.9, y = h * (0.1 + k * 0.095);
+          parts.push(paint(at(new THREE.SphereGeometry(1, 6, 3).scale(8 * S, 1.5 * S, 6 * S).translate(7 * S, 0, 0).rotateY(a), x, y, z), k % 2 ? '#4a8a30' : '#5a9a3a', k));
+          if (rs() < 0.35) parts.push(paint(at(new THREE.CylinderGeometry(1.2 * S, 0.8 * S, 16 * S, 4).rotateZ(0.2), x + Math.cos(a) * 6 * S, y - 8 * S, z + Math.sin(a) * 6 * S), '#7ab83e', k + 20));
+        }
+        break;
+      }
+      case 'lettuce': {
+        // A lettuce head: ruffled leaves in two rings round a pale heart.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, R = l.r * T;
+        parts.push(paint(at(new THREE.SphereGeometry(R * 0.55, 8, 6).scale(1, 0.8, 1), x, R * 0.4, z), '#c8e08a'));
+        for (let ring = 0; ring < 2; ring++) for (let k = 0; k < 7; k++) {
+          const a = k * 0.9 + ring * 0.45, leaf = new THREE.SphereGeometry(1, 6, 4).scale(R * 0.55, R * (0.5 - ring * 0.12), R * 0.3).translate(R * (0.45 + ring * 0.2), 0, 0).rotateZ(0.5 - ring * 0.3).rotateY(a);
+          parts.push(paint(at(leaf, x, R * 0.35, z), ring ? '#5aa03a' : '#86c050', k + ring * 9));
+        }
+        break;
+      }
+      case 'feeder': {
+        // A bird feeder on a pole: a little house with a seed tray.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, top = 200 * S;
+        parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3.5 * S, top, 6).translate(0, top / 2, 0), x, 0, z), '#3a3a36'));
+        parts.push(paint(at(new THREE.BoxGeometry(44 * S, 4 * S, 44 * S), x, top, z), '#8a5e3a'));
+        parts.push(paint(at(new THREE.BoxGeometry(26 * S, 34 * S, 26 * S), x, top + 19 * S, z), (px, py, pz) => (Math.abs(px - x) > 12 * S || Math.abs(pz - z) > 12 * S ? '#c8a86a' : '#e8d8a8')));
+        parts.push(paint(at(new THREE.ConeGeometry(28 * S, 18 * S, 4).rotateY(Math.PI / 4), x, top + 45 * S, z), '#a8402a'));
+        break;
+      }
+      case 'birdbath': {
+        // A stone birdbath: a fluted pedestal and a wide bowl of water.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, R = l.r * T, B = l.bowl * T, top = 150 * S;
+        parts.push(paint(at(new THREE.CylinderGeometry(R * 0.55, R, top, 10).translate(0, top / 2, 0), x, 0, z), (px, py) => (Math.floor(py / (12 * S)) % 2 ? '#b4aea2' : '#a8a296')));
+        parts.push(paint(at(new THREE.CylinderGeometry(B, B * 0.55, 20 * S, 16), x, top + 10 * S, z), '#bcb6aa'));
+        parts.push(paint(at(new THREE.CircleGeometry(B * 0.9, 16).rotateX(-Math.PI / 2), x, top + 19 * S, z), (px, py, pz) => (Math.hypot(px - x, pz - z) > B * 0.75 ? '#9ad0f0' : '#5ab0e8')));
+        break;
+      }
+      case 'pool': {
+        // A blue plastic kiddie pool with a white rim, half full.
+        const x = l.x * T, z = l.y * T, R = l.r * T, hgt = 50 * S;
+        claimDisc(l.x, l.y, l.r);
+        parts.push(paint(at(new THREE.CylinderGeometry(R, R * 0.97, hgt, 24, 1, true).translate(0, hgt / 2, 0), x, 0, z), (px, py) => (py > hgt - 6 * S ? '#f4f4f4' : '#3a8ae0')));
+        parts.push(paint(at(new THREE.TorusGeometry(R, 4 * S, 4, 24).rotateX(Math.PI / 2), x, hgt, z), '#f4f4f4'));
+        parts.push(paint(at(new THREE.CircleGeometry(R * 0.98, 24).rotateX(-Math.PI / 2), x, hgt * 0.55, z), (px, py, pz) => { const d = Math.hypot(px - x, pz - z) / R; return d > 0.9 ? '#7ac4f4' : Math.floor(d * 6) % 2 ? '#58b0ec' : '#4aa4e4'; }));
+        break;
+      }
+      case 'swingset': {
+        // A swing set: an A-frame at each end, a top bar, two seats on chains.
+        const top = 300 * S, z = l.y * T, sp = l.spread * T;
+        for (const xx of [l.x0, l.x1]) for (const sgn of [-1, 1]) {
+          const len = Math.hypot(top, sp), leg = new THREE.CylinderGeometry(3 * S, 3 * S, len, 6).translate(0, len / 2, 0).rotateX(sgn * Math.atan2(sp, top));
+          parts.push(paint(at(leg, (xx + 0.5) * T, 0, z + sgn * sp), '#d8402a', xx));
+        }
+        parts.push(paint(at(new THREE.CylinderGeometry(3.4 * S, 3.4 * S, (l.x1 - l.x0) * T, 6).rotateZ(Math.PI / 2), ((l.x0 + l.x1) / 2 + 0.5) * T, top, z), '#d8402a'));
+        for (const f of [0.32, 0.68]) {
+          const sx = (l.x0 + (l.x1 - l.x0) * f + 0.5) * T, seat = 50 * S;
+          parts.push(paint(at(new THREE.BoxGeometry(34 * S, 3 * S, 14 * S), sx, seat, z), '#2a2a2a'));
+          for (const cs of [-1, 1]) parts.push(paint(at(new THREE.CylinderGeometry(0.8 * S, 0.8 * S, top - seat, 3).translate(0, (top - seat) / 2, 0), sx + cs * 15 * S, seat, z), '#9a9a9a'));
+        }
+        break;
+      }
+      case 'dandelion': {
+        // A dandelion: a hollow stem with a yellow head, or a white seed clock.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h;
+        parts.push(paint(at(new THREE.CylinderGeometry(1 * S, 1.3 * S, h, 4).translate(0, h / 2, 0), x, 0, z), '#5a8a30'));
+        for (let k = 0; k < 4; k++) parts.push(paint(at(new THREE.SphereGeometry(1, 5, 3).scale(12 * S, 1 * S, 3 * S).translate(10 * S, 0, 0).rotateY(k * 1.6 + l.seed * 3), x, 1, z), '#4a8a2e', k));
+        if (l.puff) parts.push(paint(at(new THREE.IcosahedronGeometry(9 * S, 1), x, h + 6 * S, z), (px, py, pz) => ((Math.round(px + py + pz) % 3) ? '#f4f4f0' : '#d8d8d0'), 7));
+        else parts.push(paint(at(new THREE.SphereGeometry(8 * S, 8, 4).scale(1, 0.45, 1), x, h + 2 * S, z), (px, py) => (py > h + 3 * S ? '#ffd83a' : '#f2b81e'), 8));
+        break;
+      }
+      case 'molehill': {
+        // A molehill: a heap of loose, crumbly dirt.
+        const x = l.x * T, z = l.y * T, R = l.r * T;
+        claimDisc(l.x, l.y, l.r);
+        const g2 = new THREE.SphereGeometry(R, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.55, 1).toNonIndexed(), p2 = g2.attributes.position, rs = rng(Math.floor(l.x * 31 + l.y));
+        for (let i = 0; i < p2.count; i++) { const f = 0.88 + rs() * 0.24; p2.setXYZ(i, p2.getX(i) * f, p2.getY(i) * f, p2.getZ(i) * f); }
+        parts.push(paint(at(g2, x, 0, z), (px, py) => (py > R * 0.35 ? '#6a4a2e' : '#5a3e26'), 99));
+        break;
+      }
       case 'web': {
         const pts = [], cx = (l.x + 0.5) * T, cy = 58 * S, cz = (l.y + 0.5) * T, R = l.r * T * 0.85;
         for (let k = 0; k < 12; k++) { const a = (k / 12) * Math.PI * 2; pts.push(cx, cy, cz, cx + Math.cos(a) * R, cy + Math.sin(a) * R * 0.9, cz); }
@@ -373,17 +539,18 @@ export function buildYardScenery(w) {
   const grassParts = [];
   const gn = noise2(5);
   const clump = (x, y, h, wd) => { for (let k = 0; k < 2; k++) { const q = new THREE.PlaneGeometry(wd, h).translate(0, h / 2, 0).rotateY(k * Math.PI / 2 + r()); q.translate(x * T, 0, y * T); grassParts.push(q); } };
-  for (let i = 0; i < 4200 * S * S; i++) {
+  for (let i = 0; i < (4200 * W * H) / 14400; i++) {
     const x = 1 + r() * (W - 2), y = 1 + r() * (H - 2), ti = Math.floor(y) * W + Math.floor(x);
     if (w.blocked[ti] || w.pit[ti]) continue;
     if (Math.hypot(x - w.ex, y - w.ey) < 3 * S || Math.hypot(x - w.rx, y - w.ry) < 3 * S) continue;
     // Tall and thick where the Lawn's stripes are, sparse on open ground,
     // none on beds, sawdust, mud, compost, sand or slabs.
-    const bare = Math.max(F.mulch[ti], F.bark[ti], F.mud[ti], F.compost[ti], F.sand[ti], F.slab[ti], F.dirt[ti]);
+    const bare = Math.max(F.mulch[ti], F.bark[ti], F.mud[ti], F.compost[ti], F.sand[ti], F.slab[ti], F.dirt[ti], F.soil[ti], F.mat[ti]);
     if (bare > 0.5) continue;
     if (x >= w.blanket.x0 && x < w.blanket.x0 + w.blanket.w && y >= w.blanket.y0 && y < w.blanket.y0 + w.blanket.h) continue;
     const lawn = F.stripe[ti];
     if (r() < 0.75 * lawn) { clump(x, y, (14 + r() * 16) * 1.5, 12); continue; }
+    if (r() < 0.6 * F.long[ti]) { clump(x, y, (20 + r() * 26) * 1.5, 13); continue; }
     if (gn(x * 0.18 / S, y * 0.18 / S) > 0.05 && r() < 0.25) clump(x, y, (6 + r() * 7) * 1.5, 10);
   }
   // The thicket at the yard's unbuilt edges.

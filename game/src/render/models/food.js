@@ -100,6 +100,37 @@ function apple() {
   return bake(parts);
 }
 
+// A wedge of tomato: red skin, wet pink flesh, pale seeds.
+function tomato() {
+  const g = lumpy(new THREE.SphereGeometry(1, 9, 6, 0, Math.PI * 0.8), 0.1, 5);
+  const parts = [at(paint(g, (x, y, z, f) => (Math.hypot(x, y, z) < 0.92 ? (hash(f) < 0.25 ? '#f4e0a0' : '#f06058') : '#d0242a')).rotateX(-Math.PI / 2), 0, 0.15, 0, 1.2, 0.9, 1.2)];
+  return bake(parts);
+}
+// Aphids clustered on a leaf: little green bodies, one dewy drop of honeydew.
+function aphids() {
+  const parts = [at(paint(new THREE.SphereGeometry(1, 7, 3).scale(1.5, 0.12, 0.9), '#4a8a2e'), 0, 0.05, 0)];
+  for (let i = 0; i < 9; i++) {
+    const a = hash(i) * Math.PI * 2, r = 0.25 + hash(i + 5) * 0.8;
+    parts.push(at(paint(new THREE.SphereGeometry(0.22, 6, 4).scale(1.3, 0.9, 1), hash(i + 2) < 0.3 ? '#b8e070' : '#8cc850'), Math.cos(a) * r, 0.25, Math.sin(a) * r * 0.6));
+  }
+  parts.push(at(paint(new THREE.SphereGeometry(0.28, 6, 4), '#f4e8a0'), 0.2, 0.35, 0.1));
+  return bake(parts);
+}
+// A scrap of hot dog: a pink sausage stub in a torn bit of bun. Protein.
+function hotdog() {
+  const parts = [at(paint(new THREE.CylinderGeometry(0.42, 0.42, 1.8, 8).rotateZ(Math.PI / 2), (x) => (Math.abs(x) > 0.85 ? '#a83a2a' : '#c8503a')), 0, 0.55, 0)];
+  parts.push(at(paint(lumpy(new THREE.BoxGeometry(1.4, 0.5, 1.1, 2, 1, 2), 0.15, 4), (x, y) => (y > 0.1 ? '#d8a050' : '#f0dcb0')), -0.2, 0.25, 0.1));
+  parts.push(at(paint(new THREE.BoxGeometry(1.1, 0.06, 0.12), '#e8c020'), 0, 0.98, 0));
+  return bake(parts);
+}
+// A potato chip: a thin, wavy golden disc. A treat for a crew of four.
+function chip() {
+  const g = new THREE.CircleGeometry(1.3, 12).rotateX(-Math.PI / 2);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, Math.sin(x * 2.2) * 0.22 + z * z * 0.12); }
+  return bake([at(paint(g, (x, y, z, f) => (hash(f) < 0.15 ? '#c8902a' : '#f0c850')), 0, 0.35, 0), at(paint(g.clone().translate(0, -0.05, 0).rotateX(Math.PI), '#e0b040'), 0, 0.3, 0)]);
+}
+
 // A dead beetle on its back: a shiny shell, legs in the air. Protein.
 function bug() {
   const parts = [at(paint(new THREE.SphereGeometry(1, 8, 5).scale(1.3, 0.55, 0.9), (x, y) => (y > 0.2 ? '#2a3a2a' : '#1a221a')), 0, 0.5, 0)];
@@ -170,6 +201,10 @@ export const FOOD = {
   jellybean: [jellybean('#d8283a', '#ff9aa4'), jellybean('#3aa040', '#a8f0a0'), jellybean('#f08a1e', '#ffd09a')],
   cookie: cookie(),
   apple: apple(),
+  tomato: tomato(),
+  aphids: aphids(),
+  hotdog: hotdog(),
+  chip: chip(),
   bug: bug(),
   gummy: [gummy('#e0283c', '#ff9aa8'), gummy('#f2b81e', '#fff0a0'), gummy('#3cb84a', '#b8f8b0')],
   bead: bead(),
@@ -179,7 +214,7 @@ export const FOOD = {
   // A four-point sparkle that marks a treat.
   star: bake([paint(new THREE.PlaneGeometry(1, 0.16), '#ffffff'), paint(new THREE.PlaneGeometry(0.16, 1), '#ffffff'), paint(new THREE.PlaneGeometry(0.34, 0.34).rotateZ(Math.PI / 4), '#fff6c8')]),
 };
-const TREAT_COLOR = { jellybean: '#e04050', cookie: '#c98a46', gummy: '#e85060' };
+const TREAT_COLOR = { jellybean: '#e04050', cookie: '#c98a46', gummy: '#e85060', chip: '#f0c850' };
 
 // Which geometry, colour and size an item draws as. variant picks colour
 // variants deterministically from the item's position.
@@ -190,11 +225,15 @@ export function itemLook(f, COLORS) {
     return { dew: true, r: Math.min(5, 2.6 + f.amt * 0.3), beads: Math.max(1, Math.min(4, Math.ceil(f.amt / 2))) };
   }
   if (f.kind === 'grit') return { geo: PROPS.pebble, key: 'pebble', color: COLORS.grit, r: 2.6, lift: 0.6 };
+  if (f.kind === 'protein' && f.type === 'hotdog') return { geo: FOOD.hotdog, key: 'hotdog', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.12) };
   if (f.kind === 'protein' && f.type === 'bug') return { geo: FOOD.bug, key: 'bug', color: '#ffffff', r: Math.min(5.5, 2.5 + f.amt * 0.2) };
   if (f.kind === 'protein') return { geo: PROPS.meat, key: 'meat', color: COLORS.protein, r: Math.min(6, 2.5 + f.amt * 0.08), lift: 0.6 };
   switch (f.type) {
     case 'seed': return { geo: FOOD.seed, key: 'seed', color: '#ffffff', r: Math.min(5.2, 2.8 + f.amt * 0.12) };
     case 'berry': return { geo: FOOD.berry, key: 'berry', color: '#ffffff', r: Math.min(5, 2.8 + f.amt * 0.17) };
+    case 'tomato': return { geo: FOOD.tomato, key: 'tomato', color: '#ffffff', r: Math.min(6, 3.2 + f.amt * 0.13) };
+    case 'aphids': return { geo: FOOD.aphids, key: 'aphids', color: '#ffffff', r: 3.6 + Math.min(f.amt, 20) * 0.08 };
+    case 'chip': return { geo: FOOD.chip, key: 'chip', color: '#ffffff', r: 6.5, treat: true };
     case 'apple': return { geo: FOOD.apple, key: 'apple', color: '#ffffff', r: Math.min(6.5, 3.5 + f.amt * 0.12) };
     case 'popcorn': return { geo: FOOD.popcorn, key: 'popcorn', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.16) };
     case 'jellybean': return { geo: FOOD.jellybean[v % 3], key: 'jb' + (v % 3), color: '#ffffff', r: 5 + f.amt * 0.14, treat: true };
@@ -209,6 +248,7 @@ export function carryLook(kind, itype, COLORS) {
   if (kind === 'water') return { geo: FOOD.bead, key: 'cbead', color: '#ffffff', r: 0.7, water: true };
   if (kind === 'grit') return { geo: PROPS.pebble, key: 'cgrit', color: COLORS.grit, r: 1 };
   if (kind === 'protein') return { geo: PROPS.meat, key: 'cmeat', color: COLORS.protein, r: 1 };
+  if (itype === 'aphids') return { geo: PROPS.crumb, key: 'choney', color: '#e8c860', r: 0.9 }; // a drop of honeydew
   if (TREAT_COLOR[itype]) return { geo: PROPS.crumb, key: 'c' + itype, color: TREAT_COLOR[itype], r: 1 };
   const g = FOOD[itype] && !Array.isArray(FOOD[itype]) ? itype : 'crumb';
   return { geo: FOOD[g], key: 'c' + g, color: '#ffffff', r: 0.8 };

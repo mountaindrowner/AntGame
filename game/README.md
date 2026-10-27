@@ -27,7 +27,7 @@ game/
 │   ├── config.js           tunables: save key, PS1 pixel size, cameras, creature scale, colours
 │   ├── sim/
 │   │   ├── sim.js          the simulation (build 6, plus builder rules, food kinds, the fight to survive). No DOM.
-│   │   └── yard.js         the yard: nine regions at 2× scale, landmarks, food tables, hazards, nest sites, the whole-yard map
+│   │   └── yard.js         the yard: twenty regions at 2× scale, landmarks, food tables, hazards (feet, birds), nest sites, the whole-yard map
 │   ├── game/
 │   │   └── save.js         localStorage save/load (reads build 6 v5 saves)
 │   ├── render/
@@ -38,6 +38,8 @@ game/
 │   │   ├── models/
 │   │   │   ├── creatures.js  low-poly ants (3 walk frames per body plan)
 │   │   │   ├── bugs.js       the wolf spider (8-frame gait) and the woolly bear caterpillar
+│   │   │   ├── bird.js       the robin that hunts the garden and the great lawn
+│   │   │   ├── sneaker.js    the red high-top (and the leg in it): the film's stomp, and feet in play
 │   │   │   ├── food.js       each food kind, treats, dew beads; what an ant carries
 │   │   │   ├── crowd.js      instanced batches: hundreds of ants in a few draw calls
 │   │   │   ├── props.js      items, eggs and furniture primitives
@@ -46,7 +48,7 @@ game/
 │   │   │   └── contour.js    marching squares: a field → smooth outlines → THREE.Shapes
 │   │   ├── motion.js         moving vs still creatures (idle breathing, scraping, biting)
 │   │   └── views/
-│   │       ├── surfaceView.js  the yard: tilted top-down, creatures, items, scent overlay, weather
+│   │       ├── surfaceView.js  the yard: tilted top-down, creatures, items, scent overlay, weather, feet and birds
 │   │       ├── yardScenery.js  each region's ground and landmarks (rock, flowers, logs, sandbox, blanket…), culled in chunks
 │   │       └── nestView.js     the cutaway: rounded tunnels traced from nest cells, rooms, orders, queen
 │   ├── ui/

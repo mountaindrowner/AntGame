@@ -222,9 +222,9 @@ try {
   await shot('12b-spider');
   // A tour of the yard: each of the nine areas from above.
   await sim(() => { const { app } = window.UNDERFOOT, s = app.s; s.cat = null; s.spider = null; s.player.pending = false; s.colony.eggQueue.length = 0; s.colony.eggs.length = 0; app.zoomMul = 0.62; });
-  const areas = await sim(() => { const { SIM } = window.UNDERFOOT, R = SIM.AREA; return SIM.AREAS.map((A, i) => ({ key: A.key, x: ((i % 3) * R + R / 2) * SIM.T, y: (Math.floor(i / 3) * R + R / 2) * SIM.T })); });
+  const areas = await sim(() => { const { SIM } = window.UNDERFOOT; return SIM.AREAS.map((A, i) => { const b = SIM.areaBounds(i); return { key: A.key, x: (b.x0 + b.x1 + 1) / 2 * SIM.T, y: (b.y0 + b.y1 + 1) / 2 * SIM.T }; }); });
   for (const A of areas) {
-    await sim((f) => { const { app } = window.UNDERFOOT; app.surfaceFocus = f; app.view = 'surface'; }, { x: A.x, y: A.y });
+    await sim((f) => { const { app, views } = window.UNDERFOOT; app.surfaceFocus = f; app.view = 'surface'; views.surface.camInit = false; }, { x: A.x, y: A.y });
     await page.waitForTimeout(600);
     await shot('area-' + A.key);
   }
@@ -232,7 +232,7 @@ try {
   await sim(() => { const { app } = window.UNDERFOOT; app.surfaceFocus = null; });
   await page.click('#mapbtn');
   await page.waitForTimeout(300);
-  await page.click('#sheet button[data-region="5"]');
+  await page.click('#sheet button[data-region="9"]');
   await page.waitForTimeout(300);
   await shot('yard-map');
   await page.click('#sheet button[data-close]');

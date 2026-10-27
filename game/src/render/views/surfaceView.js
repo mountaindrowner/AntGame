@@ -14,8 +14,10 @@ import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
 import { buildYardScenery, mowerMesh } from './yardScenery.js';
+import { sneaker } from '../models/sneaker.js';
+import { robin } from '../models/bird.js';
 
-const { W, H, T, CASTES, AREA } = SIM;
+const { W, H, T, CASTES, AREA, FOOT: FOOT_STRIKE, BIRD } = SIM;
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -91,6 +93,16 @@ export class SurfaceView {
     this.bars = [this._bar(), this._bar()];
     this.dyn.add(this.spider, this.mower, ...this.cat, ...this.bars.map((b) => b.group));
 
+    // Visitors from above (sim strikes): a sneaker, a robin, and the shadow
+    // each casts first. Pooled; hidden when idle.
+    this.shoes = [0, 1].map(() => { const g = sneaker(); g.scale.setScalar(0.5); g.visible = false; this.dyn.add(g); return g; });
+    this.robins = [0, 1, 2].map(() => { const b = robin(); b.group.scale.setScalar(80); b.group.visible = false; this.dyn.add(b.group); return b; });
+    this.shadows = [0, 1, 2, 3, 4].map(() => {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), psxBasic({ color: '#0a0806', transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }));
+      m.renderOrder = 2; m.visible = false; this.dyn.add(m); return m;
+    });
+    this.shake = 0;
+
     // Rain: a box of falling streaks that follows the camera target.
     const n = 420, pos = new Float32Array(n * 6);
     this.rainSeeds = new Float32Array(n * 3).map(() => Math.random());
@@ -131,7 +143,8 @@ export class SurfaceView {
     const w = s.world;
 
     // The yard: ground, landmarks, walls, rocks and grass (yardScenery.js).
-    g.add(buildYardScenery(w));
+    this.scenery = buildYardScenery(w);
+    g.add(this.scenery);
 
     // Nest mounds: a ring of dug-out soil around a dark hole.
     this.holes = [];
@@ -286,6 +299,7 @@ export class SurfaceView {
     this.lastT = t;
     this._spider(s, t, fdt);
     this._caterpillar(s, t, fdt);
+    this._strikes(s, t, fdt);
 
     // Weather and light.
     const raining = s.rain.on;
@@ -313,12 +327,49 @@ export class SurfaceView {
     this.camera.aspect = aspect;
     this.camera.position.set(this.target.x, Math.sin(pitch) * dist, this.target.z + Math.cos(pitch) * dist);
     this.camera.lookAt(this.target);
+    // A stomp nearby shakes the view.
+    if (this.shake > 0) { this.shake = Math.max(0, this.shake - fdt); const k = this.shake * 14; this.camera.position.x += (Math.random() - 0.5) * k; this.camera.position.y += (Math.random() - 0.5) * k; }
     this.camera.far = dist * 3 + 400;
     this.camera.updateProjectionMatrix();
     this.scene.fog.near = dist * 1.1;
     this.scene.fog.far = dist * 2.4 + 200;
 
     if (raining) this._updateRain(t);
+    // Paint the ground of one more nearby region, if any is still plain.
+    this.scenery.userData.refine(this.target.x, this.target.z);
+  }
+
+  // Feet and birds: each shows its shadow first, then comes down.
+  _strikes(s, t, fdt) {
+    let shoe = 0, bird = 0, shadow = 0;
+    for (const st of s.strikes || []) {
+      const x = st.x * T, z = st.y * T, sh = this.shadows[shadow++];
+      if (st.kind === 'foot' && shoe < this.shoes.length) {
+        const g = this.shoes[shoe++], F = FOOT_STRIKE, k = Math.min(1, st.t / F.warn);
+        let y;
+        if (st.phase === 'warn') y = 1700 - 900 * k * k;
+        else if (st.phase === 'hold') y = Math.max(0, 800 * (1 - (st.t - F.warn) / 0.12));
+        else y = 1700 * Math.min(1, (st.t - F.warn - F.hold) / F.lift) ** 2;
+        g.visible = true; g.position.set(x, y, z); g.rotation.set(0, -st.yaw, 0);
+        if (st.phase === 'hold' && !st.shook) { st.shook = true; if (Math.hypot(x - this.target.x, z - this.target.z) < 30 * T) this.shake = 0.35; }
+        if (sh) { const near = 1 - Math.min(1, y / 1700); sh.visible = true; sh.position.set(x, 0.5, z); sh.rotation.set(0, -st.yaw, 0); sh.scale.set(F.a * T * (0.7 + 0.35 * near), 1, F.b * T * (0.7 + 0.35 * near)); sh.material.opacity = 0.12 + 0.45 * near; }
+      } else if (st.kind === 'bird' && bird < this.robins.length) {
+        const b = this.robins[bird++];
+        let y = 0, flap = false;
+        if (st.phase === 'land') { const k = Math.min(1, st.t / BIRD.land); y = (1 - k) ** 2 * 700; flap = k < 0.95; }
+        else if (st.phase === 'leave') { const k = Math.max(0, (st.t - st.leaveAt) / BIRD.leave); y = k * k * 900; flap = k > 0; }
+        else if (st.hopAt != null && st.t - st.hopAt < 0.3) y = Math.sin(Math.PI * (st.t - st.hopAt) / 0.3) * 18;
+        const peck = st.peckAt != null && st.t - st.peckAt < 0.35 ? Math.sin(Math.PI * (st.t - st.peckAt) / 0.35) : 0;
+        b.group.visible = true; b.group.position.set(x, y, z); b.group.rotation.set(0, -st.yaw, 0);
+        b.body.rotation.z = -0.75 * peck;
+        b.head.rotation.z = -0.4 * peck;
+        for (const w of b.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 28) * 0.9) : w.s * 0.05;
+        if (sh) { const near = 1 - Math.min(1, y / 900); sh.visible = true; sh.position.set(x + Math.cos(st.yaw) * 20, 0.5, z + Math.sin(st.yaw) * 20); sh.rotation.set(0, 0, 0); sh.scale.set(56 * (0.6 + 0.4 * near), 1, 40 * (0.6 + 0.4 * near)); sh.material.opacity = 0.15 + 0.3 * near; }
+      }
+    }
+    for (let i = shoe; i < this.shoes.length; i++) this.shoes[i].visible = false;
+    for (let i = bird; i < this.robins.length; i++) this.robins[i].group.visible = false;
+    for (let i = shadow; i < this.shadows.length; i++) this.shadows[i].visible = false;
   }
 
   // Dew: beads on and around a grass blade, each with an unlit shine.

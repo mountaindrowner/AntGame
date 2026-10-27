@@ -112,8 +112,7 @@ export function createUI(app) {
   // ---------------------------------------------------------- yard map
   // The whole backyard: the nine built regions in the middle, the rest
   // planned. Tap a region for its card: what's there, what it costs you.
-  const SHORT = ['Patio', 'Flowerbed', 'Woodpile', 'Spigot', 'Home', 'Compost', 'Sandbox', 'Lawn', 'Picnic'];
-  const GROUND = { slab: '#8e8a84', mulch: '#7a4a2e', bark: '#8e764a', mud: '#5a4836', home: '#7a6446', compost: '#40301e', sand: '#c8b48a', lawn: '#46802a', picnic: '#b8323a' };
+  const GROUND = { slab: '#8e8a84', mulch: '#7a4a2e', bark: '#8e764a', mud: '#5a4836', home: '#7a6446', compost: '#40301e', sand: '#c8b48a', lawn: '#46802a', picnic: '#b8323a', soil: '#4a3220', grass: '#55803a', long: '#3e6e2a' };
   function regionHere() {
     const s = app.s, a = P().ant;
     return a && !P().inNest ? SIM.areaOf(s, a.tx, a.ty) : SIM.areaOf(s, s.world.ex, s.world.ey);
@@ -125,15 +124,18 @@ export function createUI(app) {
     let h = `<div class="row head"><strong>The yard</strong><button class="x" data-close="1">Close</button></div><div class="yard">`;
     for (const z of YARD_MAP.zones) {
       const [c, r, w, hh] = z.at, pos = `grid-column:${c + 1}/span ${w};grid-row:${r + 1}/span ${hh}`;
-      if (z.built == null) { h += `<div class="z${z.house ? ' house' : ''}" style="${pos}" title="${z.name}">${z.name}</div>`; continue; }
-      const i = z.built, A = SIM.AREAS[i], seen = s.seen['area' + i] || i === 4;
-      const tag = i === 0 && s.rival.queenAlive ? '⚔' : count[i] ? '🐜' + count[i] : '';
-      h += `<button class="z${seen ? '' : ' unseen'}${i === here ? ' here' : ''}${i === pickI ? ' pick' : ''}" style="${pos};background:${GROUND[A.ground]}" data-region="${i}" aria-label="${A.name}">${SHORT[i]}${tag ? `<em>${tag}</em>` : ''}</button>`;
+      h += `<div class="z${z.house ? ' house' : ''}" style="${pos}" title="${z.name}">${z.name}</div>`;
+    }
+    // Built regions sit on top of the planned zones they belong to.
+    for (let i = 0; i < SIM.AREAS.length; i++) {
+      const A = SIM.AREAS[i], [c, r] = A.at, pos = `grid-column:${c + 1};grid-row:${r + 1}`, seen = s.seen['area' + i] || i === SIM.REGION.rock;
+      const tag = i === SIM.REGION.patio && s.rival.queenAlive ? '⚔' : count[i] ? '🐜' + count[i] : '';
+      h += `<button class="z${seen ? '' : ' unseen'}${i === here ? ' here' : ''}${i === pickI ? ' pick' : ''}" style="${pos};background:${GROUND[A.ground]}" data-region="${i}" aria-label="${A.name}">${A.short}${tag ? `<em>${tag}</em>` : ''}</button>`;
     }
     h += `</div>`;
-    const A = SIM.AREAS[pickI], seen = s.seen['area' + pickI] || pickI === 4;
+    const A = SIM.AREAS[pickI], seen = s.seen['area' + pickI] || pickI === SIM.REGION.rock;
     h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
-    h += `<div class="note">Only the middle nine are built so far.</div>`;
+    h += `<div class="note">${SIM.AREAS.length} regions built; the rest is planned.</div>`;
     el.sheet.innerHTML = h;
   }
   function openMap() { app.menu = 'map'; app.mapPick = null; el.sheet.classList.remove('hidden'); renderMap(); app.paused = true; }
