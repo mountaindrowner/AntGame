@@ -9,6 +9,7 @@ import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
 import { loadGame, saveGame, clearSave, NEW_GAME_SEED } from './game/save.js';
 import { Cinematic, renderScoreWav } from './intro/cinematic.js';
+import { uiScale } from './config.js';
 import './ui/ui.css';
 
 const { NW, NH } = SIM;
@@ -79,7 +80,10 @@ function measureHud() {
 function resize() {
   cssW = window.innerWidth;
   cssH = window.innerHeight;
-  pipeline.resize(cssW, cssH);
+  // Big screens get a bigger HUD and bigger PS1 pixels (ui.css reads --ui).
+  const k = uiScale(cssW, cssH);
+  document.documentElement.style.setProperty('--ui', k.toFixed(3));
+  pipeline.resize(cssW, cssH, k);
 }
 window.addEventListener('resize', resize);
 resize();

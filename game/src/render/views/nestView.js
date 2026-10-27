@@ -4,7 +4,7 @@
 // rebuilt whenever the sim bumps nest.ver.
 import * as THREE from 'three';
 import SIM from '../../sim/sim.js';
-import { CAMERA, COLORS, RENDER, ANT_SCALE } from '../../config.js';
+import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
@@ -394,7 +394,7 @@ export class NestView {
     const fy = (app.focus ? app.focus.y : a ? a.ny : q.y + 0.5) * T + app.panY;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    const across = (CAMERA.nestCellsAcross * T * 1.06) / app.zoomMul;
+    const across = (CAMERA.nestCellsAcross * T * 1.06 * fitWide(aspect)) / app.zoomMul;
     const dist = across / 2 / Math.tan(hfov / 2);
     const viewH = 2 * dist * Math.tan(vfov / 2);
     const shift = hudShift(app) * viewH;

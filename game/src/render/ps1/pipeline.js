@@ -47,9 +47,11 @@ export class PS1Pipeline {
   // cssW × cssH is the on-screen size; the framebuffer is that divided by
   // the PS1 pixel size, rounded so each PS1 pixel covers a whole number of
   // device pixels (uneven pixel widths shimmer as things move).
-  resize(cssW, cssH) {
+  // scale (uiScale) makes PS1 pixels bigger on big screens, so the look and
+  // the pixel count stay about what a phone gets.
+  resize(cssW, cssH, scale = 1) {
     const dpr = window.devicePixelRatio || 1;
-    const px = Math.max(1, Math.round(RENDER.pixelSize * dpr)) / dpr;
+    const px = Math.max(1, Math.round(RENDER.pixelSize * scale * dpr)) / dpr;
     const w = Math.max(64, Math.round(cssW / px)), h = Math.max(64, Math.round(cssH / px));
     if (w === this.width && h === this.height) return false;
     this.width = w;

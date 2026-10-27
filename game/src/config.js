@@ -14,6 +14,10 @@ export const RENDER = {
 
 export const CAMERA = {
   surfaceTilesAcross: 13, // default surface zoom (phone portrait)
+  // The views are framed for a phone held upright. A wider screen (a PC, a
+  // tablet on its side) shows more to the sides at the same size, instead
+  // of zooming in: see fitWide.
+  phoneAspect: 390 / 844,
   surfacePitch: 0.95, // radians from horizontal
   nestCellsAcross: 13,
   zoomMin: 0.45,
@@ -42,3 +46,8 @@ export const COLORS = {
   trail: '#8ce66e',
   alarm: '#e6463a',
 };
+
+// How much wider than a phone the screen is (1 on a phone in portrait).
+export const fitWide = (aspect) => Math.max(1, aspect / CAMERA.phoneAspect);
+// HUD and PS1-pixel scale for big screens: 1 on a phone, up to 1.6 on a desktop.
+export const uiScale = (cssW, cssH) => Math.max(1, Math.min(1.6, cssH / 780, cssW / 420));

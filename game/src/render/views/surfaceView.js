@@ -4,7 +4,7 @@
 // are redrawn from the sim every frame.
 import * as THREE from 'three';
 import SIM from '../../sim/sim.js';
-import { CAMERA, COLORS, RENDER, ANT_SCALE } from '../../config.js';
+import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
@@ -316,7 +316,7 @@ export class SurfaceView {
     const fx = sf ? sf.x : a ? a.x : (w.ex + 0.5) * T, fy = sf ? sf.y : a ? a.y : (w.ey + 0.5) * T;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    const across = (CAMERA.surfaceTilesAcross * T) / app.zoomMul;
+    const across = (CAMERA.surfaceTilesAcross * T * fitWide(aspect)) / app.zoomMul;
     const dist = across / 2 / Math.tan(hfov / 2);
     // Keep the player centred in the space the HUD leaves free.
     const viewH = (across / aspect) / Math.sin(CAMERA.surfacePitch);

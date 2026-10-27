@@ -2,6 +2,16 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: big screens (build 10.2)
+
+Mark tried the itch.io build on a PC: "it's very small".
+
+- **The views were framed for a phone held upright.** The camera fitted 13 tiles across the screen's width. In a wide window that zoomed the world in hard, the HUD stayed phone-sized, and the bottom buttons and sheets stretched edge to edge.
+- **Frame by height on wide screens.** `fitWide(aspect)` in `config.js` is 1 on a phone and grows with how much wider the screen is than a phone (390×844). Both views multiply their width by it. A PC shows more of the yard to the sides at the same scale as a phone, instead of magnifying it.
+- **Scale the HUD and the PS1 pixels with the window.** `uiScale` is 1 on a phone and up to 1.6 on a desktop (about 1.4 at 1080p). It sets `--ui`, which zooms the HUD, the bars and the sheets. The framebuffer's pixel size grows with it, so the PS1 look and the pixel count stay close to a phone's.
+- **Keep the controls together.** The bottom bars and sheets are capped at 560 px wide, centred.
+- **itch.io:** embed at a landscape size (e.g. 1280×720) with the fullscreen button on; the game fills whatever frame it gets.
+
 ## Oct 27: deeper topsoil (build 10.1)
 
 Mark, on the nest: "First soil should be deeper, and all others are equal."
