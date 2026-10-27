@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: opening film, second cut (build 8.3)
+
+Mark loved it and asked for four changes. All are done:
+- **A funky beat:** "Boom, ta boom, boom, boom, boom."
+  - A two-bar loop at 104 BPM: kick and snare on eighths in exactly that pattern, closed hats on sixteenths with an open hat at the end of the bar, and a plucky slap bass following the kicks around E minor pentatonic.
+  - It stops dead with a record scratch when the spider appears, picks back up after, cuts to silence as the sneaker's shadow spreads, and returns after the stomp.
+- **The shoe looks like a shoe:** a red canvas high-top.
+  - Footprint-shaped sole with toe spring, a dark rubber outsole and white midsole.
+  - White rubber toe cap, a canvas upper rising to a padded ankle collar with the opening visible.
+  - A tongue with criss-cross laces, a side stripe and a heel tab.
+- **The UFO sound starts earlier:** a flying-saucer warble (two wobbling tones sliding down) from 0.2 s, the theremin from 1 s, and the fleet in sight from the first card.
+- **The queens flew in backwards:** they were turned away from the camera. They now fly nose-first, and the one that descends faces the rock.
+
 ## Oct 27: the opening film (build 8.2)
 
 Mark: "a really interesting cinematic intro… kind of comedic… evoking Mars Attacks… zany… film that with the graphics we have."

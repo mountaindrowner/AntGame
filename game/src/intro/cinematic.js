@@ -71,22 +71,69 @@ function makeQueen(scale) {
   return q;
 }
 
+// A red canvas high-top: a footprint-shaped sole with toe spring, a white
+// rubber toe cap, a canvas upper rising to a padded ankle collar, a tongue,
+// criss-cross laces and a side stripe. Toe points to -X, length 600.
 function sneaker() {
   const g = new THREE.Group();
-  const add = (geo, color, x, y, z) => { const m = new THREE.Mesh(geo, psx({ color })); m.position.set(x, y, z); g.add(m); return m; };
-  add(new THREE.BoxGeometry(600, 28, 220), '#ebe6dc', 0, 14, 0);
-  add(new THREE.BoxGeometry(600, 6, 222), '#3a6ec8', 0, 30, 0);
-  add(new THREE.BoxGeometry(470, 130, 200), '#c8302a', 50, 98, 0);
-  const toe = add(new THREE.SphereGeometry(1, 12, 8), '#ebe6dc', -230, 60, 0);
-  toe.scale.set(110, 62, 100);
-  for (let i = 0; i < 5; i++) add(new THREE.BoxGeometry(12, 8, 150), '#f4f0e8', -120 + i * 44, 166, 0);
-  add(new THREE.BoxGeometry(80, 150, 204), '#a8241e', 250, 110, 0);
+  const foot = new THREE.Shape();
+  foot.moveTo(-300, 0);
+  foot.quadraticCurveTo(-300, 100, -170, 108); foot.quadraticCurveTo(-40, 112, 40, 80);
+  foot.quadraticCurveTo(150, 72, 230, 88); foot.quadraticCurveTo(302, 92, 302, 0);
+  foot.quadraticCurveTo(302, -92, 230, -88); foot.quadraticCurveTo(150, -72, 40, -80);
+  foot.quadraticCurveTo(-40, -112, -170, -108); foot.quadraticCurveTo(-300, -100, -300, 0);
+  // Extrude a footprint upward (shape XY → world XZ, depth → +Y).
+  const slab = (shape, depth, sx, sz, y) => {
+    const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 4, bevelSize: 4, bevelSegments: 1, curveSegments: 6 });
+    geo.rotateX(-Math.PI / 2); geo.scale(sx, 1, sz); geo.translate(0, y, 0);
+    return geo;
+  };
+  // Toe spring: the front of everything curls up a little.
+  const spring = (geo) => { const p = geo.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i); if (x < -140) p.setY(i, p.getY(i) + ((-140 - x) / 160) ** 2 * 30); } geo.computeVertexNormals(); return geo; };
+  const add = (geo, color, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, psx({ color })); m.position.set(x, y, z); g.add(m); return m; };
+  add(spring(slab(foot, 10, 1, 1, 0)), '#2a2420');              // rubber outsole
+  add(spring(slab(foot, 26, 0.99, 0.99, 10)), '#f1ede4');        // white midsole
+  add(spring(slab(foot, 66, 0.92, 0.9, 36)), '#c8302a');         // canvas vamp
+  const toe = add(spring(new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(118, 62, 96)), '#f1ede4', -200, 36, 0);
+  toe.rotation.y = 0;
+  // The high ankle: an oval column at the heel, its top sloping up toward the back.
+  const ankle = new THREE.Shape(); ankle.absellipse(165, 0, 142, 90, 0, Math.PI * 2);
+  const back = slab(ankle, 118, 1, 1, 36);
+  const bp = back.attributes.position;
+  for (let i = 0; i < bp.count; i++) if (bp.getY(i) > 100) bp.setY(i, bp.getY(i) + (bp.getX(i) - 25) / 280 * 34);
+  back.computeVertexNormals();
+  add(back, '#c8302a');
+  // Padded collar and the dark opening for the foot.
+  const collar = add(new THREE.TorusGeometry(1, 0.13, 6, 20).rotateX(Math.PI / 2), '#f1ede4', 180, 178, 0);
+  collar.scale.set(112, 60, 74); collar.rotation.z = -0.12;
+  const hole = add(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), '#1a1210', 180, 179, 0);
+  hole.scale.set(100, 1, 64); hole.rotation.z = -0.12;
+  // Tongue rising from the vamp to the collar, with criss-cross laces on it.
+  const tongue = add(new THREE.BoxGeometry(170, 12, 86), '#b8281e', -10, 128, 0);
+  tongue.rotation.z = 0.42;
+  for (let i = 0; i < 5; i++) {
+    const x = -80 + i * 34, y = 104 + i * 15;
+    for (const sgn of [-1, 1]) { const lace = add(new THREE.BoxGeometry(10, 6, 112), '#f8f6f0', x, y, 0); lace.rotation.set(0, sgn * 0.42, 0.42); }
+  }
+  // A white stripe sweeping back along each side, and a heel tab.
+  for (const side of [-1, 1]) {
+    const stripe = add(new THREE.BoxGeometry(260, 16, 4), '#f1ede4', 60, 72, side * 93);
+    stripe.rotation.z = 0.12;
+  }
+  add(new THREE.BoxGeometry(14, 60, 40), '#f1ede4', 306, 150, 0);
   return g;
 }
 
 // The score and the sound gags, all scheduled up front from time z.
 export function scoreFilm(S, z) {
-  S.theremin(z + 2.6, [440, 523, 494, 392, 415, 330, 349, 440, 523, 622, 587, 440], 1.05);
+  // The saucers are heard before they're seen; the theremin joins under the first card.
+  S.ufo(z + 0.2, 11);
+  S.theremin(z + 1.0, [440, 523, 494, 392, 415, 330, 349, 440, 523, 622, 587, 440, 494], 1.05);
+  // The beat: it stops dead for the spider and for the stomp, then picks back up.
+  S.groove(z + 0.4, z + 29);
+  S.scratch(z + 29);
+  S.groove(z + 34, z + 36.4);
+  S.groove(z + 38.2, z + 56);
   S.slideWhistle(z + 14.9);
   S.noiseHit(z + 16.2, 0.5, 900, 0.6);
   S.boing(z + 16.3);
@@ -357,12 +404,11 @@ export class Cinematic {
       g.visible = i === 0 ? t < 24 || (t >= 34 && t < 44) : t < 11;
       for (const w of q.wings) if (!w.free) w.pivot.rotation.x = w.side * (flying ? 0.35 + Math.sin(t * 38 + i) * 0.7 : 0.12);
       if (i > 0 || t < 11) {
-        // In formation: a wobbly V crossing from left to right.
         // In formation: a wobbly V swooping in out of the dusk toward the camera.
         const row = Math.ceil(i / 2), side = i % 2 ? 1 : -1;
-        const u = Math.max(0, (t - 2.5) / 9);
+        const u = Math.max(0, (t - 1.0) / 10.5);
         g.position.set(975 + side * row * 34 + Math.sin(t * 1.7 + i) * 6, lerp(520, 250, u) + Math.sin(t * 2.3 + i) * 10 + row * 6, lerp(-300, 1000, u) - row * 60);
-        g.rotation.set(Math.sin(t * 3 + i) * 0.25, Math.PI / 2, Math.sin(t * 2 + i * 2) * 0.12);
+        g.rotation.set(Math.sin(t * 3 + i) * 0.25, -Math.PI / 2, Math.sin(t * 2 + i * 2) * 0.12); // nose toward the camera
         g.scale.setScalar(3.6);
         return;
       }
@@ -370,7 +416,7 @@ export class Cinematic {
         // Breaking formation: a wobbling corkscrew down to the rock.
         const u = (t - 11) / (crash - 11), e = ease(u);
         g.position.set(lerp(700, L.x, e) + Math.sin(u * 12) * 40 * (1 - u), lerp(320, 0, u * u), lerp(760, L.z, e) + Math.cos(u * 10) * 20 * (1 - u));
-        g.rotation.set(Math.sin(t * 9) * 0.5 * (1 - u * 0.5), Math.sin(t * 2) * 0.6, Math.sin(t * 7) * 0.3);
+        g.rotation.set(Math.sin(t * 9) * 0.5 * (1 - u * 0.5), -0.61 + Math.sin(t * 2) * 0.35, Math.sin(t * 7) * 0.3); // heading for the rock
         g.scale.setScalar(lerp(3.6, 3.0, u));
         const beamOn = t > 11.8 && t < 15.7, h = Math.max(1, g.position.y);
         this.beam.visible = beamOn;
