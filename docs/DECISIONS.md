@@ -2,6 +2,40 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: the first ring of new regions (build 10)
+
+Mark, on the yard map: "That's a great space, let's start building."
+
+- **Build the space out first, ring by ring.** I read "start building" as building out the yard on the map, and left claiming regions for the next step. The ring around the first nine was the natural slice: it touches the house, the vegetable garden and the great lawn, and each new region has something of its own. The built yard is now a 5×4 block of the yard map (columns 2–6, rows 1–4): 20 regions, 400×320 tiles.
+- **The eleven new regions:**
+  - The **Back Steps**: crumbs and feet.
+  - The **Grill**: hot dog scraps as protein, potato chips for a crew of four, and feet under the table.
+  - Two **vegetable garden** regions: tomato plants, bean poles and lettuce in dug beds, with **aphid clusters that refill like puddles** (endless honeydew).
+  - **Under the Bird Feeder**: the most seed in the yard, and the most birds.
+  - The **Birdbath**: splash puddles.
+  - The great lawn's top row in long grass: the **Kiddie Pool**, the **Swing Set**, the **Clover Patch**, the **Molehills** (dead bugs) and the **Dandelions**.
+  - The full table is in `docs/YARD.md`.
+- **Two new dangers, both telegraphed by a shadow,** so they're readable on a phone:
+  - **Feet** (Back Steps, Grill, Swing Set): the sneaker from the opening film comes down. Its shadow spreads for 2.2 s, and in the last second two in three ants under it run. Everything under the sole dies.
+  - **Robins** (garden, feeder, birdbath, great lawn): a robin drops in, hops after the nearest ant and pecks four times, then leaves. Five fighters around it chase it off.
+  - Both only come while ants are out in that region, and only interrupt you (with an explainer) when they land near your ant.
+- **Rejected for this ring:** a second rival colony (Argentine ants in the garden) and a mole that surfaces under ants. Both are good, but each needs its own systems; the shadow-strike covers feet and birds with one.
+- **Protein near home.** The first bot runs stalled at 20 ants in two games out of four. Caterpillars now spawn across more regions, so a far kill left its meat out of foragers' reach (or under the mower). With no protein there was no barracks, no soldiers, and raiders killed the queen. Fixed two ways:
+  - Caterpillars mostly spawn near home again (Lawn, Compost, Flowerbed).
+  - Under the Rock and the Lawn now turn up a dead bug now and then.
+- **Plumbing:**
+  - Regions are looked up by key (`REGION.rock`), not by index.
+  - Scent decays only on tiles that have some (`s.hot`). Saves store scent sparsely.
+  - Each region's ground is painted the first time the camera comes near, nearest first, so the bigger yard loads as fast as before.
+  - The opening film's anchors follow the Patio region wherever the block puts it.
+  - Save format v8, under `underfoot-v9`.
+- **Bot results** (30-minute runs):
+  - All seven games survive.
+  - The four sensible games reach 40–60 ants but don't take the rival queen within 30 minutes.
+  - Feet kill 0–10 ants a game and birds 0–1.
+  - Headless frame rate is 30–40 fps across the regions.
+- **Next:** claiming regions and their rewards, aphid tending, and the next ring out (the rest of the vegetable garden and great lawn, the rock garden, the side yard).
+
 ## Oct 27: a bigger yard, in regions (build 9)
 
 Mark: things "aren't totally to scale… the ant is either too big or everything is too small… I'd like it to be maybe twice as big." Then: "separate regions that each have their own unique challenges and benefits and rewards… each region is maybe pretty big… like a nice big backyard would be", at "a similar scope to SimAnt's map".
