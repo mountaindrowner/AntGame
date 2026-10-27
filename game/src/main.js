@@ -1,4 +1,5 @@
 // Underfoot: boot, shared app state, fixed-step simulation and the render loop.
+import * as THREE from 'three';
 import SIM from './sim/sim.js';
 import { PS1Pipeline } from './render/ps1/pipeline.js';
 import { useSnapUniforms } from './render/ps1/materials.js';
@@ -61,6 +62,41 @@ const labels = new LabelLayer(document.getElementById('labels'));
 
 // The opening film plays once for a new colony, and again from Help.
 let cine = null;
+// A photo of the whole yard from straight above, for the map: the real
+// scenery and whoever is out, drawn once each time the map opens. Returns a
+// canvas `px` wide. Fog and the PS1 vertex snapping are switched off for it.
+app.snapshotMap = (px = 1600) => {
+  const sv = views.surface, s = app.s, T = SIM.T, gw = s.world.W * T, gh = s.world.H * T;
+  if (sv.state !== s) sv.update(app, clock, pipeline.aspect);
+  const ph = Math.round((px * gh) / gw), r = pipeline.renderer;
+  const rtA = new THREE.WebGLRenderTarget(px, ph, { type: THREE.HalfFloatType, depthBuffer: true });
+  const rtB = new THREE.WebGLRenderTarget(px, ph);
+  const cam = new THREE.OrthographicCamera(-gw / 2, gw / 2, gh / 2, -gh / 2, 1, 8000);
+  cam.position.set(gw / 2, 4000, gh / 2); cam.up.set(0, 0, -1); cam.lookAt(gw / 2, 0, gh / 2);
+  const fog = sv.scene.fog, rain = sv.rain.visible, snap = pipeline.uniforms.uSnap.value.clone();
+  sv.scene.fog = null; sv.rain.visible = false; pipeline.uniforms.uSnap.value.set(1e5, 1e5);
+  r.setRenderTarget(rtA); r.render(sv.scene, cam);
+  // Linear to sRGB into an 8-bit target we can read back.
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+    uniforms: { t: { value: rtA.texture } }, depthTest: false, depthWrite: false,
+    vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+    fragmentShader: 'uniform sampler2D t; varying vec2 vUv; void main(){ vec3 c = clamp(texture2D(t, vUv).rgb, 0.0, 1.0); gl_FragColor = vec4(mix(c * 12.92, 1.055 * pow(c, vec3(1.0/2.4)) - 0.055, step(vec3(0.0031308), c)), 1.0); }',
+  }));
+  const qs = new THREE.Scene(); qs.add(quad);
+  r.setRenderTarget(rtB); r.render(qs, new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1));
+  const buf = new Uint8Array(px * ph * 4);
+  r.readRenderTargetPixels(rtB, 0, 0, px, ph, buf);
+  r.setRenderTarget(null);
+  sv.scene.fog = fog; sv.rain.visible = rain; pipeline.uniforms.uSnap.value.copy(snap);
+  rtA.dispose(); rtB.dispose(); quad.geometry.dispose(); quad.material.dispose();
+  // GL rows run bottom-up.
+  const c = document.createElement('canvas'); c.width = px; c.height = ph;
+  const g = c.getContext('2d'), img = g.createImageData(px, ph);
+  for (let y = 0; y < ph; y++) img.data.set(buf.subarray((ph - 1 - y) * px * 4, (ph - y) * px * 4), y * px * 4);
+  g.putImageData(img, 0, 0);
+  return c;
+};
+
 app.playFilm = () => {
   if (cine) return;
   ui.closeMenu();

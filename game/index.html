@@ -18,27 +18,26 @@
   <div id="msg"></div>
 </div>
 <div id="bar2">
-  <button id="viewbtn">Nest</button>
-  <button id="mapbtn">Map</button>
-  <button id="help">Help</button>
-  <button id="zoom">Zoom</button>
-  <button id="stress">+200</button>
-  <button id="reset">Reset</button>
+  <button id="viewbtn" class="ico"></button>
+  <button id="mapbtn" class="ico"></button>
+  <button id="zoom" class="ico"></button>
+  <button id="help" class="ico"></button>
 </div>
 <div id="sheet" class="hidden"></div>
-<div id="bar">
-  <button id="act" class="primary">Pick up</button>
-  <button id="mark">Mark trail</button>
-  <button id="recruit">Recruit</button>
-  <button id="release" disabled>Release</button>
-  <button id="enter" class="hidden" style="grid-column: 1 / -1; min-height: 40px; padding: 8px;">Enter nest</button>
+<div id="bar" class="dock">
+  <button id="act" class="ico primary"></button>
+  <button id="mark" class="ico"></button>
+  <button id="recruit" class="ico"></button>
+  <button id="release" class="ico" disabled></button>
+  <button id="enter" class="ico hidden"></button>
 </div>
-<div id="barn" class="hidden">
-  <button id="buildnest" class="primary">Build nest</button>
-  <button id="queenbtn" class="primary">Queen</button>
-  <button id="levelbtn">Build</button>
-  <button id="exitnest">Exit nest</button>
+<div id="barn" class="dock hidden">
+  <button id="buildnest" class="ico primary"></button>
+  <button id="queenbtn" class="ico primary"></button>
+  <button id="levelbtn" class="ico"></button>
+  <button id="exitnest" class="ico"></button>
 </div>
+<div id="tip" class="hidden" role="tooltip"></div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

@@ -30,6 +30,8 @@ export const EXPL = {
 export const HELP = `
 <div class="row head"><strong>Help</strong><button class="x" data-close="1">Close</button></div>
 <div class="h"><button data-film="1" style="width:100%">Watch the opening film again</button></div>
+<div class="h btnrow"><button data-reset="1">Start over</button><button data-stress="1">+200 ants (speed test)</button></div>
+<div class="h"><b>Buttons</b> Hover over a button (or press and hold it) to see what it does. Tap the ⋯ at the end of the top bar for the colony's full numbers.</div>
 <div class="h"><b>Goal</b> Survive and grow, then kill the rival queen on the Patio (north-west): hold her hole with eight fighters, beat the defenders, and stay until she falls (the top bar shows her health). If raiders kill your queen, the colony is lost.</div>
 <div class="h"><b>The yard</b> Home is Under the Rock, in the middle. Around it: Patio (rival ants), Flowerbed (berries, the spider's web), Woodpile (dead bugs: protein), Spigot (water), Compost (rich fruit), Sandbox (treats, antlion pits), Lawn (seeds, the mower), Picnic blanket (crumbs and treats). Food near home runs thin; your trails lead foragers farther.</div>
 <div class="h"><b>Food</b> Bread crumbs, seeds, berries, popcorn. Now and then a treat drops (jelly bean, cookie, gummy bear) worth 35 to 50. Every ant eats 1 a minute, soldiers 2. The top bar shows income vs upkeep. Food store raises the cap from 20 to 150.</div>

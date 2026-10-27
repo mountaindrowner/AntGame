@@ -108,3 +108,60 @@ body.cine-on #top, body.cine-on #bar, body.cine-on #bar2, body.cine-on #barn, bo
 #bar, #barn { max-width: 560px; margin: 0 auto; }
 #sheet { max-width: 560px; margin: 0 auto; }
 #top { max-width: 640px; }
+
+/* ---- Compact HUD (build 10.4): icon buttons, stat chips, tips ---- */
+#top { padding-right: 58px; }
+#stats { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; padding: 4px 8px; font-size: 12px; line-height: 1.25; }
+#stats .chip { white-space: nowrap; cursor: default; }
+#stats .chip i { font-style: normal; opacity: 0.55; font-size: 10px; }
+#stats .chip.warn { color: var(--warn); font-weight: 700; }
+#stats .more { min-height: 0; padding: 0 6px; border: 0; background: transparent; font-size: 14px; line-height: 1; color: var(--mute); }
+#hunger { height: 4px; margin-top: 4px; width: 120px; }
+#msg { margin-top: 4px; padding: 4px 9px; font-size: 13px; line-height: 1.3; max-width: 300px; }
+#msg .next { min-height: 28px; padding: 4px 10px; }
+/* The docks: a row of round icon buttons, centred at the bottom. */
+#bar.dock, #barn.dock { display: flex; justify-content: center; gap: 10px; grid-template-columns: none; padding: 6px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); }
+.ico { position: relative; width: 46px; height: 46px; min-height: 0; padding: 0; border-radius: 50%; display: inline-grid; place-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.28); touch-action: manipulation; -webkit-touch-callout: none; }
+.ico svg { display: block; }
+#bar2 { gap: 6px; }
+#bar2 .ico { width: 38px; height: 38px; padding: 0; }
+#bar2 .ico svg { width: 19px; height: 19px; }
+.ico.primary, #bar .ico.primary, #barn .ico.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+#mark.on, #levelbtn.on { background: #ffd34d; color: #1d1710; border-color: transparent; }
+.ico .badge { position: absolute; top: -5px; right: -6px; min-width: 16px; padding: 1px 4px; border-radius: 9px; background: #ffd34d; color: #1d1710;
+  font: 700 10px/14px ui-rounded, system-ui, sans-serif; box-shadow: 0 1px 2px rgba(0,0,0,0.35); }
+/* The button a hint names pulses. */
+@keyframes ico-pulse { 0%, 100% { box-shadow: 0 2px 6px rgba(0,0,0,0.28), 0 0 0 0 rgba(255,211,77,0.9); } 50% { box-shadow: 0 2px 6px rgba(0,0,0,0.28), 0 0 0 7px rgba(255,211,77,0); } }
+.ico.pulse { animation: ico-pulse 1.3s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ico.pulse { animation: none; outline: 3px solid #ffd34d; } }
+/* Tips: what a button or chip is, on hover or a long press. */
+#tip { position: fixed; z-index: 60; pointer-events: none; max-width: 240px; padding: 5px 9px; border-radius: 8px; background: rgba(20,14,8,0.92); color: #f6eedc;
+  font: 600 12px/1.3 ui-rounded, system-ui, sans-serif; zoom: var(--ui, 1); }
+#sheet .btnrow { display: flex; gap: 8px; }
+#sheet .btnrow button { flex: 1; min-height: 40px; padding: 8px; }
+#sheet { bottom: calc(env(safe-area-inset-bottom, 0px) + 70px); }
+/* Sheets and explainer cards: tighter type and spacing. */
+#sheet { padding: 9px 11px; border-radius: 12px; max-width: 440px; }
+#sheet .row.head { margin-bottom: 4px; font-size: 14px; }
+#sheet .row.head .x { min-height: 30px; padding: 4px 10px; font-size: 13px; }
+#sheet .h { font-size: 13px; line-height: 1.35; padding: 4px 0; }
+#sheet .note { font-size: 12px; }
+#sheet .btns { gap: 6px; }
+#sheet .btns button { padding: 7px 9px; min-height: 0; font-size: 13px; }
+#sheet .btns button i { font-size: 11px; }
+#sheet .btns.one button { min-height: 38px; text-align: center; }
+
+/* The yard map: a full-screen photo of the yard under a fog of war. */
+#mapview { position: fixed; inset: 0; z-index: 40; background: #1b150e; display: flex; flex-direction: column; touch-action: none; }
+#mapview .mv-head { display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 6px; color: #f6eedc; zoom: var(--ui, 1); }
+#mapview .mv-sp { flex: 1; }
+#mapview .mv-btn { min-height: 32px; padding: 4px 12px; font-size: 13px; }
+#mapview .mv-canvas { flex: 1; width: 100%; min-height: 0; display: block; cursor: grab; touch-action: none; }
+#mapview .mv-zoom { position: absolute; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); display: flex; flex-direction: column; gap: 6px; zoom: var(--ui, 1); }
+#mapview .mv-zoom button { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; font-size: 20px; line-height: 1; }
+#mapview .mv-card { position: absolute; left: 10px; right: 62px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); max-width: 380px; background: var(--paper2); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; font-size: 13px; zoom: var(--ui, 1); }
+#mapview .mv-card dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 4px 0 0; }
+#mapview .mv-card dt { color: var(--mute); }
+#mapview .mv-card dd { margin: 0; }

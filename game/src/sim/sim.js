@@ -146,6 +146,8 @@ function create(seed){
   const s = {
     t: 0, seed: seed || 7, world: w, nest: makeNest(),
     trail: new Float32Array(W*H), alarm: new Float32Array(W*H), hot: new Set(),
+    // Fog of war: which SEE.cell-tile squares of the yard you have seen.
+    seenMap: new Uint8Array((W/SEE.cell)*(H/SEE.cell)), seenT: 0,
     ants: [], nextId: 1, items: [],
     spider: null, spiderRespawn: 50, spiderAway: null, cat: null, catRespawn: 20,
     colony: newColony(w.ex, w.ey, 0), rival: newColony(w.rx, w.ry, 1),
@@ -158,6 +160,7 @@ function create(seed){
   s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
   // Every area starts with its own stock; home has the most, and it won't last.
   for (let i=0;i<AREAS.length;i++) for (let k=0;k<AREAS[i].start;k++) spawnFood(s, i, false);
+  reveal(s, w.ex, w.ey, SEE.home);
   for (let i=0;i<6;i++) spawnInArea(s, REGION.rock, 'grit', 'pebble');
   for (let i=0;i<4;i++) spawnInArea(s, REGION.woodpile, 'grit', 'pebble');
   // Puddles never dry up and aphids never run out; both refill between visits.
@@ -167,6 +170,16 @@ function create(seed){
   mkAnt(s, 'soldier', 'in', w.rx, w.ry, 1);
   spawnSpider(s);
   return s;
+}
+// ---------- fog of war ----------
+// The yard map shows only what you have seen: a circle round your ant as it
+// walks, and the ground round home from the start.
+const SEE = { cell: 4, player: 13, home: 22 };
+function reveal(s, x, y, r){
+  const cw = W/SEE.cell, ch = H/SEE.cell, cx = x/SEE.cell, cy = y/SEE.cell, cr = r/SEE.cell;
+  for (let j = Math.max(0, Math.floor(cy - cr)); j <= Math.min(ch-1, Math.ceil(cy + cr)); j++)
+    for (let i = Math.max(0, Math.floor(cx - cr)); i <= Math.min(cw-1, Math.ceil(cx + cr)); i++)
+      if (Math.hypot(i + 0.5 - cx, j + 0.5 - cy) <= cr) s.seenMap[j*cw + i] = 1;
 }
 function mkAnt(s, caste, state, tx, ty, team){
   const rnd = Math.random, C = CASTES[caste];
@@ -315,6 +328,7 @@ function tick(s, dt){
     for (const f of s.items) if (f.max) f.amt = Math.min(f.max, f.amt + 3); }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
   tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt);
+  s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest) reveal(s, pa.x/T, pa.y/T, SEE.player); }
   stepSpider(s, dt); if (!s.spider){ if (s.spiderAway){ s.spiderAway.t -= dt; if (s.spiderAway.t <= 0){ spiderEnter(s, s.spiderAway.hp); s.spiderAway = null; } } else { s.spiderRespawn -= dt; if (s.spiderRespawn <= 0){ spiderEnter(s, 150); s.spiderRespawn = 120; } } }
   stepCat(s, dt); if (!s.cat){ s.catRespawn -= dt; if (s.catRespawn <= 0){ spawnCat(s); s.catRespawn = 90; } }
   // buckets for combat
@@ -961,6 +975,7 @@ function serialize(s){
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders }, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest }, nextId: s.nextId,
+    seen: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
 }
 function deserialize(json){
@@ -970,10 +985,11 @@ function deserialize(json){
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);
   s.lost = !!d.lost; if (d.mower) s.mower = d.mower; if (d.areaT) s.areaT = d.areaT; if (d.strikeT) s.strikeT = d.strikeT; s.player.big = s.player.ant && s.items.find(f => f.carried) || null;
+  if (d.seen && d.seen.length === s.seenMap.length) for (let i=0;i<d.seen.length;i++) s.seenMap[i] = d.seen.charCodeAt(i) === 49 ? 1 : 0;
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
+return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
 })();
 export default SIM;
 export { SIM };

@@ -2,6 +2,25 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: a compact HUD, and a real map with fog of war (build 10.4)
+
+Mark: "Minimize the menu items. Everything looks so big. The words on the bottom… should be symbols or something smaller… same thing with the food symbols up top. Maybe when you highlight over them or press them, it'll tell you… Real estate is massive in a game like this." And: "when I click on map, it's not just squares, but… a realistic version of the map… based on what I can see… a fog of war… I can zoom in on it."
+
+- **Icon buttons.**
+  - Every HUD button is now a small round line icon (`ui/icons.js`): 46 px at the bottom, 38 px on the side.
+  - Its name is a tip on hover, or on a long press on touch screens; a long press shows the tip instead of acting. The name is also the button's `aria-label`.
+  - Numbers ride as a badge: Lift 3/6, Release 4, and a live count while holding Recruit.
+  - +200 and Reset moved into Help.
+- **Stat chips.** The two-line stats box is one thin row of emoji chips (food, water, protein, stone, ants, plus queen health, rival queen, rain and cave-ins when they matter). Touching a chip says what it is. The ⋯ at the end opens the full colony numbers (income and upkeep, rival count, ants by kind, fps). Hint text and the sheets are smaller and tighter, and the desktop HUD scale is capped at 1.3.
+- **Learning the icons.** When a hint tells you to press, tap or hold a button by name, that button pulses, so the intro and hints still teach the controls.
+- **The map is a photo of the yard.** The Map button opens a full-screen map. It's the real yard rendered straight down by the game's own renderer (`app.snapshotMap`), with fog and vertex snapping switched off for the shot.
+  - **Fog of war:** the sim keeps `seenMap`, a 4×4-tile grid of what you've seen. It's revealed in a 13-tile circle round your ant as you walk, and round home from the start, and is saved with the game.
+  - **Display:** unseen ground is under a dark, misty fog with soft edges. Region names appear once you've seen part of a region and it's big enough on screen to label.
+  - **Controls:** pinch, scroll, double-tap or the +/− buttons to zoom; drag to pan; tap a spot for that region's card ("Unexplored" if you haven't been there).
+  - **Pins:** You, the Nest, and the rival nest once seen.
+  - The schematic plan of the whole backyard is still one tap away: "Whole yard".
+- **Rejected:** revealing the map wherever any of your ants goes. "Based on what I can see" reads as your ant's own eyes, and it makes exploring with the player ant matter.
+
 ## Oct 27: smoother motion and a sharper frame (build 10.3)
 
 Mark: "Can we improve the graphics a bit more? It's a bit choppy still. Keep smoothing out and removing over-pixelation."

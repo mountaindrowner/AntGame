@@ -91,7 +91,8 @@ try {
   await shot('04-surface-crumb');
 
   // Stress: +200 foragers, then look at the swarm from above.
-  await page.click('#stress');
+  await page.click('#help');
+  await page.click('#sheet [data-stress]');
   await fastForward(20);
   await page.click('#zoom');
   await page.click('#zoom');
@@ -231,10 +232,13 @@ try {
   // The yard map: the whole backyard, with a region's card.
   await sim(() => { const { app } = window.UNDERFOOT; app.surfaceFocus = null; });
   await page.click('#mapbtn');
+  await page.waitForTimeout(500);
+  await shot('yard-map');
+  await page.click('#mapview button[data-plan]');
   await page.waitForTimeout(300);
   await page.click('#sheet button[data-region="9"]');
   await page.waitForTimeout(300);
-  await shot('yard-map');
+  await shot('yard-plan');
   await page.click('#sheet button[data-close]');
   // The mower crossing the Lawn.
   await sim(() => { const { app } = window.UNDERFOOT, L = app.s.world.lawn; Object.assign(app.s.mower, { state: 'cut', y: L.y0 + 14, t: 0 }); app.surfaceFocus = { x: (L.x0 + L.w / 2) * 16, y: (L.y0 + 14) * 16 }; app.zoomMul = 0.8; });

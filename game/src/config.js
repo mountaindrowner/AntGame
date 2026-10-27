@@ -51,5 +51,5 @@ export const COLORS = {
 
 // How much wider than a phone the screen is (1 on a phone in portrait).
 export const fitWide = (aspect) => Math.max(1, aspect / CAMERA.phoneAspect);
-// HUD and PS1-pixel scale for big screens: 1 on a phone, up to 1.6 on a desktop.
-export const uiScale = (cssW, cssH) => Math.max(1, Math.min(1.6, cssH / 780, cssW / 420));
+// HUD scale for big screens: 1 on a phone, up to 1.3 on a desktop.
+export const uiScale = (cssW, cssH) => Math.max(1, Math.min(1.3, cssH / 820, cssW / 420));

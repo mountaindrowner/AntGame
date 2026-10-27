@@ -4,6 +4,8 @@
 import SIM from '../sim/sim.js';
 import { EXPL, HELP, INTRO } from './copy.js';
 import { YARD_MAP } from '../sim/yard.js';
+import { ICONS } from './icons.js';
+import { MapView } from './mapView.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
 const $ = (id) => document.getElementById(id);
@@ -13,8 +15,59 @@ export function createUI(app) {
   const el = {
     stats: $('stats'), msg: $('msg'), hungerBar: $('hungerbar'), act: $('act'), release: $('release'), mark: $('mark'),
     recruit: $('recruit'), enter: $('enter'), barS: $('bar'), barN: $('barn'), sheet: $('sheet'), buildNest: $('buildnest'),
-    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'),
+    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
   };
+
+  // ---------------------------------------------------------- icon buttons
+  // Every HUD button is a small icon; its name shows as a tip on hover or a
+  // long press (see tips below), and doubles as its aria-label. A badge
+  // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
+  function setIcon(b, icon, tip, badge) {
+    const key = icon + '|' + (badge ?? '');
+    if (b.dataset.key !== key) { b.dataset.key = key; b.innerHTML = ICONS[icon] + (badge != null && badge !== '' ? `<b class="badge">${badge}</b>` : ''); }
+    if (b.dataset.tip !== tip) { b.dataset.tip = tip; b.setAttribute('aria-label', tip); }
+  }
+  setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
+  setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
+  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
+  setIcon(el.act, 'pick', 'Pick up');
+
+  // ---------------------------------------------------------- tips
+  // Hover (mouse) or press and hold (touch) anything with data-tip to see
+  // what it is. A held button shows its tip instead of acting when let go.
+  let tipFor = null, tipTimer = null, tipHide = null, longPressed = false;
+  function showTip(t) {
+    const text = t.dataset.tip; if (!text) return;
+    tipFor = t; el.tip.textContent = text; el.tip.classList.remove('hidden');
+    const r = t.getBoundingClientRect(), w = el.tip.offsetWidth, h = el.tip.offsetHeight;
+    const below = r.top < 90;
+    el.tip.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px';
+    el.tip.style.top = (below ? r.bottom + 8 : r.top - h - 8) + 'px';
+    clearTimeout(tipHide); tipHide = setTimeout(hideTip, 2600);
+  }
+  function hideTip() { tipFor = null; el.tip.classList.add('hidden'); clearTimeout(tipTimer); }
+  document.addEventListener('pointerover', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t || e.pointerType !== 'mouse') return; clearTimeout(tipTimer); tipTimer = setTimeout(() => showTip(t), 350); });
+  document.addEventListener('pointerout', (e) => { if (e.pointerType === 'mouse' && e.target.closest && e.target.closest('[data-tip]')) hideTip(); });
+  document.addEventListener('pointerdown', (e) => {
+    longPressed = false;
+    const t = e.target.closest && e.target.closest('[data-tip]'); if (!t || e.pointerType === 'mouse') return;
+    // Stat chips have no action: a tap shows the tip straight away.
+    if (t.classList.contains('chip')) { showTip(t); return; }
+    if (t === el.recruit) return; // holding Recruit recruits more
+    clearTimeout(tipTimer); tipTimer = setTimeout(() => { longPressed = true; showTip(t); }, 450);
+  });
+  document.addEventListener('pointerup', () => clearTimeout(tipTimer));
+  // A long press was a question, not a tap.
+  document.addEventListener('click', (e) => { if (longPressed) { longPressed = false; e.stopPropagation(); e.preventDefault(); } }, true);
+
+  // The buttons a hint is talking about pulse, so the icons are easy to learn.
+  const NAMED = [['Build nest', 'buildnest'], ['Enter nest', 'enter'], ['Exit nest', 'exitnest'], ['Pick up', 'act'], ['Mark trail', 'mark'], ['Recruit', 'recruit'], ['Release', 'release'], ['Lift', 'act'], ['Queen', 'queenbtn'], ['the queen', 'queenbtn'], ['Build', 'levelbtn'], ['Nest', 'viewbtn'], ['Map', 'mapbtn']];
+  function pulseFor(text) {
+    const on = new Set();
+    let t = ' ' + (text || '') + ' ';
+    for (const [name, id] of NAMED) { const re = new RegExp('(press|tap|hold|Press|Tap|Hold)[^.]*?\\b' + name + '\\b'); if (re.test(t)) { on.add(id); t = t.split(name).join(''); } }
+    for (const b of document.querySelectorAll('.ico')) b.classList.toggle('pulse', on.has(b.id));
+  }
 
   // ---------------------------------------------------------- intro
   const introStep = () => { const i = app.s.seen.intro; return typeof i === 'number' ? i : i === 'done' ? -1 : 0; };
@@ -68,7 +121,7 @@ export function createUI(app) {
 
   function renderSheet() {
     const s = app.s, c = s.colony;
-    if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map') return;
+    if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map' || app.menu === 'colony') return;
     let h = '';
     if (app.menu === 'egg') {
       h += `<div class="row head"><strong>Queen · next egg</strong><button class="x" data-close="1">Close</button></div><div class="note">${EXPL.queen[1]}</div><div class="btns">`;
@@ -139,10 +192,21 @@ export function createUI(app) {
     el.sheet.innerHTML = h;
   }
   function openMap() { app.menu = 'map'; app.mapPick = null; el.sheet.classList.remove('hidden'); renderMap(); app.paused = true; }
+  // The plan of the whole backyard (all its regions, built or not), from the map's "Whole yard".
 
   function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.classList.remove('hidden'); renderSheet(); }
   function closeMenu() { app.menu = null; app.menuCell = null; el.sheet.classList.add('hidden'); app.paused = false; }
   function openHelp() { app.menu = 'help'; el.sheet.classList.remove('hidden'); el.sheet.innerHTML = HELP; app.paused = true; }
+  // The full numbers behind the stat chips.
+  function renderColony() {
+    const s = app.s, c = s.colony, st = SIM.stats(s);
+    const h = `<div class="row head"><strong>Colony</strong><button class="x" data-close="1">Close</button></div>`
+      + `<div class="h">Food ${Math.floor(c.store)} of ${c.cap} · water ${Math.floor(c.water)} of ${c.waterCap} · protein ${Math.floor(c.protein)} · stone ${Math.floor(c.grit)}</div>`
+      + `<div class="h">${app.statsLine || ''}</div>`
+      + `<div class="h">Ants by kind: ${Object.entries(st.byCaste).map(([k, n]) => `${CASTES[k].name} ${n}`).join(' · ') || 'none yet'}</div>`;
+    if (el.sheet.innerHTML !== h) el.sheet.innerHTML = h;
+  }
+  function openColony() { app.menu = 'colony'; el.sheet.classList.remove('hidden'); renderColony(); }
 
   // ---------------------------------------------------------- HUD
   function flash(text, test, ms) {
@@ -177,20 +241,35 @@ export function createUI(app) {
     const s = app.s, c = s.colony;
     const st = SIM.stats(s);
     const cap = SIM.queenCap(s.queen.level), nAnts = SIM.antCount(s);
-    el.stats.innerHTML = `🌾 ${Math.floor(c.store)}/${c.cap} · 💧 ${Math.floor(c.water)}/${c.waterCap} · 🥩 ${Math.floor(c.protein)} · 🪨 ${Math.floor(c.grit)}${s.queen.placed && s.queen.hp < 99.5 ? ` · 👑 ${Math.ceil(s.queen.hp)}` : ''}${s.rival.queenAlive && s.rival.qhp < 999 ? ` · rival queen ${Math.ceil(s.rival.qhp / 10)}%` : ''}<br>🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} /min · ${app.fps} fps${s.rain.on ? ' · rain' : ''}${s.repairs.length ? ' · ' + s.repairs.length + ' cave-in' : ''}`;
+    // One compact row of chips; each says what it is when touched or hovered.
+    const chip = (icon, val, tip, warn) => `<span class="chip${warn ? ' warn' : ''}" data-tip="${tip}">${icon}${val}</span>`;
+    const statsHtml = chip('🌾', `${Math.floor(c.store)}<i>/${c.cap}</i>`, `Food ${Math.floor(c.store)} of ${c.cap}`, c.store < 3)
+      + chip('💧', `${Math.floor(c.water)}<i>/${c.waterCap}</i>`, `Water ${Math.floor(c.water)} of ${c.waterCap}. Each egg costs 1`, c.water < 2)
+      + chip('🥩', Math.floor(c.protein), 'Protein: for soldiers and the queen')
+      + chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen')
+      + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
+      + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
+      + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
+      + (s.rain.on ? chip('🌧', '', 'Raining: trails wash out') : '')
+      + (s.repairs.length ? chip('⚠', s.repairs.length, 'Cave-ins to repair', true) : '')
+      + `<button class="more" data-tip="Colony details" aria-label="Colony details">⋯</button>`;
+    if (el.stats.dataset.html !== statsHtml) { el.stats.dataset.html = statsHtml; el.stats.innerHTML = statsHtml; }
+    app.statsLine = `🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} food/min · ${app.fps} fps`;
     const a0 = P().ant;
     const it = introText();
     const istep = introStep() >= 0 ? INTRO[introStep()] : null;
     if (it) { const want = istep.btn ? `${it} <button class="next" id="intronext">${istep.btn}</button>` : it; if (el.msg.innerHTML !== want) el.msg.innerHTML = want; }
     else el.msg.textContent = hint();
+    pulseFor(el.msg.textContent);
     // Crossing into another part of the yard: name it (and describe it the first time).
     if (a0 && !P().inNest) { const ai = SIM.areaOf(s, a0.tx, a0.ty); if (ai !== app.lastArea) { if (app.lastArea != null) { const A = SIM.AREAS[ai]; const first = !s.seen['area' + ai]; s.seen['area' + ai] = true; app.areaBanner = { text: first ? `${A.name}. ${A.blurb}` : A.name, until: performance.now() + (first ? 6000 : 2500) }; } app.lastArea = ai; } }
     el.hungerBar.style.width = Math.max(0, P().hunger) + '%';
     el.hungerBar.style.background = P().hunger < 35 ? '#e4524a' : '#8fd36b';
-    const lbl = SIM.actionLabel(s);
-    el.act.textContent = lbl || 'Pick up';
-    el.act.disabled = !lbl;
-    el.release.textContent = st.followers ? `Release ${st.followers}` : 'Release';
+    const lbl = SIM.actionLabel(s) || 'Pick up';
+    const lift = /^Lift (\d+\/\d+)/.exec(lbl);
+    setIcon(el.act, /^(Drop|Set down)/.test(lbl) ? 'drop' : 'pick', lbl, lift ? lift[1] : '');
+    el.act.disabled = !SIM.actionLabel(s);
+    setIcon(el.release, 'release', st.followers ? `Release ${st.followers}` : 'Release', st.followers || '');
     el.release.disabled = !st.followers;
     el.mark.classList.toggle('on', !!P().mark);
     const a = P().ant;
@@ -203,18 +282,21 @@ export function createUI(app) {
     el.queen.classList.toggle('hidden', s.phase === 'dig');
     el.level.classList.toggle('hidden', s.phase === 'dig');
     el.exitNest.classList.toggle('hidden', !(a && P().inNest));
-    el.level.textContent = app.placing ? 'Cancel' : 'Build';
+    setIcon(el.level, app.placing ? 'cancel' : 'build', app.placing ? 'Cancel' : 'Build rooms');
     el.level.classList.toggle('on', !!app.placing);
     if (nAnts >= cap && s.queen.placed) showExplainer('cap');
     if (s.seen.nest && !s.seen.soil && SIM.dugCount(s) > 12) showExplainer('soil');
-    el.view.textContent = app.view === 'nest' ? 'Surface' : 'Nest';
+    setIcon(el.view, app.view === 'nest' ? 'surface' : 'nest', app.view === 'nest' ? 'Surface' : 'Nest');
+    if (app.menu === 'colony') renderColony();
     if (app.menu) renderSheet();
   }
 
   // ---------------------------------------------------------- wiring
   $('help').addEventListener('click', openHelp);
-  el.map.addEventListener('click', () => { if (app.menu === 'map') closeMenu(); else openMap(); });
-  el.stats.addEventListener('click', openHelp);
+  // The map button opens the photo map; its "Whole yard" button opens the plan.
+  const mapView = new MapView(app, () => openMap());
+  el.map.addEventListener('click', () => { if (mapView.isOpen) mapView.close(); else { closeMenu(); mapView.open(); } });
+  el.stats.addEventListener('click', (e) => { if (e.target.closest('.more')) { if (app.menu === 'colony') closeMenu(); else openColony(); } });
   el.msg.addEventListener('click', (e) => { if (e.target && e.target.id === 'intronext') introAdvance(); });
   el.sheet.addEventListener('click', (e) => {
     const s = app.s;
@@ -222,6 +304,8 @@ export function createUI(app) {
     if (!b) return;
     if (b.dataset.close) { closeMenu(); return; }
     if (b.dataset.film) { closeMenu(); app.playFilm(); return; }
+    if (b.dataset.stress) { closeMenu(); SIM.stress(s, 200); flash('+200 foragers spawned for a frame-rate test.', /^\+200/, 4000); return; }
+    if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
@@ -252,20 +336,18 @@ export function createUI(app) {
     e.preventDefault();
     if (!P().ant || P().inNest) return;
     recN = 1;
-    el.recruit.textContent = 'Recruit 1';
-    recTimer = setInterval(() => { if (recN < 20) { recN++; el.recruit.textContent = 'Recruit ' + recN; } }, 140);
+    setIcon(el.recruit, 'recruit', 'Recruit 1', 1);
+    recTimer = setInterval(() => { if (recN < 20) { recN++; setIcon(el.recruit, 'recruit', 'Recruit ' + recN, recN); } }, 140);
   });
   const recEnd = () => {
     if (!recTimer) return;
     clearInterval(recTimer);
     recTimer = null;
     const got = SIM.recruit(app.s, recN);
-    el.recruit.textContent = 'Recruit';
+    setIcon(el.recruit, 'recruit', 'Recruit (hold for more)');
     if (got < recN) flash(got ? `${got} ants answered. Recruit near the nest or near other ants.` : 'No ants in range. Walk back toward the nest and try again.', /answered|in range/, 3000);
   };
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => el.recruit.addEventListener(t, recEnd));
-  $('stress').addEventListener('click', () => { SIM.stress(app.s, 200); flash('+200 foragers spawned for a frame-rate test.', /^\+200/, 4000); });
-  $('reset').addEventListener('click', () => confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()));
   $('zoom').addEventListener('click', () => { app.zoomMul = app.zoomMul >= 1.5 ? 0.6 : app.zoomMul >= 0.9 ? 1.6 : 1; });
 
   // In-page confirmation (browser confirm() is blocked in some hosts).
