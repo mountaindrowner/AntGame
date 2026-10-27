@@ -2,6 +2,37 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: a bigger yard, in regions (build 9)
+
+Mark: things "aren't totally to scale… the ant is either too big or everything is too small… I'd like it to be maybe twice as big." Then: "separate regions that each have their own unique challenges and benefits and rewards… each region is maybe pretty big… like a nice big backyard would be", at "a similar scope to SimAnt's map".
+
+- **Everything is twice as big; the ant isn't.** Before, a soda can was about 5 ant-lengths across (a real one is 20 or more), and the whole yard was about 60 cm at real scale. Now the layout is written in design units and stamped at `SCALE = 2`.
+  - A region is 80×80 tiles, about 6×6 phone screens. The built yard is 240×240.
+  - Props are twice as tall. Loose stones are now landmarks of their own, up to 4×4 tiles.
+  - The Flowerbed has about 70 flowers. The Sandbox has up to seven antlion pits, and the Spigot has four puddles.
+  - Ants, the spider, the caterpillar, the nest mound and the trodden patch around it stay the same size, because they're ant-scale.
+- **Nine regions.** Today's nine areas are now regions. Each has a danger, a find and a prize, shown on its card on the new yard map. The walk between regions is seamless (a banner names each one).
+  - **Rejected:** separate maps with a loading step at each edge. That would need an off-screen summary sim for the colony's own economy, which is a big risk for little gain while the whole yard fits in one sim. It will be needed once the yard is much bigger.
+- **The yard map, at SimAnt scope.** A Map button shows the whole backyard: 72 regions on a 10×8 grid, with the house along the top. The built nine sit in the middle and open a card when tapped. The other zones come from the yard sketch (vegetable garden, great lawn, the Oak, the fire ant mound and so on) and are named but greyed out until built.
+- **Edges.** The fences are gone, since the built nine sit in the middle of the yard. A thicket of tall weeds closes off the unbuilt yard on three sides, with overgrown ground beyond it out to the fog. The house wall is still north.
+- **Pace.** Trips are twice as long, so ants and creatures move 1.4× faster on the surface (real ants cover 10+ body-lengths a second). Food per region is about 1.5–2× (rate, cap, start), and other distances were scaled to match:
+  - Forager range: 48–100 tiles.
+  - Food sense: 7 tiles.
+  - Explore timeout: 60 s.
+  - Rival range: 64 tiles.
+  - Spider legs: 15–70 tiles. It now rests 30–70 s at its web and goes home more often.
+  - The mower sweeps at 4 tiles/s.
+- **Bug found by the bot.** Ants only picked up food if they were within 2 px of it at the start of a tick. At the faster speed they often stepped straight past that window and circled food forever. The first bot runs starved, and the rival colony died out. Fixed: the window is now 2 px plus one tick's step.
+- **Frame rate.** At first, landmarks, rocks and grass were each merged into one yard-wide mesh, so the whole yard was drawn every frame (24 fps in headless Chromium, down from 38). Now they're merged in 40-tile blocks and the ground in region tiles, so off-screen blocks are culled (about 41 fps). The scent overlay only updates the tiles near the camera.
+- **Bot results** (30-minute runs, compared with build 8):
+  - Sensible play won once (10:31), lost once (raiders killed the queen at 18:37), and grew to 40–60 ants without winning twice.
+  - Build 8 won all four of those seeds, in 13–31 minutes.
+  - Idle and cheese play survive. The rival raids 2–7 times per game.
+  - It's a little harder, mostly because the rival nest is twice as far away. That's in line with "a fight to survive", so it stays as is for now.
+- **The opening film** now places its shots relative to the entrance, the web and the rival crack, so it follows the yard at any scale.
+- **Saves:** format v7, under the key `underfoot-v8`. Build 8 saves don't load (the yard changed).
+- **Next:** claiming regions and their rewards, supply lines, and opening more of the yard (see `docs/YARD.md`).
+
 ## Oct 27: a leg in the shoe, and no hole before the dig (build 8.4)
 
 Mark: "Obviously, a leg and jeans connected to that shoe. And there's already an ant mound hole. Maybe it shouldn't be there until she digs."

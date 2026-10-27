@@ -1,8 +1,11 @@
 // Underfoot simulation (build 6, from prototype/sim.js). No DOM, no renderer:
 // the views read this state; nothing here knows how it is drawn.
-import { makeYard, AREAS, AREA, areaBounds } from './yard.js';
+import { makeYard, AREAS, AREA, GRID, SCALE, areaBounds } from './yard.js';
 const SIM = (() => {
-const W = 120, H = 120, T = 16;          // surface tiles: the whole yard (yard.js)
+const W = AREA*GRID, H = AREA*GRID, T = 16; // surface tiles: the whole yard (yard.js)
+// Everything on the surface is twice as big as it was (yard.js SCALE), so
+// ants and creatures walk faster to keep trips from dragging.
+const SURF = 1.4;
 const NW = 24, NH = 40, SHAFT = 12;       // nest cutaway cells
 const N8 = [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
 const N4 = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -144,8 +147,8 @@ function create(seed){
   s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
   // Every area starts with its own stock; home has the most, and it won't last.
   for (let i=0;i<AREAS.length;i++) for (let k=0;k<AREAS[i].start;k++) spawnFood(s, i, false);
-  for (let i=0;i<4;i++) spawnInArea(s, 4, 'grit', 'pebble');
-  for (let i=0;i<3;i++) spawnInArea(s, 2, 'grit', 'pebble');
+  for (let i=0;i<6;i++) spawnInArea(s, 4, 'grit', 'pebble');
+  for (let i=0;i<4;i++) spawnInArea(s, 2, 'grit', 'pebble');
   // The Spigot's puddles never dry up; they refill between visits.
   for (const [x,y,amt] of w.puddles) s.items.push({ x, y, kind:'water', type:'puddle', amt, max: amt });
   for (let i=0;i<6;i++) mkAnt(s, 'forager', 'in', w.rx, w.ry, 1);
@@ -189,12 +192,12 @@ function spawnFood(s, ai, treats){
   return spawnInArea(s, ai, type === 'bug' ? 'protein' : 'food', type);
 }
 // How far foragers roam on their own: a bigger colony reaches farther.
-const forageRange = s => Math.min(50, 24 + s.ants.length*0.25);
+const forageRange = s => Math.min(100, 48 + s.ants.length*0.5);
 const areaOf = (s, x, y) => s.world.area[idx(Math.max(0, Math.min(W-1, x)), Math.max(0, Math.min(H-1, y)))];
 // The spider lives at its web in the Flowerbed.
 function spawnSpider(s){
   const w = s.world;
-  s.spider = { x:(w.web.x+0.5)*T, y:(w.web.y+2.5)*T, hp: 150, maxHp: 150, wander: 0, bite: 0 };
+  s.spider = { x:(w.web.x+0.5)*T, y:(w.web.y+2*SCALE+0.5)*T, hp: 150, maxHp: 150, wander: 0, bite: 0 };
 }
 // Caterpillars graze the Lawn, the Compost heap and the Flowerbed.
 function spawnCat(s){
@@ -214,7 +217,7 @@ const homeOf = (s, a) => a.team ? s.world.rhome : s.world.home;
 function stepTo(a, tx, ty, speed, dt){
   const gx = (tx+0.5)*T, gy = (ty+0.5)*T; let ddx = gx-a.x, ddy = gy-a.y; const d = Math.hypot(ddx,ddy);
   if (d < 0.5){ a.x = gx; a.y = gy; return true; }
-  const m = Math.min(d, speed*dt); ddx/=d; ddy/=d; a.x += ddx*m; a.y += ddy*m; a.dx = ddx; a.dy = ddy;
+  const m = Math.min(d, speed*SURF*dt); ddx/=d; ddy/=d; a.x += ddx*m; a.y += ddy*m; a.dx = ddx; a.dy = ddy;
   return Math.hypot(gx-a.x, gy-a.y) < 0.5;
 }
 function pickWeighted(opts, tot){ let r = Math.random()*tot; for (const o of opts){ r -= o[2]; if (r <= 0) return o; } return opts[opts.length-1]; }
@@ -283,7 +286,7 @@ function tick(s, dt){
   for (let i=0;i<tr.length;i++){ if (tr[i] > 0.001) tr[i] *= td; else tr[i] = 0; if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; }
   for (const col of [c, s.rival]) tickColony(s, col, dt);
   // dew
-  s.dewTimer += dt; if (!s.dew && s.dewTimer > 110){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[4, 3], [7, 2], [1, 2]]) for (let i=0;i<n;i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!P.msg) P.msg = 'Dew is out. Foragers can carry water home for a minute.'; }
+  s.dewTimer += dt; if (!s.dew && s.dewTimer > 110){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[4, 6], [7, 4], [1, 4]]) for (let i=0;i<n;i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!P.msg) P.msg = 'Dew is out. Foragers can carry water home for a minute.'; }
   if (s.dew && s.dewTimer > 60){ s.dew = false; s.dewTimer = 0; s.items = s.items.filter(f => f.type !== 'dew'); }
   tickRain(s, dt); tickMaintenance(s, dt);
   // Food grows back area by area at each area's own pace (yard.js), so the
@@ -291,7 +294,7 @@ function tick(s, dt){
   for (let i=0;i<AREAS.length;i++){ const A = AREAS[i]; s.areaT[i] += dt*A.rate/60;
     if (s.areaT[i] >= 1){ s.areaT[i] -= 1; let n = 0; for (const f of s.items) if ((f.kind==='food'||f.kind==='protein') && f.amt > 0 && w.area[idx(f.x,f.y)] === i) n++; if (n < A.max) spawnFood(s, i, s.t > 180); } }
   s.itemTimer += dt; if (s.itemTimer > 9){ s.itemTimer = 0;
-    if (s.items.filter(f=>f.kind==='grit').length < 6) spawnInArea(s, Math.random() < 0.6 ? 4 : 2, 'grit', 'pebble');
+    if (s.items.filter(f=>f.kind==='grit').length < 10) spawnInArea(s, Math.random() < 0.6 ? 4 : 2, 'grit', 'pebble');
     for (const f of s.items) if (f.max) f.amt = Math.min(f.max, f.amt + 3); }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
   tickMower(s, dt); tickPits(s, dt);
@@ -356,9 +359,10 @@ function tick(s, dt){
     if (a.state === 'explore' || a.state === 'patrol'){
       a.explore += dt; if (s.rain.on && !a.team && a.state === 'explore' && a.explore > 2){ a.state = 'return'; a.explore = 0; continue; }
       const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
-      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2){ const take = Math.min(5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.state = 'return'; continue; }
-      if (a.explore > (a.state === 'patrol' ? 25 : 45)){ a.state = 'return'; a.explore = 0; continue; }
-      if (stepTo(a, a.tx, a.ty, C.speed, dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, 4.5, want) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : 9) : a.team ? 32 : forageRange(s)); }
+      // Pick up on arrival: within 2 px, or within this tick's step at speed.
+      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.state = 'return'; continue; }
+      if (a.explore > (a.state === 'patrol' ? 25 : 60)){ a.state = 'return'; a.explore = 0; continue; }
+      if (stepTo(a, a.tx, a.ty, C.speed, dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, 7, want) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : 9) : a.team ? 64 : forageRange(s)); }
       continue;
     }
     if (a.state === 'return'){
@@ -627,21 +631,21 @@ function spiderPlan(s, sp){
     const pts = []; for (let k=1;k<5;k++){ const t = a0 + dir*k*0.5; pts.push([(w.ex+0.5+Math.cos(t)*7.5)*T, (w.ey+0.5+Math.sin(t)*7.5)*T]); }
     sp.route.push(...pts.filter(([x, y]) => walk(s, Math.floor(x/T), Math.floor(y/T)))); sp.passing = true; return;
   }
-  if (Math.random() < 0.35){ // back to its web in the Flowerbed
-    const a = Math.random()*Math.PI*2; spiderRoute(s, sp, (w.web.x+0.5+Math.cos(a)*2.5)*T, (w.web.y+2.5+Math.abs(Math.sin(a))*2)*T, 20 + Math.random()*30); return;
+  if (Math.random() < 0.45){ // back to its web in the Flowerbed
+    const a = Math.random()*Math.PI*2; spiderRoute(s, sp, (w.web.x+0.5+Math.cos(a)*2.5*SCALE)*T, (w.web.y+(2+Math.abs(Math.sin(a))*2)*SCALE)*T, 30 + Math.random()*40); return;
   }
   if (sp.legs > 6 && Math.random() < 0.15){ // over the fence for a while
     // Walk to the fence on a path, then over it.
     const side = Math.floor(Math.random()*3), u = 0.2 + Math.random()*0.6;
     const out = side===0 ? [-2, u*H] : side===1 ? [W+2, u*H] : [u*W, H+2];
-    const inn = [Math.max(1.5, Math.min(W-1.5, out[0])), Math.max(1.5, Math.min(H-1.5, out[1]))];
+    const inn = [Math.max(3.5, Math.min(W-3.5, out[0])), Math.max(3.5, Math.min(H-3.5, out[1]))];
     spiderRoute(s, sp, inn[0]*T, inn[1]*T);
     sp.route.push([out[0]*T, out[1]*T]); sp.leaving = true; return;
   }
   for (let tries=0; tries<60; tries++){
     const x = 2+Math.floor(Math.random()*(W-4)), y = 2+Math.floor(Math.random()*(H-4));
     if (w.blocked[idx(x,y)] || w.home[idx(x,y)] < (s.t < 240 ? 14 : 7) || w.rhome[idx(x,y)] < 5) continue;
-    if (Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) < 10*T || Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) > 45*T) continue;
+    if (Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) < 15*T || Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) > 70*T) continue;
     spiderRoute(s, sp, (x+0.5)*T, (y+0.5)*T); return;
   }
 }
@@ -650,7 +654,7 @@ function spiderEnter(s, hp){
   const side = [0, 1, 3][Math.floor(Math.random()*3)],  // never through the house wall
     u = 0.2 + Math.random()*0.6;
   const out = side===0 ? [-2, u*H] : side===1 ? [W+2, u*H] : side===2 ? [u*W, -2] : [u*W, H+2];
-  const inn = side===0 ? [4, u*H] : side===1 ? [W-4, u*H] : side===2 ? [u*W, 4] : [u*W, H-4];
+  const inn = side===0 ? [5, u*H] : side===1 ? [W-5, u*H] : side===2 ? [u*W, 5] : [u*W, H-5];
   s.spider = { x: out[0]*T, y: out[1]*T, hp, maxHp: 150, bite: 0, legs: 0, route: [[inn[0]*T, inn[1]*T]], entering: true, stuck: 0 };
   if (!s.player.msg) s.player.msg = 'The spider is back, walking in from the edge of the yard.';
 }
@@ -674,13 +678,14 @@ function stepSpider(s, dt){
     if (sp.leaving && !sp.route.length){ s.spiderAway = { hp: sp.hp, t: 40 + Math.random()*40 }; s.spider = null; return; }
     if (sp.entering) sp.entering = false;
     return; } }
-  const speed = target ? 30 : 16; const ddx = gx - sp.x, ddy = gy - sp.y; if (Math.hypot(ddx, ddy) < 1) return;
+  const speed = (target ? 30 : 16)*SURF; const ddx = gx - sp.x, ddy = gy - sp.y; if (Math.hypot(ddx, ddy) < 1) return;
   const base = Math.atan2(ddy, ddx);
   // Steer around rocks: straight, then increasingly wide detours.
   for (const off of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]){
     const nx = sp.x + Math.cos(base+off)*speed*dt, ny = sp.y + Math.sin(base+off)*speed*dt;
     const tx = Math.floor(nx/T), ty = Math.floor(ny/T);
-    const inside = tx>0 && ty>0 && tx<W-1 && ty<H-1;
+    // The edge thicket is two tiles deep; a spider coming or going climbs through it.
+    const inside = tx>1 && ty>0 && tx<W-2 && ty<H-2;
     if (inside ? s.world.blocked[idx(tx,ty)] : !free) continue;
     if (spiderNearNest(s, nx, ny)) continue;
     sp.x = nx; sp.y = ny; sp.stuck = 0; return;
@@ -691,7 +696,7 @@ function stepSpider(s, dt){
 function stepCat(s, dt){
   const ct = s.cat; if (!ct) return; ct.wander -= dt; if (ct.wander <= 0){ ct.wander = 4 + Math.random()*4; const ang = Math.random()*Math.PI*2; ct.gx = ct.x + Math.cos(ang)*3*T; ct.gy = ct.y + Math.sin(ang)*3*T; }
   let ddx = ct.gx - ct.x, ddy = ct.gy - ct.y; const d = Math.hypot(ddx, ddy);
-  if (d > 1){ ddx/=d; ddy/=d; const nx = ct.x + ddx*8*dt, ny = ct.y + ddy*8*dt; if (walk(s, Math.floor(nx/T), Math.floor(ny/T))){ ct.x = nx; ct.y = ny; } else ct.wander = 0; }
+  if (d > 1){ ddx/=d; ddy/=d; const nx = ct.x + ddx*8*SURF*dt, ny = ct.y + ddy*8*SURF*dt; if (walk(s, Math.floor(nx/T), Math.floor(ny/T))){ ct.x = nx; ct.y = ny; } else ct.wander = 0; }
   // attacked by soldiers/venom on patrol/fight nearby
   for (const a of s.ants){ if (a.team || a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; if (CASTES[a.caste].fight < 3 && !a.follow && !a.isPlayer) continue; const dd = Math.hypot(a.x-ct.x, a.y-ct.y); if (dd < CAT_REACH){ ct.hp -= CASTES[a.caste].fight*dt*0.5; } else if (dd < 5*T && CASTES[a.caste].fight >= 3 && a.state === 'patrol'){ a.state = 'fight'; a.goal = 'cat'; chooseToward(s, a, ct.x, ct.y); } }
   // fight-state soldiers targeting cat
@@ -711,10 +716,10 @@ function stepPlayer(s, a, dt, enemiesNear){
   }
   let moving = false;
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
-  let speed = 85;
+  let speed = 85*SURF;
   if (P.big){ const crew = crewAt(s), need = FOODS[P.big.type].crew;
     if (crew < need){ dropBig(s); P.msg = `Too heavy for ${crew}. It takes a crew of ${need}: Recruit more, then Lift again.`; }
-    else speed = Math.min(70, 30 + 6*(crew - need)); }
+    else speed = Math.min(70, 30 + 6*(crew - need))*SURF; }
   if (P.tx != null){
     // Walk around rocks: follow a path over the tile grid toward the tapped point.
     const gx = Math.floor(P.tx/T), gy = Math.floor(P.ty/T), key = gx*1000 + gy;
@@ -813,17 +818,17 @@ function clearLine(s, a, b, avoid){
 // The Lawn's mower: a warning, then a blade sweeping the whole Lawn north to
 // south, killing anything in the grass and shredding trails and seeds.
 function tickMower(s, dt){
-  const m = s.mower, P = s.player; if (!s.queen.placed) return; m.t += dt;
+  const m = s.mower, P = s.player, L = s.world.lawn; if (!s.queen.placed) return; m.t += dt;
   if (m.state === 'idle'){ if (s.t >= m.next){ m.state = 'warn'; m.t = 0; s.events.push('mower'); P.msg = 'An engine starts up past the Lawn. The mower is coming: get out of the grass!'; } return; }
-  if (m.state === 'warn'){ if (m.t >= 8){ m.state = 'cut'; m.t = 0; m.y = 80; } return; }
-  m.y += 2.6*dt;
-  const y0 = m.y - 1.5, y1 = m.y + 1.5;
-  for (let y = Math.max(80, Math.floor(y0)); y <= Math.min(H-1, Math.floor(y1)); y++) for (let x = 40; x < 80; x++) s.trail[idx(x,y)] = 0;
-  const inBlade = (px, py) => px/T >= 40 && px/T < 80 && py/T >= y0 && py/T <= y1;
+  if (m.state === 'warn'){ if (m.t >= 8){ m.state = 'cut'; m.t = 0; m.y = L.y0; } return; }
+  m.y += 4*dt;
+  const half = 1.5*SCALE, y0 = m.y - half, y1 = m.y + half;
+  for (let y = Math.max(L.y0, Math.floor(y0)); y <= Math.min(H-1, Math.floor(y1)); y++) for (let x = L.x0; x < L.x0 + L.w; x++) s.trail[idx(x,y)] = 0;
+  const inBlade = (px, py) => px/T >= L.x0 && px/T < L.x0 + L.w && py/T >= y0 && py/T <= y1;
   for (const a of s.ants){ if (a.state==='dead'||a.state==='in'||a.state==='build'||a.state==='nest') continue; if (inBlade(a.x, a.y)) killAnt(s, a, 'mower'); }
   for (const f of s.items) if (!f.max && !f.carried && inBlade((f.x+0.5)*T, (f.y+0.5)*T)) f.amt = 0;
   if (s.cat && inBlade(s.cat.x, s.cat.y)) s.cat.hp = 0;
-  if (m.y >= H){ m.state = 'idle'; m.next = s.t + 240 + Math.random()*120; }
+  if (m.y >= L.y0 + L.h){ m.state = 'idle'; m.next = s.t + 240 + Math.random()*120; }
 }
 // Antlion pits in the Sandbox: the rim slides ants toward the bottom, where
 // the antlion bites.
@@ -831,9 +836,9 @@ function tickPits(s, dt){
   const w = s.world; if (!w.pits.length) return;
   for (const a of s.ants){ if (a.state==='dead'||a.state==='in'||a.state==='build'||a.state==='nest') continue;
     const p = w.pit[idx(Math.floor(a.x/T), Math.floor(a.y/T))]; if (!p) continue;
-    const pp = w.pits.find(q => Math.hypot(q.x - a.x/T, q.y - a.y/T) < 2.5); if (!pp) continue;
+    const pp = w.pits.find(q => Math.hypot(q.x - a.x/T, q.y - a.y/T) < q.r*1.4); if (!pp) continue;
     if (p === 2){ if (Math.random() < 1.5*dt) killAnt(s, a, 'antlion'); }
-    else { const dx = pp.x*T - a.x, dy = pp.y*T - a.y, d = Math.hypot(dx, dy) || 1; a.x += dx/d*14*dt; a.y += dy/d*14*dt; }
+    else { const dx = pp.x*T - a.x, dy = pp.y*T - a.y, d = Math.hypot(dx, dy) || 1; a.x += dx/d*20*dt; a.y += dy/d*20*dt; }
   }
 }
 function recruit(s, n){
@@ -874,14 +879,14 @@ function stats(s){
 }
 // ---------- save / load ----------
 function serialize(s){
-  return JSON.stringify({ v: 6, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
+  return JSON.stringify({ v: 7, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders }, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest }, nextId: s.nextId,
     trail: Array.from(s.trail, v => Math.round(v*100)/100) });
 }
 function deserialize(json){
-  const d = JSON.parse(json); if (d.v !== 6) throw new Error('old save'); const s = create(d.seed);
+  const d = JSON.parse(json); if (d.v !== 7) throw new Error('old save'); const s = create(d.seed);
   s.t = d.t; s.colony = d.colony; s.rival = d.rival; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen || {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
@@ -890,7 +895,7 @@ function deserialize(json){
   if (d.trail && d.trail.length === s.trail.length) s.trail.set(d.trail);
   return s;
 }
-return { W, H, T, NW, NH, SHAFT, AREAS, AREA, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
+return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
 })();
 export default SIM;
 export { SIM };

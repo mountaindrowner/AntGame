@@ -186,7 +186,7 @@ const TREAT_COLOR = { jellybean: '#e04050', cookie: '#c98a46', gummy: '#e85060' 
 export function itemLook(f, COLORS) {
   const v = (f.x * 7 + f.y * 13) >>> 0;
   if (f.kind === 'water') {
-    if (f.type === 'puddle') return { geo: FOOD.puddle, key: 'puddle', color: '#ffffff', r: 10 + Math.min(f.amt, 40) * 0.45, water: true };
+    if (f.type === 'puddle') return { geo: FOOD.puddle, key: 'puddle', color: '#ffffff', r: (10 + Math.min(f.amt, 40) * 0.45) * 2, water: true };
     return { dew: true, r: Math.min(5, 2.6 + f.amt * 0.3), beads: Math.max(1, Math.min(4, Math.ceil(f.amt / 2))) };
   }
   if (f.kind === 'grit') return { geo: PROPS.pebble, key: 'pebble', color: COLORS.grit, r: 2.6, lift: 0.6 };

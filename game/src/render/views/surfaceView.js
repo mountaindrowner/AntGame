@@ -15,7 +15,7 @@ import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
 import { buildYardScenery, mowerMesh } from './yardScenery.js';
 
-const { W, H, T, CASTES } = SIM;
+const { W, H, T, CASTES, AREA } = SIM;
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -132,7 +132,6 @@ export class SurfaceView {
 
     // The yard: ground, landmarks, walls, rocks and grass (yardScenery.js).
     g.add(buildYardScenery(w));
-    const gw = W * T, gh = H * T;
 
     // Nest mounds: a ring of dug-out soil around a dark hole.
     this.holes = [];
@@ -159,21 +158,27 @@ export class SurfaceView {
     this.scentTex = new THREE.DataTexture(this.scentData, W, H, THREE.RGBAFormat);
     this.scentTex.magFilter = this.scentTex.minFilter = THREE.NearestFilter;
     this.scentTex.flipY = false;
-    const overlay = new THREE.Mesh(
-      new THREE.PlaneGeometry(gw, gh, W, H).rotateX(-Math.PI / 2).translate(gw / 2, 0.4, gh / 2),
-      psxBasic({ map: this.scentTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }, { affine: false })
-    );
-    overlay.renderOrder = 1;
-    // PlaneGeometry's v runs bottom-up; the sim's rows run top-down.
-    overlay.geometry.attributes.uv.array.forEach((v, i, arr) => { if (i % 2) arr[i] = 1 - v; });
-    g.add(overlay);
+    // One overlay piece per region, like the ground, so off-screen ones are culled.
+    const scentMat = psxBasic({ map: this.scentTex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }, { affine: false });
+    for (let y0 = 0; y0 < H; y0 += AREA) for (let x0 = 0; x0 < W; x0 += AREA) {
+      const cw = Math.min(AREA, W - x0), ch = Math.min(AREA, H - y0);
+      const geo = new THREE.PlaneGeometry(cw * T, ch * T, cw, ch).rotateX(-Math.PI / 2).translate((x0 + cw / 2) * T, 0.4, (y0 + ch / 2) * T);
+      // Map this piece onto its part of the whole-yard scent texture.
+      // PlaneGeometry's v runs bottom-up; the sim's rows run top-down.
+      geo.attributes.uv.array.forEach((v, i, arr) => { arr[i] = i % 2 ? (y0 + (1 - v) * ch) / H : (x0 + v * cw) / W; });
+      const overlay = new THREE.Mesh(geo, scentMat);
+      overlay.renderOrder = 1;
+      g.add(overlay);
+    }
   }
 
+  // Only the tiles around the camera are rewritten each frame.
   _updateScent(s) {
     const d = this.scentData, tr = s.trail, al = s.alarm;
     const tc = new THREE.Color(COLORS.trail), ac = new THREE.Color(COLORS.alarm);
-    for (let i = 0; i < W * H; i++) {
-      const t = tr[i], a = al[i];
+    const R = 48, cx = Math.floor(this.target.x / T), cy = Math.floor(this.target.z / T);
+    for (let y = Math.max(0, cy - R); y < Math.min(H, cy + R); y++) for (let x = Math.max(0, cx - R); x < Math.min(W, cx + R); x++) {
+      const i = y * W + x, t = tr[i], a = al[i];
       let rr = 0, gg = 0, bb = 0, aa = 0;
       if (t > 0.04) { rr = tc.r; gg = tc.g; bb = tc.b; aa = Math.min(0.7, t * 0.3); }
       if (a > 0.08) { const k = Math.min(0.6, a * 0.2); rr = rr * (1 - k) + ac.r * k; gg = gg * (1 - k) + ac.g * k; bb = bb * (1 - k) + ac.b * k; aa = Math.max(aa, k); }
@@ -276,7 +281,7 @@ export class SurfaceView {
     // The mower sweeps the Lawn.
     const mw = s.mower;
     this.mower.visible = !!mw && mw.state === 'cut';
-    if (this.mower.visible) this.mower.position.set(60 * T, Math.abs(Math.sin(t * 30)) * 1.5, mw.y * T);
+    if (this.mower.visible) this.mower.position.set((w.lawn.x0 + w.lawn.w / 2) * T, Math.abs(Math.sin(t * 30)) * 1.5, mw.y * T);
     const fdt = Math.min(0.1, Math.max(0, t - this.lastT));
     this.lastT = t;
     this._spider(s, t, fdt);

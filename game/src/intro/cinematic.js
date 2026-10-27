@@ -10,12 +10,15 @@ import { psx, psxBasic } from '../render/ps1/materials.js';
 import { rampTexture } from '../render/ps1/textures.js';
 import { COLORS, ANT_SCALE } from '../config.js';
 import { FilmSound } from './sound.js';
+import { SCALE } from '../sim/yard.js';
 
 const T = 16;
-const L = new THREE.Vector3(968, 0, 968);       // where the queen lands and digs: the nest's entrance tile
-const WEB = new THREE.Vector3(968, 0, 312);      // the spider, below its web
-const HOLE = new THREE.Vector3(280, 0, 280);     // the pavement ants' crack in the patio
-const STOMP = new THREE.Vector3(1005, 0, 1082);  // where the sneaker comes down, just short of her
+// Anchors in the yard (sim/yard.js design units, at its SCALE); the shots are placed relative to them.
+const U = (v) => (v * SCALE + 0.5) * T;
+const L = new THREE.Vector3(U(60), 0, U(60));                // where the queen lands and digs: the nest's entrance tile
+const WEB = new THREE.Vector3(U(60), 0, U(17) + 2 * SCALE * T); // the spider, below its web
+const HOLE = new THREE.Vector3(U(17), 0, U(17));             // the pavement ants' crack in the patio
+const STOMP = L.clone().add(new THREE.Vector3(37, 0, 114));  // where the sneaker comes down, just short of her
 const END = 60;                                  // the title waits for a tap until here
 
 const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
@@ -24,14 +27,14 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // Shots: camera position and look-at target, eased from the first pair to the second.
 const SHOTS = [
-  { t0: 0, t1: 11, from: [V(968, 30, 1300), V(968, 230, 600)], to: [V(990, 36, 1260), V(980, 300, 700)] },
-  { t0: 11, t1: 18, from: [V(1204, 90, 1186), V(904, 140, 896)], to: [V(1134, 55, 1116), V(968, 16, 968)] },
-  { t0: 18, t1: 24, from: [V(1038, 22, 1028), V(968, 10, 968)], to: [V(1023, 18, 1013), V(968, 9, 968)] },
-  { t0: 24, t1: 29, from: [V(280, 38, 530), V(280, 8, 300)], to: [V(280, 30, 480), V(280, 7, 300)] },
-  { t0: 29, t1: 34, from: [V(968, 55, 480), V(968, 28, 312)], to: [V(968, 40, 418), V(968, 30, 312)] },
-  { t0: 34, t1: 40, from: [V(970, 380, 1660), V(1005, 0, 1010)], to: [V(970, 340, 1610), V(1010, 0, 1005)] },
-  { t0: 40, t1: 44, from: [V(968, 70, 1066), V(968, 4, 968)], to: [V(968, 52, 1036), V(968, 2, 968)] },
-  { t0: 44, t1: END, from: [V(968, 200, 1336), V(968, 0, 936)], to: [V(968, 520, 1596), V(968, 0, 896)] },
+  { t0: 0, t1: 11, from: [V(L.x, 30, L.z + 332), V(L.x, 230, L.z - 368)], to: [V(L.x + 22, 36, L.z + 292), V(L.x + 12, 300, L.z - 268)] },
+  { t0: 11, t1: 18, from: [V(L.x + 236, 90, L.z + 218), V(L.x - 64, 140, L.z - 72)], to: [V(L.x + 166, 55, L.z + 148), V(L.x, 16, L.z)] },
+  { t0: 18, t1: 24, from: [V(L.x + 70, 22, L.z + 60), V(L.x, 10, L.z)], to: [V(L.x + 55, 18, L.z + 45), V(L.x, 9, L.z)] },
+  { t0: 24, t1: 29, from: [V(HOLE.x, 38, HOLE.z + 250), V(HOLE.x, 8, HOLE.z + 20)], to: [V(HOLE.x, 30, HOLE.z + 200), V(HOLE.x, 7, HOLE.z + 20)] },
+  { t0: 29, t1: 34, from: [V(WEB.x, 55, WEB.z + 168), V(WEB.x, 28, WEB.z)], to: [V(WEB.x, 40, WEB.z + 106), V(WEB.x, 30, WEB.z)] },
+  { t0: 34, t1: 40, from: [V(L.x + 2, 380, L.z + 692), V(L.x + 37, 0, L.z + 42)], to: [V(L.x + 2, 340, L.z + 642), V(L.x + 42, 0, L.z + 37)] },
+  { t0: 40, t1: 44, from: [V(L.x, 70, L.z + 98), V(L.x, 4, L.z)], to: [V(L.x, 52, L.z + 68), V(L.x, 2, L.z)] },
+  { t0: 44, t1: END, from: [V(L.x, 200, L.z + 368), V(L.x, 0, L.z - 32)], to: [V(L.x, 520, L.z + 628), V(L.x, 0, L.z - 72)] },
 ];
 
 // Title cards: when, what, how long.
@@ -420,7 +423,7 @@ export class Cinematic {
         // In formation: a wobbly V swooping in out of the dusk toward the camera.
         const row = Math.ceil(i / 2), side = i % 2 ? 1 : -1;
         const u = Math.max(0, (t - 1.0) / 10.5);
-        g.position.set(975 + side * row * 34 + Math.sin(t * 1.7 + i) * 6, lerp(520, 250, u) + Math.sin(t * 2.3 + i) * 10 + row * 6, lerp(-300, 1000, u) - row * 60);
+        g.position.set(L.x + 7 + side * row * 34 + Math.sin(t * 1.7 + i) * 6, lerp(520, 250, u) + Math.sin(t * 2.3 + i) * 10 + row * 6, lerp(L.z - 1268, L.z + 32, u) - row * 60);
         g.rotation.set(Math.sin(t * 3 + i) * 0.25, -Math.PI / 2, Math.sin(t * 2 + i * 2) * 0.12); // nose toward the camera
         g.scale.setScalar(3.6);
         return;
@@ -428,7 +431,7 @@ export class Cinematic {
       if (t < crash) {
         // Breaking formation: a wobbling corkscrew down to the rock.
         const u = (t - 11) / (crash - 11), e = ease(u);
-        g.position.set(lerp(700, L.x, e) + Math.sin(u * 12) * 40 * (1 - u), lerp(320, 0, u * u), lerp(760, L.z, e) + Math.cos(u * 10) * 20 * (1 - u));
+        g.position.set(lerp(L.x - 268, L.x, e) + Math.sin(u * 12) * 40 * (1 - u), lerp(320, 0, u * u), lerp(L.z - 208, L.z, e) + Math.cos(u * 10) * 20 * (1 - u));
         g.rotation.set(Math.sin(t * 9) * 0.5 * (1 - u * 0.5), -0.66 + Math.sin(t * 2) * 0.35, Math.sin(t * 7) * 0.3); // heading for her landing spot
         g.scale.setScalar(lerp(3.6, 3.0, u));
         const beamOn = t > 11.8 && t < 15.7, h = Math.max(1, g.position.y);

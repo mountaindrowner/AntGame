@@ -222,14 +222,22 @@ try {
   await shot('12b-spider');
   // A tour of the yard: each of the nine areas from above.
   await sim(() => { const { app } = window.UNDERFOOT, s = app.s; s.cat = null; s.spider = null; s.player.pending = false; s.colony.eggQueue.length = 0; s.colony.eggs.length = 0; app.zoomMul = 0.62; });
-  const areas = await sim(() => window.UNDERFOOT.SIM.AREAS.map((A, i) => ({ key: A.key, x: ((i % 3) * 40 + 20) * 16, y: (Math.floor(i / 3) * 40 + 20) * 16 })));
+  const areas = await sim(() => { const { SIM } = window.UNDERFOOT, R = SIM.AREA; return SIM.AREAS.map((A, i) => ({ key: A.key, x: ((i % 3) * R + R / 2) * SIM.T, y: (Math.floor(i / 3) * R + R / 2) * SIM.T })); });
   for (const A of areas) {
     await sim((f) => { const { app } = window.UNDERFOOT; app.surfaceFocus = f; app.view = 'surface'; }, { x: A.x, y: A.y });
     await page.waitForTimeout(600);
     await shot('area-' + A.key);
   }
+  // The yard map: the whole backyard, with a region's card.
+  await sim(() => { const { app } = window.UNDERFOOT; app.surfaceFocus = null; });
+  await page.click('#mapbtn');
+  await page.waitForTimeout(300);
+  await page.click('#sheet button[data-region="5"]');
+  await page.waitForTimeout(300);
+  await shot('yard-map');
+  await page.click('#sheet button[data-close]');
   // The mower crossing the Lawn.
-  await sim(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.mower, { state: 'cut', y: 92, t: 0 }); app.surfaceFocus = { x: 60 * 16, y: 92 * 16 }; app.zoomMul = 0.8; });
+  await sim(() => { const { app } = window.UNDERFOOT, L = app.s.world.lawn; Object.assign(app.s.mower, { state: 'cut', y: L.y0 + 14, t: 0 }); app.surfaceFocus = { x: (L.x0 + L.w / 2) * 16, y: (L.y0 + 14) * 16 }; app.zoomMul = 0.8; });
   await page.waitForTimeout(500);
   await shot('mower');
   await sim(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.mower, { state: 'idle', next: 1e9 }); app.surfaceFocus = null; });

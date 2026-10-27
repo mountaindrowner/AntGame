@@ -3,6 +3,7 @@
 // the state now lives on the shared `app` object.
 import SIM from '../sim/sim.js';
 import { EXPL, HELP, INTRO } from './copy.js';
+import { YARD_MAP } from '../sim/yard.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
 const $ = (id) => document.getElementById(id);
@@ -12,7 +13,7 @@ export function createUI(app) {
   const el = {
     stats: $('stats'), msg: $('msg'), hungerBar: $('hungerbar'), act: $('act'), release: $('release'), mark: $('mark'),
     recruit: $('recruit'), enter: $('enter'), barS: $('bar'), barN: $('barn'), sheet: $('sheet'), buildNest: $('buildnest'),
-    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'),
+    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'),
   };
 
   // ---------------------------------------------------------- intro
@@ -67,7 +68,7 @@ export function createUI(app) {
 
   function renderSheet() {
     const s = app.s, c = s.colony;
-    if (app.menu === 'help' || app.menu === 'info') return;
+    if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map') return;
     let h = '';
     if (app.menu === 'egg') {
       h += `<div class="row head"><strong>Queen · next egg</strong><button class="x" data-close="1">Close</button></div><div class="note">${EXPL.queen[1]}</div><div class="btns">`;
@@ -108,6 +109,35 @@ export function createUI(app) {
     }
     if (el.sheet.innerHTML !== h) el.sheet.innerHTML = h;
   }
+  // ---------------------------------------------------------- yard map
+  // The whole backyard: the nine built regions in the middle, the rest
+  // planned. Tap a region for its card: what's there, what it costs you.
+  const SHORT = ['Patio', 'Flowerbed', 'Woodpile', 'Spigot', 'Home', 'Compost', 'Sandbox', 'Lawn', 'Picnic'];
+  const GROUND = { slab: '#8e8a84', mulch: '#7a4a2e', bark: '#8e764a', mud: '#5a4836', home: '#7a6446', compost: '#40301e', sand: '#c8b48a', lawn: '#46802a', picnic: '#b8323a' };
+  function regionHere() {
+    const s = app.s, a = P().ant;
+    return a && !P().inNest ? SIM.areaOf(s, a.tx, a.ty) : SIM.areaOf(s, s.world.ex, s.world.ey);
+  }
+  function renderMap() {
+    const s = app.s, here = regionHere(), pickI = app.mapPick ?? here;
+    const count = new Array(SIM.AREAS.length).fill(0);
+    for (const a of s.ants) if (!a.team && (a.state !== 'in' && a.state !== 'build' && a.state !== 'nest' && a.state !== 'dead')) count[SIM.areaOf(s, a.tx, a.ty)]++;
+    let h = `<div class="row head"><strong>The yard</strong><button class="x" data-close="1">Close</button></div><div class="yard">`;
+    for (const z of YARD_MAP.zones) {
+      const [c, r, w, hh] = z.at, pos = `grid-column:${c + 1}/span ${w};grid-row:${r + 1}/span ${hh}`;
+      if (z.built == null) { h += `<div class="z${z.house ? ' house' : ''}" style="${pos}" title="${z.name}">${z.name}</div>`; continue; }
+      const i = z.built, A = SIM.AREAS[i], seen = s.seen['area' + i] || i === 4;
+      const tag = i === 0 && s.rival.queenAlive ? '⚔' : count[i] ? '🐜' + count[i] : '';
+      h += `<button class="z${seen ? '' : ' unseen'}${i === here ? ' here' : ''}${i === pickI ? ' pick' : ''}" style="${pos};background:${GROUND[A.ground]}" data-region="${i}" aria-label="${A.name}">${SHORT[i]}${tag ? `<em>${tag}</em>` : ''}</button>`;
+    }
+    h += `</div>`;
+    const A = SIM.AREAS[pickI], seen = s.seen['area' + pickI] || pickI === 4;
+    h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
+    h += `<div class="note">Only the middle nine are built so far.</div>`;
+    el.sheet.innerHTML = h;
+  }
+  function openMap() { app.menu = 'map'; app.mapPick = null; el.sheet.classList.remove('hidden'); renderMap(); app.paused = true; }
+
   function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.classList.remove('hidden'); renderSheet(); }
   function closeMenu() { app.menu = null; app.menuCell = null; el.sheet.classList.add('hidden'); app.paused = false; }
   function openHelp() { app.menu = 'help'; el.sheet.classList.remove('hidden'); el.sheet.innerHTML = HELP; app.paused = true; }
@@ -181,6 +211,7 @@ export function createUI(app) {
 
   // ---------------------------------------------------------- wiring
   $('help').addEventListener('click', openHelp);
+  el.map.addEventListener('click', () => { if (app.menu === 'map') closeMenu(); else openMap(); });
   el.stats.addEventListener('click', openHelp);
   el.msg.addEventListener('click', (e) => { if (e.target && e.target.id === 'intronext') introAdvance(); });
   el.sheet.addEventListener('click', (e) => {
@@ -189,6 +220,7 @@ export function createUI(app) {
     if (!b) return;
     if (b.dataset.close) { closeMenu(); return; }
     if (b.dataset.film) { closeMenu(); app.playFilm(); return; }
+    if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; renderSheet(); return; }

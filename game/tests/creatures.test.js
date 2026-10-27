@@ -22,7 +22,7 @@ test('spider lives at its web, passes the nest, and keeps 6 tiles off it', (t) =
       minD = Math.min(minD, d);
       if (d < 9 && !near) { passes++; near = true; }
       if (d > 11) near = false;
-      if (Math.hypot(sp.x / T - w.web.x, sp.y / T - w.web.y) < 6) atWeb++;
+      if (Math.hypot(sp.x / T - w.web.x, sp.y / T - w.web.y) < 6 * SIM.SCALE) atWeb++;
     }
   }
   assert.ok(minD >= 5.9, 'spider came within ' + minD.toFixed(2) + ' tiles of the nest');
