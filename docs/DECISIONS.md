@@ -2,6 +2,13 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: a leg in the shoe, and no hole before the dig (build 8.4)
+
+Mark: "Obviously, a leg and jeans connected to that shoe. And there's already an ant mound hole. Maybe it shouldn't be there until she digs."
+- **The sneaker has a leg:** a white sock, then blue jeans with orange seams and a rolled cuff, running up out of frame.
+- **No entrance until the queen digs, in the game too.** Our mound and hole are hidden until the queen is placed and founds the nest. Rival nests are unaffected.
+- **The film lands her where the game puts her.** The queen now descends onto the actual entrance tile and digs there, so the hole she makes in the film is the hole you play with. The shots and the stomp mark moved to match.
+
 ## Oct 27: opening film, second cut (build 8.3)
 
 Mark loved it and asked for four changes. All are done:

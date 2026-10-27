@@ -151,7 +151,7 @@ export class SurfaceView {
       ring.position.set((hx + 0.5) * T, 0.6, (hy + 0.5) * T);
       ring.visible = rival;
       g.add(mound, hole, ring);
-      this.holes.push({ ring, rival });
+      this.holes.push({ ring, rival, mound, hole });
     }
 
     // Scent overlay: one texel per tile, written from the sim each frame.
@@ -201,6 +201,8 @@ export class SurfaceView {
 
     this._updateScent(s);
     this.holes[1].ring.visible = s.rival.queenAlive;
+    // Our entrance only exists once the queen has dug in and founded the nest.
+    this.holes[0].mound.visible = this.holes[0].hole.visible = s.queen.placed;
 
     // Ants, the things they carry, and items on the ground.
     this.crowd.begin();

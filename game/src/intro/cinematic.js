@@ -7,14 +7,15 @@ import { antGeometry, FOOT, WALK_FRAMES } from '../render/models/creatures.js';
 import { SPIDER_FOOT } from '../render/models/bugs.js';
 import { FOOD } from '../render/models/food.js';
 import { psx, psxBasic } from '../render/ps1/materials.js';
+import { rampTexture } from '../render/ps1/textures.js';
 import { COLORS, ANT_SCALE } from '../config.js';
 import { FilmSound } from './sound.js';
 
 const T = 16;
-const L = new THREE.Vector3(944, 0, 932);       // where the queen lands, under the big rock
+const L = new THREE.Vector3(968, 0, 968);       // where the queen lands and digs: the nest's entrance tile
 const WEB = new THREE.Vector3(968, 0, 312);      // the spider, below its web
 const HOLE = new THREE.Vector3(280, 0, 280);     // the pavement ants' crack in the patio
-const STOMP = new THREE.Vector3(1060, 0, 1060);  // where the sneaker comes down
+const STOMP = new THREE.Vector3(1005, 0, 1082);  // where the sneaker comes down, just short of her
 const END = 60;                                  // the title waits for a tap until here
 
 const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
@@ -24,13 +25,13 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 // Shots: camera position and look-at target, eased from the first pair to the second.
 const SHOTS = [
   { t0: 0, t1: 11, from: [V(968, 30, 1300), V(968, 230, 600)], to: [V(990, 36, 1260), V(980, 300, 700)] },
-  { t0: 11, t1: 18, from: [V(1180, 90, 1150), V(880, 140, 860)], to: [V(1110, 55, 1080), V(944, 16, 932)] },
-  { t0: 18, t1: 24, from: [V(1014, 22, 992), V(944, 10, 932)], to: [V(999, 18, 977), V(944, 9, 932)] },
+  { t0: 11, t1: 18, from: [V(1204, 90, 1186), V(904, 140, 896)], to: [V(1134, 55, 1116), V(968, 16, 968)] },
+  { t0: 18, t1: 24, from: [V(1038, 22, 1028), V(968, 10, 968)], to: [V(1023, 18, 1013), V(968, 9, 968)] },
   { t0: 24, t1: 29, from: [V(280, 38, 530), V(280, 8, 300)], to: [V(280, 30, 480), V(280, 7, 300)] },
   { t0: 29, t1: 34, from: [V(968, 55, 480), V(968, 28, 312)], to: [V(968, 40, 418), V(968, 30, 312)] },
-  { t0: 34, t1: 40, from: [V(960, 380, 1640), V(990, 0, 990)], to: [V(960, 340, 1590), V(995, 0, 985)] },
-  { t0: 40, t1: 44, from: [V(944, 70, 1030), V(944, 4, 932)], to: [V(944, 52, 1000), V(944, 2, 932)] },
-  { t0: 44, t1: END, from: [V(944, 200, 1300), V(944, 0, 900)], to: [V(944, 520, 1560), V(944, 0, 860)] },
+  { t0: 34, t1: 40, from: [V(970, 380, 1660), V(1005, 0, 1010)], to: [V(970, 340, 1610), V(1010, 0, 1005)] },
+  { t0: 40, t1: 44, from: [V(968, 70, 1066), V(968, 4, 968)], to: [V(968, 52, 1036), V(968, 2, 968)] },
+  { t0: 44, t1: END, from: [V(968, 200, 1336), V(968, 0, 936)], to: [V(968, 520, 1596), V(968, 0, 896)] },
 ];
 
 // Title cards: when, what, how long.
@@ -121,6 +122,18 @@ function sneaker() {
     stripe.rotation.z = 0.12;
   }
   add(new THREE.BoxGeometry(14, 60, 40), '#f1ede4', 306, 150, 0);
+  // And the person in it: a white sock, then a jeans leg with a rolled cuff
+  // and orange seam stitching, leaning back a little, up out of shot.
+  add(new THREE.CylinderGeometry(64, 70, 44, 16), '#f4f0e8', 180, 196, 0);
+  const leg = new THREE.Group();
+  leg.position.set(180, 214, 0);
+  leg.rotation.z = 0.1;
+  g.add(leg);
+  const denim = (seed, ramp, rep) => psx({ map: rampTexture(seed, ramp, { size: 16, repeat: rep }) });
+  const jeans = new THREE.Mesh(new THREE.CylinderGeometry(92, 80, 2400, 16, 1, true).translate(0, 1220, 0), denim(41, ['#28426c', '#2f4c80', '#37578e', '#40629a'], [3, 30]));
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(98, 100, 50, 16).translate(0, 26, 0), denim(43, ['#4a6aa0', '#5878ac', '#6684b6', '#7290be'], [3, 1]));
+  leg.add(jeans, cuff);
+  for (const side of [-1, 1]) { const seam = new THREE.Mesh(new THREE.BoxGeometry(5, 2400, 5), psx({ color: '#c8964a' })); seam.position.set(0, 1250, side * 87); leg.add(seam); }
   return g;
 }
 
@@ -416,7 +429,7 @@ export class Cinematic {
         // Breaking formation: a wobbling corkscrew down to the rock.
         const u = (t - 11) / (crash - 11), e = ease(u);
         g.position.set(lerp(700, L.x, e) + Math.sin(u * 12) * 40 * (1 - u), lerp(320, 0, u * u), lerp(760, L.z, e) + Math.cos(u * 10) * 20 * (1 - u));
-        g.rotation.set(Math.sin(t * 9) * 0.5 * (1 - u * 0.5), -0.61 + Math.sin(t * 2) * 0.35, Math.sin(t * 7) * 0.3); // heading for the rock
+        g.rotation.set(Math.sin(t * 9) * 0.5 * (1 - u * 0.5), -0.66 + Math.sin(t * 2) * 0.35, Math.sin(t * 7) * 0.3); // heading for her landing spot
         g.scale.setScalar(lerp(3.6, 3.0, u));
         const beamOn = t > 11.8 && t < 15.7, h = Math.max(1, g.position.y);
         this.beam.visible = beamOn;
