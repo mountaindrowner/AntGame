@@ -50,6 +50,11 @@ try {
   await page.goto(url);
   await page.waitForFunction(() => window.UNDERFOOT && window.UNDERFOOT.app);
   await page.waitForTimeout(800);
+  // A new colony opens with the film; check it is there, then skip it.
+  await page.waitForSelector('#cine .roll');
+  await shot('00-film-poster');
+  await page.click('#cine .skip');
+  await page.waitForTimeout(300);
   await step('boot');
   await shot('01-dig-intro');
 

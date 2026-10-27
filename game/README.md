@@ -12,6 +12,7 @@ npm test           # headless simulation tests (no browser)
 npm run test:e2e   # builds, serves and plays the opening in headless Chromium (needs Playwright)
 npm run build      # static site in dist/, deployable anywhere (relative paths)
 node scripts/playtest.mjs sensible 7 40   # a bot plays 40 minutes through the UI's actions and reports milestones
+node scripts/film.mjs out/               # records the opening film to out/underfoot-opening.mp4 (needs ffmpeg)
 ```
 
 On a phone: run `npm run dev`, then open the "Network" URL Vite prints from a phone on the same Wi-Fi.
@@ -53,12 +54,16 @@ game/
 │   │   ├── copy.js         every player-facing string (verbatim from build 6)
 │   │   ├── labels.js       crisp room and band labels over the 3D frame
 │   │   └── ui.css
+│   ├── intro/
+│   │   ├── cinematic.js    the opening film: shots, title cards, actors, timeline
+│   │   └── sound.js        its WebAudio score and sound gags
 │   └── input/
 │       └── pointer.js      tap, hold to walk, pinch, drag; raycasts into the active view
 ├── tests/                  node:test checks on the sim (sim, builders, creatures)
 └── scripts/
     ├── e2e.mjs             browser playthrough with screenshots
-    └── playtest.mjs        headless bot that plays whole sessions (sensible, military, cheese, idle)
+    ├── playtest.mjs        headless bot that plays whole sessions (sensible, military, cheese, idle)
+    └── film.mjs            records the opening film, frame by frame, with its score
 ```
 
 ### Rules that keep it maintainable

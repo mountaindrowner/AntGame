@@ -2,6 +2,29 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: the opening film (build 8.2)
+
+Mark: "a really interesting cinematic intro… kind of comedic… evoking Mars Attacks… zany… film that with the graphics we have."
+
+- **What it is:** a 50-second, 1950s-style alien-invasion short in the spirit of the campy B-movies Mars Attacks spoofed. The gags and cards are original, nothing lifted from the film. It plays in the game engine over the real yard, letterboxed, with flickering film grain, title cards slammed in with a wobble (Bungee and Bungee Shade from Google Fonts, falling back to Impact), and a dusk sky.
+- **The beats:**
+  1. "From beyond the picket fence…"
+  2. A V of winged queens swoops out of the dusk: "They came from the sky!"
+  3. One rides a tractor beam down and crash-lands by the rock, with a slide whistle, a boing and dust: "…one of them landed. Sort of."
+  4. Her wings pop off like a cheap costume: "She had no wings. No home. And one good idea."
+  5. Five pavement ants on the Patio do a synchronised double-take, and one is late: "The locals were not impressed."
+  6. The spider turns slowly to camera and its eyes glint: "Something hungry noticed."
+  7. A shadow, then a giant red sneaker stomps down beside her and walks off: "And something enormous didn't notice at all."
+  8. She digs like mad and vanishes: "So she did what any sensible queen would do…"
+  9. The title, "UNDERFOOT!", then "Tap to dig" starts the game.
+- **Sound:** synthesised with WebAudio, so there are no audio files: a wobbly theremin score, a slide whistle, a boing, pops, a low menacing swell for the spider, a stomp, digging scratches and a brassy title stinger. A "Roll the film" poster provides the tap browsers need before they play sound. Sound and Skip buttons stay on screen throughout.
+- **When it plays:** once, at the start of a player's first colony. Reset doesn't replay it; Help has "Watch the opening film again".
+- **Code:**
+  - `game/src/intro/cinematic.js`: the shot list, cards, actors and timeline. It borrows the surface view's scene and adds its own camera and props.
+  - `game/src/intro/sound.js`: the synthesiser.
+  - Cards and the title animate from the film's clock, not CSS timers, so a frame-by-frame recording matches live play.
+- **Recording:** `node scripts/film.mjs [dir]` steps the film exactly 1/25 s per frame in headless Chromium, renders the score offline, and muxes both into `underfoot-opening.mp4`, in perfect sync.
+
 ## Oct 26: one continuous backyard, and a sketch of the whole yard (build 8.1)
 
 Mark: the areas are "patchy": stark lines between them, left to right and top to bottom. It should look like a natural backyard, one continuous space. He also asked for a flat 2D sketch of the whole yard, with today's map as about 10% of it, sketched but not built.

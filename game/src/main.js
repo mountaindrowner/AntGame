@@ -8,6 +8,7 @@ import { createUI } from './ui/ui.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
 import { loadGame, saveGame, clearSave, NEW_GAME_SEED } from './game/save.js';
+import { Cinematic, renderScoreWav } from './intro/cinematic.js';
 import './ui/ui.css';
 
 const { NW, NH } = SIM;
@@ -34,6 +35,7 @@ const app = {
   reset() {
     clearSave();
     this.s = SIM.create(NEW_GAME_SEED);
+    this.s.seen.film = true; // the film plays once per player, not on every reset
     this.placing = null;
     this.view = 'nest';
     this.panY = 0;
@@ -55,6 +57,14 @@ const views = { surface: new SurfaceView(), nest: new NestView() };
 const ui = createUI(app);
 attachPointer(canvas, app, ui, views);
 const labels = new LabelLayer(document.getElementById('labels'));
+
+// The opening film plays once for a new colony, and again from Help.
+let cine = null;
+app.playFilm = () => {
+  if (cine) return;
+  ui.closeMenu();
+  cine = new Cinematic(pipeline, views.surface, app, () => { cine = null; app.s.seen.film = true; last = performance.now(); });
+};
 
 let cssW = 0, cssH = 0;
 // How much of the screen the HUD covers, so cameras can centre in the rest.
@@ -82,6 +92,18 @@ function frame(now) {
   last = now;
   if (dt > 0.25) dt = 0.25;
   const s = app.s;
+  if (cine) {
+    // While recording (filmStep), the recorder draws every frame itself.
+    if (!cine.manual) {
+      clock += dt;
+      views.surface.update(app, clock, pipeline.aspect);
+      cine.update(dt);
+      if (cine) cine.render();
+    }
+    labels.set([]);
+    requestAnimationFrame(frame);
+    return;
+  }
   if (!app.paused) {
     acc += dt;
     while (acc >= STEP) { SIM.tick(s, STEP); acc -= STEP; }
@@ -116,7 +138,10 @@ function frame(now) {
 window.addEventListener('pagehide', () => saveGame(app.s));
 ui.update();
 measureHud();
+if (app.s.phase === 'dig' && !app.s.seen.film) app.playFilm();
 requestAnimationFrame(frame);
 
 // For automated tests and debugging in the console.
-window.UNDERFOOT = { app, SIM, views, pipeline, ui };
+// filmStep(dt) advances the opening film by exactly dt and draws it, for recording.
+const filmStep = (dt) => { if (!cine) return false; clock += dt; views.surface.update(app, clock, pipeline.aspect); cine.step(dt); if (cine) cine.render(); return !!cine; };
+window.UNDERFOOT = { app, SIM, views, pipeline, ui, renderScoreWav, filmStep };

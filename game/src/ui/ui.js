@@ -188,6 +188,7 @@ export function createUI(app) {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.close) { closeMenu(); return; }
+    if (b.dataset.film) { closeMenu(); app.playFilm(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; renderSheet(); return; }
