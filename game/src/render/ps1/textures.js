@@ -1,5 +1,5 @@
-// Small procedural textures, nearest-filtered, the way a PS1 game held them
-// in a few kilobytes of VRAM. Everything is generated at startup, so the
+// Small procedural textures, the way a PS1 game held them in a few kilobytes
+// of VRAM (smooth-filtered and mipmapped since build 10.3). Everything is generated at startup, so the
 // game ships no image files yet.
 import * as THREE from 'three';
 
@@ -36,9 +36,10 @@ export function canvasTexture(w, h, draw, { repeat = null, wrap = true } = {}) {
   c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
-  t.magFilter = THREE.NearestFilter;
-  t.minFilter = THREE.NearestFilter;
-  t.generateMipmaps = false;
+  // Smooth up close, and mipmapped so far-off ground doesn't shimmer.
+  t.magFilter = THREE.LinearFilter;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  t.generateMipmaps = true;
   t.colorSpace = THREE.SRGBColorSpace;
   if (wrap) t.wrapS = t.wrapT = THREE.RepeatWrapping;
   if (repeat) t.repeat.set(repeat[0], repeat[1]);

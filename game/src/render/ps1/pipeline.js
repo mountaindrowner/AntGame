@@ -1,7 +1,8 @@
-// The PS1 frame: render the scene into a small framebuffer, quantise it to
-// 15-bit colour with an ordered dither, and let the browser upscale the
-// canvas with nearest-neighbour. The canvas itself is low resolution, which
-// is both the look and the cheapest thing a phone can do.
+// The PS1 frame: render the scene into a framebuffer (multisampled, so edges
+// are smooth), quantise its colour lightly with an ordered dither, and let
+// the browser upscale the canvas with nearest-neighbour. Since build 10.3 the
+// framebuffer is about the CSS size of the window, so the look comes from
+// the models, textures and lighting rather than from big chunky pixels.
 import * as THREE from 'three';
 import { RENDER } from '../../config.js';
 
@@ -29,7 +30,7 @@ export class PS1Pipeline {
     // Shared by every PS1 material: the grid vertices snap to.
     this.uniforms = { uSnap: { value: new THREE.Vector2(160, 120) } };
     this.target = new THREE.WebGLRenderTarget(4, 4, {
-      minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, type: THREE.HalfFloatType,
+      minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, type: THREE.HalfFloatType, samples: RENDER.msaa,
     });
     this.post = new THREE.ShaderMaterial({
       uniforms: { tFrame: { value: this.target.texture }, levels: { value: RENDER.colorLevels }, dither: { value: RENDER.dither } },
@@ -42,16 +43,33 @@ export class PS1Pipeline {
     this.postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.width = 0;
     this.height = 0;
+    this.quality = 0;
+  }
+
+  // Quality steps, best first: [pixel size multiplier, MSAA samples]. The
+  // game starts at 0 and steps down if it can't hold its frame rate.
+  static QUALITY = [[1, RENDER.msaa], [1, 0], [1.5, 0], [2, 0]];
+  setQuality(q) {
+    q = Math.max(0, Math.min(PS1Pipeline.QUALITY.length - 1, q));
+    if (q === this.quality) return false;
+    this.quality = q;
+    this.target.samples = PS1Pipeline.QUALITY[q][1];
+    this.target.dispose(); // rebuilt with the new sample count on next use
+    this.width = 0; // force a resize
+    if (this.cssW) this.resize(this.cssW, this.cssH);
+    return true;
   }
 
   // cssW × cssH is the on-screen size; the framebuffer is that divided by
   // the PS1 pixel size, rounded so each PS1 pixel covers a whole number of
   // device pixels (uneven pixel widths shimmer as things move).
-  // scale (uiScale) makes PS1 pixels bigger on big screens, so the look and
-  // the pixel count stay about what a phone gets.
-  resize(cssW, cssH, scale = 1) {
+  // A very big window renders at a coarser pixel so the frame stays under
+  // RENDER.maxPixels.
+  resize(cssW, cssH) {
+    this.cssW = cssW; this.cssH = cssH;
     const dpr = window.devicePixelRatio || 1;
-    const px = Math.max(1, Math.round(RENDER.pixelSize * scale * dpr)) / dpr;
+    const size = Math.max(RENDER.pixelSize * PS1Pipeline.QUALITY[this.quality][0], Math.sqrt((cssW * cssH) / RENDER.maxPixels));
+    const px = Math.max(1, Math.round(size * dpr)) / dpr;
     const w = Math.max(64, Math.round(cssW / px)), h = Math.max(64, Math.round(cssH / px));
     if (w === this.width && h === this.height) return false;
     this.width = w;

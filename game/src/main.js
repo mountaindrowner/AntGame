@@ -80,14 +80,37 @@ function measureHud() {
 function resize() {
   cssW = window.innerWidth;
   cssH = window.innerHeight;
-  // Big screens get a bigger HUD and bigger PS1 pixels (ui.css reads --ui).
-  const k = uiScale(cssW, cssH);
-  document.documentElement.style.setProperty('--ui', k.toFixed(3));
-  pipeline.resize(cssW, cssH, k);
+  // Big screens get a bigger HUD (ui.css reads --ui).
+  document.documentElement.style.setProperty('--ui', uiScale(cssW, cssH).toFixed(3));
+  pipeline.resize(cssW, cssH);
 }
 window.addEventListener('resize', resize);
 resize();
 
+// The sim steps at 20 Hz but the screen draws at 60 or more. Each creature
+// remembers where it was before the last step, and is drawn that fraction of
+// the way to where it is now, so motion is smooth at any frame rate. A jump
+// of more than two tiles (into or out of the nest) is drawn as a jump.
+function snapshot(s) {
+  for (const a of s.ants) { a.x0 = a.x; a.y0 = a.y; a.nx0 = a.nx; a.ny0 = a.ny; }
+  for (const c of [s.spider, s.cat]) if (c) { c.x0 = c.x; c.y0 = c.y; }
+}
+function blend(s, k) {
+  const saved = [];
+  const mix = (o, kx, ky, kx0, ky0, far) => {
+    const x0 = o[kx0], y0 = o[ky0];
+    if (x0 == null || Math.abs(o[kx] - x0) + Math.abs(o[ky] - y0) > far) return;
+    saved.push([o, kx, ky, o[kx], o[ky]]);
+    o[kx] = x0 + (o[kx] - x0) * k; o[ky] = y0 + (o[ky] - y0) * k;
+  };
+  if (k < 1) {
+    for (const a of s.ants) { mix(a, 'x', 'y', 'x0', 'y0', 2 * SIM.T); mix(a, 'nx', 'ny', 'nx0', 'ny0', 2); }
+    for (const c of [s.spider, s.cat]) if (c) mix(c, 'x', 'y', 'x0', 'y0', 2 * SIM.T);
+  }
+  return () => { for (const [o, kx, ky, x, y] of saved) { o[kx] = x; o[ky] = y; } };
+}
+
+let slow = 0;
 let last = performance.now(), acc = 0, hudT = 0, saveT = 0, frames = 0, fpsT = 0, clock = 0;
 let wasInNest = app.s.player.inNest;
 
@@ -110,7 +133,7 @@ function frame(now) {
   }
   if (!app.paused) {
     acc += dt;
-    while (acc >= STEP) { SIM.tick(s, STEP); acc -= STEP; }
+    while (acc >= STEP) { snapshot(s); SIM.tick(s, STEP); acc -= STEP; }
     clock += dt;
   } else acc = 0;
   if (s.player.inNest !== wasInNest) {
@@ -120,8 +143,11 @@ function frame(now) {
   }
 
   const view = app.view === 'nest' ? views.nest : views.surface;
+  // Draw creatures part way between the last two sim steps, then put them back.
+  const restore = blend(s, app.paused ? 1 : acc / STEP);
   view.update(app, clock, pipeline.aspect);
   pipeline.render(view.scene, view.camera);
+  restore();
   if (app.view === 'nest') {
     labels.set(views.nest.labels.map((l) => {
       const p = views.nest.project(l.x, l.y, l.z, cssW, cssH);
@@ -131,7 +157,13 @@ function frame(now) {
 
   frames++;
   fpsT += dt;
-  if (fpsT >= 1) { app.fps = frames; frames = 0; fpsT = 0; }
+  if (fpsT >= 1) {
+    app.fps = frames; frames = 0; fpsT = 0;
+    // Three slow seconds in a row: drop a quality step (never back up, so it
+    // doesn't flicker between steps). Skipped while the game is paused.
+    slow = app.paused ? 0 : app.fps < 40 ? slow + 1 : 0;
+    if (slow >= 3) { slow = 0; pipeline.setQuality(pipeline.quality + 1); }
+  }
   hudT += dt;
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }
   saveT += dt;

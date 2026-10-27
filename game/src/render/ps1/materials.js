@@ -1,8 +1,8 @@
 // PS1 materials: Lambert lighting with two hardware quirks patched in.
 // - Vertex snapping: clip-space positions round to a coarse screen grid, so
 //   geometry wobbles as the camera moves.
-// - Affine texture mapping: UVs interpolate without perspective correction,
-//   so textures swim across big polygons.
+// - Affine texture mapping (optional, off by default): UVs interpolate
+//   without perspective correction, so textures swim across big polygons.
 import * as THREE from 'three';
 
 let shared = null;
@@ -10,7 +10,9 @@ let shared = null;
 // Call once with the pipeline's shared uniforms before creating materials.
 export function useSnapUniforms(uniforms) { shared = uniforms; }
 
-function patch(material, { snap = true, affine = true } = {}) {
+// Affine mapping is off by default since build 10.3 (textures swam); pass
+// { affine: true } for the old wobble.
+function patch(material, { snap = true, affine = false } = {}) {
   const key = 'psx' + (snap ? 's' : '') + (affine ? 'a' : '');
   material.customProgramCacheKey = () => key;
   material.onBeforeCompile = (sh) => {
@@ -50,7 +52,7 @@ function patch(material, { snap = true, affine = true } = {}) {
   return material;
 }
 
-// Lit, snapped, affine-textured. Pass any MeshLambertMaterial params.
+// Lit and snapped. Pass any MeshLambertMaterial params.
 export function psx(params = {}, quirks) {
   return patch(new THREE.MeshLambertMaterial(params), quirks);
 }

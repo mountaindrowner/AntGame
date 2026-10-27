@@ -5,11 +5,13 @@ export const SAVE_KEY = 'underfoot-v10';
 export const LEGACY_SAVE_KEYS = []; // v9 and earlier predate the deeper topsoil (a 48-row nest) and can't load
 
 export const RENDER = {
-  pixelSize: 1.75, // CSS px per PS1 pixel (was 2.25; rounded so pixels land on whole device pixels)
+  pixelSize: 1, // CSS px per rendered pixel (was 1.75, then 2.25; whole device pixels)
+  maxPixels: 2.4e6, // above this many pixels (a big desktop window) pixels grow instead
+  msaa: 4, // multisampled edges in the framebuffer (0 to turn off)
   snapDivisor: 1, // vertex snap grid = framebuffer / this (1 = per pixel; 2 wobbled too much)
-  colorLevels: 48, // levels per channel (31 was true 15-bit; 48 softens banding)
-  dither: 0.5, // ordered-dither strength (1 = full PS1 grain)
-  animFps: 10, // walk cycles step like a busy PS1 frame
+  colorLevels: 96, // levels per channel (31 was true 15-bit; 48, then 96, to smooth banding)
+  dither: 0.2, // ordered-dither strength (1 = full PS1 grain; was 0.5)
+  animFps: 14, // walk-cycle frames per second (was 10)
 };
 
 export const CAMERA = {

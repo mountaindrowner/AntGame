@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 27: smoother motion and a sharper frame (build 10.3)
+
+Mark: "Can we improve the graphics a bit more? It's a bit choppy still. Keep smoothing out and removing over-pixelation."
+
+- **Choppy motion: the sim steps at 20 Hz and creatures were drawn where the last step left them.** At 60 fps, ants, the spider, the caterpillar and the camera following you moved in visible jumps every third frame. Each creature now remembers where it was before the last step, and is drawn the right fraction of the way between the two (`snapshot`/`blend` in `main.js`). A jump of more than two tiles, such as into or out of the nest, is still drawn as a jump. The sim itself is unchanged.
+- **Over-pixelation, all PS1 settings eased back:**
+  - Render at the window's CSS resolution: `pixelSize` 1.75 → 1. Big windows coarsen past 2.4 M pixels.
+  - Multisampled edges: MSAA ×4 in the framebuffer.
+  - Textures filtered smoothly and mipmapped, so far ground no longer shimmers.
+  - Affine texture swim off by default.
+  - Gentler colour quantising: 96 levels, dither 0.2 (was 48 levels, 0.5).
+  - Walk cycles at 14 frames a second (was 10).
+  - The PS1 character stays in the low-poly models, palettes and vertex snapping, which is now per screen pixel and barely visible.
+- **Automatic quality.** Full resolution is about 3× the pixels of before. Any real GPU is fine with that, but a weak phone might not be. If the game runs under 40 fps for three seconds in a row, it drops one quality step: no MSAA, then 1.5× pixels, then 2×. It never steps back up, so it can't flicker between steps.
+- **Rejected:** dropping the sim to a variable timestep. Interpolation gives the same smoothness without touching the sim or its tuning.
+
 ## Oct 27: big screens (build 10.2)
 
 Mark tried the itch.io build on a PC: "it's very small".
