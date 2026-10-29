@@ -129,8 +129,7 @@ export class Cinematic {
     this.done = false;
     this.camera = new THREE.PerspectiveCamera(50, 1, 2, 9000);
     // The yard's scenery is built round home, the patio and the flowerbed
-    // for the film's wide shots: streamed while the poster is up, the rest
-    // built at once when it rolls.
+    // for the film's wide shots, all at once when it rolls.
     app.sceneryFocus = { x: L.x, y: L.z, view: AREA };
     this.cards = CARDS;
     this.shake = 0;
@@ -214,29 +213,60 @@ export class Cinematic {
       <div class="grain"></div><div class="vignette"></div>
       <div class="bar top"></div><div class="bar bottom"></div>
       <div class="caption" aria-live="polite"></div>
-      <div class="title hidden"><div class="big">Underfoot!</div><div class="sub">One queen. One rock. One very big yard.</div><button class="go">Tap to dig</button></div>
-      <div class="poster"><div class="presents">A motion picture from beneath your feet</div><button class="roll">Roll the film</button><div class="hint">Sound on for the full effect</div></div>
+      <div class="title hidden"><div class="big">Underfoot!</div><div class="sub">One queen. One rock. One very big yard.</div><button class="go">Continue</button></div>
       <div class="controls"><button class="mute">Sound: on</button><button class="skip">Skip</button></div>`;
     document.body.appendChild(el);
     document.body.classList.add('cine-on');
     this.el = el;
     this.caption = el.querySelector('.caption');
-    el.querySelector('.roll').addEventListener('click', () => this.start());
     el.querySelector('.skip').addEventListener('click', () => this.finish());
     el.querySelector('.go').addEventListener('click', () => this.finish());
-    const mute = el.querySelector('.mute');
-    mute.addEventListener('click', () => { this.muted = !this.muted; if (this.sound) this.sound.mute(this.muted); mute.textContent = this.muted ? 'Sound: off' : 'Sound: on'; });
+    const mute = (this.muteBtn = el.querySelector('.mute'));
+    this.muted = this.app.opts && this.app.opts.sound === false;
+    mute.textContent = this.muted ? 'Sound: off' : 'Sound: on';
+    mute.addEventListener('click', () => {
+      if (this.locked) return; // the tap itself unlocks sound (below)
+      this.muted = !this.muted; if (this.sound) this.sound.mute(this.muted); mute.textContent = this.muted ? 'Sound: off' : 'Sound: on';
+    });
   }
 
   // ---------- playback ----------
+  // The film rolls as soon as it's made. A browser that hasn't been tapped
+  // yet won't play sound, so the film starts silent with a "Tap for sound"
+  // button; the first tap anywhere starts the score at the film's own time.
   start() {
     if (this.started) return;
     this.started = true;
     this.app.sceneryFocus.now = true;
-    this.el.querySelector('.poster').classList.add('hidden');
     this.sound = new FilmSound();
+    if (!this.sound.ctx) return;
     if (this.muted) this.sound.mute(true);
-    scoreFilm(this.sound, this.sound.now + 0.05);
+    if (this.sound.ctx.state === 'running') { scoreFilm(this.sound, this.sound.now + 0.05); return; }
+    this.locked = true;
+    this.muteBtn.textContent = 'Tap for sound';
+    this.muteBtn.classList.add('ask');
+    const unlock = () => {
+      window.removeEventListener('pointerdown', unlock, true);
+      if (this.done || !this.sound) return;
+      this.sound.ctx.resume().then(() => {
+        if (this.done || !this.sound) return;
+        this.locked = false; this.muted = false; this.sound.mute(false);
+        this.muteBtn.classList.remove('ask'); this.muteBtn.textContent = 'Sound: on';
+        this._scoreFrom(this.t);
+      });
+    };
+    window.addEventListener('pointerdown', unlock, true);
+  }
+
+  // Schedule the score as if it began t seconds ago: cues already past are
+  // dropped, and a beat already playing picks up from now.
+  _scoreFrom(t) {
+    const S = this.sound, now = S.now + 0.05;
+    const late = new Proxy(S, { get: (o, k) => (typeof o[k] !== 'function' ? o[k] : (a, ...r) => {
+      if (k === 'groove') return r[0] > now ? o.groove(Math.max(a, now), r[0]) : null;
+      return a >= now ? o[k](a, ...r) : null;
+    }) });
+    scoreFilm(late, now - t);
   }
 
   finish() {
@@ -282,7 +312,9 @@ export class Cinematic {
 
   // Recording: start without sound and advance exactly dt per call.
   step(dt) {
-    if (!this.started) { this.started = true; this.manual = true; this.app.sceneryFocus.now = true; this.el.querySelector('.poster').classList.add('hidden'); }
+    // Recording takes over: no live sound, and the film from the top.
+    if (!this.manual) { this.manual = true; this.t = 0; if (this.sound) { this.sound.stop(); this.sound = null; } }
+    if (!this.started) { this.started = true; this.app.sceneryFocus.now = true; }
     this.t += dt;
     this._advance(dt);
   }

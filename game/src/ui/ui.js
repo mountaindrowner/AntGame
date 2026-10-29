@@ -304,6 +304,7 @@ export function createUI(app) {
     if (!b) return;
     if (b.dataset.close) { closeMenu(); return; }
     if (b.dataset.film) { closeMenu(); app.playFilm(); return; }
+    if (b.dataset.title) { closeMenu(); app.openTitle(); return; }
     if (b.dataset.stress) { closeMenu(); SIM.stress(s, 200); flash('+200 foragers spawned for a frame-rate test.', /^\+200/, 4000); return; }
     if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
@@ -359,7 +360,7 @@ export function createUI(app) {
     app.paused = true;
   }
 
-  return { update, checkExplainers, closeMenu, openMenu, flash, confirmSheet, introStep, introText };
+  return { update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText };
 }
 
 export const GRID = { NW, NH };

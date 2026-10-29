@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: the film rolls by itself, then a title screen (build 11.1)
+
+Mark: "On the first run… it just starts with that video. And then after that we need an intro screen. Like a main menu… load game, play game, options."
+
+- **No poster.** A new player goes straight into the film. Browsers won't play sound before the first tap, so when sound is blocked the film starts silent with a pulsing "Tap for sound" button. The first tap anywhere starts the score in time with the picture: cues already past are dropped, and the beat picks up mid-bar.
+- **The title screen** (`ui/title.js`) comes after the film, and opens every later run instead of it. The logo sits over a slow drift across the live yard round home, with the game paused.
+  - **Continue** (once a colony has started) or **Play**.
+  - **New colony**, which asks first if there's a colony to lose.
+  - **How to play** (the Help sheet), **Options**, and **Watch the intro**.
+- **Options,** kept in the browser apart from the save:
+  - **Sound:** on or off. The film follows it now; game sounds will too.
+  - **Graphics:** Auto (sharp, easing off on a slow device, as before), Sharp (never eases off) or Fast.
+- Help's "Watch the film again" became **Main menu**. The film's last button now reads "Continue", into the menu.
+- **Load game:** there is one saved colony, so Continue is the load. Save slots can come later if wanted.
+- **Fixed: what you've seen was lost on reload.** Since build 10.4 the save wrote the fog-of-war map over the record of what you'd seen. After any reload the film and every explainer came back, as if new. The map now has its own key, and saves written before the fix still load.
+
 ## Oct 27: the whole yard, loaded in pieces (build 11)
 
 Mark: "Now let's take the time and thoughtfully build out the entire map area. Let's do it in separate chunks that load when you cross into the other areas for now."

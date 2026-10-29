@@ -50,10 +50,20 @@ try {
   await page.goto(url);
   await page.waitForFunction(() => window.UNDERFOOT && window.UNDERFOOT.app);
   await page.waitForTimeout(800);
-  // A new colony opens with the film; check it is there, then skip it.
-  await page.waitForSelector('#cine .roll');
-  await shot('00-film-poster');
+  // A new colony opens with the film rolling (no poster); skip it, and the
+  // title screen's main menu comes up. Play starts the game.
+  await page.waitForSelector('#cine .skip');
+  await page.waitForTimeout(1500);
+  await shot('00-film');
   await page.click('#cine .skip');
+  await page.waitForSelector('#title:not(.hidden)');
+  await page.waitForTimeout(800);
+  await shot('00b-title');
+  await page.click('#title button[data-t="options"]');
+  await page.waitForTimeout(200);
+  await shot('00c-options');
+  await page.click('#title button[data-t="back"]');
+  await page.click('#title button[data-t="new"]');
   await page.waitForTimeout(300);
   await step('boot');
   await shot('01-dig-intro');

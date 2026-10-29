@@ -54,10 +54,14 @@ test('save round-trips', () => {
   const s = founded();
   step(s, 60);
   SIM.toggleDigOrder(s, s.queen.x + 3, s.queen.y);
+  s.seen.film = true; s.seenMap[123] = 1;
   const json = SIM.serialize(s);
   const r = SIM.deserialize(json);
   assert.equal(r.phase, s.phase);
   assert.equal(r.ants.length, s.ants.length);
   assert.deepEqual(Array.from(r.nest.cells), Array.from(s.nest.cells));
+  // What you've seen (the film, explainers) and the fog-of-war map both survive.
+  assert.equal(r.seen.film, true);
+  assert.equal(r.seenMap[123], 1);
   assert.equal(SIM.serialize(r), json);
 });

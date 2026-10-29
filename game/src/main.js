@@ -6,6 +6,7 @@ import { useSnapUniforms } from './render/ps1/materials.js';
 import { SurfaceView } from './render/views/surfaceView.js';
 import { NestView } from './render/views/nestView.js';
 import { createUI } from './ui/ui.js';
+import { TitleMenu, loadOptions } from './ui/title.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
 import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED } from './game/save.js';
@@ -35,6 +36,7 @@ const app = {
   fps: 0,
   confirmAction: null,
   insets: { top: 0, bottom: 0, h: 1 },
+  opts: loadOptions(),
   reset() {
     clearSave();
     this.mapFresh = true; // a new colony starts with an empty map
@@ -173,8 +175,22 @@ app.snapshotMap = () => {
 app.playFilm = () => {
   if (cine) return;
   ui.closeMenu();
-  cine = new Cinematic(pipeline, views.surface, app, () => { cine = null; app.s.seen.film = true; last = performance.now(); });
+  title.close();
+  cine = new Cinematic(pipeline, views.surface, app, () => { cine = null; app.s.seen.film = true; last = performance.now(); title.open(); });
+  cine.start();
 };
+
+// The title screen and main menu (ui/title.js), over the live yard.
+const title = new TitleMenu(app, {
+  help: () => ui.openHelp(),
+  film: () => app.playFilm(),
+  applyOptions,
+});
+app.openTitle = () => title.open();
+// Graphics: Auto starts sharp and may step down; Sharp and Fast are fixed.
+function applyOptions() {
+  pipeline.setQuality(app.opts.graphics === 'fast' ? 2 : 0);
+}
 
 let cssW = 0, cssH = 0;
 // How much of the screen the HUD covers, so cameras can centre in the rest.
@@ -251,7 +267,12 @@ function frame(now) {
     app.panY = 0;
   }
 
-  const view = app.view === 'nest' ? views.nest : views.surface;
+  // Behind the title screen: a slow drift over the yard round home.
+  if (app.titleOpen) {
+    const w = s.world, k = performance.now() / 1000;
+    app.surfaceFocus = { x: (w.ex + 0.5 + Math.sin(k * 0.05) * 60) * SIM.T, y: (w.ey + 0.5 + Math.sin(k * 0.037) * 40) * SIM.T };
+  }
+  const view = app.view === 'nest' && !app.titleOpen ? views.nest : views.surface;
   // Draw creatures part way between the last two sim steps, then put them back.
   const restore = blend(s, app.paused ? 1 : acc / STEP);
   view.update(app, clock, pipeline.aspect);
@@ -272,7 +293,7 @@ function frame(now) {
     app.fps = frames; frames = 0; fpsT = 0;
     // Three slow seconds in a row: drop a quality step (never back up, so it
     // doesn't flicker between steps). Skipped while the game is paused.
-    slow = app.paused ? 0 : app.fps < 40 ? slow + 1 : 0;
+    slow = app.paused || app.opts.graphics !== 'auto' ? 0 : app.fps < 40 ? slow + 1 : 0;
     if (slow >= 3) { slow = 0; pipeline.setQuality(pipeline.quality + 1); }
   }
   hudT += dt;
@@ -285,7 +306,10 @@ function frame(now) {
 window.addEventListener('pagehide', () => { saveGame(app.s); saveMapIfNew(); });
 ui.update();
 measureHud();
+applyOptions();
+// A first run opens with the film (then the menu); later runs on the menu.
 if (app.s.phase === 'dig' && !app.s.seen.film) app.playFilm();
+else title.open();
 requestAnimationFrame(frame);
 
 // For automated tests and debugging in the console.

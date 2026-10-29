@@ -20,7 +20,7 @@ const page = await browser.newPage({ viewport: { width: 390, height: 844 }, devi
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(server.resolvedUrls.local[0]);
-await page.waitForSelector('#cine .roll');
+await page.waitForSelector('#cine .skip');
 await page.evaluate(() => document.fonts.ready);
 await page.waitForTimeout(800);
 

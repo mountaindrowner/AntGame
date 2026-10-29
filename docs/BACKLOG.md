@@ -2,12 +2,6 @@
 
 Mark's wish list after build 11 (Oct 28), not started. Grouped by area, in his words where they matter. "Notes" are first thoughts and open questions, not decisions. When an item is picked up, its decision goes in `DECISIONS.md` and it comes off this list.
 
-## Start of the game
-
-- **The film plays by itself on a first run.** No "Roll the film" poster: a new player goes straight into the movie. Skip stays.
-- **Then a title screen / main menu:** play / continue, load game, options, and so on. Later runs open here, not on the film; the film stays reachable from the menu.
-  - Notes: the options are a natural home for the sound and music volumes, Start over (now in Help), and the quality setting (now automatic).
-
 ## Sound
 
 - **Music** while playing.
