@@ -190,7 +190,8 @@ const SOUNDS = {
     x.start(t); lfo.start(t); x.stop(t + 0.45); lfo.stop(t + 0.45); return 0.5; } },
   tongue: { cool: 0.3, fn: (s, o, t) => { s.chirp(o, t, 400, 1400, 0.07, 0.25, 'triangle'); s.puff(o, t + 0.07, 0.05, 1200, 0.4, 'bandpass'); return 0.15; } },
   // ---------- priority 2 and 3 (build 11.6) ----------
-  step: { cool: 0.18, cap: 2, vol: 0.35, fn: (s, o, t) => { s.grain(o, t, 3, 0.03, 6000, 0.12, 'bandpass'); return 0.12; } },
+  // Footsteps: a soft, low pad of a step (build 12.1: was a crisp 6 kHz tick).
+  step: { cool: 0.18, cap: 2, vol: 0.3, fn: (s, o, t) => { s.grain(o, t, 2, 0.035, 520, 0.12, 'lowpass'); s.thump(o, t, 150, 95, 0.06, 0.08); return 0.12; } },
   sheetOpen: { cool: 0.2, vol: 0.6, fn: (s, o, t) => { s.puff(o, t, 0.12, 800, 0.18, 'bandpass', 2200, 0.02); return 0.15; } },
   sheetClose: { cool: 0.2, vol: 0.6, fn: (s, o, t) => { s.puff(o, t, 0.12, 2200, 0.18, 'bandpass', 800, 0.02); return 0.15; } },
   tick: { cool: 0.08, vol: 0.4, fn: (s, o, t) => { s.puff(o, t, 0.008, 6000, 0.25, 'highpass'); return 0.03; } },

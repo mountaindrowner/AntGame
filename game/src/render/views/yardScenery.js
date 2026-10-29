@@ -174,6 +174,9 @@ function* paintGround(w, F, b, out) {
   g.putImageData(img, 0, 0);
   out.canvas = c;
 }
+// A layer under the ground: drawn first, never writes depth (see the far ground).
+const underMat = (m) => { m.depthWrite = false; return m; };
+
 function textureFrom(canvas) {
   const t = new THREE.CanvasTexture(canvas);
   t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearMipmapLinearFilter; t.generateMipmaps = true;
@@ -779,7 +782,14 @@ export class YardScenery {
     // Each region: its bounds, its landmarks, and its far-off ground.
     this.regions = AREAS.map((A, i) => {
       const b = areaBounds(i);
-      const far = new THREE.Mesh(new THREE.PlaneGeometry(AREA * T, AREA * T, 8, 8).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T), psx({ color: GROUND_TINT[A.ground] || GROUND_TINT.grass }));
+      // The layers under the ground (the underlay, then each region's far
+      // painting) draw first and never write depth (build 12.1). Stacked
+      // a hair apart, they fought the ground on phones with a coarse depth
+      // buffer, which showed as dark bands across the screen. The far painting
+      // also stays under the near ground, a tile wider, so any crack where a
+      // fine near grid meets a coarse far one shows ground.
+      const far = new THREE.Mesh(new THREE.PlaneGeometry((AREA + 2) * T, (AREA + 2) * T, 8, 8).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T), underMat(psx({ color: GROUND_TINT[A.ground] || GROUND_TINT.grass })));
+      far.renderOrder = -1;
       this.group.add(far);
       return { i, b, lms: [], far, near: null, small: null, job: null };
     });
@@ -817,7 +827,10 @@ export class YardScenery {
     // Past the fence: the neighbours' grass out to the fog, so the edge
     // never shows open sky. Past the wall: the house.
     const M = 60 * S * T;
-    this.group.add(new THREE.Mesh(new THREE.PlaneGeometry(gw + M * 2, gh + M * 2, 8, 8).rotateX(-Math.PI / 2).translate(gw / 2, -0.6, gh / 2), psx({ map: rampTexture(27, ['#2e4a1c', '#34521e', '#3a5a22', '#2a4418'], { size: 16, repeat: [(gw + M * 2) / 64, (gh + M * 2) / 64] }) })));
+    const underTex = rampTexture(27, ['#2e4a1c', '#34521e', '#3a5a22', '#2a4418'], { size: 16, repeat: [(gw + M * 2) / 64, (gh + M * 2) / 64] });
+    const under = new THREE.Mesh(new THREE.PlaneGeometry(gw + M * 2, gh + M * 2, 8, 8).rotateX(-Math.PI / 2).translate(gw / 2, 0, gh / 2), underMat(psx({ map: underTex })));
+    under.renderOrder = -2;
+    this.group.add(under);
     if (wall) this.group.add(new THREE.Mesh(new THREE.BoxGeometry(wall.w * T, 420 * S, 300 * S).translate((wall.x0 + wall.w / 2) * T, 210 * S, -150 * S), psx({ color: '#b8ae9c' })));
   }
 
@@ -881,7 +894,7 @@ export class YardScenery {
     if (!R.small) {
       const c = document.createElement('canvas'); c.width = c.height = 160;
       const cg = c.getContext('2d'); cg.imageSmoothingEnabled = true; cg.drawImage(out.canvas, 0, 0, 160, 160);
-      R.far.material.dispose(); R.far.material = psx({ map: textureFrom(c) }); R.small = c;
+      R.far.material.dispose(); R.far.material = underMat(psx({ map: textureFrom(c) })); R.small = c;
     }
     yield;
     // Landmarks, merged by material.
@@ -943,7 +956,6 @@ export class YardScenery {
     if (quads.length) g.add(new THREE.Mesh(mergeGeometries(quads), this.mats.grass));
     this.group.add(g);
     R.near = g;
-    R.far.visible = false;
   }
 
   dispose() {

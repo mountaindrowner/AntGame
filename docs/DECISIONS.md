@@ -2,6 +2,16 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 30: no more lines across the ground, softer footsteps (build 12.1)
+
+Mark, playing on his iPhone: dark horizontal lines across the yard as he walks, and "the walking audio is too crisp and sharp. Maybe more muted and low to mid and rounded."
+
+- **The lines were depth fighting.** Under the ground lie two more layers: a dark green underlay (0.6 units down) and each region's far painting. A phone's depth buffer is coarser than a desktop's, so far from the camera it couldn't tell them from the ground. They fought, and with a camera looking north the fight shows as horizontal bands of underlay.
+  - Not reproduced at first: the headless test renders are too precise. Faking a coarse depth buffer (a tiny camera near plane) brought the bands straight back on build 12.
+  - The fix: both under-layers now draw first and never write depth, so the real ground always wins. The same faked test shows no bands.
+  - The far painting also stays under the built ground now, a tile wider, so any crack where a region's fine ground grid meets a coarse unbuilt neighbour shows ground, not dark green.
+- **Footsteps** are a soft, low thud (a low-passed grain around 500 Hz and a little thump), not a 6 kHz tick.
+
 ## Oct 29: Genes, ant upgrades, veterans and the evolution tree (build 12)
 
 Mark: "Make it so. Start coding it in." This is the first piece of `PROGRESSION.md`, everything that works with what the yard has today. The data lives in `game/src/sim/growth.js`; the sim applies it; the new **Evolve** button (a twist of DNA, under the map button) shows it.
