@@ -6,7 +6,7 @@
 // (sim/yard.js). Sizes are in px at SCALE 1 and multiplied by S, so a soda
 // can stands as tall as the yard is big.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { AREA, AREAS, SCALE as S, areaBounds } from '../../sim/yard.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
@@ -203,6 +203,27 @@ function lumpy(geo, amt, seed) {
   return g;
 }
 
+// A smooth, rounded rock: an icosphere welded into one surface (so it shades
+// smoothly), bulged by a few soft lumps and flattened underneath. Jittering
+// each vertex at random is what made the old rocks jagged.
+function smoothRock(seed, detail = 2, lumps = 0.22) {
+  const r = rng(Math.floor(seed * 1e6) + 3);
+  let g = new THREE.IcosahedronGeometry(1, detail);
+  g.deleteAttribute('normal'); g.deleteAttribute('uv');
+  g = mergeVertices(g);
+  const L = Array.from({ length: 5 }, () => [new THREE.Vector3(r() * 2 - 1, r() * 1.2 - 0.2, r() * 2 - 1).normalize(), (r() - 0.35) * lumps * 2, 1.5 + r() * 2.5]);
+  const p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) {
+    v.fromBufferAttribute(p, i);
+    let k = 1;
+    for (const [d, a, sharp] of L) k += a * Math.pow(Math.max(0, v.dot(d)), sharp);
+    v.multiplyScalar(k);
+    if (v.y < 0) v.y *= 0.35;
+    p.setXYZ(i, v.x, v.y, v.z);
+  }
+  return g;
+}
+
 function flower(l, parts) {
   const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, lean = (l.seed - 0.5) * 6, k2 = l.small ? 0.6 : 1;
   parts.push(paint(at(new THREE.CylinderGeometry(1.1 * S * k2, 1.6 * S * k2, h, 5).translate(0, h / 2, 0).rotateZ(lean * 0.01), x, 0, z), '#3e6e26'));
@@ -241,19 +262,17 @@ function meshLandmark(l, w, ctx) {
   switch (l.kind) {
       case 'bigrock': {
         claim(l.x0, l.y0, l.w, l.h);
+        // A big flat stone, worn smooth, with two smaller ones leaning on it.
         for (let k = 0; k < 3; k++) {
-          const rr = new THREE.IcosahedronGeometry(1, 1);
-          const pos = rr.attributes.position;
-          for (let i = 0; i < pos.count; i++) { const f = 0.85 + r() * 0.3; pos.setXYZ(i, pos.getX(i) * f, pos.getY(i) * f, pos.getZ(i) * f); }
-          rr.scale(l.w * T * (0.42 - k * 0.08), (26 - k * 6) * S, l.h * T * (0.55 - k * 0.1));
-          parts.push(paint(at(rr, (l.x0 + l.w * (0.45 + k * 0.08)) * T, (10 + k * 6) * S, (l.y0 + l.h * 0.5) * T), (x, y) => (y > 30 * S ? '#9a9488' : y > 14 * S ? '#857e73' : '#6b655c'), 40 + k));
+          const rr = smoothRock(0.31 + k * 0.17, 3, 0.16);
+          rr.scale(l.w * T * (0.5 - k * 0.12), (22 - k * 5) * S, l.h * T * (0.6 - k * 0.12));
+          stoneParts.push(at(rr, (l.x0 + l.w * (0.45 + k * 0.12)) * T, (6 + k * 7) * S, (l.y0 + l.h * (0.5 + (k === 2 ? 0.2 : 0))) * T));
         }
         break;
       }
       case 'stone': {
         claim(l.x0, l.y0, l.w, l.h);
-        const st = new THREE.IcosahedronGeometry(1, 1), pos = st.attributes.position, rs = rng(Math.floor(l.seed * 1e6));
-        for (let i = 0; i < pos.count; i++) { const f = 0.8 + rs() * 0.35; pos.setXYZ(i, pos.getX(i) * f, pos.getY(i) * f, pos.getZ(i) * f); }
+        const st = smoothRock(l.seed), rs = rng(Math.floor(l.seed * 1e6));
         const hgt = Math.min(l.w, l.h) * T * (0.35 + rs() * 0.2);
         st.scale(l.w * T * 0.58, hgt, l.h * T * 0.58).rotateY(rs() * 0.6 - 0.3);
         stoneParts.push(at(st, (l.x0 + l.w / 2) * T, hgt * 0.3, (l.y0 + l.h / 2) * T));
@@ -514,8 +533,7 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'boulder': {
-        const st = new THREE.IcosahedronGeometry(1, 1), pos = st.attributes.position, rs = rng(Math.floor(l.seed * 1e6));
-        for (let i = 0; i < pos.count; i++) { const f = 0.78 + rs() * 0.4; pos.setXYZ(i, pos.getX(i) * f, pos.getY(i) * f, pos.getZ(i) * f); }
+        const st = smoothRock(l.seed, 3, 0.28), rs = rng(Math.floor(l.seed * 1e6));
         const R = l.r * T, hgt = R * (0.7 + rs() * 0.3);
         st.scale(R * 1.05, hgt, R * 1.05).rotateY(rs() * 3);
         stoneParts.push(at(st, l.x * T, hgt * 0.35, l.y * T));
@@ -873,12 +891,13 @@ export class YardScenery {
     // Plain rocks on any blocked tile no landmark stands on.
     for (let y = Math.max(1, b.y0); y <= Math.min(w.H - 3, b.y1); y++) for (let x = Math.max(2, b.x0); x <= Math.min(W - 3, b.x1); x++) {
       if (!w.blocked[y * W + x] || this.own[y * W + x]) continue;
-      const rad = 7 + r() * 4, d = new THREE.DodecahedronGeometry(rad, 0).toNonIndexed();
+      const rad = 7 + r() * 4, d = smoothRock(r(), 1).scale(rad, rad, rad);
       d.scale(1, 0.55 + r() * 0.35, 1); d.rotateY(r() * 3);
       ctx.stoneParts.push(d.translate((x + 0.5) * T + (r() - 0.5) * 3, rad * 0.25, (y + 0.5) * T + (r() - 0.5) * 3));
     }
     if (ctx.stoneParts.length) {
-      const geo = mergeGeometries(ctx.stoneParts.map((p) => { p = p.index ? p.toNonIndexed() : p; p.deleteAttribute('normal'); if (p.attributes.uv) p.deleteAttribute('uv'); return p; }));
+      // Welded (indexed), so the rocks shade smoothly instead of in facets.
+      const geo = mergeGeometries(ctx.stoneParts.map((p) => { if (p.attributes.normal) p.deleteAttribute('normal'); if (p.attributes.uv) p.deleteAttribute('uv'); return p.index ? p : mergeVertices(p); }));
       // Planar UVs from world position, so every rock shares one stone texture.
       const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
       for (let i = 0; i < pos.count; i++) { uv[i * 2] = (pos.getX(i) + pos.getY(i) * 0.5) / 64; uv[i * 2 + 1] = (pos.getZ(i) + pos.getY(i) * 0.5) / 64; }

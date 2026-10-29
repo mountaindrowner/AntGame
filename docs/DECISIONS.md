@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: smooth rocks, and trails like smoke (build 11.4)
+
+Mark: "Rocks look really jagged on the overworld." And: "smooth out the scent trails. Right now it's just like big squares… maybe like a light smoke that lingers."
+
+- **Rocks are smooth.** Every rock was an icosphere with each vertex pushed in or out at random, drawn as flat facets: spikes and shards. Now each is one welded surface:
+  - bulged by a few soft lumps, flattened underneath, and smooth-shaded (`smoothRock` in `yardScenery.js`)
+  - this covers the big rock over home (now textured stone, not painted bands), pebbles, boulders and the plain rocks on blocked ground
+  - stepping stones keep their flat tops
+- **Trails are a drifting haze, not squares.** The overlay now works like this:
+  - It has two texels a tile, smoothly filtered.
+  - Each frame the trail and alarm scent is blurred a little, so the haze has round edges instead of tile steps.
+  - Two layers of slowly drifting noise break it into wisps that move as you watch.
+  - It is pale green and more see-through, with a floor so the trail's path stays readable.
+  - Alarm scent tints it red, as before.
+  - It costs about 1–2 ms a frame with trails everywhere, on the test machine's software renderer.
+
 ## Oct 29: sound effects, the first batch (build 11.3)
 
 The plan is `docs/SOUND.md`. Built so far:

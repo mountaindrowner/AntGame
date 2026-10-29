@@ -13,8 +13,6 @@ Mark's wish list after build 11 (Oct 28), not started. Grouped by area, in his w
 - **The queen at the start looks alive.** She sits still now; she should look like she's crawling down the walls as she digs in.
 - **A construction animation:** dust and dirt kick up and cover the room. When the dust clears, the room is built.
 - **Chambers aren't perfect shapes.** A dug room keeps the same footprint but looks a little oblong and organic.
-- **Smoother rocks on the surface.** The overworld rocks look too jagged.
-- **Scent trails look like scent:** a light, lingering smoke rather than big squares (the overlay is one square per tile now).
 
 ## Readability
 

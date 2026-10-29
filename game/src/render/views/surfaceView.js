@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import SIM from '../../sim/sim.js';
 import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
-import { rampTexture, PALETTE } from '../ps1/textures.js';
+import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS } from '../models/bugs.js';
@@ -20,7 +20,8 @@ import { toad, fallingAcorn } from '../models/toad.js';
 
 const { W, H, T, CASTES, DROP, HUNT } = SIM;
 // The scent overlay covers a window this many tiles a side round the camera.
-const SW = 96;
+const SW = 96, SR = 2, TW = SW * SR; // window tiles; texels a tile
+const SMOKE = noise2(41);
 const TOAD = 48; // toad model scale (px a unit): about six tiles nose to tail
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
@@ -182,11 +183,14 @@ export class SurfaceView {
       this.holes.push({ ring, rival, mound, hole });
     }
 
-    // Scent overlay: one texel per tile, for a window of tiles round the
-    // camera, rewritten from the sim each frame and moved with it.
-    this.scentData = new Uint8Array(SW * SW * 4);
-    this.scentTex = new THREE.DataTexture(this.scentData, SW, SW, THREE.RGBAFormat);
-    this.scentTex.magFilter = this.scentTex.minFilter = THREE.NearestFilter;
+    // Scent overlay: a lingering, drifting haze over the trails, for a
+    // window of tiles round the camera, rewritten from the sim each frame
+    // and moved with it (two texels a tile, smoothly filtered).
+    this.scentData = new Uint8Array(TW * TW * 4);
+    this.scentGrid = new Float32Array((SW + 1) * (SW + 1) * 2);
+    this.scentRaw = new Float32Array((SW + 1) * (SW + 1) * 2);
+    this.scentTex = new THREE.DataTexture(this.scentData, TW, TW, THREE.RGBAFormat);
+    this.scentTex.magFilter = this.scentTex.minFilter = THREE.LinearFilter;
     this.scentTex.flipY = false;
     const geo = new THREE.PlaneGeometry(SW * T, SW * T, 32, 32).rotateX(-Math.PI / 2).translate((SW * T) / 2, 0.4, (SW * T) / 2);
     // PlaneGeometry's v runs bottom-up; the sim's rows run top-down.
@@ -198,19 +202,50 @@ export class SurfaceView {
   }
 
   // Only the tiles around the camera are rewritten each frame.
-  _updateScent(s) {
-    const d = this.scentData, tr = s.trail, al = s.alarm;
-    const tc = new THREE.Color(COLORS.trail), ac = new THREE.Color(COLORS.alarm);
+  // Trails as smoke: each tile's scent is blended smoothly between tiles,
+  // then broken up by slowly drifting noise so it wisps instead of tiling.
+  // Only texels near some scent are worked out.
+  _updateScent(s, time) {
+    const d = this.scentData, G = this.scentGrid, Rw = this.scentRaw, tr = s.trail, al = s.alarm, N = SW + 1;
     const x0 = Math.floor(this.target.x / T) - SW / 2, y0 = Math.floor(this.target.z / T) - SW / 2;
     this.scent.position.set(x0 * T, 0, y0 * T);
     d.fill(0);
-    for (let y = Math.max(0, y0); y < Math.min(H, y0 + SW); y++) for (let x = Math.max(0, x0); x < Math.min(W, x0 + SW); x++) {
-      const i = y * W + x, t = tr[i], a = al[i], o = (y - y0) * SW + (x - x0);
-      if (t <= 0.04 && a <= 0.08) continue;
-      let rr = 0, gg = 0, bb = 0, aa = 0;
-      if (t > 0.04) { rr = tc.r; gg = tc.g; bb = tc.b; aa = Math.min(0.7, t * 0.3); }
-      if (a > 0.08) { const k = Math.min(0.6, a * 0.2); rr = rr * (1 - k) + ac.r * k; gg = gg * (1 - k) + ac.g * k; bb = bb * (1 - k) + ac.b * k; aa = Math.max(aa, k); }
-      d[o * 4] = rr * 255; d[o * 4 + 1] = gg * 255; d[o * 4 + 2] = bb * 255; d[o * 4 + 3] = aa * 255;
+    let any = false;
+    for (let j = 0; j < N; j++) for (let k = 0; k < N; k++) {
+      const x = x0 + k, y = y0 + j, o = (j * N + k) * 2;
+      const i = x >= 0 && y >= 0 && x < W && y < H ? y * W + x : -1;
+      Rw[o] = i < 0 ? 0 : tr[i] > 0.04 ? Math.min(1, tr[i] * 0.45) : 0;
+      Rw[o + 1] = i < 0 ? 0 : al[i] > 0.08 ? Math.min(1, al[i] * 0.3) : 0;
+      if (Rw[o] || Rw[o + 1]) any = true;
+    }
+    // A soft blur, so the haze has round edges instead of tile steps.
+    if (any) for (let j = 0; j < N; j++) for (let k = 0; k < N; k++) for (let c = 0; c < 2; c++) {
+      let sum = 0, wsum = 0;
+      for (let dj = -1; dj <= 1; dj++) for (let dk = -1; dk <= 1; dk++) {
+        const jj = j + dj, kk = k + dk; if (jj < 0 || kk < 0 || jj >= N || kk >= N) continue;
+        const wt = dj || dk ? (dj && dk ? 0.5 : 1) : 2; sum += Rw[(jj * N + kk) * 2 + c] * wt; wsum += wt;
+      }
+      G[(j * N + k) * 2 + c] = sum / wsum;
+    }
+    if (any) {
+      if (!this.tc) { this.tc = new THREE.Color(COLORS.trail).lerp(new THREE.Color('#ffffff'), 0.4); this.ac = new THREE.Color(COLORS.alarm); }
+      const tc = this.tc, ac = this.ac, drift = time * 0.35;
+      for (let ty = 0; ty < TW; ty++) {
+        const fy = Math.max(0, Math.min(SW - 1.001, (ty + 0.5) / SR - 0.5)), j = Math.floor(fy), v = fy - j;
+        for (let tx = 0; tx < TW; tx++) {
+          const fx = Math.max(0, Math.min(SW - 1.001, (tx + 0.5) / SR - 0.5)), k = Math.floor(fx), u = fx - k;
+          const o00 = (j * N + k) * 2, o01 = o00 + 2, o10 = o00 + N * 2, o11 = o10 + 2;
+          if (G[o00] + G[o01] + G[o10] + G[o11] + G[o00 + 1] + G[o01 + 1] + G[o10 + 1] + G[o11 + 1] < 0.004) continue;
+          const lerp2 = (c) => (G[o00 + c] * (1 - u) + G[o01 + c] * u) * (1 - v) + (G[o10 + c] * (1 - u) + G[o11 + c] * u) * v;
+          const ts = lerp2(0), as = lerp2(1);
+          const wx = x0 + fx, wy = y0 + fy;
+          const wisp = Math.max(0, Math.min(1, 0.5 + 0.9 * (SMOKE(wx * 0.55 + drift, wy * 0.55 - drift * 0.6) * 0.65 + SMOKE(wx * 1.4 - drift * 1.3, wy * 1.4 + drift) * 0.35)));
+          let aa = Math.pow(ts, 0.8) * (0.25 + 0.75 * wisp * wisp) * 0.7, rr = tc.r, gg = tc.g, bb = tc.b;
+          if (as > 0.01) { const m = Math.min(1, as * (0.4 + 0.6 * wisp)); rr = rr * (1 - m) + ac.r * m; gg = gg * (1 - m) + ac.g * m; bb = bb * (1 - m) + ac.b * m; aa = Math.max(aa, m * 0.6); }
+          const o = (ty * TW + tx) * 4;
+          d[o] = rr * 255; d[o + 1] = gg * 255; d[o + 2] = bb * 255; d[o + 3] = Math.min(0.55, aa) * 255;
+        }
+      }
     }
     this.scentTex.needsUpdate = true;
   }
@@ -232,7 +267,7 @@ export class SurfaceView {
     const P = s.player, w = s.world;
     const frameT = Math.floor(t * RENDER.animFps);
 
-    this._updateScent(s);
+    this._updateScent(s, t);
     this.holes[1].ring.visible = s.rival.queenAlive;
     // Our entrance only exists once the queen has dug in and founded the nest.
     this.holes[0].mound.visible = this.holes[0].hole.visible = s.queen.placed;
