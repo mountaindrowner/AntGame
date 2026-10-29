@@ -57,6 +57,7 @@ game/
 │   │   ├── copy.js         every player-facing string (verbatim from build 6)
 │   │   ├── labels.js       crisp room and band labels over the 3D frame
 │   │   ├── title.js        the title screen and main menu, and the options
+│   │   ├── callout.js      tap a thing on the surface: a card with its name and what it's for
 │   │   └── ui.css
 │   ├── audio/
 │   │   ├── sfx.js          game sound effects, synthesized (docs/SOUND.md): blocks, recipes, loops

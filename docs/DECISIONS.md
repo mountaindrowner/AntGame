@@ -2,6 +2,16 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: tap a thing to see what it is, and tips with a design (build 11.5)
+
+Mark: "maybe when you click on it, it kind of tells you." And: "Text boxes for the tooltips and stuff, they're a little simple. Let's give them more of a design."
+
+- **Tap anything on the surface for its card** (`ui/callout.js`). A small card pops up over it: an emoji, its name, and one line on what it's for. For example: "Gummy bear: a treat, 50 food, needs a crew of 8." "Puddle: water, it never dries up." "Wolf spider: run!"
+  - It covers food, treats, water, pebbles, meat and protein, aphids, the spider, the caterpillar, your ants and rivals, robins and toads, and both nests.
+  - It follows the thing as the camera moves and fades after two seconds.
+  - The tap still walks your ant there. Food under an ant wins over the ant.
+- **Tips and cards share a new look,** matching the title screen: cream, an inked border, a hard shadow, and a pointer to what they name. The button tips use it too.
+
 ## Oct 29: smooth rocks, and trails like smoke (build 11.4)
 
 Mark: "Rocks look really jagged on the overworld." And: "smooth out the scent trails. Right now it's just like big squares… maybe like a light smoke that lingers."

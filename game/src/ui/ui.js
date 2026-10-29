@@ -45,9 +45,11 @@ export function createUI(app) {
     const text = t.dataset.tip; if (!text) return;
     tipFor = t; el.tip.textContent = text; el.tip.classList.remove('hidden');
     const r = t.getBoundingClientRect(), w = el.tip.offsetWidth, h = el.tip.offsetHeight;
-    const below = r.top < 90;
-    el.tip.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2)) + 'px';
-    el.tip.style.top = (below ? r.bottom + 8 : r.top - h - 8) + 'px';
+    const below = r.top < 90, left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
+    el.tip.style.left = left + 'px';
+    el.tip.style.top = (below ? r.bottom + 12 : r.top - h - 12) + 'px';
+    el.tip.classList.toggle('below', below);
+    el.tip.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - left)) + 'px');
     clearTimeout(tipHide); tipHide = setTimeout(hideTip, 2600);
   }
   function hideTip() { tipFor = null; el.tip.classList.add('hidden'); clearTimeout(tipTimer); }

@@ -6,6 +6,7 @@ import { useSnapUniforms } from './render/ps1/materials.js';
 import { SurfaceView } from './render/views/surfaceView.js';
 import { NestView } from './render/views/nestView.js';
 import { createUI } from './ui/ui.js';
+import { Callout } from './ui/callout.js';
 import { TitleMenu, loadOptions } from './ui/title.js';
 import { sfx } from './audio/sfx.js';
 import { soundWatch, tapSounds } from './audio/watch.js';
@@ -63,6 +64,7 @@ const app = {
 
 const views = { surface: new SurfaceView(), nest: new NestView() };
 const ui = createUI(app);
+app.callout = new Callout(app, views);
 attachPointer(canvas, app, ui, views);
 const labels = new LabelLayer(document.getElementById('labels'));
 

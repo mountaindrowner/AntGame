@@ -17,9 +17,7 @@ Mark's wish list after build 11 (Oct 28), not started. Grouped by area, in his w
 ## Readability
 
 - **Surface items should be obvious at a glance.** Some are, some aren't.
-- **Tapping an item tells you what it is.**
 - **More icons ("techify almost everything").** Mark likes the HUD icons; carry the same style further.
-- **Tooltips with more design.** The current boxes are plain.
 
 ## Gameplay
 

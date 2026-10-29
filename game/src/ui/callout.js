@@ -1,0 +1,82 @@
+// Tap a thing on the surface to see what it is: a small card over it with
+// its name and one line on what it's for. It follows the thing on screen
+// and fades after a couple of seconds. The tap still walks your ant there.
+import * as THREE from 'three';
+import SIM from '../sim/sim.js';
+
+const { T, FOODS, CASTES } = SIM;
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const v = new THREE.Vector3();
+
+// What an item on the ground is: [icon, name, line].
+function itemCard(f) {
+  if (f.kind === 'water') return f.type === 'puddle' ? ['💧', 'Puddle', 'Water. It never dries up.'] : ['💧', 'Dew', 'Water, for a minute. Eggs need it.'];
+  if (f.kind === 'grit') return ['🪨', 'Pebble', 'Stone, for rooms and upgrades.'];
+  if (f.kind === 'protein') {
+    if (f.type === 'spider' || f.type === 'cat') return ['🥩', 'Meat', `${Math.round(f.amt)} protein. Haul it home.`];
+    const F = FOODS[f.type];
+    return ['🥩', cap(F ? F.name : 'Meat'), `Protein for soldiers. ${Math.round(f.amt)} left.`];
+  }
+  if (f.type === 'aphids') return ['🌿', 'Aphids', 'Honeydew food. It keeps coming back.'];
+  const F = FOODS[f.type];
+  if (F && F.crew) return ['🍬', cap(F.name), `A treat: ${Math.round(f.amt)} food. Needs a crew of ${F.crew}.`];
+  return ['🌾', cap(F ? F.name : 'Food'), `Food: ${Math.round(f.amt)}. Pick it up and bring it home.`];
+}
+
+export class Callout {
+  constructor(app, views) {
+    this.app = app;
+    this.views = views;
+    const el = (this.el = document.createElement('div'));
+    el.id = 'callout';
+    el.className = 'card-tip hidden';
+    document.body.appendChild(el);
+    this.target = null;
+  }
+
+  // Find what's under a tap (surface px) and show its card, if anything.
+  tap(wx, wy) {
+    const s = this.app.s, w = s.world, best = { d: Infinity, card: null, at: null };
+    // bias: >1 makes a thing lose to others under the same tap (ants lose to
+    // the food they stand on).
+    const take = (x, y, r, card, h = 4, bias = 1) => { const d0 = Math.hypot(x - wx, y - wy) / r, d = d0 * bias; if (d0 < 1 && d < best.d) Object.assign(best, { d, card, at: { x, y, h } }); };
+    for (const f of s.items) if (f.amt > 0) take(f.carried && f.px != null ? f.px : (f.x + 0.5) * T, f.carried && f.py != null ? f.py : (f.y + 0.5) * T, 1.6 * T, () => itemCard(f));
+    if (s.spider) take(s.spider.x, s.spider.y, 3.5 * T, () => ['🕷', 'Wolf spider', 'Run! Thirty ants or five Venom ants can kill it.'], 30);
+    if (s.cat) take(s.cat.x, s.cat.y, 3 * T, () => ['🐛', 'Caterpillar', 'Harmless. 40 protein if a crew brings it down.'], 14);
+    for (const a of s.ants) {
+      if (a.state === 'dead' || a.state === 'in' || a.state === 'nest' || a.state === 'build') continue;
+      take(a.x, a.y, 1.1 * T, () => (a.isPlayer ? ['⭐', 'You', 'Your ant. Lead the colony by example.'] : a.team ? ['🐜', 'Pavement ant', 'A rival. Their nest is in the Patio.'] : ['🐜', CASTES[a.caste].name, a.follow ? 'Following you.' : 'One of yours.']), 6, a.isPlayer ? 3 : 1.8);
+    }
+    for (const st of s.strikes || []) if (st.kind === 'bird' || st.kind === 'toad') take(st.x * T, st.y * T, 3 * T, () => (st.kind === 'bird' ? ['🐦', 'Robin', 'Hunting ants. Five fighters chase it off.'] : ['🐸', 'Toad', 'Its tongue reaches five tiles. Keep away.']), 20);
+    if (s.queen.placed) take((w.ex + 0.5) * T, (w.ey + 0.5) * T, 2 * T, () => ['🏠', 'Your nest', 'Bring food here.']);
+    take((w.rx + 0.5) * T, (w.ry + 0.5) * T, 2 * T, () => ['⚔', 'Rival nest', 'Hold it with eight fighters to win.']);
+    if (!best.card) return false;
+    const [icon, name, line] = best.card();
+    this.el.innerHTML = `<span class="ct-icon">${icon}</span><span class="ct-text"><b>${name}</b><span>${line}</span></span>`;
+    this.el.classList.remove('hidden', 'fade');
+    this.target = best.at;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.el.classList.add('fade'), 2200);
+    this.hideAt = performance.now() + 2700;
+    if (!this.raf) this._follow();
+    return true;
+  }
+
+  hide() { this.target = null; this.el.classList.add('hidden'); }
+
+  // Keep the card over its thing while the camera moves.
+  _follow() {
+    this.raf = requestAnimationFrame(() => {
+      this.raf = null;
+      if (!this.target || performance.now() > this.hideAt || this.app.view !== 'surface' || this.app.titleOpen) { this.hide(); return; }
+      const cam = this.views.surface.camera;
+      v.set(this.target.x, this.target.h, this.target.y).project(cam);
+      const x = (v.x * 0.5 + 0.5) * window.innerWidth, y = (-v.y * 0.5 + 0.5) * window.innerHeight;
+      const w = this.el.offsetWidth, h = this.el.offsetHeight;
+      this.el.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, x - w / 2)) + 'px';
+      this.el.style.top = Math.max(6, y - h - 18) + 'px';
+      this.el.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, x - parseFloat(this.el.style.left))) + 'px');
+      this._follow();
+    });
+  }
+}

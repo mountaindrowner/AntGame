@@ -81,6 +81,7 @@ export function attachPointer(canvas, app, ui, views) {
       if (!a || P().inNest) return;
       const w = surfacePoint(e);
       if (!w) return;
+      if (app.callout) app.callout.tap(w.x, w.y);
       P().tx = w.x;
       P().ty = w.y;
       P().holding = true;
