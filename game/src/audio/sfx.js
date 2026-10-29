@@ -195,6 +195,9 @@ const SOUNDS = {
   sheetClose: { cool: 0.2, vol: 0.6, fn: (s, o, t) => { s.puff(o, t, 0.12, 2200, 0.18, 'bandpass', 800, 0.02); return 0.15; } },
   tick: { cool: 0.08, vol: 0.4, fn: (s, o, t) => { s.puff(o, t, 0.008, 6000, 0.25, 'highpass'); return 0.03; } },
   whoosh: { cool: 0.15, vol: 0.5, fn: (s, o, t, up) => { s.puff(o, t, 0.18, up ? 500 : 1500, 0.2, 'lowpass', up ? 1500 : 500, 0.03); return 0.22; } },
+  evolve: { cool: 0.3, fn: (s, o, t) => { [64, 71, 76, 83].forEach((n, i) => { s.blip(o, t + i * 0.07, N(n), i === 3 ? 0.4 : 0.1, 0.2, 'sine'); s.blip(o, t + i * 0.07, N(n + 12), 0.06, 0.05, 'sine'); }); return 0.6; } },
+  genes: { cool: 0.6, vol: 0.7, fn: (s, o, t) => { [88, 91, 95].forEach((n, i) => s.blip(o, t + i * 0.05, N(n), 0.08, 0.12, 'sine')); return 0.25; } },
+  rankUp: { cool: 1, fn: (s, o, t) => { [72, 76, 79, 84].forEach((n, i) => s.blip(o, t + i * 0.08, N(n), 0.1, 0.16, 'triangle')); return 0.4; } },
   stinger: { cool: 3, fn: (s, o, t) => { s.thump(o, t, 160, 50, 0.3, 0.6); [69, 72, 76, 81].forEach((n, i) => s.blip(o, t + 0.05 + i * 0.07, N(n), i === 3 ? 0.6 : 0.1, 0.18, 'square')); return 1; } },
   groan: { cool: 0.5, fn: (s, o, t) => { const c = s.ctx, x = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
     x.type = 'triangle'; x.frequency.setValueAtTime(220, t); x.frequency.linearRampToValueAtTime(160, t + 0.3); lfo.frequency.value = 9; lg.gain.value = 8; lfo.connect(lg).connect(x.frequency);

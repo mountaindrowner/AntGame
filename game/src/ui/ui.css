@@ -206,3 +206,35 @@ body.title-on .card-tip, body.cine-on .card-tip { display: none !important; }
 #mapview .mv-card dl { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 4px 0 0; }
 #mapview .mv-card dt { color: var(--mute); }
 #mapview .mv-card dd { margin: 0; }
+
+/* ---- Evolve sheet (build 12): ant upgrades, the evolution tree, ranks ---- */
+#sheet .tabs { display: flex; gap: 6px; margin: 0 0 10px; }
+#sheet .tabs button { flex: 1; min-height: 38px; padding: 6px; font-weight: 700; }
+#sheet .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+#sheet .genes { font-weight: 700; }
+#sheet .up { border-top: 1px solid var(--line); padding: 10px 0 6px; }
+#sheet .up:first-of-type { border-top: 0; }
+#sheet .up-h { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+#sheet .up-h .si { width: 22px; height: 22px; color: var(--accent); }
+#sheet .up-h .si svg { width: 22px; height: 22px; }
+#sheet .up-h span { color: var(--mute); font-size: 13px; }
+#sheet .lv { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 8px; }
+#sheet .lv span { font-size: 12px; border: 1px dashed var(--line); border-radius: 6px; padding: 3px 6px; color: var(--mute); }
+#sheet .lv span.done { border-style: solid; background: rgba(111,194,106,0.25); color: var(--ink); }
+#sheet .lv span.next { border-style: solid; border-color: var(--accent); color: var(--ink); }
+#sheet .doc { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; color: var(--mute); margin-top: 6px; }
+#sheet .doc button { min-height: 30px; padding: 4px 8px; font-size: 12px; border-radius: 8px; }
+#sheet .doc button.on { background: #ffd34d; color: #1d1710; border-color: transparent; font-weight: 700; }
+#sheet .branch { margin-top: 10px; }
+#sheet .branch > b { display: block; margin-bottom: 4px; }
+#sheet .node { display: block; width: 100%; text-align: left; min-height: 0; padding: 8px 10px; margin: 4px 0; border-radius: 10px; }
+#sheet .node b { display: block; }
+#sheet .node i { display: block; font-style: normal; font-size: 12px; color: var(--mute); }
+#sheet .node.owned { background: rgba(111,194,106,0.25); border-style: solid; }
+#sheet .node.ready { border: 2px solid var(--accent); }
+#sheet .node.soon { opacity: 0.5; border-style: dashed; }
+#sheet .node.big b::after { content: ' ★'; color: #c99a1a; }
+#sheet table.ranks { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+#sheet table.ranks th, #sheet table.ranks td { padding: 4px; border-bottom: 1px solid var(--line); text-align: center; }
+#sheet table.ranks th:first-child, #sheet table.ranks td:first-child { text-align: left; }
+#sheet .named { font-size: 13px; padding: 4px 0; border-bottom: 1px dotted var(--line); }

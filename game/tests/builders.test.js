@@ -46,6 +46,7 @@ test('a brick does not break before its builder arrives', () => {
   assert.equal(early, false, 'no progress while the builder is still walking');
 });
 
+// A fresh (Callow) builder; Seasoned and better ones dig faster (growth.js RANKS).
 test('digging a soft cell takes about six builder-seconds once there', () => {
   const { s, run } = colonyWithBuilders(1);
   const r = s.queen.room;

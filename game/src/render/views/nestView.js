@@ -13,7 +13,7 @@ import { PROPS } from '../models/props.js';
 import { carryLook } from '../models/food.js';
 import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
 import { MotionTracker, idlePose } from '../motion.js';
-import { antColor, hudShift } from './surfaceView.js';
+import { antColor, rankScale, hudShift } from './surfaceView.js';
 import { shapesFromField } from '../geometry/contour.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, SOIL_TOP } = SIM;
@@ -425,7 +425,7 @@ export class NestView {
     // Ants inside, then the player.
     for (const a of s.ants) {
       if (a.team || a.isPlayer || !(a.state === 'in' || a.state === 'build')) continue;
-      this._pushAnt(a, antColor(a), 1, frameT, t);
+      this._pushAnt(a, antColor(a), rankScale(a), frameT, t);
     }
     const pa = P.ant;
     if (pa && P.inNest) {

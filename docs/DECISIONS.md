@@ -2,6 +2,47 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: Genes, ant upgrades, veterans and the evolution tree (build 12)
+
+Mark: "Make it so. Start coding it in." This is the first piece of `PROGRESSION.md`, everything that works with what the yard has today. The data lives in `game/src/sim/growth.js`; the sim applies it; the new **Evolve** button (a twist of DNA, under the map button) shows it.
+
+- **🧬 Genes,** earned by playing, never by waiting:
+  - 1 for each region you scout for the first time
+  - 1 for the first of each kind of thing brought home (a crumb, a berry, dew, a pebble, caterpillar meat…)
+  - 1 for every 10 eggs hatched
+  - 1 for your first hunt; 3 for the spider (1 each time after); 5 for the rival queen
+
+  A 🧬 chip joins the top bar once you have any, and a chime plays for each.
+- **Upgrades for each kind of ant** (Evolve → Ants), bought with materials, once for the whole kind:
+  - Forager, Builder and Nurse have five levels; Soldier five; Venom ant three. Levels 2 and 3 are bought by picking one of two abilities, for good; level 5 is a gold "mastery" pick.
+  - The Forager's first three levels are the old "Train foragers". That button is now "Train ants · evolve" in the queen's sheet.
+  - Every level is shown. The ones costing 🍯 sugar, 🪲 chitin or 🪵 wood say so and can't be bought until those materials arrive. That leaves Forager 1–3, Builder 1–3, Soldier 1–2, Venom 1–2 and Nurse 1–2 buyable now.
+  - Live picks:
+    - Forager: Trailblazer (stronger trails) or Sprinter (faster off a trail); then Pathfinder (spots food twice as far off) or Hauler (foragers chew pieces off treats and bring them home on their own).
+    - Builder: Shorer (cave-ins less than half as likely) or Mason (rooms cost 25% less stone); then Excavator (digs 50% faster) or Field engineer (repairs twice as fast).
+    - Soldier: Doorkeeper (raiders steal nothing past a guarded door) or Escort (patrols twice as far; counts against birds from farther).
+    - Venom ant: Paralytic (stung spiders and caterpillars slow to half) or Hunter (a kill lays a trail home).
+    - Nurse: Wet nurse (eggs cost 30% less food) or Medic training (hurt ants heal in the nest).
+  - **The queen's trait** at level IV: Fertile (eggs 20% faster) or Hardy (raiders hurt her less than half as much). Her levels V–VIII and later traits are listed but need sugar.
+- **Veteran ranks** (Civilization's unit experience):
+  - Ants earn experience at their own job: foragers per load home, builders per cell dug or room built, fighters by biting and killing, nurses per egg hatched, any ant for getting out from under a foot or acorn, a crew for hauling a treat.
+  - Five ranks: Callow, Seasoned (10 xp), Veteran (50), Elite (150), Legend (400, or the spider's killing bite). Each makes an ant 10% better at its job, up to 40%.
+  - **You can see it:** callows hatch pale, as real ants do, and darken; Veterans stand a little bigger; Elites wear a pale-gold ring and Legends a gold one.
+  - **Doctrine:** with dozens of ants, picking per ant would be a chore, so each kind of ant has one setting: which promotion its Veterans learn, and which second one its Elites add (Trailwise, Strongback, Keen nose, Dodger for gatherers; Quick digger, Steady, Packer, Fixer for diggers; Brawler, Guard, Hunter, Skirmisher for fighters; Gentle, Healer for nurses).
+  - **Elites get names** (Thorn, Burr, Pip…), Legends a title ("Spider-bane"). Named ants who die are listed under Evolve → Ranks, "The fallen".
+  - **Rebirth:** when your ant dies and you have named ants, you can come back as one of them, where it stands, instead of waiting for an egg. The first step of "choose your rebirth".
+- **The evolution tree** (Evolve → Evolution): all five branches and their ~60 nodes are listed, with what each needs first. These 15 are live now:
+  - Strong mandibles (fighters bite 25% harder), Formic spray (fighters bite from 2 tiles), Stridulation (every fighter answers an alarm), Trail runners (25% faster on a trail).
+  - Strong scent (trails last twice as long), Bigger crews and Bigger crews II (recruit 30, then 45).
+  - Hatchery II and III (4 and 5 eggs at once), Store II and III (400 and 1,000 food), Insulation (cave-ins halved, rain caves in once not twice).
+  - Division of labour (experience 25% faster), Drill hall (fighters hatch Seasoned), Colony memory (every ant hatches Seasoned).
+  - Each has a deed that halves its 🧬 once done (for example: Strong mandibles, kill 20 rival ants; Hatchery II, hatch 30 eggs).
+  - The rest show faded, "coming in a later build". Respec, the lineage pick and the great evolutions are not built yet.
+- **Saves** move to format 11; build 11.6 saves load with everything at zero.
+- **Balance.** A first version made fresh ants 10% worse at their jobs. That shrank every bot colony (median 15 ants at 25 minutes, against 27 on build 11.6), because every ant starts fresh, so Callow is now a look only.
+- **Bots, 30 minutes, 14 games:** losses match build 11.6 (seed 21 loses its queen to raiders on both builds; the rest survive). Colonies reach 16–58 ants, and earn 15–29 Genes. The bot buys growth only with a full Food store, after the queen, so it spends little; a player choosing well should do better.
+- **Tests:** `tests/growth.test.js` covers Genes, the tree's locks and costs, Store II/III, upgrade levels and picks, ranks, rebirth, doctrine and saves. The browser test opens all three Evolve tabs, buys a node, and takes over a Legend.
+
 ## Oct 29: the rest of the wish list (build 11.6)
 
 Mark: "Do it all now." Everything left on the backlog, in one build.

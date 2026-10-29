@@ -28,6 +28,8 @@ export const EXPL = {
   queen: ['', 'Tap a caste to lay an egg. A Hatchery lets her lay more at once.'],
   build: ['', 'Each room needs a dug pocket its size. You pay now; Builders finish it.'],
   soil: ['Soil', 'Deeper is harder. Packed soil needs a Workshop; clay also needs a queen upgrade.'],
+  genes: ['🧬 Genes', 'You earn Genes by playing: scouting new ground, bringing home new finds, hatching eggs, killing big game. Spend them on the evolution tree. Press Evolve (the twist of DNA).'],
+  veteran: ['A Veteran', 'Ants get better at their jobs. They hatch pale, darken as they learn, and Veterans pick up a promotion. Elites get names. Choose what they learn under Evolve → Ants.'],
   cap: ['The queen’s reach', 'She’s at her ant limit. Upgrade her to raise it.'],
 };
 
@@ -40,6 +42,7 @@ export const HELP = `
 <div class="h"><b>Outside</b> Tap to walk. Pick up, carry home. Your path is a trail others follow. Hold Recruit for a crew; Lift carries treats.</div>
 <div class="h"><b>The nest</b> Tap dirt to dig. Build places rooms. Tap the queen for eggs and upgrades.</div>
 <div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: soldiers. 🪨 Stone: rooms and upgrades.</div>
+<div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs and big kills. Spend them on the evolution tree; spend materials on each kind of ant's levels. Ants rank up as they work: Veterans learn a promotion, Elites get a name, and when you die you can come back as one.</div>
 <div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders.</div>
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging.</div>
 <div class="h"><b>Dangers</b> Spider, rival raids, the mower, antlion pits, feet, birds, toads, acorns, bug spray, fire ants, rain and cave-ins. Each explains itself the first time.</div>`;

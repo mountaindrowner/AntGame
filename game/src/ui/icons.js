@@ -49,5 +49,7 @@ export const ICONS = {
   film: svg('<rect x="3" y="8" width="18" height="12" rx="1.5"/><path d="M3 8l2.5-4 4 1-2.5 4M10 5l4 1-2.5 4M15 6l4 1-2 3"/>'),
   back: svg('<path d="M15 5l-7 7 7 7"/>'),
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  // Evolve: a twist of DNA.
+  evolve: svg('<path d="M7 3c0 6 10 6 10 12s-10 3-10 6M17 3c0 6-10 6-10 12s10 3 10 6"/><path d="M8.5 7h7M8.5 17h7"/>'),
   help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1.1.9-1.1 1.6v.4"/><circle cx="12" cy="17.2" r=".9" fill="currentColor"/>'),
 };

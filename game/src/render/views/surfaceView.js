@@ -13,6 +13,7 @@ import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
+import { rankOf } from '../../sim/growth.js';
 import { YardScenery, mowerMesh } from './yardScenery.js';
 import { sneaker } from '../models/sneaker.js';
 import { robin } from '../models/bird.js';
@@ -44,7 +45,7 @@ export function hudShift(app) {
   return ((ins.top - ins.bottom) / 2) / ins.h;
 }
 
-export function antColor(a) {
+function casteColor(a) {
   const C = CASTES[a.caste];
   if (a.team) return C.fight >= 3 ? COLORS.rivalSoldier : COLORS.rivalAnt;
   if (a.caste === 'venom') return COLORS.venom;
@@ -53,6 +54,23 @@ export function antColor(a) {
   if (a.caste === 'nurse') return COLORS.nurse;
   return COLORS.ourAnt;
 }
+// Rank shows on the ant (build 12): fresh Callows hatch pale, as real ants
+// do, and darken as they learn; Veterans and better are a touch darker.
+const RANK_TINT = [['#d8c6a6', 0.55], null, ['#000000', 0.18], ['#000000', 0.28], ['#000000', 0.3]];
+const tintCache = new Map();
+export function antColor(a) {
+  const base = casteColor(a);
+  if (a.team) return base;
+  const r = rankOf(a), tint = RANK_TINT[r];
+  if (!tint) return base;
+  const key = base + r;
+  let c = tintCache.get(key);
+  if (!c) { c = new THREE.Color(base).lerp(new THREE.Color(tint[0]), tint[1]); tintCache.set(key, c); }
+  return c;
+}
+// Veterans stand a little bigger; Elites and Legends wear a ring.
+export const rankScale = (a) => (a.team ? 1 : [1, 1, 1.05, 1.1, 1.15][rankOf(a)]);
+export const rankRing = (a) => (a.team ? null : [null, null, null, '#d9c48a', '#ffd34d'][rankOf(a)]);
 
 export class SurfaceView {
   constructor() {
@@ -346,7 +364,9 @@ export class SurfaceView {
     }
     for (const a of s.ants) {
       if (a.isPlayer || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'dead') continue;
-      ant(a, antColor(a));
+      ant(a, antColor(a), rankScale(a));
+      const ring = rankRing(a);
+      if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
     const pa = P.ant;
     if (pa && !P.inNest) {

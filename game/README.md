@@ -27,6 +27,7 @@ game/
 │   ├── config.js           tunables: save key, PS1 pixel size, cameras, creature scale, colours
 │   ├── sim/
 │   │   ├── sim.js          the simulation (build 6, plus builder rules, food kinds, the fight to survive). No DOM.
+│   │   ├── growth.js       build 12: 🧬 Genes, ant upgrade levels, veteran ranks, the evolution tree (data the sim and UI share)
 │   │   └── yard.js         the yard: 70 regions at 2× scale, landmarks, food tables, hazards (feet, birds, toads, acorns, spray, fire ants), nest sites, the yard plan
 │   ├── game/
 │   │   └── save.js         localStorage save/load (reads build 6 v5 saves)
@@ -68,7 +69,7 @@ game/
 │   │   └── sound.js        its WebAudio score and sound gags
 │   └── input/
 │       └── pointer.js      tap, hold to walk, pinch, drag; raycasts into the active view
-├── tests/                  node:test checks on the sim (sim, builders, creatures)
+├── tests/                  node:test checks on the sim (sim, builders, creatures, strikes, growth)
 └── scripts/
     ├── e2e.mjs             browser playthrough with screenshots
     ├── playtest.mjs        headless bot that plays whole sessions (sensible, military, cheese, idle)

@@ -1,6 +1,6 @@
 # Progression
 
-Status: **design proposal (Oct 29), not built.** Mark: "Let's really take time to think out progression… how progression can grow so that the player always has something more to build, more to expand."
+Status: **design proposal (Oct 29). Build 12 starts it:** 🧬 Genes, the ant upgrade levels, veteran ranks, the evolution tree's first nodes and rebirth as a named ant. See "Built today vs proposed". Mark: "Let's really take time to think out progression… how progression can grow so that the player always has something more to build, more to expand."
 
 It builds on what's in the game (build 11.6), the original design (`HANDOFF.md` §2–3) and the depth pillars (`DEPTH.md`). The numbers are first guesses for the bots to tune. The decisions that are Mark's to make are at the end.
 
@@ -578,9 +578,9 @@ Seasons give the whole game a rhythm: build, harvest, prepare, survive. They mak
 |---|---|---|
 | Territory | Explore to wake regions; forage range and training | Outposts, Held regions and Prizes, satellites, supply lines |
 | Nest | 6 rooms; 3 soil bands; spoil heap | Room tiers I–III, a deep band, 8 new rooms |
-| Population | Queen I–IV; 5 castes | Queen V–VI, satellite queens, 11 more castes |
-| Evolution | — | 🧬 Genes, 24 nodes in three branches, the lineage pick |
-| You | One body type; crews to 20 | Choose your rebirth; scent types; the goals board; the memorial |
+| Population | Queen I–IV, and her first trait at IV; 5 castes; upgrade levels for all 5 (the levels needing 🍯, 🪲 or 🪵 show but can't be bought yet); veteran ranks, doctrine and named Elites (build 12) | Queen V–VIII, satellite queens, 32 more castes |
+| Evolution | 🧬 Genes from scouting, first finds, every 10 eggs and big kills; 15 of the tree's nodes live, the rest shown as coming (build 12) | The other nodes, deeds for every node, respec, the lineage pick, great evolutions |
+| You | Crews to 20, 30 or 45; come back as a named Elite or Legend; the fallen are remembered (build 12) | Rebirth as any unlocked caste; scent types; the goals board |
 | Materials | 4 | 7 |
 | Challenge | Distance hazards, the spider, growing raids | 10 more bosses, 4 more rivals that spread, Notice, the director, seasons |
 

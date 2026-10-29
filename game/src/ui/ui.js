@@ -7,6 +7,7 @@ import { sfx } from '../audio/sfx.js';
 import { YARD_MAP } from '../sim/yard.js';
 import { ICONS } from './icons.js';
 import { MapView } from './mapView.js';
+import { RES as GRES, UPGRADES, BRANCHES, EVO, EVO_BY, evoCost, laterIn, LATER, RANKS, rankOf, PROMOS, FAMILY, QUEEN_TRAITS } from '../sim/growth.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
 const $ = (id) => document.getElementById(id);
@@ -16,7 +17,7 @@ export function createUI(app) {
   const el = {
     stats: $('stats'), msg: $('msg'), hungerBar: $('hungerbar'), act: $('act'), release: $('release'), mark: $('mark'),
     recruit: $('recruit'), enter: $('enter'), barS: $('bar'), barN: $('barn'), sheet: $('sheet'), buildNest: $('buildnest'),
-    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
+    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'), evolve: $('evolvebtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
   };
 
   // ---------------------------------------------------------- icon buttons
@@ -34,7 +35,7 @@ export function createUI(app) {
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
-  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
+  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.evolve, 'evolve', 'Evolve: ants, evolution, ranks'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
   setIcon(el.act, 'pick', 'Pick up');
 
   // ---------------------------------------------------------- tips
@@ -129,9 +130,93 @@ export function createUI(app) {
   }
 
   // A cost as resource icons (the top bar's), not words: "🌾10 🪨5".
-  const RES = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨' };
+  const RES = GRES;
   const costIcons = (cost) => Object.entries(cost).map(([k, v]) => `<span class="cost">${RES[k] || k}${v}</span>`).join(' ') || 'free';
   const sicon = (name) => (ICONS[name] ? `<span class="si">${ICONS[name]}</span>` : '');
+
+  // ---------------------------------------------------------- Evolve (build 12)
+  // Three tabs: each kind of ant's upgrades and its veterans' doctrine; the
+  // evolution tree, paid in 🧬; and the ranks, named ants and the fallen.
+  const CASTE_ORDER = ['forager', 'builder', 'nurse', 'soldier', 'venom'];
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+  function renderGrow() {
+    const s = app.s, c = s.colony, tab = app.growTab || 'ants';
+    let h = `<div class="row head"><strong>Evolve · <span class="genes">🧬 ${c.genes}</span></strong><button class="x" data-close="1">Close</button></div>`;
+    h += `<div class="tabs">${[['ants', 'Ants'], ['evo', 'Evolution'], ['ranks', 'Ranks']].map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+    if (tab === 'ants') h += growAnts(s, c);
+    else if (tab === 'evo') h += growEvo(s, c);
+    else h += growRanks(s, c);
+    return h;
+  }
+  function growAnts(s, c) {
+    let h = `<div class="note">Each level is bought once for every ant of that kind. Levels with two choices are for good: pick one.</div>`;
+    for (const k of CASTE_ORDER) {
+      const L = UPGRADES[k], n = SIM.casteLevel(s, k), lock = SIM.upgradeLock(s, k), C = CASTES[k];
+      h += `<div class="up"><div class="up-h">${sicon(k)}<b>${C.name}</b><span>level ${n} of ${L.length}${lock ? ' · ' + lock : ''}</span></div><div class="lv">`;
+      L.forEach((U, i) => {
+        const pk = (c.picks[k] || {})[i + 1], pn = pk && U.picks.find((p) => p[0] === pk);
+        h += `<span class="${i < n ? 'done' : i === n ? 'next' : ''}">${i + 1}. ${U.boost === 'Mastery' ? '★ Mastery' : U.boost}${pn ? ': ' + pn[1] : ''}</span>`;
+      });
+      h += `</div>`;
+      const U = L[n];
+      if (U && !lock) {
+        const later = laterIn(U.cost), pay = SIM.canPay(c, U.cost);
+        const why = later ? `needs ${LATER[later]}: coming in a later build` : pay ? '' : 'short on materials';
+        if (U.picks) h += `<div class="btns">` + U.picks.map(([pk, pn, pd]) => `<button data-upc="${k}:${pk}" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost === 'Mastery' ? '' : U.boost + ' + '}${pn}</b><i>${pd}</i><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button>`).join('') + `</div>`;
+        else h += `<div class="btns one"><button data-upc="${k}:" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost}</b><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button></div>`;
+      } else if (!U) h += `<div class="note">All levels bought.</div>`;
+      const P = PROMOS[FAMILY[k]], d = SIM.doctrineOf(s, k);
+      for (const [slot, label] of [[0, 'Veterans learn'], [1, 'Elites add']]) {
+        h += `<div class="doc">${label}:` + P.map(([pk, pn, pd]) => `<button data-doc="${k}:${slot}:${pk}" class="${d[slot] === pk ? 'on' : ''}" data-tip="${pd}">${pn}</button>`).join('') + `</div>`;
+      }
+      h += `</div>`;
+    }
+    return h;
+  }
+  function growEvo(s, c) {
+    let h = `<div class="note">Spend 🧬 Genes and materials. Genes come from scouting new regions, the first of each find brought home, every 10 eggs hatched, and big kills. Doing a node's deed halves its 🧬. Faded nodes come in later builds.</div>`;
+    const kids = (key, b) => EVO.filter((n) => n.branch === b && (n.after || null) === key);
+    for (const B of BRANCHES) {
+      h += `<div class="branch"><b>${B.name}</b><div class="note">${B.note}</div>`;
+      const walk = (key, depth) => {
+        for (const n of kids(key, B.key)) {
+          const lock = SIM.evoLock(s, n.key), cost = evoCost(s, n), pay = SIM.canPay(c, cost);
+          const cls = lock === 'owned' ? 'owned' : n.soon ? 'soon' : !lock && pay ? 'ready' : '';
+          const deed = n.deed ? (n.deed[1](s) ? ' · deed done: half 🧬' : ` · deed: ${n.deed[0]} for half 🧬`) : '';
+          const state = lock === 'owned' ? '✓ evolved' : lock ? lock : pay ? 'tap to evolve' : 'short on materials';
+          h += `<button class="node ${cls}${n.big ? ' big' : ''}" data-evo="${n.key}" style="margin-left:${depth * 14}px;width:calc(100% - ${depth * 14}px)" ${lock || !pay ? 'aria-disabled="true"' : ''}><b>${n.name}</b><i>${n.fx}</i><i>${costIcons(cost)}${deed}</i><i>${state}</i></button>`;
+          walk(n.key, depth + 1);
+        }
+      };
+      walk(null, 0);
+      h += `</div>`;
+    }
+    return h;
+  }
+  function growRanks(s, c) {
+    const mine = s.ants.filter((a) => !a.team && a.state !== 'dead');
+    let h = `<div class="note">Ants get better at their jobs as they work. They hatch pale and darken; Veterans learn a promotion and Elites a second, and get a name. A big kill makes a Legend.</div>`;
+    h += `<table class="ranks"><tr><th></th>${RANKS.map((r) => `<th>${r.name}</th>`).join('')}</tr>`;
+    for (const k of CASTE_ORDER) {
+      const row = RANKS.map(() => 0); for (const a of mine) if (a.caste === k) row[rankOf(a)]++;
+      if (row.some((x) => x)) h += `<tr><td>${CASTES[k].name}</td>${row.map((x) => `<td>${x || '·'}</td>`).join('')}</tr>`;
+    }
+    h += `</table>`;
+    const named = mine.filter((a) => a.name).sort((a, b) => (b.xp || 0) - (a.xp || 0));
+    h += `<div class="t" style="margin-top:10px">Named ants</div>`;
+    h += named.length ? named.map((a) => `<div class="named"><b>${a.name}${a.title ? ' ' + a.title : ''}</b>${a.isPlayer ? ' (you)' : ''} · ${RANKS[rankOf(a)].name} ${CASTES[a.caste].name} · ${Math.floor(a.xp || 0)} xp</div>`).join('') : `<div class="note">None yet. Elites get names.</div>`;
+    h += `<div class="t" style="margin-top:10px">The fallen</div>`;
+    h += c.fallen.length ? c.fallen.map((f) => `<div class="named">${f.name}${f.title ? ' ' + f.title : ''}${f.you ? ' (you)' : ''} · ${RANKS[f.rank].name} ${CASTES[f.caste].name} · ${({ spider: 'the spider', rival: 'a rival', war: 'in battle', antlion: 'an antlion', mower: 'the mower', foot: 'a foot', bird: 'a robin', toad: 'the toad', acorn: 'an acorn', spray: 'bug spray', fireants: 'fire ants', starved: 'starved', hunger: 'starved' }[f.cause] || f.cause)}</div>`).join('') : `<div class="note">No named ant has died.</div>`;
+    return h;
+  }
+  // Your ant died: come back as one of your named ants, or wait for an egg.
+  function rebornChoices() { return app.s.ants.filter((a) => !a.team && a.state !== 'dead' && !a.isPlayer && rankOf(a) >= 3).sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 4); }
+  function renderReborn() {
+    const list = rebornChoices();
+    return `<div class="row head"><strong>Your ant is gone</strong></div><div class="note">Come back as one of your named ants, or wait for the next hatchling.</div><div class="btns">`
+      + list.map((a) => `<button data-possess="${a.id}">${sicon(a.caste)}<b>${a.name}${a.title ? ' ' + a.title : ''}</b><i>${RANKS[rankOf(a)].name} ${CASTES[a.caste].name}</i></button>`).join('')
+      + `<button data-wait="1"><b>Wait</b><i>for the next hatchling</i></button></div>`;
+  }
 
   function renderSheet() {
     const s = app.s, c = s.colony;
@@ -142,23 +227,33 @@ export function createUI(app) {
       for (const k of Object.keys(CASTES)) {
         const C = CASTES[k];
         const lock = SIM.eggLock(s, k);
-        const dis = lock || !SIM.canPay(c, C.cost) || c.eggQueue.length >= 10;
-        h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${lock || costIcons(C.cost) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
+        const ec = SIM.eggCost(s, k), dis = lock || !SIM.canPay(c, ec) || c.eggQueue.length >= 10;
+        h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${lock || costIcons(ec) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
       }
       h += `</div>`;
       const cap = SIM.queenCap(s.queen.level), up = SIM.QUEEN_UP[s.queen.level];
       h += `<div class="note">Queen level ${s.queen.level + 1} · holds ${cap} ants (${SIM.antCount(s)} now)${SIM.antCount(s) >= cap ? ' · at the cap, eggs paused' : ''}</div>`;
-      if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}>${sicon('queen')}<b>Upgrade queen</b><i>${costIcons(up)} · +20 ants${s.queen.level === 0 ? ' · unlocks clay digging' : ''}</i></button></div>`;
-      // Foragers' training: how far they go on their own, and how fast.
-      const fl = c.forage || 0, fu = SIM.FORAGE[fl + 1];
-      h += `<div class="note">Foragers range ${SIM.FORAGE[fl].range} tiles from the nest on their own. Your trails lead them farther.</div>`;
-      if (fu) h += `<div class="btns one"><button data-forage="1" ${SIM.canPay(c, fu.cost) ? '' : 'disabled'}>${sicon('train')}<b>Train foragers</b><i>${costIcons(fu.cost)} · range ${fu.range} · ${Math.round((fu.speed - 1) * 100)}% faster</i></button></div>`;
+      const later = up && laterIn(up);
+      if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}>${sicon('queen')}<b>Upgrade queen to level ${s.queen.level + 2}</b><i>${costIcons(up)} · +20 ants${s.queen.level === 0 ? ' · unlocks clay digging' : ''}</i>${later ? `<i>needs ${LATER[later]}: coming in a later build</i>` : ''}</button></div>`;
+      // Her traits: one pick, for good, at levels IV, VI and VIII.
+      for (const Q of QUEEN_TRAITS) if (s.queen.level >= Q.level && !c.qtraits[Q.level]) {
+        h += `<div class="note">Level ${Q.level + 1}: pick a trait, for good.</div><div class="btns">` + Q.picks.map(([k, n, d]) => `<button data-qt="${Q.level}:${k}"><b>${n}</b><i>${d}</i></button>`).join('') + `</div>`;
+      }
+      const traits = Object.values(c.qtraits).map((k) => QUEEN_TRAITS.flatMap((q) => q.picks).find((p) => p[0] === k)).filter(Boolean);
+      if (traits.length) h += `<div class="note">Her traits: ${traits.map((p) => `<b>${p[1]}</b> (${p[2].toLowerCase()})`).join(' · ')}</div>`;
+      // Training and the tech tree live under Evolve.
+      h += `<div class="note">Foragers range ${SIM.FORAGE[Math.min(4, c.forage || 0)].range} tiles from the nest on their own. Your trails lead them farther.</div>`;
+      h += `<div class="btns one"><button data-grow="ants">${sicon('evolve')}<b>Train ants · evolve</b><i>🧬 ${c.genes} · upgrades for each kind of ant, and the evolution tree</i></button></div>`;
       if (c.eggs.length || c.eggQueue.length) {
         h += `<div class="eggs">`;
         for (const e of c.eggs) h += `<span class="egg"><em style="width:${Math.min(100, (e.t / e.need) * 100)}%"></em>${CASTES[e.caste].name}</span>`;
         for (const q of c.eggQueue) h += `<span class="egg q">${CASTES[q].name}</span>`;
         h += `</div><div class="note">${c.eggs.length}/${c.hatchCap} hatching · ${c.eggQueue.length} queued</div>`;
       } else h += `<div class="note">No eggs. The queen waits.</div>`;
+    } else if (app.menu === 'grow') {
+      h = renderGrow();
+    } else if (app.menu === 'reborn') {
+      h = renderReborn();
     } else if (app.menu === 'catalog') {
       const builders = s.ants.filter((a) => a.caste === 'builder').length;
       h += `<div class="row head"><strong>Build</strong><button class="x" data-close="1">Close</button></div>`;
@@ -166,11 +261,11 @@ export function createUI(app) {
       for (const k of ROOM_KEYS) {
         const R = ROOMS[k];
         const have = SIM.roomOf(s, k), queued = c.buildQueue.some((j) => j.room === k);
-        const fits = app.anyFit(R.w, R.h), pay = SIM.canPay(c, R.cost);
+        const rc = SIM.roomCost(s, k), fits = app.anyFit(R.w, R.h), pay = SIM.canPay(c, rc);
         // A cost above the food cap can never be paid: say what unlocks it.
-        const overCap = (R.cost.food || 0) > c.cap;
-        const status = have ? 'built' : queued ? 'being built' : overCap ? `needs a Food store first (food cap ${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(R.cost) : 'ready to place';
-        h += `<button data-place="${k}" ${have || queued || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}</b><i>${costIcons(R.cost)} · ${R.desc}</i><i>${status}</i></button>`;
+        const overCap = (rc.food || 0) > c.cap;
+        const status = have ? 'built' : queued ? 'being built' : overCap ? `needs a Food store first (food cap ${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(rc) : 'ready to place';
+        h += `<button data-place="${k}" ${have || queued || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}</b><i>${costIcons(rc)} · ${R.desc}</i><i>${status}</i></button>`;
       }
       h += `</div><div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
       h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
@@ -266,6 +361,7 @@ export function createUI(app) {
       + chip('🥩', Math.floor(c.protein), 'Protein: for soldiers and the queen')
       + chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
+      + (c.genesTotal ? chip('🧬', c.genes, 'Genes: spend them under Evolve') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
       + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
       + (s.rain.on ? chip('🌧', '', 'Raining: trails wash out') : '')
@@ -305,6 +401,13 @@ export function createUI(app) {
     if (nAnts >= cap && s.queen.placed) showExplainer('cap');
     if (s.seen.nest && !s.seen.soil && SIM.dugCount(s) > 12) showExplainer('soil');
     setIcon(el.view, app.view === 'nest' ? 'surface' : 'nest', app.view === 'nest' ? 'Surface' : 'Nest');
+    // A chime for each Gene earned and each new Elite.
+    if (app.lastGenes != null && c.genesTotal > app.lastGenes) sfx.play('genes');
+    app.lastGenes = c.genesTotal;
+    const named = c.named; if (app.lastNamed != null && named > app.lastNamed) sfx.play('rankUp'); app.lastNamed = named;
+    // Your ant died and you have named ants: offer them as your next body.
+    if (P().ant) app.rebirthAsked = false;
+    else if (P().pending && !app.rebirthAsked && !app.menu && s.queen.placed && rebornChoices().length) { app.rebirthAsked = true; openMenu('reborn'); app.paused = true; }
     if (app.menu === 'colony') renderColony();
     if (app.menu) renderSheet();
   }
@@ -329,6 +432,14 @@ export function createUI(app) {
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.forage) { SIM.upgradeForage(s); renderSheet(); return; }
+    if (b.dataset.grow) { app.growTab = b.dataset.grow; openMenu('grow'); return; }
+    if (b.dataset.tab) { app.growTab = b.dataset.tab; renderSheet(); return; }
+    if (b.dataset.upc) { const [k, pk] = b.dataset.upc.split(':'); if (SIM.upgradeCaste(s, k, pk || undefined)) sfx.play('evolve'); renderSheet(); return; }
+    if (b.dataset.evo) { if (SIM.buyEvo(s, b.dataset.evo)) sfx.play('evolve'); renderSheet(); return; }
+    if (b.dataset.doc) { const [k, slot, pk] = b.dataset.doc.split(':'); SIM.setDoctrine(s, k, +slot, pk); renderSheet(); return; }
+    if (b.dataset.qt) { const [lv, k] = b.dataset.qt.split(':'); SIM.pickQueenTrait(s, +lv, k); renderSheet(); return; }
+    if (b.dataset.possess) { SIM.possess(s, +b.dataset.possess); closeMenu(); return; }
+    if (b.dataset.wait) { app.rebirthAsked = true; closeMenu(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; renderSheet(); return; }
     if (b.dataset.place) { app.placing = { kind: 'room', key: b.dataset.place }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.tool) { app.placing = { kind: b.dataset.tool }; closeMenu(); app.view = 'nest'; return; }
@@ -348,6 +459,7 @@ export function createUI(app) {
   });
   el.buildNest.addEventListener('click', () => { if (SIM.buildNest(app.s)) closeMenu(); });
   el.queen.addEventListener('click', () => openMenu('egg'));
+  el.evolve.addEventListener('click', () => { if (app.menu === 'grow') closeMenu(); else { mapView.isOpen && mapView.close(); openMenu('grow'); app.paused = true; } });
   el.level.addEventListener('click', () => { if (app.placing) app.placing = null; else openMenu('catalog'); });
   el.exitNest.addEventListener('click', () => { P().ntx = SHAFT; P().nty = 0; P().exiting = true; });
 
@@ -357,7 +469,7 @@ export function createUI(app) {
     if (!P().ant || P().inNest) return;
     recN = 1;
     setIcon(el.recruit, 'recruit', 'Recruit 1', 1);
-    recTimer = setInterval(() => { if (recN < 20) { recN++; setIcon(el.recruit, 'recruit', 'Recruit ' + recN, recN); } }, 140);
+    recTimer = setInterval(() => { if (recN < SIM.crewCap(app.s)) { recN++; setIcon(el.recruit, 'recruit', 'Recruit ' + recN, recN); } }, 140);
   });
   const recEnd = () => {
     if (!recTimer) return;

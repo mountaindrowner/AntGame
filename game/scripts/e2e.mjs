@@ -273,6 +273,40 @@ try {
   console.log('crew lift'.padEnd(22), '|', carried);
   await page.waitForTimeout(900);
   await shot('crew-carry');
+  // Build 12: ranks on the ants, the Evolve sheet's three tabs, a purchase, rebirth.
+  await sim(() => {
+    const { app } = window.UNDERFOOT, s = app.s;
+    Object.assign(s.colony, { genes: 12, genesTotal: 12, protein: 80, grit: 80, store: Math.max(s.colony.store, 60) });
+    const crew = s.ants.filter((o) => !o.team && !o.isPlayer);
+    crew.forEach((o, i) => { o.xp = [0, 0, 15, 60, 160, 420][i % 6]; if (o.xp >= 150) o.name = 'Thorn' + i; });
+    s.player.big = null;
+  });
+  await page.waitForTimeout(500);
+  await shot('ranks-on-ants');
+  await page.click('#evolvebtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(300);
+  await shot('evolve-ants');
+  await page.click('#sheet button[data-tab="evo"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(200);
+  await page.click('#sheet button[data-evo="mandibles"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(200);
+  await shot('evolve-tree');
+  const bought = await sim(() => window.UNDERFOOT.SIM.has(window.UNDERFOOT.app.s, 'mandibles'));
+  console.log('evolve: mandibles'.padEnd(22), '|', bought);
+  if (!bought) errors.push('test: Strong mandibles did not buy');
+  await page.click('#sheet button[data-tab="ranks"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(200);
+  await shot('evolve-ranks');
+  await page.click('#sheet button[data-close]');
+  // Your ant dies with named ants alive: the rebirth choice opens.
+  await sim(() => { const { app } = window.UNDERFOOT, s = app.s, a = s.player.ant; if (a) { a.state = 'dead'; s.ants = s.ants.filter((o) => o !== a); s.player.ant = null; } s.player.pending = true; app.rebirthAsked = false; });
+  await page.waitForTimeout(700);
+  await shot('reborn');
+  const reborn = await page.$('#sheet button[data-possess]');
+  if (!reborn) errors.push('test: no rebirth choice');
+  else { await reborn.click({ force: true, timeout: 5000 }); await page.waitForTimeout(300); }
+  const who = await sim(() => { const a = window.UNDERFOOT.app.s.player.ant; return a ? a.name : null; });
+  console.log('reborn as'.padEnd(22), '|', who);
 } catch (e) {
   errors.push('test: ' + e.message);
 }
