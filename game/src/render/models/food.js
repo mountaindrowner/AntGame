@@ -270,6 +270,7 @@ export function itemLook(f, COLORS) {
 export function carryLook(kind, itype, COLORS) {
   if (kind === 'water') return { geo: FOOD.bead, key: 'cbead', color: '#ffffff', r: 0.7, water: true };
   if (kind === 'grit') return { geo: PROPS.pebble, key: 'cgrit', color: COLORS.grit, r: 1 };
+  if (kind === 'dirt') return { geo: PROPS.pebble, key: 'cdirt', color: '#6a4628', r: 1.15 }; // a clod of dug dirt for the spoil heap
   if (kind === 'protein') return { geo: PROPS.meat, key: 'cmeat', color: COLORS.protein, r: 1 };
   if (itype === 'aphids') return { geo: PROPS.crumb, key: 'choney', color: '#e8c860', r: 0.9 }; // a drop of honeydew
   if (TREAT_COLOR[itype]) return { geo: PROPS.crumb, key: 'c' + itype, color: TREAT_COLOR[itype], r: 1 };

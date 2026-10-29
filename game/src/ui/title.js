@@ -3,10 +3,12 @@
 // Opens after the film on a first run, and on every later run. Options live
 // in localStorage (app.opts), apart from the saved colony.
 import { ICONS } from './icons.js';
+import { sfx } from '../audio/sfx.js';
 
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
-  try { return Object.assign({ sound: true, graphics: 'auto' }, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { return { sound: true, graphics: 'auto' }; }
+  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto' };
+  try { return Object.assign(def, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { return def; }
 }
 function saveOptions(o) { try { localStorage.setItem(OPTS_KEY, JSON.stringify(o)); } catch (e) { /* blocked */ } }
 
@@ -35,6 +37,7 @@ export class TitleMenu {
     document.body.classList.add('title-on');
     this.el.classList.remove('hidden');
     this._main();
+    sfx.play('stinger');
   }
 
   close() {
@@ -57,8 +60,10 @@ export class TitleMenu {
   _options() {
     const o = this.app.opts, pick = (k, v, label) => `<button class="t-opt${o[k] === v ? ' on' : ''}" data-t="opt:${k}:${v}">${label}</button>`;
     this._page(`<div class="t-row"><span>Sound</span>${pick('sound', true, 'On')}${pick('sound', false, 'Off')}</div>`
+      + `<div class="t-row"><span>Music</span>${pick('music', 'off', 'Off')}${pick('music', 'quiet', 'Quiet')}${pick('music', 'loud', 'Loud')}</div>`
+      + `<div class="t-row"><span>Effects</span>${pick('fx', 'off', 'Off')}${pick('fx', 'quiet', 'Quiet')}${pick('fx', 'loud', 'Loud')}</div>`
       + `<div class="t-row"><span>Graphics</span>${pick('graphics', 'auto', 'Auto')}${pick('graphics', 'sharp', 'Sharp')}${pick('graphics', 'fast', 'Fast')}</div>`
-      + `<div class="t-note">Auto starts sharp and eases off if your device struggles. Music is coming.</div>`
+      + `<div class="t-note">Graphics: Auto starts sharp and eases off if your device struggles.</div>`
       + btn('back', 'back', 'Back'));
   }
 

@@ -3,6 +3,7 @@
 // under a fog of war that lifts where you have been (sim seenMap). Pinch,
 // scroll or double-tap to zoom, drag to pan, tap a spot for its region.
 import SIM from '../sim/sim.js';
+import { sfx } from '../audio/sfx.js';
 
 const { T, AREAS, SEE } = SIM;
 
@@ -98,6 +99,7 @@ export class MapView {
   }
 
   zoomAt(x, y, k) {
+    sfx.play('whoosh', null, k > 1);
     const z0 = this.z;
     this.z = Math.max(this.minZ, Math.min(this.minZ * 9, this.z * k));
     const f = this.z / z0;

@@ -29,8 +29,10 @@ const BLEND = 8; // how softly neighbouring cells merge
 function tunnelBoxes(s) {
   const cells = s.nest.cells;
   const boxes = Array.from({ length: NW * NH }, () => []);
+  // Finished rooms (cells marked 2) are drawn as one organic chamber instead
+  // (see roomShape); everything else is a box per cell.
   for (let y = 0; y < NH; y++) for (let x = 0; x < NW; x++) {
-    if (cells[y * NW + x]) boxes[y * NW + x].push([(x + 0.5) * T, (y + 0.5) * T, T / 2, T / 2]);
+    if (cells[y * NW + x] === 1) boxes[y * NW + x].push([(x + 0.5) * T, (y + 0.5) * T, T / 2, T / 2]);
   }
   // The shaft breaks through the surface.
   boxes[SHAFT].push([(SHAFT + 0.5) * T, -T / 2, T / 2, T]);
@@ -57,6 +59,22 @@ export function tunnelGrid(s, x0, y0, step, nx, ny) {
   const far = T * 2;
   const grid = new Float32Array(nx * ny).fill(far);
   const reach = ROUND + BLEND;
+  // Rooms: a squarish oval filling the room's cells, its wall wobbling a
+  // little, so chambers look dug rather than machined. Same footprint.
+  for (const rm of s.nest.rooms) {
+    const cx = (rm.x0 + (rm.w || 4) / 2) * T, cy = (rm.y0 + (rm.h || 3) / 2) * T, hw = (rm.w || 4) * T / 2 + 1.5, hh = (rm.h || 3) * T / 2 + 1.5;
+    const seed = rm.x0 * 7.3 + rm.y0 * 3.1, m = Math.min(hw, hh), N = 3;
+    const i0 = Math.max(0, Math.floor((cx - hw - reach - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((cx + hw + reach - x0) / step));
+    const j0 = Math.max(0, Math.floor((cy - hh - reach - y0) / step)), j1 = Math.min(ny - 1, Math.ceil((cy + hh + reach - y0) / step));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const u = (x0 + i * step - cx) / hw, v = (y0 + j * step - cy) / hh, ang = Math.atan2(v, u);
+      // The floor stays flat (rooms stand things on it); walls and ceiling wobble.
+      const wob = v > 0.55 ? 0 : Math.sin(ang * 3 + seed) * 1.6 + Math.sin(ang * 5 + seed * 1.7) * 0.9;
+      const d = (Math.pow(Math.pow(Math.abs(u), N) + Math.pow(Math.abs(v), N), 1 / N) - 1) * m + wob;
+      const k = j * nx + i, a = grid[k], h = Math.max(BLEND - Math.abs(a - d), 0) / BLEND;
+      grid[k] = Math.min(a, d) - h * h * BLEND * 0.25;
+    }
+  }
   for (const b of tunnelBoxes(s)) {
     const r = Math.min(ROUND, b[2], b[3]);
     const i0 = Math.max(0, Math.floor((b[0] - b[2] - reach - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((b[0] + b[2] + reach - x0) / step));
@@ -89,6 +107,12 @@ const QZ_DN = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1)
 const Q_LEFT = new THREE.Quaternion().setFromAxisAngle(Y_AXIS, Math.PI);
 const Q_ID = new THREE.Quaternion();
 const tmpE = new THREE.Euler();
+// Dust puffs and dirt clods for building and digging: white-coloured, tinted per instance.
+const whiten = (g) => { g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(g.attributes.position.count * 3).fill(1), 3)); return g; };
+const PUFF = whiten(new THREE.IcosahedronGeometry(1, 1));
+const CLOD = whiten(new THREE.BoxGeometry(1, 1, 1));
+const DUST = ['#e8dcc4', '#d9c7a6', '#f2e9d8'];
+const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 export class NestView {
   constructor() {
@@ -132,6 +156,11 @@ export class NestView {
     this.crowd = new Crowd(this.dyn, psx({ vertexColors: true }));
     this.props = new Crowd(this.dyn, psx({ vertexColors: true }));
     this.overlay = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false }, { snap: false }));
+    // Construction dust: a cloud over a room while it's built, which clears when it's done.
+    this.dust = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false }));
+    this.clearing = [];
+    this.knownRooms = null;
+    this.lastProg = new Map();
     this.panels = new THREE.Group();
     this.scene.add(this.panels);
     this.panelSig = '';
@@ -247,6 +276,18 @@ export class NestView {
     this.overlay.push('q', PROPS.quad, tmpM, color);
   }
 
+  // A cloud of dust over a room's cells: thick (k 1) to gone (0), swelling by grow.
+  _cloud(x0, y0, w, h, seed, t, k, grow) {
+    if (k <= 0.01) return;
+    const n = Math.round(w * h * 2.6);
+    for (let i = 0; i < n; i++) {
+      const u = hash(seed + i * 1.7), v = hash(seed + i * 2.9), z = hash(seed + i * 4.3);
+      tmpV.set((x0 + 0.3 + u * (w - 0.6)) * T + Math.sin(t * 0.8 + i) * 2.5, -(y0 + 0.4 + v * (h - 0.8)) * T + Math.sin(t * 1.1 + i * 2) * 2, -DEPTH * (0.15 + z * 0.6));
+      const r = T * (0.75 + 0.45 * hash(seed + i * 6.1)) * (1 + 0.12 * Math.sin(t * 2 + i)) * grow * k;
+      this.dust.pushAt('puff', PUFF, tmpV, Q_ID, r, DUST[i % 3]);
+    }
+  }
+
   // Place a prop: world position, per-axis scale, colour, optional Euler rotation.
   _put(geo, p, sc, color, rot) {
     tmpV.set(p[0], p[1], p[2]);
@@ -285,6 +326,7 @@ export class NestView {
     this.crowd.begin();
     this.props.begin();
     this.overlay.begin();
+    this.dust.begin();
 
     // Room back panels, dressing and lamps.
     this.roomLights.forEach((l) => (l.intensity = 0));
@@ -332,6 +374,35 @@ export class NestView {
       this._fill(j.x0 * T + 4, (j.y0 + j.h) * T - 7, (j.w * T - 8) * pr, 3, '#ffd34d', 0.7);
       this.labels.push({ text: ROOMS[j.room].name + ' ' + Math.round(pr * 100) + '%', x: (j.x0 + j.w / 2) * T, y: -j.y0 * T - 2, z: 0, kind: 'room' });
     }
+    // Building: a cloud of dust hides the room while builders work, with
+    // clods of dirt flying out of it. When the room is finished the cloud
+    // swells and clears, and there it is.
+    for (const j of col.buildQueue) {
+      const seed = j.x0 * 31 + j.y0 * 17, busy = j.progress > 0;
+      this._cloud(j.x0, j.y0, j.w, j.h, seed, t, busy ? 1 : 0.35, 1);
+      if (busy) for (let k = 0; k < 4; k++) {
+        const ph = (t * 0.9 + hash(seed + k) ) % 1, vx = (hash(seed + k * 3) - 0.5) * 70, vy = 45 + hash(seed + k * 5) * 30;
+        const ox = (j.x0 + j.w * (0.3 + 0.4 * hash(seed + k * 7))) * T, oy = (j.y0 + j.h * 0.6) * T;
+        tmpV.set(ox + vx * ph, -oy + vy * ph - 90 * ph * ph, -DEPTH * 0.3);
+        tmpQ.setFromEuler(tmpE.set(ph * 6, ph * 4, 0));
+        this.props.pushAt('clod', CLOD, tmpV, tmpQ, 2.2 * (1 - ph * 0.5), ['#6a4628', '#7a5432', '#5a3c22'][k % 3]);
+      }
+    }
+    const keys = new Set(n.rooms.map((r) => r.key + r.x0 + ',' + r.y0));
+    if (this.knownRooms) for (const r of n.rooms) if (!this.knownRooms.has(r.key + r.x0 + ',' + r.y0) && r.key !== 'queen') this.clearing.push({ r, t0: t });
+    this.knownRooms = keys;
+    this.clearing = this.clearing.filter((c) => t - c.t0 < 1.8);
+    for (const c of this.clearing) { const k = (t - c.t0) / 1.8; this._cloud(c.r.x0, c.r.y0, c.r.w || 4, c.r.h || 3, c.r.x0 * 31 + c.r.y0 * 17, t, 1 - k, 1 + k * 0.9); }
+    // Digging: a few puffs at the face of each brick being chipped.
+    for (const o of n.digOrders) {
+      const key = o.x + ',' + o.y, last = this.lastProg.get(key) || 0;
+      if (o.progress > last) for (let k = 0; k < 3; k++) {
+        const ph = (t * 1.6 + k / 3) % 1;
+        tmpV.set((o.x + 0.5 + (hash(k + o.x) - 0.5) * 0.8) * T, -(o.y + 0.5 + (hash(k + o.y * 3) - 0.5) * 0.6) * T + ph * 6, -DEPTH * 0.35);
+        this.dust.pushAt('puff', PUFF, tmpV, Q_ID, 3.2 * (0.4 + ph) * (1 - ph * 0.6), DUST[k % 3]);
+      }
+      this.lastProg.set(key, o.progress);
+    }
     // Placement tools.
     const placing = app.placing;
     if (placing && placing.kind === 'room') {
@@ -361,13 +432,28 @@ export class NestView {
       this._pushAnt(pa, COLORS.player, 1.2, frameT, t);
       if (P.ntx != null) this._outline(P.ntx * T + 2, P.nty * T + 2, T - 4, T - 4, '#ffffff', 0.7);
     }
-    // Queen: grows with each upgrade; during the dig she shows where she can go.
+    // Queen: grows with each upgrade. She crawls from cell to cell (head
+    // down the shaft wall as she digs in, legs walking), fidgets while she
+    // waits, and once settled paces her chamber.
     const qs = ANT_SCALE.queen + q.level * ANT_SCALE.queenPerLevel;
-    const floorY = q.room ? -(q.room.y0 + (q.room.h || 3)) * T : -(q.y + 1) * T;
-    this.queenMesh.position.set((q.x + 0.5) * T, floorY + FOOT * qs, -DEPTH * 0.5);
+    const R = q.room, tgx = R ? R.x0 + (R.w || 4) / 2 + Math.sin(t * 0.21) * ((R.w || 4) / 2 - 1.3) : q.x + 0.5, tgy = R ? R.y0 + (R.h || 3) - 0.5 : q.y + 0.5;
+    const fdt = Math.min(0.1, Math.max(0, t - (this.qT ?? t))); this.qT = t;
+    if (!this.qp || this.qp.s !== s) this.qp = { s, x: tgx, y: tgy, dx: -1, dy: 0, moved: -9, phase: 0 };
+    const qp = this.qp, qdx = tgx - qp.x, qdy = tgy - qp.y, qd = Math.hypot(qdx, qdy);
+    if (qd > 0.01) { const m = Math.min(qd, (R ? 0.5 : 1.6) * fdt); qp.x += (qdx / qd) * m; qp.y += (qdy / qd) * m; qp.dx = qdx / qd; qp.dy = qdy / qd; qp.moved = t; qp.phase += m * 3; }
+    const qMoving = t - qp.moved < 0.15, climbing = qMoving && Math.abs(qp.dy) > Math.abs(qp.dx) + 0.05;
+    // Waiting to dig, her legs shuffle now and then.
+    const qFrame = qMoving ? Math.floor(qp.phase * WALK_FRAMES) % WALK_FRAMES : s.phase === 'dig' && Math.floor(t * 2.5) % 4 === 0 ? Math.floor(t * 5) % WALK_FRAMES : -1;
+    this.queenMesh.geometry = antGeometry('queen', qFrame);
+    if (climbing) {
+      this.queenMesh.quaternion.multiplyQuaternions(qp.dy > 0 ? QZ_DN : QZ_UP, QX90);
+      this.queenMesh.position.set(qp.x * T, -qp.y * T, -DEPTH + FOOT * qs + 0.6);
+    } else {
+      this.queenMesh.quaternion.copy(qp.dx < 0 ? Q_LEFT : Q_ID);
+      this.queenMesh.position.set(qp.x * T, -(Math.floor(qp.y) + 1) * T + FOOT * qs, -DEPTH * 0.5);
+    }
     const qb = Math.sin(t * 1.6);
     this.queenMesh.scale.set(qs * (1 + 0.01 * qb), qs * (1 + 0.035 * qb), qs * (1 + 0.02 * qb));
-    this.queenMesh.quaternion.copy(Q_LEFT);
     if (s.phase === 'dig') {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const x = q.x + dx, y = q.y + dy;
@@ -376,6 +462,7 @@ export class NestView {
       }
     }
     this.crowd.end();
+    this.dust.end();
     this.props.end();
     this.overlay.end();
     this.motion.sweep();

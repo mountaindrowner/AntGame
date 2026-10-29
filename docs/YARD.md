@@ -119,7 +119,7 @@ Each region's danger, finds and prize are its card on the yard map (`AREAS` in `
 
 ## Creatures (built)
 
-- **Spider:** lives at its web in the Flowerbed and rests there in ambush for 30–70 seconds at a time. It roams the yard on paths around obstacles and passes the nest every third leg, never closer than 6 tiles. It never hunts ants on the nest's doorstep. It sometimes climbs over the fence and leaves the yard for a while.
+- **Spider** (reworked in build 11.6, after finding it killed nothing): it hunts a territory within 60 tiles of its web in the Flowerbed. Resting at the web (30–70 s) it waits in ambush, hard to see until close, and lunges at ants within 4 tiles. Roaming, it stalks ants within 5 tiles, lunges, then runs at 40 and gives up after 6 s, so a running ant escapes. Its bite reaches 1.4 tiles, once every 2 s. Every fourth leg it strolls past the nest (never within 6 tiles, and never before minute 4), and it sometimes climbs over the fence for a while. About one kill every three minutes when foragers work near the Flowerbed.
 - **Woolly bear caterpillar:** appears mostly in the Lawn, the Compost or the Flowerbed, sometimes in the Tomato Rows, the Clover Patch or the Dandelions.
 - **Rival pavement ants:** a nest in the Patio cracks. They grow to 60 and raid harder over time.
 - **Feet** (the steps, porch, grill, cooler, trash cans, side path, swings, stepping stones, trampoline and soccer ball): while ants are out in the region, every 40–90 s a shoe comes down near one of them. Its shadow spreads for 2.2 s; in the last second most ants under it run for the edge. Everything under the sole dies, a caterpillar too, and the spider takes a hard knock.

@@ -13,7 +13,9 @@ export class Sfx {
   constructor() {
     this.ctx = null;
     this.on = true;
-    this.vol = 0.7;
+    this.vol = 0.7;      // everything
+    this.fxVol = 1;      // effects (Options: Effects)
+    this.musicVol = 0.5; // music (Options: Music)
     this.last = {};    // name → time last played (cooldowns)
     this.voices = {};  // name → copies playing
     this.loops = {};
@@ -32,6 +34,12 @@ export class Sfx {
       this.master = c.createGain();
       this.master.gain.value = this.on ? this.vol : 0;
       this.master.connect(c.destination);
+      // Two buses: effects, and music (through a filter that muffles it in rain).
+      this.fx = c.createGain(); this.fx.gain.value = this.fxVol; this.fx.connect(this.master);
+      this.music = c.createGain(); this.music.gain.value = this.musicVol;
+      this.musicFilter = c.createBiquadFilter(); this.musicFilter.type = 'lowpass'; this.musicFilter.frequency.value = 18000;
+      this.music.connect(this.musicFilter).connect(this.master);
+      if (this.onReady) this.onReady();
       const n = c.sampleRate;
       this.noise = c.createBuffer(1, n, n);
       const d = this.noise.getChannelData(0);
@@ -42,6 +50,11 @@ export class Sfx {
 
   get ready() { return !!this.ctx && this.ctx.state === 'running'; }
   setOn(on) { this.on = on; if (this.master) this.master.gain.setTargetAtTime(on ? this.vol : 0, this.ctx.currentTime, 0.05); }
+  // Volumes from Options: 0 (off) to 1.
+  setVolumes(fx, music) {
+    this.fxVol = fx; this.musicVol = music;
+    if (this.fx) { this.fx.gain.setTargetAtTime(fx, this.ctx.currentTime, 0.05); this.music.gain.setTargetAtTime(music, this.ctx.currentTime, 0.2); }
+  }
 
   // ---------- building blocks ----------
   // Every block takes an output node (out) and a start time (t).
@@ -74,8 +87,8 @@ export class Sfx {
   // A sound's output node: through a panner and a gain for where it is.
   _out(gain, pan) {
     const c = this.ctx, g = c.createGain(); g.gain.value = gain;
-    if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(this.master); g.connect(p); }
-    else g.connect(this.master);
+    if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(this.fx); g.connect(p); }
+    else g.connect(this.fx);
     return g;
   }
 
@@ -104,7 +117,7 @@ export class Sfx {
       if (want < 0.01) return;
       const c = this.ctx, g = c.createGain(), p = c.createStereoPanner ? c.createStereoPanner() : null;
       g.gain.value = 0.0001;
-      if (p) { g.connect(p).connect(this.master); } else g.connect(this.master);
+      if (p) { g.connect(p).connect(this.fx); } else g.connect(this.fx);
       L = this.loops[name] = { g, p, stop: LOOPS[name](this, g) };
     }
     L.g.gain.setTargetAtTime(Math.max(0.0001, want), this.ctx.currentTime, 0.25);
@@ -176,6 +189,33 @@ const SOUNDS = {
     f.type = 'lowpass'; f.frequency.value = 700; s._env(g, t, 0.02, 0.35, 0.35); x.connect(f).connect(g).connect(o);
     x.start(t); lfo.start(t); x.stop(t + 0.45); lfo.stop(t + 0.45); return 0.5; } },
   tongue: { cool: 0.3, fn: (s, o, t) => { s.chirp(o, t, 400, 1400, 0.07, 0.25, 'triangle'); s.puff(o, t + 0.07, 0.05, 1200, 0.4, 'bandpass'); return 0.15; } },
+  // ---------- priority 2 and 3 (build 11.6) ----------
+  step: { cool: 0.18, cap: 2, vol: 0.35, fn: (s, o, t) => { s.grain(o, t, 3, 0.03, 6000, 0.12, 'bandpass'); return 0.12; } },
+  sheetOpen: { cool: 0.2, vol: 0.6, fn: (s, o, t) => { s.puff(o, t, 0.12, 800, 0.18, 'bandpass', 2200, 0.02); return 0.15; } },
+  sheetClose: { cool: 0.2, vol: 0.6, fn: (s, o, t) => { s.puff(o, t, 0.12, 2200, 0.18, 'bandpass', 800, 0.02); return 0.15; } },
+  tick: { cool: 0.08, vol: 0.4, fn: (s, o, t) => { s.puff(o, t, 0.008, 6000, 0.25, 'highpass'); return 0.03; } },
+  whoosh: { cool: 0.15, vol: 0.5, fn: (s, o, t, up) => { s.puff(o, t, 0.18, up ? 500 : 1500, 0.2, 'lowpass', up ? 1500 : 500, 0.03); return 0.22; } },
+  stinger: { cool: 3, fn: (s, o, t) => { s.thump(o, t, 160, 50, 0.3, 0.6); [69, 72, 76, 81].forEach((n, i) => s.blip(o, t + 0.05 + i * 0.07, N(n), i === 3 ? 0.6 : 0.1, 0.18, 'square')); return 1; } },
+  groan: { cool: 0.5, fn: (s, o, t) => { const c = s.ctx, x = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
+    x.type = 'triangle'; x.frequency.setValueAtTime(220, t); x.frequency.linearRampToValueAtTime(160, t + 0.3); lfo.frequency.value = 9; lg.gain.value = 8; lfo.connect(lg).connect(x.frequency);
+    s._env(g, t, 0.02, 0.3, 0.3); x.connect(g).connect(o); x.start(t); lfo.start(t); x.stop(t + 0.4); lfo.stop(t + 0.4); return 0.4; } },
+  rumble: { cool: 20, vol: 0.7, fn: (s, o, t) => { const c = s.ctx, x = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
+    x.type = 'sine'; x.frequency.value = 70; lfo.frequency.value = 14; lg.gain.value = 20; lfo.connect(lg).connect(x.frequency);
+    s._env(g, t, 0.05, 0.4, 0.4); x.connect(g).connect(o); x.start(t); lfo.start(t); x.stop(t + 0.5); lfo.stop(t + 0.5); return 0.5; } },
+  bite: { cool: 0.12, cap: 3, fn: (s, o, t) => { s.puff(o, t, 0.015, 5000, 0.3, 'highpass'); s.blip(o, t, 1200, 0.02, 0.15, 'square'); return 0.05; } },
+  digTick: { cool: 0.05, vol: 0.5, fn: (s, o, t) => { s.blip(o, t, 2000, 0.015, 0.2, 'square'); return 0.03; } },
+  crumble: { cool: 0.1, fn: (s, o, t) => { s.grain(o, t, 5, 0.018, 700, 0.25, 'lowpass'); return 0.12; } },
+  pat: { cool: 0.15, fn: (s, o, t) => { s.puff(o, t, 0.05, 400, 0.3); s.puff(o, t + 0.1, 0.05, 400, 0.3); return 0.18; } },
+  crumbleBig: { cool: 0.5, fn: (s, o, t) => { for (let i = 0; i < 18; i++) s.puff(o, t + i * 0.04, 0.04, 900 - i * 30, 0.22); return 0.8; } },
+  full: { cool: 30, fn: (s, o, t) => { s.blip(o, t, N(79), 0.15, 0.2, 'sine'); s.blip(o, t + 0.14, N(74), 0.3, 0.2, 'sine'); return 0.5; } },
+  scrape: { cool: 0.4, fn: (s, o, t) => { s.puff(o, t, 0.25, 1600, 0.2, 'bandpass', 900, 0.05); return 0.3; } },
+  ding: { cool: 20, fn: (s, o, t) => { s.blip(o, t, N(88), 1.2, 0.18, 'sine'); s.blip(o, t, N(100), 0.6, 0.05, 'sine'); return 1.3; } },
+  twinkle: { cool: 2, fn: (s, o, t) => { [84, 88, 91, 96].forEach((n, i) => s.blip(o, t + i * 0.09, N(n), 0.4, 0.1, 'sine')); return 0.8; } },
+  drip: { cool: 0.1, fn: (s, o, t) => { s.chirp(o, t, 1400, 2000, 0.04, 0.25); return 0.06; } },
+  cheer: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 16; i++) s.blip(o, t + i * 0.035 + Math.random() * 0.03, N(84 + Math.floor(Math.random() * 12)), 0.05, 0.08 * (1 - Math.abs(i - 8) / 10), 'sine'); return 0.8; } },
+  thunder: { cool: 8, vol: 0.8, fn: (s, o, t) => { s.puff(o, t, 2.5, 140 + Math.random() * 80, 0.6, 'lowpass', 60, 0.4); return 3; } },
+  drips: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 8; i++) s.puff(o, t + i * (0.2 + i * 0.08), 0.03, 1500 + Math.random() * 800, 0.18, 'bandpass'); return 4; } },
+  snap: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.4, 2000, 0.15, 'bandpass', 600, 0.1); s.puff(o, t + 0.4, 0.05, 1200, 0.4, 'bandpass'); s.thump(o, t + 0.4, 150, 60, 0.12, 0.4); return 0.6; } },
 };
 
 // Looping beds: start(sfx, out) → stop().
@@ -198,10 +238,49 @@ const LOOPS = {
     a.type = 'triangle'; a.frequency.value = 70; b.type = 'sine'; b.frequency.value = 1240; lfo.frequency.value = 5; lg.gain.value = 0.02;
     const bg = c.createGain(); bg.gain.value = 0.02; lfo.connect(lg).connect(bg.gain);
     g.gain.value = 0.25; a.connect(g); b.connect(bg).connect(g); g.connect(o); a.start(); b.start(); lfo.start();
-    return () => { a.stop(); b.stop(); lfo.stop(); };
+    // And its many feet, lightly.
+    const steps = setInterval(() => { if (s.ready) s.grain(o, c.currentTime, 8, 0.03, 3500, 0.06, 'bandpass'); }, 600);
+    return () => { clearInterval(steps); a.stop(); b.stop(); lfo.stop(); };
   },
   fireants: (s, o) => {
     const c = s.ctx, tick = setInterval(() => { if (s.ready) s.grain(o, c.currentTime, 3, 0.02, 5000, 0.25, 'highpass'); }, 70);
+    return () => clearInterval(tick);
+  },
+  // Ambience (build 11.6): the yard's breeze and birdsong; the nest's earthy hum.
+  yard: (s, o) => {
+    const c = s.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    n.buffer = s.noise; n.loop = true; f.type = 'lowpass'; f.frequency.value = 500; g.gain.value = 0.08; lfo.frequency.value = 0.13; lg.gain.value = 0.05; lfo.connect(lg).connect(g.gain);
+    n.connect(f).connect(g).connect(o); n.start(); lfo.start();
+    const bird = setInterval(() => { if (s.ready && Math.random() < 0.5) { const t = c.currentTime + Math.random(), f0 = 2600 + Math.random() * 1600; s.chirp(o, t, f0, f0 * 1.25, 0.07, 0.05); s.chirp(o, t + 0.1, f0 * 1.2, f0 * 0.9, 0.08, 0.05); } }, 4000);
+    return () => { clearInterval(bird); n.stop(); lfo.stop(); };
+  },
+  nest: (s, o) => {
+    const c = s.ctx, a = c.createOscillator(), b = c.createOscillator(), g = c.createGain();
+    a.type = 'sine'; a.frequency.value = 58; b.type = 'sine'; b.frequency.value = 87.5; g.gain.value = 0.1; a.connect(g); b.connect(g); g.connect(o); a.start(); b.start();
+    const scratch = setInterval(() => { if (s.ready && Math.random() < 0.4) s.grain(o, c.currentTime + Math.random(), 4, 0.03, 1800, 0.06, 'bandpass'); }, 2500);
+    return () => { clearInterval(scratch); a.stop(); b.stop(); };
+  },
+  // Region flavour: crickets in the grass, drips in the wet ground.
+  crickets: (s, o) => {
+    const c = s.ctx, tick = setInterval(() => { if (!s.ready) return; const t = c.currentTime; for (let i = 0; i < 3; i++) s.blip(o, t + i * 0.045, 4300 + Math.random() * 200, 0.025, 0.05, 'sine'); }, 650);
+    return () => clearInterval(tick);
+  },
+  wet: (s, o) => {
+    const c = s.ctx, tick = setInterval(() => { if (s.ready && Math.random() < 0.6) s.chirp(o, c.currentTime + Math.random() * 0.4, 900 + Math.random() * 700, 1600 + Math.random() * 600, 0.05, 0.1); }, 700);
+    return () => clearInterval(tick);
+  },
+  // Builders chipping away, while you watch the nest.
+  chipping: (s, o) => {
+    const c = s.ctx, tick = setInterval(() => { if (s.ready) s.grain(o, c.currentTime, 2, 0.05, 900, 0.15, 'lowpass'); }, 260);
+    return () => clearInterval(tick);
+  },
+  trail: (s, o) => {
+    const c = s.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    n.buffer = s.noise; n.loop = true; f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 2; g.gain.value = 0.05;
+    n.connect(f).connect(g).connect(o); n.start(); return () => n.stop();
+  },
+  munch: (s, o) => {
+    const c = s.ctx, tick = setInterval(() => { if (s.ready) s.puff(o, c.currentTime, 0.05, 500, 0.15); }, 330);
     return () => clearInterval(tick);
   },
 };

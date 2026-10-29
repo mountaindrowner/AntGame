@@ -61,7 +61,8 @@ game/
 │   │   └── ui.css
 │   ├── audio/
 │   │   ├── sfx.js          game sound effects, synthesized (docs/SOUND.md): blocks, recipes, loops
-│   │   └── watch.js        what plays: compares the game frame to frame, plus button taps
+│   │   ├── watch.js        what plays: compares the game frame to frame, plus button taps
+│   │   └── music.js        the music: five synthesized layers mixed by mood (title, yard, nest, danger, rain)
 │   ├── intro/
 │   │   ├── cinematic.js    the opening film: shots, title cards, actors, timeline
 │   │   └── sound.js        its WebAudio score and sound gags

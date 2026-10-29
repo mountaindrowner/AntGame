@@ -44,6 +44,7 @@ export function createUI(app) {
   function showTip(t) {
     const text = t.dataset.tip; if (!text) return;
     tipFor = t; el.tip.textContent = text; el.tip.classList.remove('hidden');
+    sfx.play('tick');
     const r = t.getBoundingClientRect(), w = el.tip.offsetWidth, h = el.tip.offsetHeight;
     const below = r.top < 90, left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
     el.tip.style.left = left + 'px';
@@ -127,6 +128,11 @@ export function createUI(app) {
     if (!s.seen.grit && s.colony.grit > 0) showExplainer('grit');
   }
 
+  // A cost as resource icons (the top bar's), not words: "🌾10 🪨5".
+  const RES = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨' };
+  const costIcons = (cost) => Object.entries(cost).map(([k, v]) => `<span class="cost">${RES[k] || k}${v}</span>`).join(' ') || 'free';
+  const sicon = (name) => (ICONS[name] ? `<span class="si">${ICONS[name]}</span>` : '');
+
   function renderSheet() {
     const s = app.s, c = s.colony;
     if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map' || app.menu === 'colony') return;
@@ -137,12 +143,16 @@ export function createUI(app) {
         const C = CASTES[k];
         const lock = SIM.eggLock(s, k);
         const dis = lock || !SIM.canPay(c, C.cost) || c.eggQueue.length >= 10;
-        h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}><b>${C.name}</b><i>${lock || SIM.costText(C.cost) + ' · ' + Math.round(C.hatch * c.hatchMul) + ' s'}</i></button>`;
+        h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${lock || costIcons(C.cost) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
       }
       h += `</div>`;
       const cap = SIM.queenCap(s.queen.level), up = SIM.QUEEN_UP[s.queen.level];
       h += `<div class="note">Queen level ${s.queen.level + 1} · holds ${cap} ants (${SIM.antCount(s)} now)${SIM.antCount(s) >= cap ? ' · at the cap, eggs paused' : ''}</div>`;
-      if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}><b>Upgrade queen</b><i>${SIM.costText(up)} · +20 ants${s.queen.level === 0 ? ' · unlocks clay digging' : ''}</i></button></div>`;
+      if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}>${sicon('queen')}<b>Upgrade queen</b><i>${costIcons(up)} · +20 ants${s.queen.level === 0 ? ' · unlocks clay digging' : ''}</i></button></div>`;
+      // Foragers' training: how far they go on their own, and how fast.
+      const fl = c.forage || 0, fu = SIM.FORAGE[fl + 1];
+      h += `<div class="note">Foragers range ${SIM.FORAGE[fl].range} tiles from the nest on their own. Your trails lead them farther.</div>`;
+      if (fu) h += `<div class="btns one"><button data-forage="1" ${SIM.canPay(c, fu.cost) ? '' : 'disabled'}>${sicon('train')}<b>Train foragers</b><i>${costIcons(fu.cost)} · range ${fu.range} · ${Math.round((fu.speed - 1) * 100)}% faster</i></button></div>`;
       if (c.eggs.length || c.eggQueue.length) {
         h += `<div class="eggs">`;
         for (const e of c.eggs) h += `<span class="egg"><em style="width:${Math.min(100, (e.t / e.need) * 100)}%"></em>${CASTES[e.caste].name}</span>`;
@@ -160,7 +170,7 @@ export function createUI(app) {
         // A cost above the food cap can never be paid: say what unlocks it.
         const overCap = (R.cost.food || 0) > c.cap;
         const status = have ? 'built' : queued ? 'being built' : overCap ? `needs a Food store first (food cap ${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(R.cost) : 'ready to place';
-        h += `<button data-place="${k}" ${have || queued || !fits || !pay ? 'disabled' : ''}><b>${R.name} · ${R.w}×${R.h}</b><i>${SIM.costText(R.cost)} · ${R.desc}</i><i>${status}</i></button>`;
+        h += `<button data-place="${k}" ${have || queued || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}</b><i>${costIcons(R.cost)} · ${R.desc}</i><i>${status}</i></button>`;
       }
       h += `</div><div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
       h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
@@ -318,6 +328,7 @@ export function createUI(app) {
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
+    if (b.dataset.forage) { SIM.upgradeForage(s); renderSheet(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; renderSheet(); return; }
     if (b.dataset.place) { app.placing = { kind: 'room', key: b.dataset.place }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.tool) { app.placing = { kind: b.dataset.tool }; closeMenu(); app.view = 'nest'; return; }

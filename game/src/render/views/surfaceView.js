@@ -22,7 +22,8 @@ const { W, H, T, CASTES, DROP, HUNT } = SIM;
 // The scent overlay covers a window this many tiles a side round the camera.
 const SW = 96, SR = 2, TW = SW * SR; // window tiles; texels a tile
 const SMOKE = noise2(41);
-const TOAD = 48; // toad model scale (px a unit): about six tiles nose to tail
+const TOAD = 48;
+const HALO = { food: '#ffd34d', water: '#6ac8ff', protein: '#ff6a5a', grit: '#d0ccc4' }; // toad model scale (px a unit): about six tiles nose to tail
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -183,7 +184,18 @@ export class SurfaceView {
       this.holes.push({ ring, rival, mound, hole });
     }
 
-    // Scent overlay: a lingering, drifting haze over the trails, for a
+    // The spoil heap: dug dirt that builders carry out of the nest, a low
+    // mound of loose soil that grows with every load.
+    const heapGeo = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, 0, Math.PI / 2);
+    const hp = heapGeo.attributes.position;
+    for (let i = 0; i < hp.count; i++) { const y = hp.getY(i), k = 1 + Math.sin(hp.getX(i) * 7 + hp.getZ(i) * 5) * 0.06 * (1 - y); hp.setXYZ(i, hp.getX(i) * k, y, hp.getZ(i) * k); }
+    heapGeo.computeVertexNormals();
+    this.heap = new THREE.Mesh(heapGeo, psx({ map: rampTexture(33, PALETTE.dirt, { size: 16, repeat: [2, 1] }) }));
+    this.heap.position.set((s.spoilAt.x + 0.5) * T, 0, (s.spoilAt.y + 0.5) * T);
+    this.heap.visible = false;
+    g.add(this.heap);
+
+        // Scent overlay: a lingering, drifting haze over the trails, for a
     // window of tiles round the camera, rewritten from the sim each frame
     // and moved with it (two texels a tile, smoothly filtered).
     this.scentData = new Uint8Array(TW * TW * 4);
@@ -268,6 +280,10 @@ export class SurfaceView {
     const frameT = Math.floor(t * RENDER.animFps);
 
     this._updateScent(s, t);
+    // The spoil heap grows with the loads dumped on it.
+    const pile = s.spoilPile || 0;
+    this.heap.visible = pile > 0;
+    if (pile > 0) { const r = Math.min(5.5, 0.9 + Math.sqrt(pile) * 0.32) * T; this.heap.scale.set(r, Math.min(r * 0.42, 6 + Math.sqrt(pile) * 2.2), r); }
     this.holes[1].ring.visible = s.rival.queenAlive;
     // Our entrance only exists once the queen has dug in and founded the nest.
     this.holes[0].mound.visible = this.holes[0].hole.visible = s.queen.placed;
@@ -306,6 +322,14 @@ export class SurfaceView {
       // A treat being carried rides on its crew, just ahead of you.
       const lifted = f.carried && f.px != null;
       const cx = lifted ? f.px : (f.x + 0.5) * T, cz = lifted ? f.py : (f.y + 0.5) * T, spin = (f.x * 7 + f.y * 13) % 6;
+      // A ring in its kind's colour under anything you can pick up, so items
+      // stand out from the ground: gold food, blue water, red protein, grey
+      // stone, pink treats. Puddles and carried things go without.
+      if (!lifted && f.type !== 'puddle') {
+        const col = L.treat ? '#ff8ad8' : HALO[f.kind] || HALO.food, pr = (L.dew ? 3.6 : L.r) * 1.75 * (1 + 0.07 * Math.sin(t * 3 + f.x + f.y));
+        tmpV.set(cx, 0.45, cz);
+        this.marks.pushAt('halo', PROPS.ring, tmpV, tmpQ.identity(), pr, col);
+      }
       if (L.dew) { this._dew(f, L, cx, cz, spin, t); continue; }
       tmpV.set(cx, L.water ? 0.3 : (L.lift || 0) * L.r + 0.15 + (lifted ? 5 + Math.abs(Math.sin(t * 9)) : 0), cz);
       tmpQ.setFromAxisAngle(UP, spin);

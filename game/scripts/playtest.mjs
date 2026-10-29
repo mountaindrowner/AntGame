@@ -83,7 +83,8 @@ const ORDER = {
 let pocket = null; // { key, x0, y0, w, h }
 function roomPlan() {
   const keys = ORDER[strategy] || ORDER.sensible;
-  const next = keys.find((k) => !SIM.roomOf(s, k) && !c.buildQueue.some((j) => j.room === k));
+  // A room costing more food than the store can hold has to wait for a Food store.
+  const next = keys.find((k) => !SIM.roomOf(s, k) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
   if (!next) return;
   const R = SIM.ROOMS[next];
   // A fitting pocket already dug? Place it when affordable (Build → tap a green cell).
@@ -131,6 +132,9 @@ function eggs() {
   if (c.eggQueue.length >= 2) return;
   const n = SIM.antCount(s), cap = SIM.queenCap(s.queen.level);
   if (n + c.eggQueue.length + c.eggs.length >= cap) return;
+  // Save up for the foragers' training once there are hands to spare.
+  const fu = SIM.FORAGE[(c.forage || 0) + 1];
+  if (fu && strategy !== 'idle' && n >= 12 && !SIM.canPay(c, fu.cost) && (fu.cost.food || 0) <= c.cap) return;
   const f = caste('forager'), b = caste('builder'), nu = caste('nurse'), so = fighters();
   let want = null;
   if (strategy === 'idle') want = f < 6 ? 'forager' : b < 1 ? 'builder' : 'forager';
@@ -206,6 +210,8 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
     nestThink = 0;
     eggs(); roomPlan();
     if (SIM.QUEEN_UP[s.queen.level] && SIM.antCount(s) >= SIM.queenCap(s.queen.level) - 3 && SIM.upgradeQueen(s)) note(`queen upgraded to ${s.queen.level}`);
+    const fu = SIM.FORAGE && SIM.FORAGE[(c.forage || 0) + 1];
+    if (fu && strategy !== 'idle' && SIM.upgradeForage(s)) note(`foragers trained to ${c.forage}`);
   }
   // Milestones.
   const del = c.delivered.reduce((x, y) => x + y, 0);
@@ -229,9 +235,9 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
   }
   if ((s.won || s.lost) && s.t > 60 * 3) break;
 }
-const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), queenMinHp: Math.round(qmin), lost: s.lost, won: s.won, miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /^Raid!/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
+const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), queenMinHp: Math.round(qmin), lost: s.lost, won: s.won, miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /Raid!/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
 console.log(JSON.stringify(out, null, 1));
-console.log(log.filter((l) => /\[min|placed|upgraded|hunt|siege|died|treat|lifted/.test(l)).join('\n'));
+console.log(log.filter((l) => /\[min|placed|upgraded|trained|hunt|siege|died|treat|lifted/.test(l)).join('\n'));
 const uniq = [...new Set(msgs.map((m) => m.slice(m.indexOf(' ') + 1)))];
 console.log('--- distinct messages:', uniq.length); console.log(uniq.slice(0, 40).join('\n'));
 if (process.env.WHY) { const g = {}; for (const d of whyLog) { const k = d.st + ' home~' + Math.min(20, Math.floor(d.home / 5) * 5) + (d.passing ? ' passing' : ''); g[k] = (g[k] || 0) + 1; } console.log(g); }

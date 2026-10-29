@@ -10,6 +10,7 @@ import { Callout } from './ui/callout.js';
 import { TitleMenu, loadOptions } from './ui/title.js';
 import { sfx } from './audio/sfx.js';
 import { soundWatch, tapSounds } from './audio/watch.js';
+import { music } from './audio/music.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
 import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED } from './game/save.js';
@@ -195,6 +196,8 @@ app.openTitle = () => title.open();
 function applyOptions() {
   pipeline.setQuality(app.opts.graphics === 'fast' ? 2 : 0);
   sfx.setOn(app.opts.sound !== false);
+  const V = { off: 0, quiet: 0.45, loud: 1 };
+  sfx.setVolumes(V[app.opts.fx] ?? 1, V[app.opts.music] ?? 0.45);
 }
 // Game sounds (audio/): what changed each frame, and button taps.
 const hear = soundWatch(app, views);
@@ -292,6 +295,8 @@ function frame(now) {
   restore();
   if (!app.titleOpen) hear(s, newEvents);
   else hear.quiet();
+  // The music follows the game: the title, the yard or the nest, tension, rain.
+  music.set(app.titleOpen ? 'title' : app.view === 'nest' ? 'nest' : 'yard', app.titleOpen ? 0 : hear.mood(s), s.rain.on && !app.titleOpen);
   // One map photo a frame, for regions just built.
   if (photoQ.length && view === views.surface && !shot.busy) { const i = photoQ.shift(); if (built(i)) app.photoRegion(i, false); }
   if (app.view === 'nest') {

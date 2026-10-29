@@ -5,7 +5,7 @@ const SIM = (() => {
 const W = AREA*BLOCK.cols, H = AREA*BLOCK.rows, T = 16; // surface tiles: the built yard (yard.js)
 // Everything on the surface is twice as big as it was (yard.js SCALE), so
 // ants and creatures walk faster to keep trips from dragging.
-const SURF = 1.4;
+const SURF = 1.15; // surface speed: everything outdoors (ants, you, the spider) moves at this pace (build 11.6: was 1.4)
 // Nest cutaway cells. The soil comes in bands, top down: a deep layer of
 // soft topsoil, then packed soil and clay, equally deep.
 const SOIL_ROWS = [20, 14, 14];
@@ -55,6 +55,13 @@ const FOODS = {
 const heavy = f => !!(FOODS[f.type] && FOODS[f.type].crew);
 const SOIL = [ {name:'soft', work:6}, {name:'packed', work:12}, {name:'clay', work:20} ];
 const soilTier = y => y < SOIL_TOP[1] ? 0 : y < SOIL_TOP[2] ? 1 : 2;
+// Foragers range only so far from the nest on their own (tiles of path), or
+// further along a scent trail you lay. Training them reaches further and
+// walks them faster. Level 0 is where a colony starts.
+const FORAGE = [ {range:40, speed:1}, {range:55, speed:1.1, cost:{food:15}}, {range:75, speed:1.2, cost:{food:40, grit:10}}, {range:100, speed:1.3, cost:{food:80, protein:10, grit:25}} ];
+// Dug dirt has to go somewhere: each dug cell is a load a builder carries up
+// and out to the spoil heap. With SPOIL_MAX loads waiting, digging stops.
+const SPOIL_MAX = 3;
 const QUEEN_UP = [ {food:40, protein:10}, {food:80, protein:20, grit:20}, {food:150, protein:40, grit:40} ];
 const queenCap = lvl => 20 + 20*lvl;
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
@@ -80,7 +87,7 @@ function bfs(blocked, sx, sy){
 function makeNest(){
   const cells = new Uint8Array(NW*NH); // 0 dirt, 1 dug, 2 room floor
   cells[nidx(SHAFT,0)] = 1;
-  return { cells, ver: 1, rooms: [], digOrders: [], fillOrders: [], fields: {} }; // rooms: [{x0,y0,w,h,key}]
+  return { cells, ver: 1, rooms: [], digOrders: [], fillOrders: [], fields: {}, spoil: 0 }; // rooms: [{x0,y0,w,h,key}]; spoil: loads of dug dirt waiting to go out
 }
 function nestField(s, tx, ty){
   const n = s.nest; const key = tx+','+ty; const f = n.fields[key];
@@ -141,7 +148,7 @@ function newColony(ex, ey, team){
   return { team, ex, ey, store: team ? 20 : 10, cap: 20, water: 8, waterCap: 10, protein: 0, grit: 0,
     hatchCap: 1, hatchMul: 1, buildQueue: [], eggQueue: [], eggs: [],
     trophies: {spider:false}, starve: 0, deaths: {}, kills: {}, delivered: new Array(60).fill(0), eaten: new Array(60).fill(0), secAcc: 0,
-    queenAlive: true, founded: team !== 0, raidT: 0, siege: 0, stolen: 0, pstarve: 0 };
+    queenAlive: true, founded: team !== 0, raidT: 0, siege: 0, stolen: 0, pstarve: 0, forage: 0 };
 }
 function create(seed){
   const w = makeWorld(seed || 7);
@@ -173,7 +180,20 @@ function create(seed){
   for (let i=0;i<6;i++) mkAnt(s, 'forager', 'in', w.rx, w.ry, 1);
   mkAnt(s, 'soldier', 'in', w.rx, w.ry, 1);
   spawnSpider(s);
+  s.spoilAt = spoilSpot(s); s.spoilPile = 0;
   return s;
+}
+// Where diggers dump the dirt: open ground about eight tiles from the
+// entrance, out of the way (preferring south, away from the rock).
+function spoilSpot(s){
+  const w = s.world; let best = null, bs = Infinity;
+  for (let k = 0; k < 24; k++){ const a = k/24*Math.PI*2;
+    for (const r of [7, 8, 9, 10]){ const x = Math.round(w.ex + Math.cos(a)*r), y = Math.round(w.ey + Math.sin(a)*r);
+      if (!walk(s, x, y) || w.home[idx(x,y)] >= 9999) continue;
+      let open = 0; for (let dy=-2;dy<=2;dy++) for (let dx=-2;dx<=2;dx++) if (walk(s, x+dx, y+dy)) open++;
+      const sc = Math.abs(w.home[idx(x,y)] - 9) + (25 - open) * 0.5 - Math.sin(a) * 2;
+      if (sc < bs){ bs = sc; best = { x, y }; } } }
+  return best || { x: w.ex + 6, y: w.ey + 6 };
 }
 // ---------- fog of war ----------
 // The yard map shows only what you have seen: a circle round your ant as it
@@ -221,7 +241,9 @@ function spawnFood(s, ai, treats){
   return spawnInArea(s, ai, FOODS[type] && FOODS[type].protein ? 'protein' : 'food', type);
 }
 // How far foragers roam on their own: a bigger colony reaches farther.
-const forageRange = s => Math.min(100, 48 + s.ants.length*0.5);
+const forageRange = s => FORAGE[s.colony.forage || 0].range;
+// A forager's pace, with its training.
+const fSpeed = (s, a) => CASTES[a.caste].speed * (!a.team && a.caste === 'forager' ? FORAGE[s.colony.forage || 0].speed : 1);
 const areaOf = (s, x, y) => s.world.area[idx(Math.max(0, Math.min(W-1, x)), Math.max(0, Math.min(H-1, y)))];
 // The spider lives at its web in the Flowerbed.
 function spawnSpider(s){
@@ -352,7 +374,7 @@ function tick(s, dt){
     if (a.flee > 0) a.flee -= dt; else a.fleeFrom = null;
     const aggressive = C.fight >= 3 || a.follow || a.state === 'raid';
     // spider / enemies
-    if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y);
+    if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y) * (s.spider.rest > 0 ? 2.5 : 1); // waiting at its web, it's hard to see
       const brave = a.follow || a.state === 'raid' || (a.state === 'fight' && a.goal === 'spider') || spiderCrew[a.team] >= 5;
       if (sd < 3.5*T){ if (aggressive && brave){ if (a.state !== 'follow' && a.state !== 'raid') a.state = 'fight'; a.goal = 'spider'; } else if (a.state !== 'fight'){ a.flee = 2; } } }
     const en = enemiesNear(a, aggressive ? 1 : 2);
@@ -393,20 +415,27 @@ function tick(s, dt){
       if (pd > 1.3*T){ if (stepTo(a, a.tx, a.ty, pd > 3*T ? 95 : C.speed+15, dt)) chooseToward(s, a, P.ant.x + (Math.random()-0.5)*T, P.ant.y + (Math.random()-0.5)*T); }
       continue;
     }
+    // A builder carrying a load of dug dirt out to the spoil heap.
+    if (a.state === 'spoil'){
+      const sp = s.spoilAt;
+      if (Math.hypot(a.x - (sp.x+0.5)*T, a.y - (sp.y+0.5)*T) < 1.2*T){ s.spoilPile = (s.spoilPile||0) + 1; a.carry = 0; a.kind = null; a.itype = null; a.state = 'return'; continue; }
+      if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, (sp.x+0.5)*T, (sp.y+0.5)*T);
+      continue;
+    }
     if (a.state === 'explore' || a.state === 'patrol'){
       a.explore += dt; if (s.rain.on && !a.team && a.state === 'explore' && a.explore > 2){ a.state = 'return'; a.explore = 0; continue; }
       const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
       if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.state = 'return'; continue; }
       if (a.explore > (a.state === 'patrol' ? 25 : 60)){ a.state = 'return'; a.explore = 0; continue; }
-      if (stepTo(a, a.tx, a.ty, C.speed, dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, 7, want) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : 9) : a.team ? 64 : forageRange(s)); }
+      if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, 7, want) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : 9) : a.team ? 64 : forageRange(s)); }
       continue;
     }
     if (a.state === 'return'){
       if (a.carry > 0 && !a.team){ const i = idx(a.tx,a.ty); s.trail[i] = Math.min(5, s.trail[i] + 1.2*dt); s.hot.add(i); }
       if (a.tx === col.ex && a.ty === col.ey && Math.hypot(a.x-(col.ex+0.5)*T, a.y-(col.ey+0.5)*T) < 2){
         if (a.carry) deposit(s, a); enterNest(s, a); continue; }
-      if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseReturn(s, a);
+      if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt)) chooseReturn(s, a);
       continue;
     }
   }
@@ -469,7 +498,8 @@ function tickColony(s, c, dt){
       job.progress += builders*ws*dt; const R = ROOMS[job.room];
       if (job.progress >= R.work){ c.buildQueue.shift(); finishRoom(s, job); } }
     for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
-    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ dig(s, o.x, o.y); s.nest.digOrders.splice(i,1); } }
+    const full = (s.nest.spoil||0) >= SPOIL_MAX; // dirt waiting to go out: digging stops
+    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ dig(s, o.x, o.y); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
   }
 }
 function finishRoom(s, job){
@@ -522,6 +552,10 @@ function tickInside(s, a, dt){
   // walk inside; work only counts once the builder stands on its own cell
   const arrived = nestStep(s, a, C.speed*0.8, dt);
   a.atWork = a.state === 'build' && arrived && Math.floor(a.nx) === a.ntx && Math.floor(a.ny) === a.nty;
+  // A hauler at the top of the shaft takes a load of dirt out.
+  if (a.task === 'h' && a.atWork){ a.task = null; a.taskCell = null;
+    if ((s.nest.spoil||0) > 0){ s.nest.spoil--; exitNest(s, a, 'spoil'); a.carry = 1; a.kind = 'dirt'; a.itype = 'dirt'; chooseToward(s, a, (s.spoilAt.x+0.5)*T, (s.spoilAt.y+0.5)*T); }
+    return; }
   if (a.state !== 'in') return;
   if (!arrived || a.goal === 'exit') return;
   a.rest -= dt; if (a.rest > 0) return;
@@ -543,6 +577,7 @@ const ROOM_CREW = 3;
 function reachable(s, x, y){ return nestField(s, x, y)[nidx(SHAFT,0)] < 9999; }
 function taskSpot(s, a, task){
   const k = task[0];
+  if (k === 'h') return reachable(s, SHAFT, 0) ? [SHAFT, 0] : null;
   if (k === 'j'){
     const job = s.colony.buildQueue[0]; if (!job) return null;
     // Spread the crew along the room's floor.
@@ -557,6 +592,8 @@ function taskSpot(s, a, task){
 }
 function taskExists(s, task){
   const k = task[0]; if (k === 'j') return s.colony.buildQueue.length > 0;
+  if (k === 'h') return (s.nest.spoil||0) > 0;
+  if (k === 'd' && (s.nest.spoil||0) >= SPOIL_MAX) return false; // go haul instead
   const [x, y] = task.slice(1).split(',').map(Number);
   const list = k === 'd' ? s.nest.digOrders : k === 'f' ? s.nest.fillOrders : s.repairs;
   return list.some(o => o.x === x && o.y === y);
@@ -581,10 +618,13 @@ function pickBuilderTask(s, a){
   };
   const job = s.colony.buildQueue[0];
   const room = job && (claimed.get('j')||0) < ROOM_CREW ? (() => { const spot = taskSpot(s, a, 'j'); return spot ? { t: 'j', spot, goal: 'job' } : null; })() : null;
-  const dig = best(s.nest.digOrders, 'd', 'dig');
+  const spoil = s.nest.spoil || 0, full = spoil >= SPOIL_MAX;
+  const haul = spoil > (claimed.get('h')||0) && reachable(s, SHAFT, 0) ? { t: 'h', spot: [SHAFT, 0], goal: 'haul' } : null;
+  const dig = full ? null : best(s.nest.digOrders, 'd', 'dig');
   const pick = best(s.repairs, 'r', 'repair')
+    || (full ? haul : null)
     || (room && (!dig || a.id % 2 === 1) ? room : null)
-    || dig || best(s.nest.fillOrders, 'f', 'fill') || room;
+    || dig || haul || best(s.nest.fillOrders, 'f', 'fill') || room;
   if (pick){ a.task = pick.t; a.taskCell = pick.spot; a.goal = pick.goal; }
 }
 function nestStep(s, a, speed, dt){
@@ -649,7 +689,12 @@ function rivalBrain(s, dt){
 
 // The spider roams the whole yard: landmark to landmark, past our nest every
 // few legs, and now and then off the edge into the next area for a while.
-const SPIDER_REACH = 1.1*T, CAT_REACH = 1.8*T;
+// The spider (build 11.6): a hunter with a territory round its web in the
+// Flowerbed. Resting at the web it is hidden (ants only notice it close up)
+// and lunges at what wanders near; roaming, it stalks ants it sees, lunges,
+// and gives up after a few seconds, so a running ant can still get away.
+const SPIDER_REACH = 1.4*T, CAT_REACH = 1.8*T;
+const SPIDER = { ambush: 4*T, see: 5*T, passing: 1.5*T, lunge: 0.8, lungeSpeed: 100, chaseSpeed: 40, roamSpeed: 16, giveUp: 6, tired: 4, home: 60 };
 // For the first four minutes it keeps well away, so the opening is safe to learn.
 const spiderNearNest = (s, x, y) => Math.hypot(x/T - (s.world.ex+0.5), y/T - (s.world.ey+0.5)) < (s.t < 240 ? 12 : 6) || Math.hypot(x/T - (s.world.rx+0.5), y/T - (s.world.ry+0.5)) < 4;
 // Plan a walk to (px, py) around rocks and clear of the nests; rest there.
@@ -662,7 +707,7 @@ function spiderRoute(s, sp, px, py, rest){
 function spiderPlan(s, sp){
   const w = s.world; sp.legs = (sp.legs||0) + 1; sp.route = [];
   sp.passing = false;
-  if (sp.legs % 3 === 0 && s.t >= 240){ // stroll past the nest along an arc 7.5 tiles out, not hunting
+  if (sp.legs % 4 === 0 && s.t >= 240){ // stroll past the nest along an arc 7.5 tiles out, not hunting
     const a0 = Math.random()*Math.PI*2, dir = Math.random() < 0.5 ? 1 : -1;
     const a = a0; spiderRoute(s, sp, (w.ex+0.5+Math.cos(a)*7.5)*T, (w.ey+0.5+Math.sin(a)*7.5)*T);
     const pts = []; for (let k=1;k<5;k++){ const t = a0 + dir*k*0.5; pts.push([(w.ex+0.5+Math.cos(t)*7.5)*T, (w.ey+0.5+Math.sin(t)*7.5)*T]); }
@@ -680,12 +725,12 @@ function spiderPlan(s, sp){
     sp.route.push([out[0]*T, out[1]*T]); sp.leaving = true; return;
   }
   for (let tries=0; tries<60; tries++){
-    // Somewhere 15–70 tiles away, inside the yard.
-    const ang = Math.random()*Math.PI*2, dd = 15 + Math.random()*55;
-    const x = Math.floor(sp.x/T + Math.cos(ang)*dd), y = Math.floor(sp.y/T + Math.sin(ang)*dd);
+    // Somewhere in its territory: within SPIDER.home tiles of the web.
+    const ang = Math.random()*Math.PI*2, dd = 8 + Math.random()*(SPIDER.home - 8);
+    const x = Math.floor(w.web.x + Math.cos(ang)*dd), y = Math.floor(w.web.y + Math.sin(ang)*dd);
     if (x < 3 || y < 3 || x >= W-3 || y >= H-3) continue;
     if (w.blocked[idx(x,y)] || w.home[idx(x,y)] < (s.t < 240 ? 14 : 7) || w.rhome[idx(x,y)] < 5) continue;
-    if (Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) < 15*T || Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) > 70*T) continue;
+    if (Math.hypot((x+0.5)*T - sp.x, (y+0.5)*T - sp.y) < 12*T) continue;
     spiderRoute(s, sp, (x+0.5)*T, (y+0.5)*T); return;
   }
 }
@@ -704,9 +749,13 @@ function stepSpider(s, dt){
   // Passing the nest it only strikes at ants that walk right into it.
   // Resting at its web it waits in ambush and only strikes close.
   if (sp.rest > 0) sp.rest -= dt;
-  let target = null, bd = sp.passing || sp.rest > 0 ? 1.5*T : 3*T;
+  if (sp.tired > 0) sp.tired -= dt;
+  let target = null, bd = sp.passing ? SPIDER.passing : sp.rest > 0 ? SPIDER.ambush : SPIDER.see;
   // Ants on the nest's doorstep are out of bounds, so it never camps the entrance.
-  if (!free) for (const a of s.ants){ if (a.state==='dead'||a.state==='in'||a.state==='build'||a.state==='nest') continue; if (spiderNearNest(s, a.x, a.y)) continue; const d = Math.hypot(a.x-sp.x, a.y-sp.y); if (d < bd){ bd = d; target = a; } }
+  if (!free && !(sp.tired > 0)) for (const a of s.ants){ if (a.state==='dead'||a.state==='in'||a.state==='build'||a.state==='nest') continue; if (spiderNearNest(s, a.x, a.y)) continue; const d = Math.hypot(a.x-sp.x, a.y-sp.y); if (d < bd){ bd = d; target = a; } }
+  // A chase: a lunge, then a steady run; after a few seconds it gives up.
+  if (target){ if (!sp.chaseT) { sp.chaseT = 0; sp.rest = 0; } sp.chaseT += dt; if (sp.chaseT > SPIDER.giveUp){ sp.chaseT = 0; sp.tired = SPIDER.tired; target = null; } }
+  else sp.chaseT = 0;
   if (!sp.route || !sp.route.length) spiderPlan(s, sp);
   if (!sp.route.length && !target){ sp.rest = 1; return; } // no plan this time: wait and try again
   let gx, gy;
@@ -719,7 +768,7 @@ function stepSpider(s, dt){
     if (sp.leaving && !sp.route.length){ s.spiderAway = { hp: sp.hp, t: 40 + Math.random()*40 }; s.spider = null; return; }
     if (sp.entering) sp.entering = false;
     return; } }
-  const speed = (target ? 30 : 16)*SURF; const ddx = gx - sp.x, ddy = gy - sp.y; if (Math.hypot(ddx, ddy) < 1) return;
+  const speed = (target ? (sp.chaseT < SPIDER.lunge ? SPIDER.lungeSpeed : SPIDER.chaseSpeed) : SPIDER.roamSpeed)*SURF; const ddx = gx - sp.x, ddy = gy - sp.y; if (Math.hypot(ddx, ddy) < 1) return;
   const base = Math.atan2(ddy, ddx);
   // Steer around rocks: straight, then increasingly wide detours.
   for (const off of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]){
@@ -1001,6 +1050,7 @@ function queueRoom(s, room, cell){
   if (!payCost(c, R.cost)) return false;
   c.buildQueue.push({ room, x0: rect.x0, y0: rect.y0, w: R.w, h: R.h, progress: 0, x: rect.x0+1, y: rect.y0+1 }); return true;
 }
+function upgradeForage(s){ const c = s.colony, next = FORAGE[(c.forage||0)+1]; if (!next || !payCost(c, next.cost)) return false; c.forage = (c.forage||0)+1; return true; }
 function upgradeQueen(s){ const q = s.queen, c = s.colony; const cost = QUEEN_UP[q.level]; if (!cost || !payCost(c, cost)) return false; q.level++; return true; }
 function antCount(s){ return s.ants.filter(a => !a.team).length; }
 function roomStateAt(s, x, y){ const r = roomAt(s, x, y); if (r) return { kind:'room', room: r }; const j = s.colony.buildQueue.find(j => x >= j.x0 && x < j.x0+j.w && y >= j.y0 && y < j.y0+j.h); if (j) return { kind:'job', job: j }; return { kind:'none' }; }
@@ -1013,7 +1063,7 @@ function stats(s){
 // ---------- save / load ----------
 function serialize(s){
   return JSON.stringify({ v: 10, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn,
-    nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders }, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
+    nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
@@ -1022,7 +1072,7 @@ function serialize(s){
 function deserialize(json){
   const d = JSON.parse(json); if (d.v !== 10) throw new Error('old save'); const s = create(d.seed);
   s.t = d.t; s.colony = d.colony; s.rival = d.rival; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.nextId = d.nextId;
-  s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
+  s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);
   s.lost = !!d.lost; if (d.mower) s.mower = d.mower; if (d.areaT) s.areaT = d.areaT; if (d.strikeT) s.strikeT = d.strikeT; s.player.big = s.player.ant && s.items.find(f => f.carried) || null;
@@ -1033,7 +1083,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
+return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText };
 })();
 export default SIM;
 export { SIM };

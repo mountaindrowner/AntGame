@@ -28,6 +28,20 @@ export const ICONS = {
   surface: svg('<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'),
   map: svg('<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>'),
   zoom: svg('<circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21M8 10.5h5M10.5 8v5"/>'),
+  // Castes, for the queen's egg menu.
+  forager: svg('<ellipse cx="9" cy="14" rx="3" ry="2.3"/><circle cx="14" cy="13" r="1.9"/><path d="M16 12l3-5M17 7c2-1 4 0 4 2-2 1-4 0-4-2z"/><path d="M7 16l-2 3M10 16l0 3M12 15l2 3"/>'),
+  builder: svg('<path d="M14 4l6 6M17 7l-7 7"/><path d="M10 14l-5 1-1 5 5-1 1-5z"/>'),
+  nurse: svg('<ellipse cx="12" cy="13" rx="5" ry="6.5"/><path d="M12 9.5c-1.4-1.6-3.8-.4-3 1.6.5 1.2 3 2.9 3 2.9s2.5-1.7 3-2.9c.8-2-1.6-3.2-3-1.6z" fill="currentColor"/>'),
+  soldier: svg('<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M12 8v8M9 11h6"/>'),
+  venom: svg('<path d="M12 3c3 5 6 8 6 12a6 6 0 0 1-12 0c0-4 3-7 6-12z"/><path d="M9.5 15.5a2.5 2.5 0 0 0 2.5 2.5"/>'),
+  // Rooms, for the build catalog.
+  hatchery: svg('<ellipse cx="8" cy="15" rx="3" ry="4"/><ellipse cx="16" cy="15" rx="3" ry="4"/><ellipse cx="12" cy="8" rx="3" ry="4"/>'),
+  store: svg('<path d="M7 8c0-2 2-4 5-4s5 2 5 4"/><path d="M5 9h14l-1.5 11h-11z"/><path d="M9 13h6"/>'),
+  cistern: svg('<path d="M12 3c3 5 6 8 6 12a6 6 0 0 1-12 0c0-4 3-7 6-12z"/><path d="M8 15h8" opacity=".6"/>'),
+  nursery: svg('<path d="M4 12a8 8 0 0 0 16 0z"/><path d="M4 12h16M7 20l2-3M17 20l-2-3"/><ellipse cx="12" cy="9" rx="2.5" ry="3"/>'),
+  barracks: svg('<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>'),
+  workshop: svg('<path d="M14 6l4 4-8 8-4-4z"/><path d="M14 6l2-2 4 4-2 2M6 14l-3 3 4 4 3-3"/>'),
+  train: svg('<path d="M4 18l5-5 4 3 7-8"/><path d="M15 8h5v5"/>'),
   // Main menu: play, new, options, the film, back.
   play: svg('<path d="M8 5v14l11-7z" fill="currentColor"/>'),
   plus: svg('<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>'),

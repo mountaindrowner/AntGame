@@ -1,6 +1,6 @@
 # Sound
 
-Status: **the engine and the first batch are built** (build 11.3): `game/src/audio/sfx.js` holds the engine and the recipes, `audio/watch.js` decides what plays. Most priority-1 rows play; the few still to do are listed under "Build order". Priority 2 and 3, the ambience and the music are next. Originally charted, not built. Mark: "We need sound effects for almost everything… We can first chart out everything in the game and what sounds they make, and then we can chart out how to make those sounds." This page is both charts. Each row is one sound: when it plays (the hook in the code), what it should sound like, and how to make it.
+Status: **built** (builds 11.3 and 11.6). `game/src/audio/sfx.js` holds the engine, the recipes and the loops; `audio/watch.js` decides what plays; `audio/music.js` is the music. Everything on this page plays except two region layers, the patio's house hum and the Oak's creak. Tune by ear in play.
 
 ## How every sound is made
 

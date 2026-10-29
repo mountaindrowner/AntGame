@@ -2,6 +2,60 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: the rest of the wish list (build 11.6)
+
+Mark: "Do it all now." Everything left on the backlog, in one build.
+
+- **Slower movement.** Everything outdoors moves at 1.15 instead of 1.4 (`SURF`): your ant, the colony, the spider, raiders. That's about 18% slower. Mark's word was "much slower", but 25% starved every bot colony, so 18% is a compromise.
+- **Foragers stay close until trained.**
+  - On their own they range 40 tiles of path from the nest, about the home region, or farther only along a scent trail you lay. The old range grew by itself with colony size.
+  - **Train foragers** at the queen buys range and speed:
+    - level 1: 55 tiles, 10% faster, 🌾15 (affordable before a Food store)
+    - level 2: 75 tiles, 20% faster, 🌾40 🪨10
+    - level 3: 100 tiles, 30% faster, 🌾80 🥩10 🪨25
+  - Far food is reached by scouting and marking the way, or by training.
+- **Dug dirt goes somewhere.**
+  - Each dug cell is a load a builder carries up the shaft and out to the **spoil heap**, a mound of soil about eight tiles from the entrance that grows with every load.
+  - With 3 loads waiting, digging stops until they're hauled.
+  - Builders pick hauling themselves, so digging takes real work and builders, and you can see it outside.
+  - Saved with the game.
+- **The spider, investigated.** Over 30 simulated minutes with a hungry colony foraging, it killed **no ants**:
+  - 58% of its time in the Flowerbed, and 30% circling the nest without hunting.
+  - Its chase was half an ant's speed and its bite reached barely a tile, so everything outran it.
+  - Changed: it now hunts its territory, within 60 tiles of its web.
+    - **At its web it waits in ambush,** and ants only notice it close up.
+    - It lunges at what wanders within 4 tiles: a fast burst, then a 40-speed run.
+    - Roaming, it stalks ants within 5 tiles and gives up after 6 s, so a running ant still escapes.
+    - Its bite reaches 1.4 tiles, and it passes the nest every fourth leg (was every third).
+  - Result in the same test: about one kill every three minutes, mostly round the Flowerbed. It guards the berries now. Thirty ants or five Venom ants still kill it.
+- **The queen looks alive.** She crawls from cell to cell instead of jumping: head down the shaft wall as she digs in, legs walking. Her legs shuffle while she waits for your next tap, and once settled she paces her chamber.
+- **Building is a dust cloud.** While a room is built, a pale cloud of dust hides it, with clods of dirt flying out. When it's done the cloud swells and clears, and the furnished room is there. Bricks being dug puff dust as builders chip.
+- **Chambers are organic.** A finished room is drawn as one squarish oval with a gently wobbling ceiling and walls and a flat floor, on the same cells. Tunnels stay as they were.
+- **Items stand out.** Anything you can pick up sits in a ring of its kind's colour: gold food, blue water, red protein, grey stone, pink treats.
+- **More icons:**
+  - Each caste and room has its own line icon in the queen and build menus.
+  - Costs show as the top bar's resource icons (🌾10 🪨5), not words, and hatch times as ⏱20s.
+- **Sound, the rest** (`docs/SOUND.md`):
+  - **Music** (`audio/music.js`): synthesized like the effects, in A minor at 92 bpm, an eight-bar loop of pad, bass, marimba and drums. It shifts with the game rather than switching tracks:
+    - a title mix, a yard mix and a nest mix
+    - a danger layer (fast hats, a low pulse) that rises when the spider is near, raiders march, the queen is hurt or a visitor strikes nearby
+    - rain muffles it
+  - **Ambience:** breeze and birdsong outside, an earthy hum below, crickets on the lawns, drips in the wet ground, builders chipping while you watch the nest.
+  - **The second and third batches:**
+    - your footsteps, sheet swishes, the tooltip tick, the map's whoosh, the title stinger
+    - a groan when a treat is too heavy, a tummy rumble when you're hungry, bites in fights
+    - dig ticks, crumbles, pats, a scrape for repairs
+    - the full-colony and full-store chimes, dew twinkles, a cheer for a big haul
+    - thunder, and drips as rain ends
+    - the spider's feet, the caterpillar munching, the antlion's snap, and a bonk for greyed-out buttons
+  - **Options:** Music and Effects each Off, Quiet or Loud, beside Sound on/off.
+- **The military playtest bot works again.** It wanted a Barracks first, which costs 30 food when the store holds 20. It now skips rooms it can't afford yet.
+- **Bots, 30 minutes:**
+  - 6 of 7 colonies survive. Two reach 60 ants; most build every room.
+  - One loses its queen to raiders. That seed also lost sometimes before.
+  - Growth is slower than build 11 (most stayed 20–40 ants), and starvation is the main cause of death.
+  - The bots buy forager training but don't scout far with trails the way a player can, so a human should do better.
+
 ## Oct 29: tap a thing to see what it is, and tips with a design (build 11.5)
 
 Mark: "maybe when you click on it, it kind of tells you." And: "Text boxes for the tooltips and stuff, they're a little simple. Let's give them more of a design."
