@@ -2,32 +2,32 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-/* Layout: family trees of the ants, then one upgrade tree per ant, then the evolution tree, then the schedule. Soil palette. */
+/* Layout: ant family trees, veteran ranks, one upgrade tree per ant, the queen, the evolution tree, great evolutions, then the schedule. Soil palette. */
 :root {
   --bg: #eceee6; --panel: #f8f9f4; --fg: #1e1c17; --muted: #5d5a50; --line: #bfc2b4;
-  --accent: #b5760f;
+  --accent: #b5760f; --gold: #9a6a00;
   --terr: #3f7d34; --nest: #8a5a2b; --pop: #b5760f; --evo: #7048a8; --you: #2d6aa3;
-  --mat: #1f7f7a; --boss: #b23a2e; --push: #c4571c;
+  --mat: #1f7f7a; --boss: #b23a2e; --push: #c4571c; --soc: #2d6aa3; --sym: #1f7f7a;
   --display: "Chakra Petch", "Trebuchet MS", sans-serif;
   --body: "Atkinson Hyperlegible", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #4a4639; --accent: #e3a443;
+  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #4a4639; --accent: #e3a443; --gold: #f0c050;
   --terr: #7cc16c; --nest: #c99462; --pop: #e3a443; --evo: #b393e6; --you: #73aee6;
-  --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; color-scheme: dark } }
+  --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; --soc: #73aee6; --sym: #5fc8c1; color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #4a4639; --accent: #e3a443;
+  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #4a4639; --accent: #e3a443; --gold: #f0c050;
   --terr: #7cc16c; --nest: #c99462; --pop: #e3a443; --evo: #b393e6; --you: #73aee6;
-  --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; color-scheme: dark }
+  --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; --soc: #73aee6; --sym: #5fc8c1; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 .wrap { max-width: 1400px; margin: 0 auto; padding-block: 28px 60px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid; gap: 44px; }
+  display: grid; gap: 48px; grid-template-columns: minmax(0, 1fr); }
 h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
 h1 { font-size: clamp(28px, 5vw, 44px); }
 h2 { font-size: 24px; }
 h3 { font-size: 18px; }
-.lede { max-width: 68ch; color: var(--muted); margin: 8px 0 0; }
+.lede { max-width: 70ch; color: var(--muted); margin: 8px 0 0; }
 nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 nav a { font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--fg); text-decoration: none; padding: 5px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); }
 nav a:hover, nav a:focus-visible { border-color: var(--accent); }
@@ -35,15 +35,17 @@ nav a:hover, nav a:focus-visible { border-color: var(--accent); }
 .chip { display: inline-block; font-size: 12.5px; line-height: 1.3; padding: 3px 7px; border-radius: 4px;
   border: 1.5px dashed var(--c, var(--muted)); color: var(--fg); background: transparent; }
 .chip.b { border-style: solid; background: color-mix(in srgb, var(--c, var(--muted)) 22%, transparent); }
+.chip.g { border: 1.5px solid var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
 section > header { display: grid; gap: 4px; margin-bottom: 16px; }
-section > header p { margin: 0; color: var(--muted); max-width: 72ch; }
+section > header p { margin: 0; color: var(--muted); max-width: 74ch; }
 .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.count { font-family: var(--display); font-size: 14px; color: var(--muted); font-weight: 500; }
 
-/* Org-chart trees (ul/li with drawn connectors) */
+/* Org-chart trees */
 .ft { padding: 18px 12px 20px; min-width: max-content; }
 .ft ul { position: relative; display: flex; justify-content: center; padding: 20px 0 0; margin: 0; }
 .ft > ul { padding-top: 0; }
-.ft li { list-style: none; position: relative; padding: 20px 6px 0; display: flex; flex-direction: column; align-items: center; }
+.ft li { list-style: none; position: relative; padding: 20px 5px 0; display: flex; flex-direction: column; align-items: center; }
 .ft li::before, .ft li::after { content: ""; position: absolute; top: 0; right: 50%; width: 50%; height: 20px; border-top: 2px solid var(--line); }
 .ft li::after { right: auto; left: 50%; border-left: 2px solid var(--line); }
 .ft li:only-child::before, .ft li:only-child::after { display: none; }
@@ -54,18 +56,37 @@ section > header p { margin: 0; color: var(--muted); max-width: 72ch; }
 .ft ul ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 20px; border-left: 2px solid var(--line); }
 .ft > ul > li { padding-top: 0; }
 .ft > ul > li::before, .ft > ul > li::after { display: none; }
-.box { display: grid; gap: 1px; justify-items: center; text-align: center; padding: 7px 11px; border: 2px dashed var(--c); border-radius: 7px; background: var(--panel); color: var(--fg); text-decoration: none; max-width: 190px; }
+.box { display: grid; gap: 1px; justify-items: center; text-align: center; padding: 7px 10px; border: 2px dashed var(--c); border-radius: 7px; background: var(--panel); color: var(--fg); text-decoration: none; max-width: 180px; }
 .box.b { border-style: solid; background: color-mix(in srgb, var(--c) 18%, var(--panel)); }
-.box b { font-family: var(--display); font-size: 15px; }
+.box.g { border: 2px solid var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 35%, transparent); }
+.box.big { border-style: solid; border-width: 2.5px; background: color-mix(in srgb, var(--c) 12%, var(--panel)); }
+.box b { font-family: var(--display); font-size: 14.5px; }
 .box small { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
-.box .key { font-size: 11px; color: var(--c); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.box .key { font-size: 10.5px; color: var(--c); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; line-height: 1.25; }
+.box.g .key { color: var(--gold); }
 a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
 .box.root { border-style: solid; background: var(--c); color: var(--bg); }
 .box.root small { color: var(--bg); opacity: .85; }
-.fams { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+.fams { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); }
 .fam { display: grid; gap: 8px; align-content: start; min-width: 0; }
 .fam h3 { color: var(--c); }
-.fam p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.fam p { margin: 0; font-size: 13.5px; color: var(--muted); max-width: 80ch; }
+
+/* Ranks */
+.ranks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px; }
+.rank { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 6px; align-content: start; }
+.rank .ant { height: 30px; display: flex; align-items: center; }
+.rank b { font-family: var(--display); font-size: 17px; }
+.rank .xp { font-size: 12px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.rank p { margin: 0; font-size: 13.5px; }
+.rank .look { color: var(--muted); font-size: 12.5px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; margin-top: 14px; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; min-width: 0; }
+.panel h3 { font-size: 16px; margin-bottom: 8px; }
+.panel ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-family: var(--display); font-size: 13px; color: var(--muted); font-weight: 500; }
 
 /* Per-ant upgrade trees */
 .group { display: grid; gap: 12px; }
@@ -82,12 +103,14 @@ a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 
 .lv + .lv::before { content: ""; position: absolute; left: 16px; top: -10px; height: 10px; border-left: 2px solid var(--line); }
 .lv .n { width: 34px; height: 34px; border-radius: 50%; border: 2px dashed var(--c); display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 14px; }
 .lv.b .n { border-style: solid; background: color-mix(in srgb, var(--c) 22%, var(--panel)); }
+.lv.m .n { border: 2px solid var(--gold); box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 35%, transparent); }
 .lv .body { display: grid; gap: 6px; min-width: 0; }
 .lv .stat { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; padding-top: 6px; }
 .cost { font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pick { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: stretch; }
 .pick .or { font-size: 11px; color: var(--muted); align-self: center; text-transform: uppercase; letter-spacing: .06em; }
 .opt { border: 1.5px dashed var(--c); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; line-height: 1.35; min-width: 0; }
+.lv.m .opt { border-color: var(--gold); border-style: solid; }
 .opt b { display: block; font-size: 13.5px; }
 .picknote { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .queen { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 8px; }
@@ -95,11 +118,30 @@ a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 
 .ql.b { border-style: solid; background: color-mix(in srgb, var(--pop) 18%, var(--panel)); }
 .ql b { font-family: var(--display); font-size: 16px; }
 .ql small { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.qpicks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; margin-top: 12px; }
+.qpick { --c: var(--pop); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
+.qpick b.h { font-family: var(--display); font-size: 15px; }
 
 /* Evolution */
-.evo .box { --c: var(--evo); }
-.evo .box .cost { font-size: 11.5px; }
-.tree-wrap { display: grid; gap: 14px; }
+.evo-tree { display: grid; gap: 8px; }
+.evo-tree h3 { color: var(--c); }
+.evo-tree > p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.box .cost { font-size: 11.5px; }
+
+/* Great evolutions */
+.greats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.great { background: var(--panel); border: 2px solid var(--gold); border-radius: 12px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+.great .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.great .top b { font-family: var(--display); font-size: 19px; }
+.great .real { font-size: 12px; color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.great p { margin: 0; font-size: 13.5px; }
+.great .world { padding: 8px 10px; border-radius: 6px; background: color-mix(in srgb, var(--gold) 12%, var(--panel)); font-size: 13.5px; }
+.great .world span { font-weight: 700; }
+.great .meta { font-size: 12.5px; color: var(--muted); display: grid; gap: 2px; }
+.slots { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+.slot { border: 2px dashed var(--gold); border-radius: 10px; padding: 10px 14px; display: grid; gap: 2px; min-width: 0; }
+.slot b { font-family: var(--display); font-size: 16px; }
+.slot small { color: var(--muted); font-size: 12.5px; }
 
 /* Schedule */
 .lanes { display: grid; grid-template-columns: 130px repeat(7, minmax(150px, 1fr)); min-width: 1180px; }
@@ -111,9 +153,6 @@ a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 
   font-family: var(--display); font-weight: 700; font-size: 14px; display: block; }
 .lanes .lane small { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 11.5px; }
 .lanes .corner { position: sticky; left: 0; z-index: 3; }
-.loop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-weight: 500; margin-bottom: 14px; }
-.loop span.step { padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); }
-.loop span.arr { color: var(--accent); font-weight: 700; }
 .mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; }
 .mat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 4px; align-content: start; }
 .mat .nm { font-family: var(--display); font-weight: 700; font-size: 16px; }
@@ -124,50 +163,68 @@ a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 
 <div class="wrap">
   <div>
     <h1>Underfoot: ants, upgrades and the tech tree</h1>
-    <p class="lede">Every ant in the plan, what it grows into, and how each one levels up. Solid outlines are in the game today (build 11.6); dashed ones are proposed. Costs are first guesses for the bots to tune.</p>
+    <p class="lede">Every ant in the plan, what it grows into, how each one levels up, how single ants earn rank, and the evolution tree with its great evolutions. Solid outlines are in the game today (build 11.6); dashed ones are proposed; gold marks a great evolution. Every ant and power is something real ants do. Costs are first guesses for the bots to tune.</p>
     <div class="legend">
       <span class="chip b" style="--c:var(--accent)">Built</span>
       <span class="chip" style="--c:var(--accent)">Proposed</span>
+      <span class="chip g">Great evolution</span>
     </div>
     <nav>
       <a href="#families">Ant family trees</a>
-      <a href="#upgrades">Upgrade tree for each ant</a>
+      <a href="#ranks">Veteran ranks</a>
+      <a href="#upgrades">Upgrades for each ant</a>
       <a href="#queen">The queen</a>
       <a href="#evolution">Evolution tree</a>
+      <a href="#great">Great evolutions</a>
       <a href="#schedule">Schedule</a>
-      <a href="#materials">Materials</a>
     </nav>
   </div>
 
   <section id="families">
-    <header><h2>Ant family trees</h2><p>Every new ant grows out of one you already have. The label above each one is what unlocks it: usually a boss's trophy plus a room. Tap an ant to jump to its upgrades.</p></header>
+    <header><h2>Ant family trees <span class="count" id="antcount"></span></h2><p>Every new ant grows out of one you already have, up to four generations deep. The label above each ant is what unlocks it: a boss's trophy, a room, an evolution node, or a great evolution (gold). Tap an ant to jump to its upgrades.</p></header>
     <div class="fams" id="fams"></div>
   </section>
 
+  <section id="ranks">
+    <header><h2>Veteran ranks</h2><p>Civilization's unit experience, for ants. Every ant earns experience by doing its job and climbs five ranks. You can see rank on the ant itself: new ants hatch pale (real ants do; they're called callows) and darken as they age, and the best carry a glint and a name. Losing veterans hurts, so keeping them alive matters.</p></header>
+    <div class="ranks" id="rankrow"></div>
+    <div class="two">
+      <div class="panel"><h3>Earning experience</h3><table id="xp"></table></div>
+      <div class="panel"><h3>Promotions (picked once per ant type, not per ant)</h3><table id="promos"></table>
+        <p style="font-size:13px;color:var(--muted);margin:10px 0 0">With hundreds of ants, picking for each would be a chore. Instead you set a <b>doctrine</b> for each ant type: one tap in its sheet says which promotion its Veterans take, and which second one its Elites add.</p></div>
+      <div class="panel"><h3>Keeping and making veterans</h3><ul id="vetkeep"></ul></div>
+      <div class="panel"><h3>Where it comes from</h3><ul>
+        <li><b>Civilization V and VI:</b> units gain experience and pick promotions from a list for their class; a Barracks makes new units start with experience.</li>
+        <li><b>XCOM:</b> soldiers earn ranks and names, and a memorial wall remembers the fallen. Losing a veteran stings.</li>
+        <li><b>Real ants:</b> experienced foragers do measurably better, and workers change jobs as they age (nurses first, foragers later).</li>
+      </ul></div>
+    </div>
+  </section>
+
   <section id="upgrades">
-    <header><h2>Upgrade tree for each ant</h2><p>Every ant type has three levels, bought with materials (never 🧬 Genes). Level 1 is a straight boost. Levels 2 and 3 add a boost plus a <b>choice of two abilities</b>. The choice is permanent for that colony, so two players' soldiers end up different.</p></header>
-    <div class="group" id="groups" style="gap:28px"></div>
+    <header><h2>Upgrades for each ant</h2><p>Bought with materials (never 🧬 Genes), once for the whole ant type. Level 1 is a boost; levels 2 and 3 add a boost and a <b>permanent choice of two abilities</b>. The four core ants (Forager, Builder, Soldier, Nurse) go two levels further: level 4 is a big boost and level 5 is a gold <b>mastery</b> choice that changes how the colony plays.</p></header>
+    <div class="group" id="groups" style="gap:30px"></div>
   </section>
 
   <section id="queen">
-    <header><h2>The queen</h2><p>Her level sets how many ants the colony can hold. Each satellite nest's queen adds 20 more.</p></header>
+    <header><h2>The queen</h2><p>Her level sets how many ants the colony can hold; each satellite queen adds 20 more. Levels VII and VIII are new. At IV, VI and VIII she takes a permanent trait.</p></header>
     <div class="queen" id="queens"></div>
+    <div class="qpicks" id="qpicks"></div>
   </section>
 
-  <section id="evolution" class="evo">
-    <header><h2>Evolution tree</h2><p>Paid in 🧬 Genes plus materials. Genes come from playing: 1 per 10 eggs hatched, 1 per new region, 1 per new kind of thing brought home, 2–5 per boss, 1–2 per goal, 5 per rival queen. Lines show what must come first. About 24 nodes; a yard run affords about two-thirds, so choose. Each node has a deed that halves its cost, and any node can be refunded except the lineage.</p></header>
-    <div class="tree-wrap" id="evo"></div>
+  <section id="evolution">
+    <header><h2>Evolution tree <span class="count" id="evocount"></span></h2><p>Five branches, paid in 🧬 Genes plus materials. Genes come from playing: 1 per 10 eggs hatched, 1 per new region, 1 per new kind of thing brought home, 2–5 per boss, 1–2 per goal, 5 per rival queen. Lines show what must come first; the thick boxes at the bottom of each branch are the expensive late nodes. A yard run affords about half the tree, so every colony is different. Each node has a deed that halves its cost; any node but the lineage can be refunded.</p></header>
+    <div class="fams" id="evo"></div>
+  </section>
+
+  <section id="great">
+    <header><h2>Great evolutions</h2><p>Huge, one-time choices, like Civilization's wonders and Stellaris's ascension perks. Each copies a real ant species' way of life, changes how you play, and shows in the yard. <b>A colony gets three</b>, out of twelve, and some rule each other out, so no two colonies are alike.</p></header>
+    <div class="slots" id="slots"></div>
+    <div class="greats" id="greats"></div>
   </section>
 
   <section id="schedule">
-    <header><h2>When it all arrives</h2><p>The same pieces laid out by play time. Read down a column for what a player is doing then; read across a row to watch one track grow. Swipe sideways on a phone.</p></header>
-    <div class="loop">
-      <span class="step">Explore</span><span class="arr">→</span>
-      <span class="step">Haul, hunt, fight</span><span class="arr">→</span>
-      <span class="step">Spend on eggs, rooms, upgrades, outposts</span><span class="arr">→</span>
-      <span class="step">Reach further</span><span class="arr">→</span>
-      <span class="step">The yard pushes back</span><span class="arr">↺</span>
-    </div>
+    <header><h2>When it all arrives</h2><p>The same pieces by play time. Read down a column for what a player is doing then; read across to watch one track grow. Swipe sideways on a phone.</p></header>
     <div class="scroll"><div class="lanes" id="lanes"></div></div>
   </section>
 
@@ -179,69 +236,140 @@ a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 
 
 <script>
 // DATA
-// Ant families: a tree of {id, name, built, unlock, note, kids}
+// Ant families. Node: {id, name, built, unlock, great (unlock is a great evolution), kids}
 const FAMILIES = [
-  { name: 'Gatherers', c: 'terr', note: 'Bring things home. They branch into ants that go further, survive danger, work at night.',
-    tree: { id: 'forager', name: 'Forager', built: true, note: 'from the start', kids: [
-      { id: 'scout', name: 'Scout', unlock: 'Lookout room' },
+  { name: 'Gatherers', c: 'terr', note: 'Bring things home. They branch into ants that range further, farm, and work where others can\'t.',
+    tree: { id: 'forager', name: 'Forager', built: true, unlock: 'from the start', kids: [
+      { id: 'scout', name: 'Scout', unlock: 'Lookout room', kids: [
+        { id: 'runner', name: 'Desert runner', unlock: 'Heat tolerance' }] },
+      { id: 'night', name: 'Night forager', unlock: 'Roach antenna' },
       { id: 'armored', name: 'Armored forager', unlock: 'Beetle shell + Armory' },
-      { id: 'night', name: 'Night forager', unlock: 'Roach antenna' }] } },
-  { name: 'Diggers', c: 'nest', note: 'Dig, build, haul spoil. They branch into better builders, faster diggers and wood cutters.',
-    tree: { id: 'builder', name: 'Builder', built: true, note: 'from the start', kids: [
-      { id: 'master', name: 'Master builder', unlock: 'Hornworm silk + Workshop II' },
-      { id: 'sapper', name: 'Sapper', unlock: 'Antlion jaw' },
-      { id: 'carpenter', name: 'Carpenter', unlock: 'Termite queen + Workshop II' }] } },
-  { name: 'Fighters', c: 'boss', note: 'Two lines: the venom line (stings and sprays) and the heavy line (size and jaws). The lineage pick then changes every fighter.',
+      { id: 'harvester', name: 'Harvester', unlock: 'Granary', kids: [
+        { id: 'leafcutter', name: 'Leafcutter', unlock: 'Fungus garden', kids: [
+          { id: 'gardener', name: 'Gardener', unlock: 'Fungus Empire', great: true }] }] },
+      { id: 'herder', name: 'Herder', unlock: 'Aphid farming', kids: [
+        { id: 'rancher', name: 'Rancher', unlock: 'Mealybug ranching' }] }] } },
+  { name: 'Diggers', c: 'nest', note: 'Dig, build, haul spoil. They branch into deep miners, great builders, wood and silk workers, and ants that make bridges and rafts of their own bodies.',
+    tree: { id: 'builder', name: 'Builder', built: true, unlock: 'from the start', kids: [
+      { id: 'sapper', name: 'Sapper', unlock: 'Antlion jaw', kids: [
+        { id: 'miner', name: 'Miner', unlock: 'Deep halls' }] },
+      { id: 'master', name: 'Master builder', unlock: 'Hornworm silk + Workshop II', kids: [
+        { id: 'architect', name: 'Architect', unlock: 'Workshop III' }] },
+      { id: 'carpenter', name: 'Carpenter', unlock: 'Termite queen + Workshop II', kids: [
+        { id: 'weaver', name: 'Weaver', unlock: 'Weaver Canopy', great: true }] },
+      { id: 'bridger', name: 'Bridger', unlock: 'Living Bridges', great: true },
+      { id: 'rafter', name: 'Rafter', unlock: 'Raft Colony', great: true }] } },
+  { name: 'Fighters', c: 'boss', note: 'Three lines. The venom line stings and sprays; the heavy line grows bigger heads and jaws; the raider line takes the fight to rival nests. The lineage pick crowns the venom line with a champion.',
     tree: { id: 'soldier', name: 'Soldier', built: true, unlock: 'Barracks', kids: [
       { id: 'venom', name: 'Venom ant', built: true, unlock: 'Spider fang', kids: [
-        { id: 'acid', name: 'Acid sprayer', unlock: 'Wasp sting + Venom lab' }] },
+        { id: 'acid', name: 'Acid sprayer', unlock: 'Wasp sting + Venom lab', kids: [
+          { id: 'champion', name: 'Lineage champion', unlock: 'The lineage pick' }] },
+        { id: 'exploder', name: 'Exploder', unlock: 'Formic spray + Venom lab' }] },
       { id: 'major', name: 'Major', unlock: 'Barracks II + 🪲', kids: [
-        { id: 'trapjaw', name: 'Trap-jaw', unlock: 'Centipede plate + Armory II' }] }] } },
-  { name: 'Nest and royals', c: 'pop', note: 'Ants that keep the nest running and the ones that start new nests.',
-    tree: { id: 'queen', name: 'Queen', built: true, note: 'levels I–VI', kids: [
+        { id: 'supermajor', name: 'Supermajor', unlock: 'Polymorphism', kids: [
+          { id: 'doorhead', name: 'Doorhead', unlock: 'Gate room' },
+          { id: 'titan', name: 'Titan', unlock: 'Titan Line', great: true }] },
+        { id: 'trapjaw', name: 'Trap-jaw', unlock: 'Centipede plate + Armory II' }] },
+      { id: 'raider', name: 'Raider', unlock: 'War camp', kids: [
+        { id: 'broodraider', name: 'Brood raider', unlock: 'Brood raiding' }] }] } },
+  { name: 'Nest and royals', c: 'pop', note: 'The ants that keep the nest alive, and the young queens that carry the colony on.',
+    tree: { id: 'queen', name: 'Queen', built: true, unlock: 'levels I–VIII', kids: [
       { id: 'nurse', name: 'Nurse', built: true, unlock: 'Nursery', kids: [
-        { id: 'replete', name: 'Replete', unlock: 'Honeypot vault' }] },
+        { id: 'replete', name: 'Replete', unlock: 'Honeypot vault' },
+        { id: 'medic', name: 'Medic', unlock: 'Infirmary' },
+        { id: 'undertaker', name: 'Undertaker', unlock: 'Midden' }] },
+      { id: 'princess', name: 'Princess', unlock: 'Polygyny' },
       { id: 'breeder', name: 'Breeder', unlock: 'Royal chamber + 🍯' }] } },
 ];
 
-// Per-ant upgrades. L: [boost, cost, built?, [pickA, pickB]] ; pick = [name, effect]
+// Per-ant upgrades. Level: [boost, cost, built?, [[pickA, effect], [pickB, effect]]]. Level 5 of the core ants is a mastery.
 const ANTS = {
   forager: { role: 'Gathers food and water; lays scent trails.', L: [
     ['Range 55, 10% faster', '🌾15', true],
     ['Range 75, 20% faster', '🌾40 🪨10', true, [['Trailblazer', 'Trails it lays last twice as long'], ['Sprinter', '25% faster off a trail']]],
-    ['Range 100, 30% faster', '🌾80 🥩10 🪨25', true, [['Pathfinder', 'Finds food twice as far off a trail'], ['Hauler', 'Two foragers can carry a treat']]]] },
+    ['Range 100, 30% faster', '🌾80 🥩10 🪨25', true, [['Pathfinder', 'Finds food twice as far off a trail'], ['Hauler', 'Two foragers can carry a treat']]],
+    ['Carries 7, range 130', '🌾150 🍯20 🪲10'],
+    ['Mastery', '🌾250 🍯50 🧬2', false, [['Trail queen', 'Its trails become roads: every ant on them is 40% faster'], ['Lone wolf', 'Forages anywhere in the yard; range no longer applies']]]] },
   scout: { role: 'Explores far and fast; lifts fog as it goes.', L: [
     ['20% faster', '🌾30 🪨10'],
     ['Sees 50% further', '🌾60 🥩10', false, [['Mapper', 'Ground it scouts shows its food for 2 minutes'], ['Decoy', 'Draws a bird or spider away, then outruns it']]],
     ['Never tires', '🌾100 🍯15', false, [['Spy', 'Shows a rival\'s raid before it leaves home'], ['Pioneer', 'Outposts it builds reach 5 tiles further']]]] },
-  armored: { role: 'Forages in danger; survives one stomp or peck.', L: [
-    ['Carries 6', '🌾40 🪲5'],
-    ['50% more health', '🌾60 🪲10', false, [['Shellback', 'Survives two stomps or pecks'], ['Mule', 'Carries 10']]],
-    ['20% faster', '🌾100 🪲20', false, [['Rearguard', 'Foragers near it take half damage'], ['Bird-proof', 'Birds ignore it']]]] },
+  runner: { role: 'Desert ant: forages alone in the heat, finds home by the sun, outruns spiders.', L: [
+    ['25% faster in heat', '🌾60 🪨10'],
+    ['Carries 6', '🌾90 🍯10', false, [['Sun reader', 'Walks straight home with no trail'], ['Spider-dodger', 'Outruns any spider']]],
+    ['40% more health', '🌾140 🍯25', false, [['Carrion seeker', 'Finds bugs killed by the heat: free 🥩'], ['Long haul', 'No range limit in summer']]]] },
   night: { role: 'Forages at night and in rain.', L: [
     ['25% faster at night', '🌾40 🥩5'],
     ['Carries 6', '🌾60 🥩15', false, [['Rain runner', 'Full speed in rain; never washed away'], ['Glow trails', 'Its trails show on the map at night']]],
     ['40% more health', '🌾100 🍯15', false, [['Scavenger', 'Finds dead bugs at night: free 🥩'], ['Ghost', 'Rivals and the roach don\'t notice it']]]] },
+  armored: { role: 'Forages in danger; survives one stomp or peck.', L: [
+    ['Carries 6', '🌾40 🪲5'],
+    ['50% more health', '🌾60 🪲10', false, [['Shellback', 'Survives two stomps or pecks'], ['Mule', 'Carries 10']]],
+    ['20% faster', '🌾100 🪲20', false, [['Rearguard', 'Foragers near it take half damage'], ['Bird-proof', 'Birds ignore it']]]] },
+  harvester: { role: 'Harvester ant: gathers seeds, which never rot and fill the Granary.', L: [
+    ['Carries 6 seeds', '🌾30 🪨10'],
+    ['15% faster', '🌾60 🪨20', false, [['Thresher', 'Cracks seeds: twice the food'], ['Sower', 'Dropped seeds sprout near the nest: food grows at home']]],
+    ['Granary 50% bigger', '🌾100 🪨40', false, [['Hoarder', 'Seeds last through winter untouched'], ['Seed thief', 'Steals from rival granaries']]]] },
+  leafcutter: { role: 'Cuts leaves and carries them home to feed the fungus garden.', L: [
+    ['Cuts 30% faster', '🌾50 💧20'],
+    ['Carries big leaf pieces', '🌾80 🍯10', false, [['Minim riders', 'Tiny ants ride the leaves: flies and wasps can\'t attack'], ['Green highway', 'Leaf trails are cleared: every ant on them is faster']]],
+    ['40% more health', '🌾120 🪲10', false, [['Petal clipper', 'Cuts flowers too: richer fungus'], ['Strip-cutter', 'Strips a whole plant in one trip']]]] },
+  gardener: { role: 'Tends the fungus: weeds out mould, spreads new gardens.', L: [
+    ['Fungus grows 20% faster', '🌾60 💧30'],
+    ['Tends twice the garden', '🌾100 💧40', false, [['Weeder', 'Mould never spoils a garden'], ['Spreader', 'New gardens start from cuttings, free']]],
+    ['Works through winter', '🌾150 🍯30', false, [['Antibiotic', 'Ants that eat the fungus resist disease'], ['Feast', 'The garden feeds larvae: eggs cost no food']]]] },
+  herder: { role: 'Tends aphids, moves them to fresh plants, guards them from ladybirds.', L: [
+    ['Milks 25% faster', '🌾30 🍯5'],
+    ['Drives off ladybirds', '🌾50 🍯15', false, [['Shepherd', 'Moves aphids to new plants: herds grow'], ['Wing clipper', 'Aphids never fly away']]],
+    ['Herds 30% bigger', '🍯30 🪲5', false, [['Big herd', 'Herds twice as large'], ['Sweet trail', 'Sugar comes home 30% faster']]]] },
+  rancher: { role: 'Keeps root aphids and mealybugs underground: sugar from inside the nest.', L: [
+    ['Herd 25% bigger', '🍯15 🪨20'],
+    ['Milks 30% faster', '🍯30 🪨30', false, [['Cave herd', 'Herds survive winter'], ['Deep roots', 'Cellars in the deep band hold twice']]],
+    ['Herds breed faster', '🍯50 🪵10', false, [['Honey well', 'Cellar sugar never runs dry'], ['Breeding stock', 'Each satellite nest gets a starter herd']]]] },
   builder: { role: 'Digs, builds rooms, hauls spoil, holds tunnels up.', L: [
     ['Digs 30% faster', '🌾20 🪨10'],
     ['Carries 2 spoil loads', '🌾50 🪨25', false, [['Shorer', 'Tunnels near it never cave in'], ['Mason', 'Rooms cost 25% less 🪨']]],
-    ['Builds 50% faster', '🌾90 🪨40 🥩10', false, [['Excavator', 'Digs room pockets twice as fast'], ['Field engineer', 'Builds and repairs outposts in half the time']]]] },
-  master: { role: 'Builds tier III rooms; digs the deep band; builds 2×.', L: [
-    ['Builds 30% faster', '🌾60 🪨30'],
-    ['30% more health', '🌾80 🪵10', false, [['Architect', 'Rooms it builds hold 20% more'], ['Vaulter', 'Tier III rooms cost 30% less 🪵']]],
-    ['Deep band dug 50% faster', '🌾120 🪵25', false, [['Fortifier', 'Rooms it builds never flood'], ['Planner', 'Queue three rooms at once']]]] },
+    ['Builds 50% faster', '🌾90 🪨40 🥩10', false, [['Excavator', 'Digs room pockets twice as fast'], ['Field engineer', 'Builds and repairs outposts in half the time']]],
+    ['Digs any soil 2× faster', '🌾150 🪨60 🪵10'],
+    ['Mastery', '🌾250 🪨100 🧬2', false, [['Foreman', 'Builders near it work 50% faster'], ['Tunnel master', 'Its tunnels never collapse or flood']]]] },
   sapper: { role: 'Digs fast through clay and stone; repairs cave-ins at once.', L: [
     ['Clay dug 40% faster', '🌾50 🪨20'],
     ['40% more health', '🌾80 🥩15', false, [['Tunneller', 'Digs a hidden tunnel out to an outpost'], ['Demolisher', 'Collapses a tunnel onto raiders']]],
     ['Deep band dug 2× faster', '🌾120 🪲10', false, [['Breacher', 'Digs into rival nests'], ['Rescuer', 'Digs out ants trapped in cave-ins']]]] },
+  miner: { role: 'Digs the deepest band and finds what\'s buried there.', L: [
+    ['Stone dug 30% faster', '🌾80 🪨30'],
+    ['Carries 2', '🌾120 🪨50', false, [['Prospector', 'Finds buried grubs and quartz: 🪨 ×3'], ['Shaft sinker', 'Digs a straight shaft in one go']]],
+    ['50% more health', '🌾160 🪲20', false, [['Cave finder', 'Breaks into natural hollows: free rooms'], ['Spring finder', 'Strikes groundwater: a cistern that never empties']]]] },
+  master: { role: 'Builds tier III rooms; digs the deep band; builds 2×.', L: [
+    ['Builds 30% faster', '🌾60 🪨30'],
+    ['30% more health', '🌾80 🪵10', false, [['Vaulter', 'Rooms it builds hold 20% more'], ['Economist', 'Tier III rooms cost 30% less 🪵']]],
+    ['Deep band dug 50% faster', '🌾120 🪵25', false, [['Fortifier', 'Rooms it builds never flood'], ['Planner', 'Queue three rooms at once']]]] },
+  architect: { role: 'Builds the great works and the biggest rooms.', L: [
+    ['Builds 30% faster', '🌾100 🪵20'],
+    ['Rooms one size bigger', '🌾150 🪵30', false, [['Ventilator', 'The nest stays cool: no summer slowdown'], ['Fortress', 'Gates and walls twice as strong']]],
+    ['Works 2× faster', '🌾200 🪵50', false, [['Great works', 'Great evolutions build 30% faster'], ['Monument', 'A finished great evolution lowers Notice by 10']]]] },
   carpenter: { role: 'Chews through bark; the only ant that cuts 🪵 wood.', L: [
     ['Cuts 30% faster', '🌾60 🪵5'],
     ['Carries 2 wood', '🌾90 🪵15', false, [['Woodcutter', 'Bark walls fall twice as fast'], ['Gallery maker', 'Satellite nests in wood need no digging']]],
     ['40% more health', '🌾120 🪲15', false, [['Joiner', 'Gates and Highways cost 30% less 🪵'], ['Termite bane', 'Termites flee its trails']]]] },
+  weaver: { role: 'Weaver ant: glues leaves together with larval silk to build nests in the hedge and the Oak.', L: [
+    ['Weaves 30% faster', '🌾60 🍯10'],
+    ['Builds leaf nests 2× bigger', '🌾100 🍯20', false, [['Living chain', 'Chains of ants pull leaves across gaps'], ['Silk patch', 'Repairs any nest in seconds']]],
+    ['40% more health', '🌾150 🍯30', false, [['Canopy guard', 'Drops on foes from above'], ['Treetop farm', 'Herds scale insects in the leaves: 🍯']]]] },
+  bridger: { role: 'Army ant: links with others to span gaps and water with its own body.', L: [
+    ['Bridges 30% longer', '🌾60 🥩10'],
+    ['Bridges form 2× faster', '🌾90 🥩20', false, [['Rope', 'Bridges hold crews carrying treats'], ['Ladder', 'Bridges climb walls and steps']]],
+    ['50% more health', '🌾140 🪲10', false, [['Tireless', 'Bridges never break'], ['Moat', 'Bridges pull up behind you: raiders can\'t follow']]]] },
+  rafter: { role: 'Fire ant: locks legs with others to float; carries the colony through floods.', L: [
+    ['Rafts 30% bigger', '🌾60 🍯10'],
+    ['Rafts drift 2× faster', '🌾90 🍯20', false, [['Sail', 'Steer rafts where you want'], ['Anchor', 'Rafts hold still: the nest waits out the flood']]],
+    ['50% more health', '🌾140 🪲10', false, [['Flood rider', 'A flood carries a raft to new ground: a free outpost'], ['Lifeboat', 'The queen and eggs are always saved from floods']]]] },
   soldier: { role: 'Fights; guards the door.', L: [
     ['30% more health', '🌾30 🥩5'],
     ['Bites 25% harder', '🌾60 🥩15', false, [['Doorkeeper', 'Blocks the entrance alone'], ['Escort', 'Follows and guards foragers']]],
-    ['20% faster', '🌾100 🥩25 🪲5', false, [['Alarm caller', 'Wakes every idle ant when attacked'], ['Phalanx', 'Bites 50% harder with 3 or more soldiers']]]] },
+    ['20% faster', '🌾100 🥩25 🪲5', false, [['Alarm caller', 'Wakes every idle ant when attacked'], ['Phalanx', 'Bites 50% harder with 3 or more soldiers']]],
+    ['50% more health again', '🥩80 🪲25'],
+    ['Mastery', '🥩150 🪲50 🧬2', false, [['Warlord', 'Every fighter within 5 tiles bites 30% harder'], ['Guardian', 'Takes the hits meant for the queen, nurses and your ant']]]] },
   venom: { role: 'Kills big things: an 8× sting.', L: [
     ['Venom 25% stronger', '🥩20'],
     ['30% more health', '🌾40 🥩35', false, [['Paralytic', 'Stung prey slows to half speed'], ['Hunter', 'Kills leave a scent that calls haulers']]],
@@ -250,69 +378,203 @@ const ANTS = {
     ['Range 4 tiles', '🥩30 🍯10'],
     ['40% more health', '🥩50 🍯20', false, [['Acid cloud', 'Each spray hits a small area'], ['Bird scarer', 'Birds won\'t strike near it']]],
     ['Sprays faster', '🥩80 🪲15', false, [['Silk melter', 'Webs and silk walls melt at once'], ['Corrosive', 'Armored foes take double damage']]]] },
+  champion: { role: 'Your lineage\'s elite: an Acid fire-spitter, a Trap-jaw leaper, or a Bullet ant, by the lineage you picked.', L: [
+    ['40% more health', '🥩80 🪲30'],
+    ['Hits 30% harder', '🥩120 🪲40', false, [['Spearhead', 'Leads raids: ants following it hit harder'], ['Bodyguard', 'Walks with your ant and guards it']]],
+    ['Two at once', '🥩180 🪲60 🧬3', false, [['Terror', 'Rivals flee its scent'], ['Boss killer', 'Double damage to bosses']]]] },
+  exploder: { role: 'Exploding ant: bursts in a fight, gluing foes with toxic goo. It dies doing it.', L: [
+    ['Goo 30% wider', '🥩20'],
+    ['Hatches 2× faster', '🥩40 🍯10', false, [['Tar pit', 'Goo holds foes still for 5 s'], ['Toxin', 'Goo poisons whatever it touches']]],
+    ['Bursts on command', '🥩70 🪲10', false, [['Last stand', 'Bursts on its own when the nest is breached'], ['Volatile', 'Strips a boss\'s armour for 10 s']]]] },
   major: { role: 'Heavy fighter; carries treats alone; blocks a tunnel.', L: [
     ['40% more health', '🥩20 🪲10'],
     ['Bites 30% harder', '🥩40 🪲20', false, [['Bulwark', 'Plugs a tunnel completely'], ['Porter', 'Carries a treat alone at full speed']]],
     ['20% faster', '🥩70 🪲35', false, [['Crusher', 'Cracks shells: 2× 🪲 from kills'], ['Shield wall', 'Ants behind it take no damage']]]] },
+  supermajor: { role: 'Giant-headed: cracks seeds and shells, holds a tunnel alone.', L: [
+    ['50% more health', '🥩60 🪲30'],
+    ['Bites 40% harder', '🥩90 🪲45', false, [['Nutcracker', 'Cracks seeds and shells for the colony: more food and 🪲'], ['Wall', 'Nothing gets past it']]],
+    ['25% faster', '🥩130 🪲60', false, [['Stomper', 'Knocks small foes flying'], ['Sentinel', 'Never leaves its post, never sleeps']]]] },
+  doorhead: { role: 'Turtle ant: its flat head plugs the nest door like a cork.', L: [
+    ['50% more health', '🥩40 🪲30'],
+    ['Closes 2× faster', '🥩60 🪲40', false, [['Keyholder', 'Lets your ants through, no one else'], ['Two doors', 'Guards a second entrance too']]],
+    ['Can\'t be moved', '🥩90 🪲60', false, [['Shell door', 'Keeps out floods and the hose'], ['Spiked', 'Hurts anything that pushes on it']]]] },
+  titan: { role: 'As big as a beetle: carries a cookie alone, wrestles the toad.', L: [
+    ['Twice the health', '🥩150 🪲60'],
+    ['Bites 50% harder', '🥩200 🪲90', false, [['Hauler of giants', 'Carries any treat home alone'], ['Juggernaut', 'Walks through feet and beaks']]],
+    ['A second titan', '🥩300 🪲120 🧬4', false, [['Roar', 'Stridulates: every rival in the region flees'], ['Monster slayer', 'Triple damage to bosses']]]] },
   trapjaw: { role: 'Snaps small foes in one bite; jumps clear of feet and gaps.', L: [
     ['Snaps 30% harder', '🥩30 🪲10'],
     ['Jumps 50% further', '🥩50 🪲20', false, [['Snap guard', 'Kills the first small foe through the door'], ['Long jump', 'Clears two gaps in one jump']]],
     ['30% more health', '🥩80 🪵10', false, [['Hair trigger', 'Always bites first'], ['Escape artist', 'Always jumps clear of feet and beaks']]]] },
+  raider: { role: 'Marches on rival nests in columns.', L: [
+    ['15% faster', '🥩30 🌾30'],
+    ['30% more health', '🥩60 🌾50', false, [['War drum', 'Raid columns form in half the time'], ['Pillager', 'Carries rival food home']]],
+    ['Bites 30% harder', '🥩100 🪲20', false, [['Siege', 'Breaks rival Gates'], ['Swift return', 'Survivors run home 2× faster']]]] },
+  broodraider: { role: 'Slave-maker ant: steals rival pupae, which hatch as workers for you.', L: [
+    ['Carries 2 pupae', '🥩50'],
+    ['30% faster', '🥩80 🍯20', false, [['Propaganda', 'Rival ants fight each other during your raids'], ['Gentle jaws', 'Every stolen pupa survives']]],
+    ['40% more health', '🥩120 🪲20', false, [['Mixed colony', 'Stolen workers keep their species\' skill'], ['Usurper', 'Takes over a rival nest whose queen is dead']]]] },
   nurse: { role: 'Tends eggs; eggs hatch faster.', L: [
     ['Eggs hatch 15% faster', '🌾20 💧10'],
-    ['Tends 2 eggs at once', '🌾40 💧20', false, [['Wet nurse', 'Larvae eat 30% less'], ['Medic', 'Heals hurt ants in the nest']]],
-    ['Works 30% faster', '🌾70 🍯10', false, [['Brood guard', 'Fights like a soldier inside the nest'], ['Attendant', 'The queen lays 20% faster']]]] },
-  replete: { role: 'A living jar: the colony\'s store of 🍯 and 💧.', L: [
+    ['Tends 2 eggs at once', '🌾40 💧20', false, [['Wet nurse', 'Larvae eat 30% less'], ['Medic training', 'Heals hurt ants in the nest']]],
+    ['Works 30% faster', '🌾70 🍯10', false, [['Brood guard', 'Fights like a soldier inside the nest'], ['Attendant', 'The queen lays 20% faster']]],
+    ['Eggs hatch 25% faster again', '🌾120 🍯25'],
+    ['Mastery', '🌾200 🍯50 🧬2', false, [['Teacher', 'Every ant hatches Seasoned'], ['Caste-shaper', 'Choose any caste for an egg at the cost of a worker']]]] },
+  replete: { role: 'Honeypot ant: a living jar of 🍯 and 💧 hanging in the vault.', L: [
     ['Holds 25% more', '🍯10'],
     ['Holds 25% more again', '🍯20 💧20', false, [['Sugar keg', 'Holds twice the 🍯'], ['Water keg', 'Holds twice the 💧']]],
-    ['Hides in a safe room', '🍯40', false, [['Living larder', 'Feeds ants directly: upkeep −15%'], ['Drought store', 'Never spoils; lasts the winter']]]] },
+    ['Can\'t be stolen', '🍯40', false, [['Living larder', 'Feeds ants directly: upkeep −15%'], ['Drought store', 'Never spoils; lasts the winter']]]] },
+  medic: { role: 'Matabele ant: treats wounds and carries the hurt home.', L: [
+    ['Heals 30% faster', '🌾30 💧10'],
+    ['Carries the wounded', '🌾50 💧20', false, [['Field medic', 'Treats ants where they fall'], ['Stretcher', 'Carries the wounded home 2× faster']]],
+    ['40% more health', '🌾90 🍯15', false, [['Life saver', 'A veteran\'s first death is only a wound'], ['Antiseptic', 'No infections in the nest']]]] },
+  undertaker: { role: 'Carries the dead out to the midden, keeping disease away.', L: [
+    ['Works 30% faster', '🌾20'],
+    ['Carries 2', '🌾40 🪨10', false, [['Recycler', 'The dead become 🥩'], ['Clean nest', 'Disease halved']]],
+    ['Never gets sick', '🌾70 🍯10', false, [['Remembrance', 'A fallen Elite inspires: fighters +10% for a minute'], ['Plague wall', 'Rival diseases never spread to you']]]] },
+  princess: { role: 'A young queen in the home nest: lays eggs, and inherits the colony if the queen dies.', L: [
+    ['Lays 25% faster', '🌾100 🍯30'],
+    ['30% more health', '🌾150 🍯40', false, [['Heir', 'Takes over at once if the queen dies'], ['Founder', 'Leaves with 20 ants to found a satellite']]],
+    ['Matches the queen\'s level', '🌾250 🍯60', false, [['Twin rule', 'Both queens lay at full speed'], ['Ambassador', 'Satellites she founds start with a Granary and Hatchery']]]] },
   breeder: { role: 'Flies on a mating flight; founds a satellite nest.', L: [
     ['Flies 30% further', '🌾60 🍯20'],
     ['Founds nests 30% faster', '🍯40 🪵10', false, [['Twin queens', 'A new nest starts with two queens'], ['Swift founding', 'A new nest starts with 10 workers']]],
     ['Survives birds on the way', '🍯60 🪵20', false, [['Long flight', 'Can found a nest on any scouted ground'], ['Strong line', 'Satellite queens start at level II']]]] },
 };
 
-const QUEEN = [['I', 20, 'start', true], ['II', 40, '🌾40 🥩10', true], ['III', 60, '🌾80 🥩20 🪨20', true], ['IV', 80, '🌾150 🥩40 🪨40', true], ['V', 100, '🌾250 🥩60 🍯20'], ['VI', 120, '🌾400 🥩90 🍯40']];
+const QUEEN = [['I', 20, 'start', true], ['II', 40, '🌾40 🥩10', true], ['III', 60, '🌾80 🥩20 🪨20', true], ['IV', 80, '🌾150 🥩40 🪨40', true], ['V', 100, '🌾250 🥩60 🍯20'], ['VI', 120, '🌾400 🥩90 🍯40'], ['VII', 140, '🌾600 🥩120 🍯60 🪲20'], ['VIII', 160, '🌾900 🥩180 🍯100 🪵40']];
+const QUEEN_PICKS = [
+  ['At level IV', ['Fertile', 'Lays 25% faster'], ['Hardy', 'Shrugs off the first three bites of any raid that reaches her']],
+  ['At level VI', ['Brood mother', 'Eggs cost 30% less'], ['Matriarch', 'Every ant has 10% more health']],
+  ['At level VIII', ['Mother of nations', 'Satellite queens start at level IV'], ['Eternal line', 'If she dies, a new queen takes over; the colony never falls']],
+];
 
-// Evolution: branch → tree; node {name, cost, fx, kids}
+const RANKS = [
+  ['Callow', 'just hatched', '−10% at its job', 'Pale, almost see-through', 0.25],
+  ['Seasoned', '20 xp', '+10% at its job', 'Its proper colour', 0.6],
+  ['Veteran', '60 xp', '+20%, and its first promotion', 'Darker, a little bigger', 0.85],
+  ['Elite', '150 xp', '+30%, a second promotion, and a name', 'Dark, with a scar or a glint', 1],
+  ['Legend', '400 xp, or a boss kill', '+40% and a title, like "Thorn, Spider-bane"', 'A soft glow; on the map; on the memorial wall when it dies', 1],
+];
+const XP = [['Forager', '1 per load home; more for long trips and treats'], ['Scout', '1 per new patch of ground'], ['Builder', '1 per 2 tiles dug; 3 per room built'], ['Soldier and fighters', '3 per fight survived, 5 per kill, 50 for a boss'], ['Nurse', '2 per egg hatched'], ['Any ant', '10 for surviving a raid, a flood or a stomp']];
+const PROMOS = [['Gatherers', 'Trailwise (faster on trails) · Strongback (+1 carried) · Keen nose (sees food further) · Dodger (dodges the first strike)'], ['Diggers', 'Quick digger · Steady (no cave-ins nearby) · Packer (+1 spoil) · Fixer (repairs as it passes)'], ['Fighters', 'Brawler (+bite) · Guard (+defence at home) · Hunter (+damage to big bugs) · Skirmisher (+speed) · Ambusher (first hit doubled)'], ['Nest', 'Gentle (+hatch speed) · Healer (heals nearby) · Tidy (less disease)']];
+const VETKEEP = [
+  '<b>Drill hall</b> (Society node): soldiers hatch Seasoned, like Civilization\'s Barracks.',
+  '<b>Colony memory</b> (Society, late): every new ant hatches Seasoned.',
+  '<b>Medics</b> carry the wounded home; with <i>Life saver</i> a veteran\'s first death is only a wound.',
+  '<b>Long-lived workers</b> (Bodies): ants live twice as long, so veterans stay.',
+  '<b>Division of labour</b> (Society): ants nurse young and forage old, earning experience in both.',
+  '<b>Your rebirth:</b> when your ant dies you can come back as one of your Elites or Legends.',
+];
+
+// Evolution. Branch {name, c, note, kids}; node {name, cost, fx, big, kids}
 const EVO = [
-  { name: 'Bodies', note: 'what an ant is', kids: [
-    { name: 'Strong mandibles', cost: '🧬2 🥩10', fx: 'Fighters bite 25% harder', kids: [{ name: 'Formic spray', cost: '🧬4 🥩20', fx: 'Soldiers bite at 2 tiles' }] },
-    { name: 'Trail runners', cost: '🧬2 🌾30', fx: '25% faster on a scent trail', kids: [{ name: 'Big crop', cost: '🧬3 🍯10', fx: 'Foragers carry 8, not 5' }] },
-    { name: 'Tough cuticle', cost: '🧬3 🪲10', fx: '50% more health', kids: [{ name: 'Majors', cost: '🧬4 🪲20', fx: 'Unlocks the Major (with Barracks II)' }] },
-    { name: 'Heat tolerance', cost: '🧬3', fx: 'Work through summer heat (with seasons)' },
-    { name: 'Lineage: pick one, forever', cost: '🧬8 + 3 trophies', fx: 'Acid: every fighter sprays · Trap-jaw: one-bite kills and a jump · Bullet: a sting that stuns bosses' }] },
-  { name: 'Senses', note: 'how the colony thinks', kids: [
-    { name: 'Waypoints', cost: '🧬1 🪨10', fx: 'Outposts', kids: [{ name: 'Lookout', cost: '🧬3 🪨20', fx: 'Scouts; +2 outposts; boss patrols on the map' }] },
-    { name: 'Strong scent', cost: '🧬2', fx: 'Trails fade half as fast', kids: [{ name: 'Danger scent', cost: '🧬2', fx: 'Foragers route round a danger mark', kids: [{ name: 'Rally scent', cost: '🧬3', fx: 'Fighters gather to a mark', kids: [{ name: 'Hive mind', cost: '🧬6', fx: 'Idle ants answer the colony\'s biggest need on their own' }] }] }] },
-    { name: 'Bigger crews', cost: '🧬3', fx: 'Crews of 30', kids: [{ name: 'Bigger crews II', cost: '🧬5', fx: 'Crews of 45' }] },
-    { name: 'Night sense', cost: '🧬3', fx: 'Forage at night' }] },
-  { name: 'Nest', note: 'how the colony lives', kids: [
-    { name: 'Hatchery II', cost: '🧬1 + materials', fx: '3 eggs at once', kids: [{ name: 'Hatchery III', cost: '🧬1 + materials', fx: '5 eggs at once' }] },
-    { name: 'Store II', cost: '🧬1 + materials', fx: '400 food', kids: [{ name: 'Store III', cost: '🧬1 + materials', fx: '1000 food' }] },
-    { name: 'Aphid farming', cost: '🧬2', fx: '🍯 sugar from aphids (garden held)', kids: [{ name: 'Honeypot vault', cost: '🧬3 🍯20', fx: 'Repletes' }] },
-    { name: 'Insulation', cost: '🧬2', fx: 'Cave-ins and floods halved' },
-    { name: 'Fungus garden', cost: '🧬4', fx: 'Leaves become food (Leaf pile held)' },
-    { name: 'Royal chamber', cost: '🧬5 🪵20', fx: 'Breeders, mating flights, satellites', kids: [{ name: 'Highways', cost: '🧬5 🪵30', fx: 'Tunnels between nests', kids: [{ name: 'Supercolony', cost: 'late', fx: 'Every nest one network' }] }] }] },
+  { name: 'Bodies', c: 'boss', note: 'What an ant is: jaws, armour, glands, size.', kids: [
+    { name: 'Strong mandibles', cost: '🧬2 🥩10', fx: 'Fighters bite 25% harder', kids: [
+      { name: 'Formic spray', cost: '🧬4 🥩20', fx: 'Soldiers bite at 2 tiles', kids: [
+        { name: 'Exploders', cost: '🧬5 🥩40', fx: 'The Exploder ant' }] },
+      { name: 'Stridulation', cost: '🧬4', fx: 'Ants squeak through the soil: the nest rallies in 2 s' }] },
+    { name: 'Trail runners', cost: '🧬2 🌾30', fx: '25% faster on a scent trail', kids: [
+      { name: 'Big crop', cost: '🧬3 🍯10', fx: 'Foragers carry 8, not 5', kids: [
+        { name: 'Social stomach', cost: '🧬8 🍯50', fx: 'Ants share food mouth to mouth: no ant far from home ever starves', big: true }] }] },
+    { name: 'Tough cuticle', cost: '🧬3 🪲10', fx: '50% more health', kids: [
+      { name: 'Majors', cost: '🧬4 🪲20', fx: 'The Major ant (with Barracks II)', kids: [
+        { name: 'Polymorphism', cost: '🧬9 🪲60', fx: 'The Supermajor ant', big: true }] },
+      { name: 'Metapleural glands', cost: '🧬5', fx: 'A natural antiseptic: mould and disease halved' }] },
+    { name: 'Heat tolerance', cost: '🧬3', fx: 'Work through summer heat; the Desert runner', kids: [
+      { name: 'Long-lived workers', cost: '🧬10 🍯40', fx: 'Ants live twice as long, so veterans stay', big: true }] },
+    { name: 'Lineage: pick one, forever', cost: '🧬8 + 3 trophies', fx: 'Acid: every fighter sprays · Trap-jaw: one-bite kills and a jump · Bullet: a sting that stuns bosses. Unlocks the Lineage champion', big: true }] },
+  { name: 'Senses', c: 'evo', note: 'How the colony thinks: scent, sight, the sun, and your powers.', kids: [
+    { name: 'Waypoints', cost: '🧬1 🪨10', fx: 'Outposts', kids: [
+      { name: 'Lookout', cost: '🧬3 🪨20', fx: 'Scouts; +2 outposts; boss patrols on the map', kids: [
+        { name: 'Sun compass', cost: '🧬6', fx: 'Foragers walk straight home and never get lost' }] }] },
+    { name: 'Strong scent', cost: '🧬2', fx: 'Trails fade half as fast', kids: [
+      { name: 'Danger scent', cost: '🧬2', fx: 'Foragers route round a danger mark', kids: [
+        { name: 'Rally scent', cost: '🧬3', fx: 'Fighters gather to a mark', kids: [
+          { name: 'Hive mind', cost: '🧬10', fx: 'Idle ants answer the colony\'s biggest need on their own', big: true }] }] },
+      { name: 'Propaganda scent', cost: '🧬7', fx: 'Rival ants turn on each other during your raids' }] },
+    { name: 'Bigger crews', cost: '🧬3', fx: 'Crews of 30', kids: [
+      { name: 'Bigger crews II', cost: '🧬5', fx: 'Crews of 45', kids: [
+        { name: 'War columns', cost: '🧬9 🥩80', fx: 'Lead raids of 60 that march as one', big: true }] }] },
+    { name: 'Night sense', cost: '🧬3', fx: 'Forage at night', kids: [
+      { name: 'Vibration sense', cost: '🧬5', fx: 'Feel feet and the mower coming: 2 s warning' }] }] },
+  { name: 'Nest', c: 'nest', note: 'How the colony lives: rooms, stores, depth.', kids: [
+    { name: 'Hatchery II', cost: '🧬1 + materials', fx: '3 eggs at once', kids: [
+      { name: 'Hatchery III', cost: '🧬1 + materials', fx: '5 eggs at once', kids: [
+        { name: 'Brood chambers', cost: '🧬6 🍯30', fx: 'Eggs cost 25% less' }] }] },
+    { name: 'Store II', cost: '🧬1 + materials', fx: '400 food', kids: [
+      { name: 'Store III', cost: '🧬1 + materials', fx: '1000 food', kids: [
+        { name: 'Honeypot vault', cost: '🧬3 🍯20', fx: 'Repletes' }] },
+      { name: 'Granary', cost: '🧬2 🪨30', fx: 'Harvesters; seeds never rot' }] },
+    { name: 'Insulation', cost: '🧬2', fx: 'Cave-ins and floods halved', kids: [
+      { name: 'Thermal chimneys', cost: '🧬6 🪨60', fx: 'The nest never floods; eggs hatch 15% faster' }] },
+    { name: 'Infirmary', cost: '🧬3', fx: 'Medics' },
+    { name: 'Midden', cost: '🧬2', fx: 'Undertakers; disease kept away' },
+    { name: 'Workshop III', cost: '🧬6 🪵30', fx: 'Architects', kids: [
+      { name: 'Deep halls', cost: '🧬8 🪨100', fx: 'A fifth soil band; Miners', big: true }] },
+    { name: 'Royal chamber', cost: '🧬5 🪵20', fx: 'Breeders, mating flights, satellites', kids: [
+      { name: 'Highways', cost: '🧬5 🪵30', fx: 'Tunnels between nests', kids: [
+        { name: 'Shared stores', cost: '🧬9', fx: 'Every nest draws on every store', big: true }] }] }] },
+  { name: 'Society', c: 'soc', note: 'How ants organise: jobs, war, queens. New.', kids: [
+    { name: 'Division of labour', cost: '🧬3', fx: 'Ants nurse young and forage old, earning xp in both', kids: [
+      { name: 'Drill hall', cost: '🧬4 🥩40', fx: 'Soldiers hatch Seasoned', kids: [
+        { name: 'Colony memory', cost: '🧬12', fx: 'Every ant hatches Seasoned', big: true }] }] },
+    { name: 'War camp', cost: '🧬3 🪨30', fx: 'Raiders', kids: [
+      { name: 'Brood raiding', cost: '🧬6', fx: 'Brood raiders (needs a rival queen killed)' }] },
+    { name: 'Polygyny', cost: '🧬6 🍯40', fx: 'A second queen: the Princess', kids: [
+      { name: 'Honour guard', cost: '🧬5', fx: 'Elite soldiers guard the queens; the queen can\'t be reached by raids under 30' }] }] },
+  { name: 'Symbiosis', c: 'sym', note: 'Partners from other species: aphids, fungus, beetles, flowers. New.', kids: [
+    { name: 'Aphid farming', cost: '🧬2', fx: 'Herders; 🍯 from aphids (garden held)', kids: [
+      { name: 'Mealybug ranching', cost: '🧬4', fx: 'Root cellar and Ranchers: sugar underground', kids: [
+        { name: 'Honey economy', cost: '🧬8', fx: '🍯 can pay wherever 🌾 can', big: true }] }] },
+    { name: 'Fungus garden', cost: '🧬4', fx: 'Leafcutters; leaves become food (Leaf pile held)' },
+    { name: 'Beetle guests', cost: '🧬4', fx: 'Rove beetles live in the nest and eat parasites: disease halved' },
+    { name: 'Flower nectar', cost: '🧬3', fx: 'Flowers in held regions give 🍯' }] },
+];
+
+// Great evolutions: three per colony.
+const GREAT = [
+  { name: 'Living Bridges', real: 'Army ants', cost: '🧬15 🥩100', needs: 'Centipede beaten', fx: 'Bridgers link up to cross gaps, puddles and walls. New shortcuts open everywhere.', world: 'Chains of ants hang across gaps and puddles.' },
+  { name: 'Raft Colony', real: 'Fire ants', cost: '🧬15 🍯40', needs: 'Wet strip held', fx: 'Floods stop being disasters. Rafters float the colony, and a flood can carry a raft to new ground.', world: 'Floating mats of ants drift on the puddles after rain.' },
+  { name: 'Weaver Canopy', real: 'Weaver ants', cost: '🧬18 🍯60', needs: 'Hedge row held; Hornworm silk', fx: 'Weavers build nests in the hedge and the Oak, out of reach of feet and floods, close to the caterpillars.', world: 'Balls of leaves stitched with silk hang in the hedge.' },
+  { name: 'Fungus Empire', real: 'Leafcutter ants', cost: '🧬20 🌾200', needs: 'Leaf pile held; Fungus garden', fx: 'Gardeners and vast fungus halls. The colony cap rises by half; leaves become your main food.', world: 'Green highways of leaf bits stream across the lawn.', ex: 'Army of the March' },
+  { name: 'The Great Mound', real: 'Wood ants', cost: '🧬20 🪨200 🪵80', needs: 'Workshop III', fx: 'A thatch mound rises over the nest and warms it: eggs hatch 30% faster and winter is halved. It is loud: Notice +15.', world: 'A mound you can see from anywhere in the yard.', ex: 'Army of the March' },
+  { name: 'Army of the March', real: 'Army ants', cost: '🧬25 + 3 trophies', needs: 'War columns', fx: 'The colony goes nomadic. No rooms: the nest is a living ball of ants that moves to any region, and raid swarms sweep regions clean.', world: 'A swarm front flows across the map, and everything flees it.', ex: 'Fungus Empire, The Great Mound' },
+  { name: 'The Peony Pact', real: 'Ant-plant partners', cost: '🧬15 🍯40', needs: 'Flowerbed held', fx: 'A peony bonds with the colony. It grows huge, feeds you nectar, and its leaves shade your ants from birds. You defend it.', world: 'A giant peony blooms over the flowerbed, full of your ants.' },
+  { name: 'Blue Butterfly Pact', real: 'Large blue butterflies', cost: '🧬15 🍯30', needs: 'Aphid farming', fx: 'Caterpillars live in your nest and give honeydew. Each spring they hatch, and birds chase the butterflies instead of your ants.', world: 'A cloud of blue butterflies rises from your nest.' },
+  { name: 'Supercolony', real: 'Argentine ants', cost: '🧬25', needs: 'Highways; 3 satellites', fx: 'Every nest becomes one colony with many queens. Rival ground next to yours erodes on its own.', world: 'Your colour spreads across the yard map.' },
+  { name: 'Swarm Day', real: 'Nuptial flights', cost: '🧬20 🍯100', needs: 'Royal chamber', fx: 'Once a year, hundreds of winged ants rise from every nest. Birds gorge on them, not on workers, and three satellites are founded at once.', world: 'The sky over the yard fills with wings.' },
+  { name: 'Titan Line', real: 'Giant supermajors', cost: '🧬20 🪲80', needs: 'Polymorphism', fx: 'Titans as big as a beetle: they carry a cookie alone and wrestle the toad.', world: 'Huge ants among your workers, and footprints in the dust.' },
+  { name: 'Brood Empire', real: 'Slave-maker ants', cost: '🧬18', needs: 'Brood raiding; 2 rival queens killed', fx: 'Raids capture rival workers. Your colony becomes many species, and each keeps its skills.', world: 'Ants of every colour in your tunnels.' },
 ];
 // END DATA
 
-const famColor = {};
-for (const f of FAMILIES) (function walk(n) { famColor[n.id] = f.c; famColor[n.id + ':name'] = n; (n.kids || []).forEach(walk); })(f.tree);
+const famOf = {}, nodeOf = {};
+for (const f of FAMILIES) (function walk(n) { famOf[n.id] = f; nodeOf[n.id] = n; (n.kids || []).forEach(walk); })(f.tree);
+document.getElementById('antcount').textContent = `· ${Object.keys(nodeOf).length - 1} ant types + the queen (5 built)`;
 
-const antBox = (n, c, root) => `<a class="box${n.built ? ' b' : ''}${root ? ' root' : ''}" style="--c:var(--${c})" href="#ant-${n.id}">${n.unlock && !root ? `<span class="key">${n.unlock}</span>` : ''}<b>${n.name}</b>${root ? `<small>${n.unlock || n.note}</small>` : ''}</a>`;
+const antBox = (n, c, root) => `<a class="box${n.built ? ' b' : ''}${n.great ? ' g' : ''}${root ? ' root' : ''}" style="--c:var(--${c})" href="#ant-${n.id}">${!root ? `<span class="key">${n.great ? '★ ' : ''}${n.unlock}</span>` : ''}<b>${n.name}</b>${root ? `<small>${n.unlock}</small>` : ''}</a>`;
 const antTree = (n, c, root) => `<li>${antBox(n, c, root)}${n.kids ? `<ul>${n.kids.map((k) => antTree(k, c)).join('')}</ul>` : ''}</li>`;
 document.getElementById('fams').innerHTML = FAMILIES.map((f) =>
   `<div class="fam" style="--c:var(--${f.c})"><h3>${f.name}</h3><p>${f.note}</p><div class="scroll"><div class="ft"><ul>${antTree(f.tree, f.c, true)}</ul></div></div></div>`).join('');
 
+const antSvg = (o) => `<svg width="56" height="26" viewBox="0 0 56 26" aria-hidden="true"><g fill="var(--fg)" fill-opacity="${o}" stroke="var(--fg)" stroke-opacity="${o}" stroke-width="1.5"><ellipse cx="12" cy="14" rx="9" ry="6"/><ellipse cx="27" cy="14" rx="5" ry="4"/><circle cx="39" cy="13" r="5"/><path d="M42 9 L50 3 M43 11 L52 7" fill="none"/><path d="M24 17 L20 24 M28 17 L28 25 M31 17 L35 24 M24 11 L20 4 M28 11 L28 3 M31 11 L35 4" fill="none"/></g></svg>`;
+document.getElementById('rankrow').innerHTML = RANKS.map(([n, xp, fx, look, o], i) =>
+  `<div class="rank"><div class="ant">${antSvg(o)}${i >= 3 ? '<span style="color:var(--gold);font-size:18px;margin-left:4px">✦</span>' : ''}</div><span class="xp">${xp}</span><b>${n}</b><p>${fx}</p><span class="look">${look}</span></div>`).join('');
+document.getElementById('xp').innerHTML = '<tr><th>Ant</th><th>Earns</th></tr>' + XP.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+document.getElementById('promos').innerHTML = '<tr><th>Family</th><th>Promotions to choose from</th></tr>' + PROMOS.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+document.getElementById('vetkeep').innerHTML = VETKEEP.map((t) => `<li>${t}</li>`).join('');
+
 const card = (id) => {
-  const a = ANTS[id], n = famColor[id + ':name'], c = famColor[id];
-  const lv = a.L.map(([boost, cost, built, pick], i) => `<div class="lv${built ? ' b' : ''}"><div class="n">L${i + 1}</div><div class="body">
-    <div class="stat"><span>${boost}</span><span class="cost">${cost}</span></div>
-    ${pick ? `<span class="picknote">Pick one, permanent</span><div class="pick"><div class="opt"><b>${pick[0][0]}</b>${pick[0][1]}</div><span class="or">or</span><div class="opt"><b>${pick[1][0]}</b>${pick[1][1]}</div></div>` : ''}
-  </div></div>`).join('');
-  return `<article class="card" id="ant-${id}" style="--c:var(--${c})"><div class="top"><b>${n.name}</b><span class="chip${n.built ? ' b' : ''}" style="--c:var(--${c})">${n.built ? 'Built' : 'Proposed'}</span></div>
-    <p class="role">${a.role}</p><div class="unl"><span>Unlocked by:</span> ${n.unlock || n.note}</div>${lv}</article>`;
+  const a = ANTS[id], n = nodeOf[id], f = famOf[id], c = f.c;
+  const lv = a.L.map(([boost, cost, built, pick], i) => {
+    const m = boost === 'Mastery';
+    return `<div class="lv${built ? ' b' : ''}${m ? ' m' : ''}"><div class="n">L${i + 1}</div><div class="body">
+    <div class="stat"><span>${m ? '<b>Mastery</b>' : boost}</span><span class="cost">${cost}</span></div>
+    ${pick ? `<span class="picknote">${m ? 'Mastery: pick one, permanent' : 'Pick one, permanent'}</span><div class="pick"><div class="opt"><b>${pick[0][0]}</b>${pick[0][1]}</div><span class="or">or</span><div class="opt"><b>${pick[1][0]}</b>${pick[1][1]}</div></div>` : ''}
+  </div></div>`; }).join('');
+  return `<article class="card" id="ant-${id}" style="--c:var(--${c})"><div class="top"><b>${n.name}</b><span class="chip${n.built ? ' b' : ''}${n.great ? ' g' : ''}" style="--c:var(--${c})">${n.built ? 'Built' : n.great ? 'Great evolution' : 'Proposed'}</span></div>
+    <p class="role">${a.role}</p><div class="unl"><span>Unlocked by:</span> ${n.unlock}</div>${lv}</article>`;
 };
 const ids = (n) => [n.id, ...(n.kids || []).flatMap(ids)];
 document.getElementById('groups').innerHTML = FAMILIES.map((f) =>
@@ -320,37 +582,40 @@ document.getElementById('groups').innerHTML = FAMILIES.map((f) =>
 
 document.getElementById('queens').innerHTML = QUEEN.map(([l, cap, cost, b]) =>
   `<div class="ql${b ? ' b' : ''}"><b>Queen ${l}</b><small>Up to ${cap} ants</small><small>${cost}</small></div>`).join('');
+document.getElementById('qpicks').innerHTML = QUEEN_PICKS.map(([when, a, b]) =>
+  `<div class="qpick"><b class="h">${when}</b><span class="picknote">Pick one, permanent</span><div class="pick"><div class="opt"><b>${a[0]}</b>${a[1]}</div><span class="or">or</span><div class="opt"><b>${b[0]}</b>${b[1]}</div></div></div>`).join('');
 
+let nodes = 0;
 const evoBox = (n, root) => root
   ? `<span class="box root"><b>${n.name}</b><small>${n.note}</small></span>`
-  : `<span class="box"><b>${n.name}</b><small class="cost">${n.cost}</small><small>${n.fx}</small></span>`;
+  : (nodes++, `<span class="box${n.big ? ' big' : ''}"><b>${n.name}</b><small class="cost">${n.cost}</small><small>${n.fx}</small></span>`);
 const evoTree = (n, root) => `<li>${evoBox(n, root)}${n.kids ? `<ul>${n.kids.map((k) => evoTree(k)).join('')}</ul>` : ''}</li>`;
-document.getElementById('evo').innerHTML = EVO.map((b) => `<div class="scroll"><div class="ft"><ul>${evoTree(b, true)}</ul></div></div>`).join('');
+document.getElementById('evo').innerHTML = EVO.map((b) => `<div class="evo-tree" style="--c:var(--${b.c})"><div class="scroll"><div class="ft"><ul>${evoTree(b, true)}</ul></div></div></div>`).join('');
+document.getElementById('evocount').textContent = `· ${nodes} nodes in five branches`;
+
+document.getElementById('slots').innerHTML = [['First slot', 'Opens around 1 hour, after your second boss'], ['Second slot', 'Opens with the lineage pick, around 2–3 hours'], ['Third slot', 'Opens when you hold 12 regions, around 4 hours']].map(([a, b]) =>
+  `<div class="slot"><b>★ ${a}</b><small>${b}</small></div>`).join('');
+document.getElementById('greats').innerHTML = GREAT.map((g) => `<article class="great"><div class="top"><b>${g.name}</b><span class="real">${g.real}</span></div>
+  <p>${g.fx}</p><div class="world"><span>In the yard:</span> ${g.world}</div>
+  <div class="meta"><span>Cost: ${g.cost}</span><span>Needs: ${g.needs}</span>${g.ex ? `<span>Rules out: ${g.ex}</span>` : ''}</div></article>`).join('');
 
 const COLS = [['0–10 min', 'Founding'], ['10–30 min', 'The home ring'], ['30–60 min', 'First boss, first war'], ['1–2 h', 'The middle yard'], ['2–4 h', 'The outer yard'], ['4–6 h', 'The finale'], ['After', 'Act 2 and beyond']];
 const LANES = [
   ['Territory', 'the map', 'terr', [
-    ['*Land under the rock', '*First crumbs'],
-    ['*Scout the home ring', '*Forager range I–III', 'Waypoints: first outposts'],
-    ['Hold the Flowerbed: berries ×2', 'Hold the Patio', 'Lookout: +2 outposts'],
-    ['Hold Tomato rows, Rock garden, Sandbox', 'First satellite nest', 'Caste gates open'],
-    ['Hold Woodpile, Oak, Hedge, Leaf pile, Trash cans', 'Highways between nests'],
-    ['Wet strip', 'Fire ant country', 'The yard is yours'],
-    ['The yard turns harder', 'The house', 'Or a new yard']]],
-  ['Nest', 'rooms', 'nest', [
-    ['*Hatchery', '*Food store'], ['*Cistern', '*Workshop', '*Nursery', '*Spoil heap'],
-    ['*Barracks', 'Venom lab', 'Lookout', 'Hatchery II, Store II'],
-    ['Armory', 'Workshop II', 'Royal chamber', 'Tier II rooms'],
-    ['Tier III rooms', 'Gate', 'Honeypot vault', 'Fungus garden'], ['Several nests'], ['Nests in the house']]],
-  ['Ants', 'castes and upgrades', 'pop', [
-    ['*Queen I', '*Foragers', '*Builders'], ['*Queen II', '*Nurses', 'Level 1 upgrades'],
-    ['*Queen III–IV', '*Soldiers', '*Venom ants', 'Scouts', 'Level 2: first picks'],
-    ['Queen V', 'Majors', 'Armored foragers', 'Master builders', 'Sappers', 'Breeders', 'Level 3: second picks'],
-    ['Queen VI', 'Trap-jaws', 'Acid sprayers', 'Night foragers', 'Carpenters', 'Repletes'], ['200–400 ants'], []]],
-  ['Evolution', '🧬', 'evo', [
-    [], ['First 🧬', 'Waypoints', 'Strong scent'], ['Strong mandibles', 'Trail runners', 'Danger scent', 'Bigger crews'],
-    ['Big crop', 'Tough cuticle', 'Majors', 'Rally scent', 'Aphid farming', 'Royal chamber'],
-    ['Formic spray', 'Lineage pick', 'Night sense', 'Honeypot', 'Highways'], ['Hive mind', 'Supercolony'], ['The rest of the tree']]],
+    ['*Land under the rock', '*First crumbs'], ['*Scout the home ring', '*Forager range I–III', 'First outposts'],
+    ['Hold the Flowerbed', 'Hold the Patio', 'Lookout'], ['Hold Tomato rows, Rock garden, Sandbox', 'First satellite nest', 'Caste gates open'],
+    ['Hold Woodpile, Oak, Hedge, Leaf pile, Trash cans', 'Highways'], ['Fire ant country', 'The yard is yours'], ['The yard turns harder', 'The house', 'Or a new yard']]],
+  ['Ants', 'types and upgrades', 'pop', [
+    ['*Queen I', '*Foragers', '*Builders', 'Callows darken: first ranks'], ['*Queen II', '*Nurses', 'Level 1 upgrades', 'Herders, Harvesters'],
+    ['*Queen III–IV', '*Soldiers', '*Venom ants', 'Scouts', 'Raiders', 'Medics', 'Undertakers', 'Level 2 picks', 'First Veterans'],
+    ['Queen V', 'Majors', 'Armored foragers', 'Master builders', 'Sappers', 'Breeders', 'Leafcutters', 'Exploders', 'Level 3 picks', 'First Elites'],
+    ['Queen VI–VII', 'Trap-jaws', 'Acid sprayers', 'Night foragers', 'Carpenters', 'Repletes', 'Supermajors', 'Princess', 'Desert runners', 'Ranchers', 'Brood raiders', 'Levels 4–5: masteries', 'Legends'],
+    ['Queen VIII', 'Champions', 'Doorheads', 'Architects', 'Miners', 'Great-evolution ants'], ['Hundreds of ants across nests']]],
+  ['Evolution', '🧬 and great evolutions', 'evo', [
+    [], ['First 🧬', 'Waypoints', 'Strong scent', 'Division of labour'], ['Strong mandibles', 'Trail runners', 'Danger scent', 'Aphid farming', 'War camp', 'Drill hall'],
+    ['Big crop', 'Tough cuticle', 'Majors', 'Rally scent', 'Royal chamber', 'Polygyny', '★ First great evolution'],
+    ['Lineage pick', 'Polymorphism', 'Sun compass', 'Brood raiding', 'Deep halls', '★ Second great evolution'],
+    ['Hive mind', 'Colony memory', 'Social stomach', '★ Third great evolution'], ['The rest of the tree']]],
   ['Bosses', 'trophy + key', 'boss', [
     [], ['Caterpillar'], ['*Wolf spider'], ['Hornworm', 'Ground beetle', 'Antlion queen'],
     ['Mantis', 'Wasp nest', 'Roach', 'Centipede', 'Termite queen'], ['Toad', 'Fire ant queen'], ['House bosses']]],
@@ -358,7 +623,7 @@ const LANES = [
     ['*Feet', '*Robins'], ['*Pavement raids', '*The mower'], ['Pavement war', 'Odorous house ants', 'Notice 25'],
     ['Argentine ants spread', 'Notice 50: bait'], ['Fire ant raids', 'Notice 75: spray'], ['Fire ant war', 'The exterminator'], ['Stronger rivals return']]],
 ];
-const chip = (t, c) => { const b = t[0] === '*'; return `<span class="chip${b ? ' b' : ''}" style="--c:var(--${c})">${b ? t.slice(1) : t}</span>`; };
+const chip = (t, c) => { const b = t[0] === '*', g = t[0] === '★'; return `<span class="chip${b ? ' b' : ''}${g ? ' g' : ''}" style="--c:var(--${c})">${b ? t.slice(1) : t}</span>`; };
 let h = '<div class="th corner"></div>' + COLS.map(([a, b]) => `<div class="th">${a}<small>${b}</small></div>`).join('');
 for (const [name, note, c, cells] of LANES) {
   h += `<div class="lane" style="--c:var(--${c})">${name}<small>${note}</small></div>`;

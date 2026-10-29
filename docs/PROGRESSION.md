@@ -208,49 +208,97 @@ Space is the economy (handoff pillar 7). Bigger and better rooms need bigger poc
 
 This is where the colony specialises without spending evolution points.
 
-### Upgrade trees for every caste (proposed)
+### Ant types and their upgrade trees (proposed, revised Oct 29)
 
-The full list, drawn as trees in `progression-map.html`. Level 1 is a boost; levels 2 and 3 add a boost and a permanent pick of one of two abilities. Costs are first guesses. The Forager's three range levels are built (Train foragers); its picks are not.
+This supersedes the caste ladder table above: 37 ant types plus the queen, in four families up to four generations deep. Drawn as trees in `progression-map.html`. Levels are bought once per ant type with materials. Level 1 is a boost; levels 2 and 3 add a boost and a permanent pick of one of two abilities. The four core ants (Forager, Builder, Soldier, Nurse) also have level 4 (a big boost) and level 5 (a mastery pick). ★ marks an ant unlocked by a great evolution. The Forager's first three range levels are built (Train foragers); its picks are not.
 
-**Gatherers**
+**Gatherers.** Bring things home. They branch into ants that range further, farm, and work where others can't.
 
-| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
-|---|---|---|---|---|
-| Forager | from the start | Range 55, 10% faster (🌾15) | Range 75, 20% faster (🌾40 🪨10): **Trailblazer** (trails it lays last twice as long) or **Sprinter** (25% faster off a trail) | Range 100, 30% faster (🌾80 🥩10 🪨25): **Pathfinder** (finds food twice as far off a trail) or **Hauler** (two foragers can carry a treat) |
-| Scout | Lookout room | 20% faster (🌾30 🪨10) | Sees 50% further (🌾60 🥩10): **Mapper** (ground it scouts shows its food for 2 minutes) or **Decoy** (draws a bird or spider away, then outruns it) | Never tires (🌾100 🍯15): **Spy** (shows a rival's raid before it leaves home) or **Pioneer** (outposts it builds reach 5 tiles further) |
-| Armored forager | Beetle shell + Armory | Carries 6 (🌾40 🪲5) | 50% more health (🌾60 🪲10): **Shellback** (survives two stomps or pecks) or **Mule** (carries 10) | 20% faster (🌾100 🪲20): **Rearguard** (foragers near it take half damage) or **Bird-proof** (birds ignore it) |
-| Night forager | Roach antenna | 25% faster at night (🌾40 🥩5) | Carries 6 (🌾60 🥩15): **Rain runner** (full speed in rain; never washed away) or **Glow trails** (its trails show on the map at night) | 40% more health (🌾100 🍯15): **Scavenger** (finds dead bugs at night: free 🥩) or **Ghost** (rivals and the roach don't notice it) |
+| Ant | Grows from | Unlocked by | L1 | L2 (pick one) | L3 (pick one) | L4 | L5 mastery (pick one) |
+|---|---|---|---|---|---|---|---|
+| Forager (built) | — | from the start | Range 55, 10% faster (🌾15) | Range 75, 20% faster (🌾40 🪨10): **Trailblazer**, trails it lays last twice as long; or **Sprinter**, 25% faster off a trail | Range 100, 30% faster (🌾80 🥩10 🪨25): **Pathfinder**, finds food twice as far off a trail; or **Hauler**, two foragers can carry a treat | Carries 7, range 130 (🌾150 🍯20 🪲10) | (🌾250 🍯50 🧬2): **Trail queen**, its trails become roads: every ant on them is 40% faster; or **Lone wolf**, forages anywhere in the yard; range no longer applies |
+| Scout | Forager | Lookout room | 20% faster (🌾30 🪨10) | Sees 50% further (🌾60 🥩10): **Mapper**, ground it scouts shows its food for 2 minutes; or **Decoy**, draws a bird or spider away, then outruns it | Never tires (🌾100 🍯15): **Spy**, shows a rival's raid before it leaves home; or **Pioneer**, outposts it builds reach 5 tiles further | — | — |
+| Desert runner | Scout | Heat tolerance | 25% faster in heat (🌾60 🪨10) | Carries 6 (🌾90 🍯10): **Sun reader**, walks straight home with no trail; or **Spider-dodger**, outruns any spider | 40% more health (🌾140 🍯25): **Carrion seeker**, finds bugs killed by the heat: free 🥩; or **Long haul**, no range limit in summer | — | — |
+| Night forager | Forager | Roach antenna | 25% faster at night (🌾40 🥩5) | Carries 6 (🌾60 🥩15): **Rain runner**, full speed in rain; never washed away; or **Glow trails**, its trails show on the map at night | 40% more health (🌾100 🍯15): **Scavenger**, finds dead bugs at night: free 🥩; or **Ghost**, rivals and the roach don't notice it | — | — |
+| Armored forager | Forager | Beetle shell + Armory | Carries 6 (🌾40 🪲5) | 50% more health (🌾60 🪲10): **Shellback**, survives two stomps or pecks; or **Mule**, carries 10 | 20% faster (🌾100 🪲20): **Rearguard**, foragers near it take half damage; or **Bird-proof**, birds ignore it | — | — |
+| Harvester | Forager | Granary | Carries 6 seeds (🌾30 🪨10) | 15% faster (🌾60 🪨20): **Thresher**, cracks seeds: twice the food; or **Sower**, dropped seeds sprout near the nest: food grows at home | Granary 50% bigger (🌾100 🪨40): **Hoarder**, seeds last through winter untouched; or **Seed thief**, steals from rival granaries | — | — |
+| Leafcutter | Harvester | Fungus garden | Cuts 30% faster (🌾50 💧20) | Carries big leaf pieces (🌾80 🍯10): **Minim riders**, tiny ants ride the leaves: flies and wasps can't attack; or **Green highway**, leaf trails are cleared: every ant on them is faster | 40% more health (🌾120 🪲10): **Petal clipper**, cuts flowers too: richer fungus; or **Strip-cutter**, strips a whole plant in one trip | — | — |
+| ★ Gardener | Leafcutter | Fungus Empire | Fungus grows 20% faster (🌾60 💧30) | Tends twice the garden (🌾100 💧40): **Weeder**, mould never spoils a garden; or **Spreader**, new gardens start from cuttings, free | Works through winter (🌾150 🍯30): **Antibiotic**, ants that eat the fungus resist disease; or **Feast**, the garden feeds larvae: eggs cost no food | — | — |
+| Herder | Forager | Aphid farming | Milks 25% faster (🌾30 🍯5) | Drives off ladybirds (🌾50 🍯15): **Shepherd**, moves aphids to new plants: herds grow; or **Wing clipper**, aphids never fly away | Herds 30% bigger (🍯30 🪲5): **Big herd**, herds twice as large; or **Sweet trail**, sugar comes home 30% faster | — | — |
+| Rancher | Herder | Mealybug ranching | Herd 25% bigger (🍯15 🪨20) | Milks 30% faster (🍯30 🪨30): **Cave herd**, herds survive winter; or **Deep roots**, cellars in the deep band hold twice | Herds breed faster (🍯50 🪵10): **Honey well**, cellar sugar never runs dry; or **Breeding stock**, each satellite nest gets a starter herd | — | — |
 
-**Diggers**
+**Diggers.** Dig, build, haul spoil. They branch into deep miners, great builders, wood and silk workers, and ants that make bridges and rafts of their own bodies.
 
-| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
-|---|---|---|---|---|
-| Builder | from the start | Digs 30% faster (🌾20 🪨10) | Carries 2 spoil loads (🌾50 🪨25): **Shorer** (tunnels near it never cave in) or **Mason** (rooms cost 25% less 🪨) | Builds 50% faster (🌾90 🪨40 🥩10): **Excavator** (digs room pockets twice as fast) or **Field engineer** (builds and repairs outposts in half the time) |
-| Master builder | Hornworm silk + Workshop II | Builds 30% faster (🌾60 🪨30) | 30% more health (🌾80 🪵10): **Architect** (rooms it builds hold 20% more) or **Vaulter** (tier iii rooms cost 30% less 🪵) | Deep band dug 50% faster (🌾120 🪵25): **Fortifier** (rooms it builds never flood) or **Planner** (queue three rooms at once) |
-| Sapper | Antlion jaw | Clay dug 40% faster (🌾50 🪨20) | 40% more health (🌾80 🥩15): **Tunneller** (digs a hidden tunnel out to an outpost) or **Demolisher** (collapses a tunnel onto raiders) | Deep band dug 2× faster (🌾120 🪲10): **Breacher** (digs into rival nests) or **Rescuer** (digs out ants trapped in cave-ins) |
-| Carpenter | Termite queen + Workshop II | Cuts 30% faster (🌾60 🪵5) | Carries 2 wood (🌾90 🪵15): **Woodcutter** (bark walls fall twice as fast) or **Gallery maker** (satellite nests in wood need no digging) | 40% more health (🌾120 🪲15): **Joiner** (gates and highways cost 30% less 🪵) or **Termite bane** (termites flee its trails) |
+| Ant | Grows from | Unlocked by | L1 | L2 (pick one) | L3 (pick one) | L4 | L5 mastery (pick one) |
+|---|---|---|---|---|---|---|---|
+| Builder (built) | — | from the start | Digs 30% faster (🌾20 🪨10) | Carries 2 spoil loads (🌾50 🪨25): **Shorer**, tunnels near it never cave in; or **Mason**, rooms cost 25% less 🪨 | Builds 50% faster (🌾90 🪨40 🥩10): **Excavator**, digs room pockets twice as fast; or **Field engineer**, builds and repairs outposts in half the time | Digs any soil 2× faster (🌾150 🪨60 🪵10) | (🌾250 🪨100 🧬2): **Foreman**, builders near it work 50% faster; or **Tunnel master**, its tunnels never collapse or flood |
+| Sapper | Builder | Antlion jaw | Clay dug 40% faster (🌾50 🪨20) | 40% more health (🌾80 🥩15): **Tunneller**, digs a hidden tunnel out to an outpost; or **Demolisher**, collapses a tunnel onto raiders | Deep band dug 2× faster (🌾120 🪲10): **Breacher**, digs into rival nests; or **Rescuer**, digs out ants trapped in cave-ins | — | — |
+| Miner | Sapper | Deep halls | Stone dug 30% faster (🌾80 🪨30) | Carries 2 (🌾120 🪨50): **Prospector**, finds buried grubs and quartz: 🪨 ×3; or **Shaft sinker**, digs a straight shaft in one go | 50% more health (🌾160 🪲20): **Cave finder**, breaks into natural hollows: free rooms; or **Spring finder**, strikes groundwater: a cistern that never empties | — | — |
+| Master builder | Builder | Hornworm silk + Workshop II | Builds 30% faster (🌾60 🪨30) | 30% more health (🌾80 🪵10): **Vaulter**, rooms it builds hold 20% more; or **Economist**, tier III rooms cost 30% less 🪵 | Deep band dug 50% faster (🌾120 🪵25): **Fortifier**, rooms it builds never flood; or **Planner**, queue three rooms at once | — | — |
+| Architect | Master builder | Workshop III | Builds 30% faster (🌾100 🪵20) | Rooms one size bigger (🌾150 🪵30): **Ventilator**, the nest stays cool: no summer slowdown; or **Fortress**, gates and walls twice as strong | Works 2× faster (🌾200 🪵50): **Great works**, great evolutions build 30% faster; or **Monument**, a finished great evolution lowers Notice by 10 | — | — |
+| Carpenter | Builder | Termite queen + Workshop II | Cuts 30% faster (🌾60 🪵5) | Carries 2 wood (🌾90 🪵15): **Woodcutter**, bark walls fall twice as fast; or **Gallery maker**, satellite nests in wood need no digging | 40% more health (🌾120 🪲15): **Joiner**, gates and Highways cost 30% less 🪵; or **Termite bane**, termites flee its trails | — | — |
+| ★ Weaver | Carpenter | Weaver Canopy | Weaves 30% faster (🌾60 🍯10) | Builds leaf nests 2× bigger (🌾100 🍯20): **Living chain**, chains of ants pull leaves across gaps; or **Silk patch**, repairs any nest in seconds | 40% more health (🌾150 🍯30): **Canopy guard**, drops on foes from above; or **Treetop farm**, herds scale insects in the leaves: 🍯 | — | — |
+| ★ Bridger | Builder | Living Bridges | Bridges 30% longer (🌾60 🥩10) | Bridges form 2× faster (🌾90 🥩20): **Rope**, bridges hold crews carrying treats; or **Ladder**, bridges climb walls and steps | 50% more health (🌾140 🪲10): **Tireless**, bridges never break; or **Moat**, bridges pull up behind you: raiders can't follow | — | — |
+| ★ Rafter | Builder | Raft Colony | Rafts 30% bigger (🌾60 🍯10) | Rafts drift 2× faster (🌾90 🍯20): **Sail**, steer rafts where you want; or **Anchor**, rafts hold still: the nest waits out the flood | 50% more health (🌾140 🪲10): **Flood rider**, a flood carries a raft to new ground: a free outpost; or **Lifeboat**, the queen and eggs are always saved from floods | — | — |
 
-**Fighters**
+**Fighters.** Three lines. The venom line stings and sprays; the heavy line grows bigger heads and jaws; the raider line takes the fight to rival nests. The lineage pick crowns the venom line with a champion.
 
-| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
-|---|---|---|---|---|
-| Soldier | Barracks | 30% more health (🌾30 🥩5) | Bites 25% harder (🌾60 🥩15): **Doorkeeper** (blocks the entrance alone) or **Escort** (follows and guards foragers) | 20% faster (🌾100 🥩25 🪲5): **Alarm caller** (wakes every idle ant when attacked) or **Phalanx** (bites 50% harder with 3 or more soldiers) |
-| Venom ant | Spider fang | Venom 25% stronger (🥩20) | 30% more health (🌾40 🥩35): **Paralytic** (stung prey slows to half speed) or **Hunter** (kills leave a scent that calls haulers) | Stings faster (🥩60 🍯15): **Neurotoxin** (every fifth sting stuns a boss) or **Lethal dose** (small foes die in one sting) |
-| Acid sprayer | Wasp sting + Venom lab | Range 4 tiles (🥩30 🍯10) | 40% more health (🥩50 🍯20): **Acid cloud** (each spray hits a small area) or **Bird scarer** (birds won't strike near it) | Sprays faster (🥩80 🪲15): **Silk melter** (webs and silk walls melt at once) or **Corrosive** (armored foes take double damage) |
-| Major | Barracks II + 🪲 | 40% more health (🥩20 🪲10) | Bites 30% harder (🥩40 🪲20): **Bulwark** (plugs a tunnel completely) or **Porter** (carries a treat alone at full speed) | 20% faster (🥩70 🪲35): **Crusher** (cracks shells: 2× 🪲 from kills) or **Shield wall** (ants behind it take no damage) |
-| Trap-jaw | Centipede plate + Armory II | Snaps 30% harder (🥩30 🪲10) | Jumps 50% further (🥩50 🪲20): **Snap guard** (kills the first small foe through the door) or **Long jump** (clears two gaps in one jump) | 30% more health (🥩80 🪵10): **Hair trigger** (always bites first) or **Escape artist** (always jumps clear of feet and beaks) |
+| Ant | Grows from | Unlocked by | L1 | L2 (pick one) | L3 (pick one) | L4 | L5 mastery (pick one) |
+|---|---|---|---|---|---|---|---|
+| Soldier (built) | — | Barracks | 30% more health (🌾30 🥩5) | Bites 25% harder (🌾60 🥩15): **Doorkeeper**, blocks the entrance alone; or **Escort**, follows and guards foragers | 20% faster (🌾100 🥩25 🪲5): **Alarm caller**, wakes every idle ant when attacked; or **Phalanx**, bites 50% harder with 3 or more soldiers | 50% more health again (🥩80 🪲25) | (🥩150 🪲50 🧬2): **Warlord**, every fighter within 5 tiles bites 30% harder; or **Guardian**, takes the hits meant for the queen, nurses and your ant |
+| Venom ant (built) | Soldier | Spider fang | Venom 25% stronger (🥩20) | 30% more health (🌾40 🥩35): **Paralytic**, stung prey slows to half speed; or **Hunter**, kills leave a scent that calls haulers | Stings faster (🥩60 🍯15): **Neurotoxin**, every fifth sting stuns a boss; or **Lethal dose**, small foes die in one sting | — | — |
+| Acid sprayer | Venom ant | Wasp sting + Venom lab | Range 4 tiles (🥩30 🍯10) | 40% more health (🥩50 🍯20): **Acid cloud**, each spray hits a small area; or **Bird scarer**, birds won't strike near it | Sprays faster (🥩80 🪲15): **Silk melter**, webs and silk walls melt at once; or **Corrosive**, armored foes take double damage | — | — |
+| Lineage champion | Acid sprayer | The lineage pick | 40% more health (🥩80 🪲30) | Hits 30% harder (🥩120 🪲40): **Spearhead**, leads raids: ants following it hit harder; or **Bodyguard**, walks with your ant and guards it | Two at once (🥩180 🪲60 🧬3): **Terror**, rivals flee its scent; or **Boss killer**, double damage to bosses | — | — |
+| Exploder | Venom ant | Formic spray + Venom lab | Goo 30% wider (🥩20) | Hatches 2× faster (🥩40 🍯10): **Tar pit**, goo holds foes still for 5 s; or **Toxin**, goo poisons whatever it touches | Bursts on command (🥩70 🪲10): **Last stand**, bursts on its own when the nest is breached; or **Volatile**, strips a boss's armour for 10 s | — | — |
+| Major | Soldier | Barracks II + 🪲 | 40% more health (🥩20 🪲10) | Bites 30% harder (🥩40 🪲20): **Bulwark**, plugs a tunnel completely; or **Porter**, carries a treat alone at full speed | 20% faster (🥩70 🪲35): **Crusher**, cracks shells: 2× 🪲 from kills; or **Shield wall**, ants behind it take no damage | — | — |
+| Supermajor | Major | Polymorphism | 50% more health (🥩60 🪲30) | Bites 40% harder (🥩90 🪲45): **Nutcracker**, cracks seeds and shells for the colony: more food and 🪲; or **Wall**, nothing gets past it | 25% faster (🥩130 🪲60): **Stomper**, knocks small foes flying; or **Sentinel**, never leaves its post, never sleeps | — | — |
+| Doorhead | Supermajor | Gate room | 50% more health (🥩40 🪲30) | Closes 2× faster (🥩60 🪲40): **Keyholder**, lets your ants through, no one else; or **Two doors**, guards a second entrance too | Can't be moved (🥩90 🪲60): **Shell door**, keeps out floods and the hose; or **Spiked**, hurts anything that pushes on it | — | — |
+| ★ Titan | Supermajor | Titan Line | Twice the health (🥩150 🪲60) | Bites 50% harder (🥩200 🪲90): **Hauler of giants**, carries any treat home alone; or **Juggernaut**, walks through feet and beaks | A second titan (🥩300 🪲120 🧬4): **Roar**, stridulates: every rival in the region flees; or **Monster slayer**, triple damage to bosses | — | — |
+| Trap-jaw | Major | Centipede plate + Armory II | Snaps 30% harder (🥩30 🪲10) | Jumps 50% further (🥩50 🪲20): **Snap guard**, kills the first small foe through the door; or **Long jump**, clears two gaps in one jump | 30% more health (🥩80 🪵10): **Hair trigger**, always bites first; or **Escape artist**, always jumps clear of feet and beaks | — | — |
+| Raider | Soldier | War camp | 15% faster (🥩30 🌾30) | 30% more health (🥩60 🌾50): **War drum**, raid columns form in half the time; or **Pillager**, carries rival food home | Bites 30% harder (🥩100 🪲20): **Siege**, breaks rival Gates; or **Swift return**, survivors run home 2× faster | — | — |
+| Brood raider | Raider | Brood raiding | Carries 2 pupae (🥩50) | 30% faster (🥩80 🍯20): **Propaganda**, rival ants fight each other during your raids; or **Gentle jaws**, every stolen pupa survives | 40% more health (🥩120 🪲20): **Mixed colony**, stolen workers keep their species' skill; or **Usurper**, takes over a rival nest whose queen is dead | — | — |
 
-**Nest and royals**
+**Nest and royals.** The ants that keep the nest alive, and the young queens that carry the colony on.
 
-| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
-|---|---|---|---|---|
-| Nurse | Nursery | Eggs hatch 15% faster (🌾20 💧10) | Tends 2 eggs at once (🌾40 💧20): **Wet nurse** (larvae eat 30% less) or **Medic** (heals hurt ants in the nest) | Works 30% faster (🌾70 🍯10): **Brood guard** (fights like a soldier inside the nest) or **Attendant** (the queen lays 20% faster) |
-| Replete | Honeypot vault | Holds 25% more (🍯10) | Holds 25% more again (🍯20 💧20): **Sugar keg** (holds twice the 🍯) or **Water keg** (holds twice the 💧) | Hides in a safe room (🍯40): **Living larder** (feeds ants directly: upkeep −15%) or **Drought store** (never spoils; lasts the winter) |
-| Breeder | Royal chamber + 🍯 | Flies 30% further (🌾60 🍯20) | Founds nests 30% faster (🍯40 🪵10): **Twin queens** (a new nest starts with two queens) or **Swift founding** (a new nest starts with 10 workers) | Survives birds on the way (🍯60 🪵20): **Long flight** (can found a nest on any scouted ground) or **Strong line** (satellite queens start at level ii) |
+| Ant | Grows from | Unlocked by | L1 | L2 (pick one) | L3 (pick one) | L4 | L5 mastery (pick one) |
+|---|---|---|---|---|---|---|---|
+| Nurse (built) | Queen | Nursery | Eggs hatch 15% faster (🌾20 💧10) | Tends 2 eggs at once (🌾40 💧20): **Wet nurse**, larvae eat 30% less; or **Medic training**, heals hurt ants in the nest | Works 30% faster (🌾70 🍯10): **Brood guard**, fights like a soldier inside the nest; or **Attendant**, the queen lays 20% faster | Eggs hatch 25% faster again (🌾120 🍯25) | (🌾200 🍯50 🧬2): **Teacher**, every ant hatches Seasoned; or **Caste-shaper**, choose any caste for an egg at the cost of a worker |
+| Replete | Nurse | Honeypot vault | Holds 25% more (🍯10) | Holds 25% more again (🍯20 💧20): **Sugar keg**, holds twice the 🍯; or **Water keg**, holds twice the 💧 | Can't be stolen (🍯40): **Living larder**, feeds ants directly: upkeep −15%; or **Drought store**, never spoils; lasts the winter | — | — |
+| Medic | Nurse | Infirmary | Heals 30% faster (🌾30 💧10) | Carries the wounded (🌾50 💧20): **Field medic**, treats ants where they fall; or **Stretcher**, carries the wounded home 2× faster | 40% more health (🌾90 🍯15): **Life saver**, a veteran's first death is only a wound; or **Antiseptic**, no infections in the nest | — | — |
+| Undertaker | Nurse | Midden | Works 30% faster (🌾20) | Carries 2 (🌾40 🪨10): **Recycler**, the dead become 🥩; or **Clean nest**, disease halved | Never gets sick (🌾70 🍯10): **Remembrance**, a fallen Elite inspires: fighters +10% for a minute; or **Plague wall**, rival diseases never spread to you | — | — |
+| Princess | Queen | Polygyny | Lays 25% faster (🌾100 🍯30) | 30% more health (🌾150 🍯40): **Heir**, takes over at once if the queen dies; or **Founder**, leaves with 20 ants to found a satellite | Matches the queen's level (🌾250 🍯60): **Twin rule**, both queens lay at full speed; or **Ambassador**, satellites she founds start with a Granary and Hatchery | — | — |
+| Breeder | Queen | Royal chamber + 🍯 | Flies 30% further (🌾60 🍯20) | Founds nests 30% faster (🍯40 🪵10): **Twin queens**, a new nest starts with two queens; or **Swift founding**, a new nest starts with 10 workers | Survives birds on the way (🍯60 🪵20): **Long flight**, can found a nest on any scouted ground; or **Strong line**, satellite queens start at level II | — | — |
 
-Caste family lines: Forager → Scout, Armored forager, Night forager. Builder → Master builder, Sapper, Carpenter. Soldier → Venom ant → Acid sprayer, and Soldier → Major → Trap-jaw. Queen → Nurse → Replete, and Queen → Breeder.
+**The queen** goes to level VIII: I, 20 ants (start; built) · II, 40 ants (🌾40 🥩10; built) · III, 60 ants (🌾80 🥩20 🪨20; built) · IV, 80 ants (🌾150 🥩40 🪨40; built) · V, 100 ants (🌾250 🥩60 🍯20) · VI, 120 ants (🌾400 🥩90 🍯40) · VII, 140 ants (🌾600 🥩120 🍯60 🪲20) · VIII, 160 ants (🌾900 🥩180 🍯100 🪵40).
 
-Evolution prerequisites: Strong mandibles → Formic spray; Trail runners → Big crop; Tough cuticle → Majors; Waypoints → Lookout; Strong scent → Danger scent → Rally scent → Hive mind; Bigger crews → Bigger crews II; Hatchery II → III; Store II → III; Aphid farming → Honeypot vault; Royal chamber → Highways → Supercolony.
+She takes a permanent trait three times: at level IV, **Fertile** (lays 25% faster) or **Hardy** (shrugs off the first three bites of any raid that reaches her); at level VI, **Brood mother** (eggs cost 30% less) or **Matriarch** (every ant has 10% more health); at level VIII, **Mother of nations** (satellite queens start at level IV) or **Eternal line** (if she dies, a new queen takes over; the colony never falls).
+
+### Veterans: experience for single ants (proposed; Civilization, XCOM)
+
+Every ant earns experience by doing its job and climbs five ranks, shown on the ant itself:
+
+| Rank | At | Effect | Look |
+|---|---|---|---|
+| Callow | just hatched | −10% at its job | Pale, almost see-through |
+| Seasoned | 20 xp | +10% at its job | Its proper colour |
+| Veteran | 60 xp | +20%, and its first promotion | Darker, a little bigger |
+| Elite | 150 xp | +30%, a second promotion, and a name | Dark, with a scar or a glint |
+| Legend | 400 xp, or a boss kill | +40% and a title, like "Thorn, Spider-bane" | A soft glow; on the map; on the memorial wall when it dies |
+
+Experience: forager, 1 per load home; more for long trips and treats; scout, 1 per new patch of ground; builder, 1 per 2 tiles dug; 3 per room built; soldier and fighters, 3 per fight survived, 5 per kill, 50 for a boss; nurse, 2 per egg hatched; any ant, 10 for surviving a raid, a flood or a stomp.
+
+Promotions come from a list per family. **Gatherers:** Trailwise (faster on trails) · Strongback (+1 carried) · Keen nose (sees food further) · Dodger (dodges the first strike). **Diggers:** Quick digger · Steady (no cave-ins nearby) · Packer (+1 spoil) · Fixer (repairs as it passes). **Fighters:** Brawler (+bite) · Guard (+defence at home) · Hunter (+damage to big bugs) · Skirmisher (+speed) · Ambusher (first hit doubled). **Nest:** Gentle (+hatch speed) · Healer (heals nearby) · Tidy (less disease). With hundreds of ants, the player sets a **doctrine** per ant type (which promotion its Veterans take and which its Elites add) instead of picking per ant.
+
+Keeping and making veterans:
+
+- Drill hall (Society node): soldiers hatch Seasoned, like Civilization's Barracks.
+- Colony memory (Society, late): every new ant hatches Seasoned.
+- Medics carry the wounded home; with Life saver a veteran's first death is only a wound.
+- Long-lived workers (Bodies): ants live twice as long, so veterans stay.
+- Division of labour (Society): ants nurse young and forage old, earning experience in both.
+- Your rebirth: when your ant dies you can come back as one of your Elites or Legends.
+
+Precedents: Civilization V and VI promotions and the Barracks head start; XCOM ranks, names and memorial; real ants, where experienced foragers do better and workers change jobs as they age.
 
 ## Track 4: Evolution (the tech tree)
 
@@ -315,6 +363,71 @@ Hive mind is the automation the player **earns**: the game stays hands-on early 
 | Highways | Tunnels between nests: food and ants move between them | 🧬5 🪵30 |
 
 Later: **Supercolony** (every nest one network; trails between nests never fade).
+
+### The expanded tree (revised Oct 29)
+
+This supersedes the three tables above: five branches, two of them new (Society and Symbiosis), each ending in expensive late nodes (in bold). A yard run affords about half. Each line is a chain: a node needs the one before it.
+
+**Bodies:** what an ant is: jaws, armour, glands, size.
+
+- Strong mandibles (🧬2 🥩10; fighters bite 25% harder) → Formic spray (🧬4 🥩20; soldiers bite at 2 tiles) → Exploders (🧬5 🥩40; the Exploder ant)
+- Strong mandibles (🧬2 🥩10; fighters bite 25% harder) → Stridulation (🧬4; ants squeak through the soil: the nest rallies in 2 s)
+- Trail runners (🧬2 🌾30; 25% faster on a scent trail) → Big crop (🧬3 🍯10; foragers carry 8, not 5) → **Social stomach** (🧬8 🍯50; ants share food mouth to mouth: no ant far from home ever starves)
+- Tough cuticle (🧬3 🪲10; 50% more health) → Majors (🧬4 🪲20; the Major ant (with Barracks II)) → **Polymorphism** (🧬9 🪲60; the Supermajor ant)
+- Tough cuticle (🧬3 🪲10; 50% more health) → Metapleural glands (🧬5; a natural antiseptic: mould and disease halved)
+- Heat tolerance (🧬3; work through summer heat; the Desert runner) → **Long-lived workers** (🧬10 🍯40; ants live twice as long, so veterans stay)
+- **Lineage: pick one, forever** (🧬8 + 3 trophies; acid: every fighter sprays · Trap-jaw: one-bite kills and a jump · Bullet: a sting that stuns bosses. Unlocks the Lineage champion)
+
+**Senses:** how the colony thinks: scent, sight, the sun, and your powers.
+
+- Waypoints (🧬1 🪨10; outposts) → Lookout (🧬3 🪨20; scouts; +2 outposts; boss patrols on the map) → Sun compass (🧬6; foragers walk straight home and never get lost)
+- Strong scent (🧬2; trails fade half as fast) → Danger scent (🧬2; foragers route round a danger mark) → Rally scent (🧬3; fighters gather to a mark) → **Hive mind** (🧬10; idle ants answer the colony's biggest need on their own)
+- Strong scent (🧬2; trails fade half as fast) → Propaganda scent (🧬7; rival ants turn on each other during your raids)
+- Bigger crews (🧬3; crews of 30) → Bigger crews II (🧬5; crews of 45) → **War columns** (🧬9 🥩80; lead raids of 60 that march as one)
+- Night sense (🧬3; forage at night) → Vibration sense (🧬5; feel feet and the mower coming: 2 s warning)
+
+**Nest:** how the colony lives: rooms, stores, depth.
+
+- Hatchery II (🧬1 + materials; 3 eggs at once) → Hatchery III (🧬1 + materials; 5 eggs at once) → Brood chambers (🧬6 🍯30; eggs cost 25% less)
+- Store II (🧬1 + materials; 400 food) → Store III (🧬1 + materials; 1000 food) → Honeypot vault (🧬3 🍯20; repletes)
+- Store II (🧬1 + materials; 400 food) → Granary (🧬2 🪨30; harvesters; seeds never rot)
+- Insulation (🧬2; cave-ins and floods halved) → Thermal chimneys (🧬6 🪨60; the nest never floods; eggs hatch 15% faster)
+- Infirmary (🧬3; medics)
+- Midden (🧬2; undertakers; disease kept away)
+- Workshop III (🧬6 🪵30; architects) → **Deep halls** (🧬8 🪨100; a fifth soil band; Miners)
+- Royal chamber (🧬5 🪵20; breeders, mating flights, satellites) → Highways (🧬5 🪵30; tunnels between nests) → **Shared stores** (🧬9; every nest draws on every store)
+
+**Society:** how ants organise: jobs, war, queens. New.
+
+- Division of labour (🧬3; ants nurse young and forage old, earning xp in both) → Drill hall (🧬4 🥩40; soldiers hatch Seasoned) → **Colony memory** (🧬12; every ant hatches Seasoned)
+- War camp (🧬3 🪨30; raiders) → Brood raiding (🧬6; brood raiders (needs a rival queen killed))
+- Polygyny (🧬6 🍯40; a second queen: the Princess) → Honour guard (🧬5; elite soldiers guard the queens; the queen can't be reached by raids under 30)
+
+**Symbiosis:** partners from other species: aphids, fungus, beetles, flowers. New.
+
+- Aphid farming (🧬2; herders; 🍯 from aphids (garden held)) → Mealybug ranching (🧬4; root cellar and Ranchers: sugar underground) → **Honey economy** (🧬8; 🍯 can pay wherever 🌾 can)
+- Fungus garden (🧬4; leafcutters; leaves become food (Leaf pile held))
+- Beetle guests (🧬4; rove beetles live in the nest and eat parasites: disease halved)
+- Flower nectar (🧬3; flowers in held regions give 🍯)
+
+### Great evolutions (proposed; Civilization wonders, Stellaris ascension perks)
+
+Huge one-time choices. Each copies a real species' way of life, changes how the colony plays, and shows in the yard. **A colony gets three of twelve:** the first slot opens around 1 hour (after the second boss), the second with the lineage pick (2–3 hours), the third at 12 regions held (around 4 hours). Some rule each other out.
+
+| Great evolution | Real ants | What it does | In the yard | Cost | Needs | Rules out |
+|---|---|---|---|---|---|---|
+| Living Bridges | Army ants | Bridgers link up to cross gaps, puddles and walls. New shortcuts open everywhere. | Chains of ants hang across gaps and puddles. | 🧬15 🥩100 | Centipede beaten | — |
+| Raft Colony | Fire ants | Floods stop being disasters. Rafters float the colony, and a flood can carry a raft to new ground. | Floating mats of ants drift on the puddles after rain. | 🧬15 🍯40 | Wet strip held | — |
+| Weaver Canopy | Weaver ants | Weavers build nests in the hedge and the Oak, out of reach of feet and floods, close to the caterpillars. | Balls of leaves stitched with silk hang in the hedge. | 🧬18 🍯60 | Hedge row held; Hornworm silk | — |
+| Fungus Empire | Leafcutter ants | Gardeners and vast fungus halls. The colony cap rises by half; leaves become your main food. | Green highways of leaf bits stream across the lawn. | 🧬20 🌾200 | Leaf pile held; Fungus garden | Army of the March |
+| The Great Mound | Wood ants | A thatch mound rises over the nest and warms it: eggs hatch 30% faster and winter is halved. It is loud: Notice +15. | A mound you can see from anywhere in the yard. | 🧬20 🪨200 🪵80 | Workshop III | Army of the March |
+| Army of the March | Army ants | The colony goes nomadic. No rooms: the nest is a living ball of ants that moves to any region, and raid swarms sweep regions clean. | A swarm front flows across the map, and everything flees it. | 🧬25 + 3 trophies | War columns | Fungus Empire, The Great Mound |
+| The Peony Pact | Ant-plant partners | A peony bonds with the colony. It grows huge, feeds you nectar, and its leaves shade your ants from birds. You defend it. | A giant peony blooms over the flowerbed, full of your ants. | 🧬15 🍯40 | Flowerbed held | — |
+| Blue Butterfly Pact | Large blue butterflies | Caterpillars live in your nest and give honeydew. Each spring they hatch, and birds chase the butterflies instead of your ants. | A cloud of blue butterflies rises from your nest. | 🧬15 🍯30 | Aphid farming | — |
+| Supercolony | Argentine ants | Every nest becomes one colony with many queens. Rival ground next to yours erodes on its own. | Your colour spreads across the yard map. | 🧬25 | Highways; 3 satellites | — |
+| Swarm Day | Nuptial flights | Once a year, hundreds of winged ants rise from every nest. Birds gorge on them, not on workers, and three satellites are founded at once. | The sky over the yard fills with wings. | 🧬20 🍯100 | Royal chamber | — |
+| Titan Line | Giant supermajors | Titans as big as a beetle: they carry a cookie alone and wrestle the toad. | Huge ants among your workers, and footprints in the dust. | 🧬20 🪲80 | Polymorphism | — |
+| Brood Empire | Slave-maker ants | Raids capture rival workers. Your colony becomes many species, and each keeps its skills. | Ants of every colour in your tunnels. | 🧬18 | Brood raiding; 2 rival queens killed | — |
 
 ## Track 5: You (the player's ant)
 
@@ -500,3 +613,5 @@ Each step is a few pieces, playable on its own:
 4. **After the yard:** into the house (the original plan), a new yard (New Game+), or both?
 5. **How big a colony?** Hundreds of ants across several nests (proposed), or keep it to one nest of about 100?
 6. **Permanent choices.** Proposed, after the research: the lineage pick plus the caste upgrades' pick-one-of-two abilities, as in Empires of the Undergrowth. Too many, too few, or right?
+7. **Great evolutions:** three per colony out of twelve (proposed), or more or fewer?
+8. **Veterans:** a doctrine per ant type (proposed), or also let the player pick promotions by hand for named Elites?
