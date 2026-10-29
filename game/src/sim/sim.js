@@ -212,7 +212,7 @@ function spawnFood(s, ai, treats){
   const A = AREAS[ai], w = s.world;
   if (treats && A.treat && w.rnd() < A.treat && !s.items.some(f => heavy(f))){
     const it = spawnInArea(s, ai, 'food', A.treats[Math.floor(w.rnd()*A.treats.length)]);
-    if (it){ const F = FOODS[it.type]; s.events.push('treat'); if (!s.player.msg) s.player.msg = 'Something tasty fell by ' + A.name.replace(/^The /, 'the ') + ': a ' + F.name + ', worth ' + it.amt + ' food. It takes a crew of ' + F.crew + ' to carry.'; }
+    if (it){ const F = FOODS[it.type]; s.events.push('treat'); if (!s.player.msg) s.player.msg = 'A ' + F.name + ' fell by ' + A.name.replace(/^The /, 'the ') + '! Crew of ' + F.crew + ' to carry.'; }
     return it;
   }
   let tot = 0; for (const f of A.foods) tot += f[1];
@@ -320,7 +320,7 @@ function tick(s, dt){
   for (const i of s.hot){ if (tr[i] > 0.001) tr[i] *= td; else tr[i] = 0; if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; if (!tr[i] && !al[i]) s.hot.delete(i); }
   for (const col of [c, s.rival]) tickColony(s, col, dt);
   // dew
-  s.dewTimer += dt; if (!s.dew && s.dewTimer > 110){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[REGION.rock, 6], [REGION.lawn, 4], [REGION.flowerbed, 4], [REGION.clover, 3], [REGION.dandelions, 3]]) for (let i=0;i<n;i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!P.msg) P.msg = 'Dew is out. Foragers can carry water home for a minute.'; }
+  s.dewTimer += dt; if (!s.dew && s.dewTimer > 110){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[REGION.rock, 6], [REGION.lawn, 4], [REGION.flowerbed, 4], [REGION.clover, 3], [REGION.dandelions, 3]]) for (let i=0;i<n;i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!P.msg) P.msg = 'Dew is out: water for a minute.'; }
   if (s.dew && s.dewTimer > 60){ s.dew = false; s.dewTimer = 0; s.items = s.items.filter(f => f.type !== 'dew'); }
   tickRain(s, dt); tickMaintenance(s, dt);
   // Food grows back area by area at each area's own pace (yard.js), so the
@@ -379,7 +379,7 @@ function tick(s, dt){
       if (Math.hypot(a.x-gx, a.y-gy) < 1.5*T){ const guarded = s.ants.some(o => !o.team && o.state!=='dead' && CASTES[o.caste].fight >= 3 && (o.state==='patrol'||o.state==='fight') && Math.hypot(o.tx-c.ex, o.ty-c.ey) < 4);
         // Unguarded, raiders push into the nest and go for the queen.
         a.raidT = (a.raidT||0) + dt; raiseAlarm(s, c.ex, c.ey, 2);
-        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt; if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are inside the nest, attacking the queen! Soldiers at the entrance stop them.'; } continue; }
+        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt; if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
         const take = Math.min(guarded ? 1 : 2, c.store); c.store -= take; c.stolen += take; a.carry = take; a.kind = 'food'; a.state = 'return'; a.raidT = 0; continue; }
       if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, gx, gy);
       continue;
@@ -417,10 +417,10 @@ function tick(s, dt){
     s.spider.hp -= power*0.5*dt; s.spider.bite += dt;
     if (s.spider.bite >= 2 && near.length){ s.spider.bite = 0; killAnt(s, near[Math.floor(Math.random()*near.length)], 'spider'); }
     if (s.spider.hp <= 0){ s.items.push({ x: Math.floor(s.spider.x/T), y: Math.floor(s.spider.y/T), kind:'protein', type:'spider', amt: 40 });
-      if (!c.trophies.spider){ c.trophies.spider = true; P.msg = 'Spider down. Trophy: spider fang. Venom ants unlocked at the queen.'; }
+      if (!c.trophies.spider){ c.trophies.spider = true; P.msg = 'Spider down! Venom ants unlocked.'; }
       c.kills.spider = (c.kills.spider||0)+1; s.spider = null; s.spiderRespawn = 120; }
   }
-  if (s.cat && s.cat.hp <= 0){ s.items.push({ x: Math.floor(s.cat.x/T), y: Math.floor(s.cat.y/T), kind:'protein', type:'cat', amt: 40 }); c.kills.caterpillar = (c.kills.caterpillar||0)+1; if (!P.msg) P.msg = 'Caterpillar down. 40 protein on the ground. Haul it home for Soldiers.'; s.cat = null; s.catRespawn = 90; }
+  if (s.cat && s.cat.hp <= 0){ s.items.push({ x: Math.floor(s.cat.x/T), y: Math.floor(s.cat.y/T), kind:'protein', type:'cat', amt: 40 }); c.kills.caterpillar = (c.kills.caterpillar||0)+1; if (!P.msg) P.msg = 'Caterpillar down! Haul the meat home.'; s.cat = null; s.catRespawn = 90; }
   // siege on rival entrance
   if (s.rival.queenAlive){
     let ours = 0, theirs = 0, power = 0;
@@ -442,7 +442,7 @@ function tickColony(s, c, dt){
   c.secAcc += dt; while (c.secAcc >= 1){ c.secAcc -= 1; c.delivered.pop(); c.delivered.unshift(0); c.eaten.pop(); c.eaten.unshift(0); }
   let eat = 0; for (const a of s.ants) if (a.state !== 'dead' && a.team === c.team) eat += CASTES[a.caste].eat;
   const bite = eat/60*dt; c.eaten[0] += bite; c.store -= bite;
-  if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The store is empty and the colony is starving. Lead foragers farther with trails, or lay fewer eggs.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
+  if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The colony is starving. Forage farther.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
   if (c.starve > 20 && (c.starve - 20) % 5 < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); }
   const overCap = !c.team && s.ants.filter(a => !a.team).length >= queenCap(s.queen.level);
   if (c.queenAlive && (c.team || s.queen.placed) && !overCap){
@@ -455,13 +455,13 @@ function tickColony(s, c, dt){
     // Fighters eat protein: half a unit a minute each. With none, they starve one by one.
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
     if (fighters.length){ c.protein -= fighters.length*0.5/60*dt;
-      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: no protein in store. Hunt a caterpillar or haul bugs from the Woodpile.'; } }
+      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
       else c.pstarve = 0; }
     // The queen heals slowly; if raiders kill her, the colony is lost.
     const q = s.queen;
     if (q.placed && !s.lost){ q.hp = Math.min(100, q.hp + 0.1*dt); if (q.hp >= 99) s.queenWarned = false;
-      if (q.hp <= 0){ q.hp = 0; s.lost = true; c.queenAlive = false; s.events.push('lost'); P.msg = 'The queen is dead. Without her the colony will dwindle away. Press Reset to found a new one.'; } }
-    if (P.pending && !P.ant && !c.eggs.length && !c.eggQueue.length && s.queen.placed){ c.eggQueue.push('forager'); P.msg = 'Waiting for the next hatchling. A free Forager egg was laid.'; }
+      if (q.hp <= 0){ q.hp = 0; s.lost = true; c.queenAlive = false; s.events.push('lost'); P.msg = 'The queen is dead. The colony is lost.'; } }
+    if (P.pending && !P.ant && !c.eggs.length && !c.eggQueue.length && s.queen.placed){ c.eggQueue.push('forager'); P.msg = 'Waiting for the next hatchling.'; }
     const ws = roomOf(s, 'workshop') ? 2 : 1;
     // Construction only advances for builders standing at their own job.
     const atWork = key => s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === key).length;
@@ -604,10 +604,10 @@ function nestStep(s, a, speed, dt){
 function note(s, msg){ s.player.msg = msg; }
 function tickRain(s, dt){
   const r = s.rain; r.t += dt;
-  if (!r.on && r.t >= r.next){ r.on = true; r.t = 0; r.next = 200 + Math.random()*120; s.events.push('rain'); note(s, 'Rain. Trails wash out, foragers head home.' + (buildersInside(s) ? ' Your builders are holding the drains.' : ' With no builder inside, the lowest level will cave in.')); }
+  if (!r.on && r.t >= r.next){ r.on = true; r.t = 0; r.next = 200 + Math.random()*120; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
   else if (r.on){
     if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + 0.4*dt);
-    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed){ collapse(s, true); collapse(s, true); note(s, 'The rain caved in part of the lowest level. Builders repair cave-ins on their own.'); } }
+    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed){ collapse(s, true); collapse(s, true); note(s, 'The rain caved in a tunnel.'); } }
   }
 }
 function buildersInside(s){ return s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build')).length; }
@@ -615,7 +615,7 @@ function tickMaintenance(s, dt){
   const c = s.colony; if (!s.queen.placed || s.t < 240) return;
   c.wearT = (c.wearT || 0) + dt; if (c.wearT < 1) return; c.wearT = 0;
   const need = Math.ceil(dugCount(s)/40), b = buildersInside(s);
-  if (b < need && Math.random() < 0.0045 * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. Every 40 dug cells need a builder inside to keep them shored up.'); }
+  if (b < need && Math.random() < 0.0045 * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. You need more Builders inside.'); }
   for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i]; const n = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y).length; rep.progress += n; if (rep.progress >= 8){ dig(s, rep.x, rep.y); s.repairs.splice(i,1); } }
 }
 function collapse(s, lowest){
@@ -644,7 +644,7 @@ function rivalBrain(s, dt){
   const idle = soldiers.filter(a => a.state==='in' || a.state==='patrol');
   // Raids start at six minutes and grow: 3 soldiers, then one more every 2.5 minutes.
   const size = Math.min(14, 3 + Math.floor(Math.max(0, s.t - 360)/150));
-  if (s.t > 360 && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.player.msg = `A rival raid of ${size} is marching on your nest from the Patio.`; s.events.push('raid'); }
+  if (s.t > 360 && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.player.msg = `Raid! ${size} rivals are coming.`; s.events.push('raid'); }
 }
 
 // The spider roams the whole yard: landmark to landmark, past our nest every
@@ -759,7 +759,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
   let speed = 85*SURF;
   if (P.big){ const crew = crewAt(s), need = FOODS[P.big.type].crew;
-    if (crew < need){ dropBig(s); P.msg = `Too heavy for ${crew}. It takes a crew of ${need}: Recruit more, then Lift again.`; }
+    if (crew < need){ dropBig(s); P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`; }
     else speed = Math.min(70, 30 + 6*(crew - need))*SURF; }
   if (P.tx != null){
     // Walk around rocks: follow a path over the tile grid toward the tapped point.
@@ -816,7 +816,7 @@ function doAction(s){
   const f = itemAt(s, a.tx, a.ty);
   if (f && heavy(f)){ const crew = crewAt(s), need = FOODS[f.type].crew;
     if (crew >= need){ P.big = f; f.carried = true; P.msg = 'Lifted! Walk it home; your crew carries it with you.'; }
-    else P.msg = `Too heavy: ${crew} of ${need}. Hold Recruit near the nest or other ants, bring them here, then Lift.`;
+    else P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`;
     return; }
   if (f){ const take = Math.min(5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; }
 }
@@ -863,7 +863,7 @@ function clearLine(s, a, b, avoid){
 // south, killing anything in the grass and shredding trails and seeds.
 function tickMower(s, dt){
   const m = s.mower, P = s.player, L = s.world.lawn; if (!s.queen.placed) return; m.t += dt;
-  if (m.state === 'idle'){ if (s.t >= m.next){ m.state = 'warn'; m.t = 0; s.events.push('mower'); P.msg = 'An engine starts up past the Lawn. The mower is coming: get out of the grass!'; } return; }
+  if (m.state === 'idle'){ if (s.t >= m.next){ m.state = 'warn'; m.t = 0; s.events.push('mower'); P.msg = 'The mower is coming! Get off the Lawn.'; } return; }
   if (m.state === 'warn'){ if (m.t >= 8){ m.state = 'cut'; m.t = 0; m.y = L.y0; } return; }
   m.y += 4*dt;
   const half = 1.5*SCALE, y0 = m.y - half, y1 = m.y + half;
@@ -896,13 +896,13 @@ function tickPits(s, dt){
 //   fighters round it chase it off.
 // Each comes only while ants are out in that region.
 const DROP = {
-  foot:  { warn: 2.2, hold: 1.2, lift: 0.8, a: 9, b: 3.4, cause: 'foot', msg: 'A shadow falls over you. Something is coming down: get out from under it!', ev: 'feet' },
-  acorn: { warn: 1.6, hold: 0.3, lift: 0.1, a: 2.4, b: 2.4, cause: 'acorn', msg: 'Something is falling out of the Oak! Get out from under the shadow.', ev: 'acorn' },
-  spray: { warn: 2.0, hold: 2.2, lift: 0.6, a: 6, b: 6, cause: 'spray', msg: 'A hiss from the shed: bug spray! Get out of the cloud.', ev: 'spray' },
+  foot:  { warn: 2.2, hold: 1.2, lift: 0.8, a: 9, b: 3.4, cause: 'foot', msg: 'A shadow! Get out from under it!', ev: 'feet' },
+  acorn: { warn: 1.6, hold: 0.3, lift: 0.1, a: 2.4, b: 2.4, cause: 'acorn', msg: 'An acorn is falling! Move!', ev: 'acorn' },
+  spray: { warn: 2.0, hold: 2.2, lift: 0.6, a: 6, b: 6, cause: 'spray', msg: 'Bug spray! Get out of the mist!', ev: 'spray' },
 };
 const HUNT = {
-  bird: { land: 1.4, peck: 1.3, pecks: 4, leave: 1.2, reach: 1.6, hop: 2.5, sight: 12, scare: 5, cause: 'bird', name: 'robin', msg: 'A robin drops out of the sky to hunt. Run, or bring five soldiers to chase it off.', ev: 'bird' },
-  toad: { land: 1.0, peck: 1.7, pecks: 5, leave: 1.0, reach: 5, hop: 1.2, sight: 10, scare: 5, cause: 'toad', name: 'toad', msg: 'A toad! Its tongue reaches five tiles. Keep away, or bring five fighters.', ev: 'toad' },
+  bird: { land: 1.4, peck: 1.3, pecks: 4, leave: 1.2, reach: 1.6, hop: 2.5, sight: 12, scare: 5, cause: 'bird', name: 'robin', msg: 'A robin! Run, or bring five fighters.', ev: 'bird' },
+  toad: { land: 1.0, peck: 1.7, pecks: 5, leave: 1.0, reach: 5, hop: 1.2, sight: 10, scare: 5, cause: 'toad', name: 'toad', msg: 'A toad! Keep your distance.', ev: 'toad' },
 };
 const FOOT = DROP.foot, BIRD = HUNT.bird;
 const outside = a => a.state !== 'dead' && a.state !== 'in' && a.state !== 'build' && a.state !== 'nest';
@@ -970,7 +970,7 @@ function tickStings(s, dt){
     const d = Math.hypot(a.x/T - z.x, a.y/T - z.y); if (d > z.r) continue;
     a.hp -= z.power * k * (a.isPlayer ? 0.6 : 1);
     if (!a.isPlayer){ a.flee = Math.max(a.flee, 1); a.fleeFrom = { x: z.x*T, y: z.y*T }; }
-    else if (!s.stungWarned){ s.stungWarned = true; s.events.push('fireants'); s.player.msg = 'Fire ants! They sting anything on their ground. Keep moving, and keep out of the mound\'s red earth.'; }
+    else if (!s.stungWarned){ s.stungWarned = true; s.events.push('fireants'); s.player.msg = 'Fire ants! Keep moving.'; }
     if (a.hp <= 0) killAnt(s, a, 'fireants');
   }
 }

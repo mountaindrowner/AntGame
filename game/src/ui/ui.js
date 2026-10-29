@@ -22,9 +22,13 @@ export function createUI(app) {
   // Every HUD button is a small icon; its name shows as a tip on hover or a
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
+  // Bottom-bar buttons also wear a short name curved over their tops.
+  const ARC = { pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
-    const key = icon + '|' + (badge ?? '');
-    if (b.dataset.key !== key) { b.dataset.key = key; b.innerHTML = ICONS[icon] + (badge != null && badge !== '' ? `<b class="badge">${badge}</b>` : ''); }
+    const name = b.closest('.dock') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
+    const key = icon + '|' + (badge ?? '') + '|' + name;
+    if (b.dataset.key !== key) { b.dataset.key = key; b.innerHTML = ICONS[icon] + (badge != null && badge !== '' ? `<b class="badge">${badge}</b>` : '') + (name ? arc(b, name) : ''); }
     if (b.dataset.tip !== tip) { b.dataset.tip = tip; b.setAttribute('aria-label', tip); }
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
@@ -218,7 +222,7 @@ export function createUI(app) {
     if (P().msg) return P().msg;
     if (app.placing && app.view === 'nest') {
       if (app.placing.kind === 'room') { const R = ROOMS[app.placing.key]; return `Placing ${R.name} (${R.w}×${R.h}). Tap a green cell. Cancel to stop.`; }
-      if (app.placing.kind === 'fill') return 'Fill: tap dug tunnel cells to queue them for packing. Tap again to undo. Cancel to stop.';
+      if (app.placing.kind === 'fill') return 'Fill: tap tunnel cells to pack them back. Cancel to stop.';
       return 'Remove: tap a room to tear it out. Cancel to stop.';
     }
     if (s.lost) return 'The queen is dead. The colony is lost. Press Reset to found a new one.';
@@ -226,14 +230,14 @@ export function createUI(app) {
     if (app.areaBanner && app.areaBanner.until > performance.now()) return app.areaBanner.text;
     if (s.phase === 'dig') return q.energy > 0 ? `You are the queen. Tap the dirt next to her to dig (${q.energy} digs left). Two down, then Build nest.` : 'Out of energy. Tap Build nest.';
     if (!a) return 'Waiting for the next hatchling.';
-    if (P().inNest) return app.view === 'nest' ? 'Walk up the shaft and tap the top cell to go outside. Tap the queen to lay eggs; press Build to add rooms.' : 'Your ant is inside. Tap Nest view.';
+    if (P().inNest) return app.view === 'nest' ? 'Tap the top cell to go outside. Tap the queen for eggs; Build adds rooms.' : 'Your ant is inside. Tap Nest view.';
     if (a.carry) return 'Carry it to the dark hole. Your trail lays itself.';
     if (s.t < 180 && c.store < 8) return 'Tap a crumb or seed to walk there, then Pick up. Hold to keep walking.';
-    if (c.water < 3) return 'Water is low. Blue dew appears every two minutes; the big puddle is always out there. Eggs need water.';
+    if (c.water < 3) return 'Water is low. Fetch dew or puddle water.';
     if (!c.eggQueue.length && !c.eggs.length && c.store >= 4) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
     if (P().hunger < 35) return 'You are hungry. Go home, or stand by a forager carrying food.';
     if (s.ants.filter((x) => x.caste === 'builder').length === 0 && c.store >= 10) return 'Lay a Builder egg. Builders dig rooms.';
-    if (SIM.eggLock(s, 'soldier') && c.protein < 5 && s.cat) return 'Soldiers need protein. Recruit 8 ants, walk them onto the green caterpillar, and haul the meat home.';
+    if (SIM.eggLock(s, 'soldier') && c.protein < 5 && s.cat) return 'Soldiers need protein. Hunt the caterpillar with a crew.';
     if (SIM.eggLock(s, 'soldier') && c.protein >= 5) return 'You have protein. Dig a 6×3 pocket and build a Barracks.';
     return '';
   }

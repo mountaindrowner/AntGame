@@ -2,6 +2,16 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: less reading, and names on the buttons (build 11.2)
+
+Mark: "All the instructions and stuff tend to be a lot of text… we don't want to create reading fatigue." And: "text that revolves around the buttons… on the bottom of the screen."
+
+- **Names curved over the bottom buttons.** Each bottom-bar button wears its short name on an arc over its top: Pick up / Drop / Lift, Trail, Recruit, Release, Enter, and in the nest Dig in, Queen, Build, Exit. They dim with a disabled button. The side buttons keep their hover and long-press tips.
+- **Every explainer is one or two short lines** (was a paragraph). For example, Stone is now "Builders fetch pebbles. Stone pays for rooms and queen upgrades." The full numbers stay in the Build and queen sheets, where you need them.
+- **The intro steps are one line each,** and the Help sheet is a short reference: goal, controls, resources, ants, rooms, dangers.
+- **Messages from the game are shorter too:** "Raid! 5 rivals are coming." "A shadow! Get out from under it!" "A cookie fell by the Patio! Crew of 6 to carry."
+- Copy no longer comes from build 6 word for word; `ui/copy.js` says so.
+
 ## Oct 29: the film rolls by itself, then a title screen (build 11.1)
 
 Mark: "On the first run… it just starts with that video. And then after that we need an intro screen. Like a main menu… load game, play game, options."

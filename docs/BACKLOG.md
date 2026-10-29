@@ -26,9 +26,7 @@ Mark's wish list after build 11 (Oct 28), not started. Grouped by area, in his w
 - **Surface items should be obvious at a glance.** Some are, some aren't.
 - **Tapping an item tells you what it is.**
 - **More icons ("techify almost everything").** Mark likes the HUD icons; carry the same style further.
-- **Short labels around the bottom buttons**, e.g. text that curves around each button. The right-hand one already reads clearly; the others need it most.
 - **Tooltips with more design.** The current boxes are plain.
-- **Less text everywhere, to avoid reading fatigue.** Mark's example is the stone explainer ("Gray pebbles. Builders fetch them when the colony has food to spare. Stone pays for the Food store, the Cistern, the Workshop, and queen upgrades."). Aim for a line, plus icons, rather than a paragraph.
 
 ## Gameplay
 
