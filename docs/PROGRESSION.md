@@ -32,6 +32,55 @@ The tracks feed each other:
          (rivals spread, predators, humans)
 ```
 
+## Built on proven designs
+
+Mark asked that every piece rest on ideas proven in popular games, or be a new twist on one. Here is the precedent for each part of this plan and what each game teaches. Revisions made because of it are marked **(revised)** further down. Sources are at the end of this section.
+
+| Our piece | Proven in | How it works there | The lesson we take |
+|---|---|---|---|
+| Bosses that gate the next ring, with trophies | **Valheim**, **Terraria**, **Grounded** | Valheim: each biome gives the materials to beat its boss; the boss drops a trophy (a power) and a key that opens the next biome. Terraria: the bosses are the engine of progression, in a recommended order that isn't enforced, plus optional bosses. Grounded: tiers of gear follow zones of rising danger | Each boss drops **two things**: a trophy that unlocks a caste, and a key that opens the next ring. Each region supplies what you need to beat its own boss. Order recommended, not forced; some bosses optional |
+| Castes as keys to obstacles | **Pikmin** (each type unlocked in an area and needed for that area's hazards); metroidvanias | A new Pikmin type is how you get past fire, water or electricity | **(revised)** Regions get physical gates that need a caste: bark walls (Carpenters), silk-choked tunnels (Acid), gaps (Trap-jaws jump), fire-ant ground (Armored foragers) |
+| 🧬 Genes earned by doing, including first finds | **Grounded** (scan new items for "Raw Science"; scanning many kinds raises Brainpower); **Subnautica** (scan fragments to unlock blueprints) | Finding new things is itself the research | **(revised)** Bringing a new kind of thing home for the first time (a beetle shell, a slug, wood) *studies* it: 🧬, a card on what it's for, and the recipes that use it |
+| Boosts on evolution nodes | **Civilization VI** (Eurekas: a related deed cuts a tech's cost; settle on a coast → Sailing boosted) | Ties research to play | **(revised)** Each node's 🧬 cost halves once you've done its matching deed. Critics found some Civ triggers too situational, so every boost here is always possible in the yard |
+| Per-caste upgrades with permanent picks | **Empires of the Undergrowth** (the closest ant game: Royal Jelly buys three tiers of stats per ant; two ability slots, pick one of two, permanent) | Specialises each colony; choices stick | **(revised)** A **caste upgrades** track: three stat tiers per caste, and at tiers 2 and 3 a permanent pick of one of two abilities |
+| One new material per tier | **Factorio** (each new science pack needs a new production chain); **Oxygen Not Included** (Novice, then Advanced research) | Each tier is a new thing to set up, not a bigger number | Kept. Factorio's own team found one jump too big (blue science, FFF #159), so each material gets an easy first source |
+| Population tiers that unlock buildings | **Anno 1800** (residence tiers act like levels; each unlocks production; needs rise with them) | Growth itself is the difficulty curve | Queen levels act as tiers: higher levels unlock rooms and need the new materials (🍯 sugar at V–VI) |
+| Notice, the humans | **Against the Storm** (Hostility: rises per year, per villager and per glade opened; each 100 points is a level that triggers worse events in the storm season; actions lower it); **RimWorld** (raid points from colony wealth and population, with buildings counted at half) | The world answers how big and how far you've grown, not just the clock | **(revised)** Notice levels every 25 points, from population, regions opened, years and noise near the house. Stored food counts for little, so saving up isn't punished (RimWorld's lesson). There are ways to lower it |
+| The director | **RimWorld** storytellers (paced, adaptive events) | | Kept as designed |
+| Seasons and winter | **Northgard**, **Frostpunk**, **Against the Storm**, **Don't Starve** | Northgard: food falls in winter, you stockpile, and winters get harsher each year | Recommended: seasons are the most proven rhythm for colony games |
+| The goals board | **Stardew Valley** (Community Center bundles: themed sets that open rooms, with a reward for each set and a bigger one per room) | Clear goals that point at every activity | **(revised)** Goals come in themed **sets** (a garden set, a hunter set, a builder set). Each goal pays 🧬, and a finished set pays a permanent colony-wide reward |
+| Respec | **Hades** (Mirror of Night: every upgrade has two versions; refunds cost a rare key) | Experimenting without regret | **(revised)** Evolution nodes can be refunded for a trophy's worth of cost. The lineage pick is the exception |
+| Mechanics over percentages | **Sid Meier** ("a series of interesting decisions"); tech-tree critiques (every node should change something; not everything should be obtainable; choices should stick); **Hades** (stat boosts vs. upgrades that change how you play) | | **(revised)** Tree nodes change how you play. Plain stat bumps move into the caste upgrades. About two-thirds of the tree is affordable in the yard, and the lineage is permanent |
+| A world-changing gate | **Terraria** (beating the Wall of Flesh turns the world to Hardmode) | A late boss changes the whole world, so old ground is fresh again | Beating the fire ant queen (or entering the house) sets the yard to a harder state: new spawns, stronger rivals |
+| Satellite nests by mating flight; the yard, then the house | **SimAnt** (the Full Game: spread through the yard sector by sector by sending breeders, then into the house, to drive out the red ants and the owners) | Our own source | Kept: the satellite plan and Act 2 are SimAnt's structure, updated |
+
+**What's new here, and what it rests on:**
+
+- **Notice** puts Against the Storm's Hostility in SimAnt's humans.
+- **Choosing your rebirth** takes the class picks of roguelites and team games onto SimAnt's "you become the next ant".
+- **Outposts** are the territory claiming of Northgard-style strategy games, made with SimAnt's scent trails.
+- **The spoil heap** comes from real ants, and builders hauling it is a logistics chain of the Factorio kind.
+
+Sources (searched Oct 29):
+
+- [Valheim boss and biome progression](https://guildorder.com/games/valheim/wiki/boss-and-biome-progression); [Valheim progression guide](https://allthings.how/valheim-progression-guide-every-biome-boss-and-key-drop/)
+- [Terraria wiki: game progression](https://terraria.wiki.gg/wiki/Guide:Game_progression); [Terraria boss order](https://xgamingserver.com/blog/terraria-progression-guide-boss-order/)
+- [Grounded 2 getting started (Xbox)](https://news.xbox.com/en-us/2025/07/29/getting-started-in-grounded-2/); [Grounded tiers and bosses](https://earlyguides.pages.dev/grounded/bosses)
+- [Subnautica 2 scanner and blueprints](https://www.keengamer.com/articles/guides/subnautica-2-scanner-guide-how-blueprint-unlocks-work/)
+- [Pikmin 4 onions](https://www.nintendolife.com/guides/pikmin-4-all-onion-upgrade-and-flarlic-locations); [Pikmin types](https://nc.inverse.com/gaming/pikmin-4-find-get-red-yellow-ice-blue-purple-rock-winged-glow-white)
+- [Civilization VI boosts discussion](https://forums.civfanatics.com/threads/concerns-regarding-the-eureka-mechanism.572299)
+- [Empires of the Undergrowth: Formicarium adaptations](https://hoodedhorse.com/wiki/Empires_of_the_Undergrowth/Formicarium_Adaptation); [upgrades guide](https://primagames.com/tips/empires-of-the-undergrowth-beginner-story-progression-guide); [population](https://primagames.com/gaming/how-to-increase-max-population-in-empires-of-the-undergrowth)
+- [Factorio FFF #159](https://direct.factorio.com/blog/post/fff-159); [FFF #275](https://factorio.com/blog/post/fff-275)
+- [Oxygen Not Included research](https://oxygennotincluded.wiki.gg/wiki/Research)
+- [Anno 1800 population](https://anno1800.fandom.com/wiki/Population?oldid=3313); [Anno-Union devblog](https://anno-union.com/tag/anno-1800-en/page/30)
+- [Against the Storm Hostility](https://hoodedhorse.com/wiki/Against_the_Storm/Hostility); [beginner's guide](https://hoodedhorse.com/wiki/Against_the_Storm/Beginner%27s_Guide)
+- [RimWorld raid points](https://rimworldwiki.com/wiki/Raid_points); [wealth](https://rimworldwiki.com/wiki/Wealth)
+- [Northgard food and winter](https://www.gamepressure.com/northgard-game-guide/food/z8aacc); [Frostpunk tech and laws](https://www.gamepressure.com/frostpunk/how-to-start/zda129)
+- [Stardew Valley bundles](https://stardewvalley.fandom.com/wiki/Bundles)
+- [Hades meta-progression](https://saschb2b.github.io/game-mechanics/games/hades/meta-progression)
+- [Sid Meier on interesting decisions](https://gamedeveloper.com/design/video-sid-meier-explores-interesting-decisions-in-gameplay); [Old World designer notes on tech](https://forum.quartertothree.com/t/old-world-designer-notes/152938?page=3)
+- [SimAnt (Wikipedia)](https://en.wikipedia.org/wiki/SimAnt); [SimAnt strategy wiki](https://strategywiki.org/wiki/SimAnt)
+
 ## Principles
 
 1. **Three horizons, always.** Next minute: a crumb, a dig. Next ten minutes: a room, a hunt, a region. Next hour: a boss, a new nest, a lineage.
@@ -88,6 +137,17 @@ A region moves through five states:
 
 The other regions hold minor prizes: a little more of their own food, a shortcut, a hiding place.
 
+**Gates (revised; Pikmin).** Some ways through need a particular caste. Castes become keys to the map, and each new one opens ground you've already seen:
+
+| Gate | Where | Opened by |
+|---|---|---|
+| Bark walls and rotten wood | Woodpile, Fallen limb, the Oak | Carpenters chew through |
+| Silk-choked tunnels | Hedge row, under the Shed | Acid sprayers dissolve them |
+| Gaps and ledges | Rock garden, the Oak's roots | Trap-jaws jump them |
+| Fire-ant ground | Fire ant country | Armored foragers cross it unstung |
+| Night-only paths | Trash cans, Leaf pile | Night foragers |
+| Deep sand and stone seams | Sandbox, the nest's deep band | Sappers
+
 ## Track 2: Nest (space)
 
 Space is the economy (handoff pillar 7). Bigger and better rooms need bigger pockets, and bigger pockets need deeper or harder digging and more builders hauling spoil (built in 11.6).
@@ -140,12 +200,21 @@ Space is the economy (handoff pillar 7). Bigger and better rooms need bigger poc
 | Replete | Honeypot vault | Is the storage: a living jar | — |
 | Breeder | Royal chamber, 🍯 | Flies on a mating flight | Founds a satellite |
 
+**Caste upgrades** (revised; Empires of the Undergrowth). Each caste has its own short line, bought with materials, never 🧬:
+
+- **Tier 1:** a stat (more health, speed or carrying).
+- **Tier 2:** the next stat, plus a **pick of one of two abilities, permanent**. For example, Soldiers get *Doorkeeper* (block the entrance alone) or *Escort* (follow and guard foragers).
+- **Tier 3:** a stat, plus another permanent pick. For example, Foragers get *Pathfinder* (find food twice as far off a trail) or *Hauler* (two ants carry a treat).
+
+This is where the colony specialises without spending evolution points.
+
 ## Track 4: Evolution (the tech tree)
 
 **The currency is 🧬 Genes,** earned by growing, exploring and hunting, so the tree advances with play, not with waiting:
 
 - 🧬1 for every 10 eggs hatched (a generation)
 - 🧬1 for each region scouted for the first time
+- 🧬1 for each new kind of thing brought home for the first time: a beetle shell, a slug, wood (revised; Grounded's scanning). It also shows a card on what the thing is for, and the recipes that use it
 - 🧬2–5 for each boss killed
 - 🧬1–2 for each colony goal completed (see Track 5)
 - 🧬5 for each rival queen killed
@@ -154,12 +223,18 @@ The tree has three branches, eight nodes each. A node costs 🧬 plus some mater
 
 There are about 24 nodes. **By the end of the yard you can afford roughly two-thirds of them,** so every colony is a set of choices. The rest come in Act 2.
 
+Three rules from the research:
+
+- **Boosts** (revised; Civ VI): each node has a deed that halves its 🧬 cost, and the deed is always possible in the yard. For example, Strong mandibles is boosted by killing 20 rival ants, and Big crop by hauling 10 treats.
+- **Nodes change how you play** (revised): plain stat bumps live in the caste upgrades instead.
+- **Respec** (revised; Hades): a node can be refunded for a trophy's worth of cost. The lineage pick can't.
+
 **Bodies** (what an ant is):
 
 | Node | Effect | Cost |
 |---|---|---|
 | Strong mandibles | Fighters bite +25% | 🧬2 🥩10 |
-| Long legs | All ants +8% speed | 🧬2 🌾30 |
+| Trail runners | Ants on a scent trail move 25% faster, so trails become roads | 🧬2 🌾30 |
 | Big crop | Foragers carry 8, not 5 | 🧬3 🍯10 |
 | Tough cuticle | Ants have 50% more health | 🧬3 🪲10 |
 | Formic spray | Soldiers bite at 2 tiles | 🧬4 🥩20 |
@@ -205,7 +280,7 @@ Later: **Supercolony** (every nest one network; trails between nests never fade)
   - a Venom ant for a boss
   - a Forager (the default)
 - **Your powers grow** through the Senses branch: crew size, scent types, rally points.
-- **The colony goals board** keeps three goals open at once, one short, one medium and one long. Each pays 🧬 and points at something the colony hasn't done. For example:
+- **The colony goals board** keeps three goals open at once, one short, one medium and one long. Each pays 🧬 and points at something the colony hasn't done. Goals come in **themed sets** (revised; Stardew's bundles), such as Garden, Hunter, Builder and Explorer. Finishing a set pays a permanent colony-wide reward. For example:
   - "Haul a cookie home."
   - "Scout Slug Alley."
   - "Build Hatchery II."
@@ -234,7 +309,12 @@ Four dials, all already started in the game:
 
 **1. Distance** (built): the further from home, the worse the ground. Each ring has its own hazards and a guardian.
 
-**2. Bosses.** A boss guards a region's Prize. Beating it gives a trophy and 🧬, and it doesn't come back.
+**2. Bosses** (Valheim, Terraria). A boss guards a region's Prize. Beating it gives 🧬 and **two drops**, and it doesn't come back:
+
+- **A trophy** that unlocks a caste.
+- **A key** that opens the next ring's gate: a scent the guardians of the next ring respect, or a material the next gate needs.
+
+Each region supplies most of what its boss needs. The ring order is recommended, not forced, and the mantis and the toad are optional (lineage trophies).
 
 | Boss | Where | How to beat it | Trophy unlocks |
 |---|---|---|---|
@@ -260,7 +340,16 @@ Four dials, all already started in the game:
 | Carpenter ants | The Oak | Always there; don't spread | Big Majors hold the Oak; the gate to wood |
 | Fire ants | The far corner | Raid your held regions and outposts from the 90-minute mark | Acid; the final war |
 
-**4. Notice (the humans).** A 0–100 meter rises with surface traffic near the house, colony size, regions held near the house and treats taken, and falls slowly. It is the player's choice: grow loud by the house (the richest crumbs) or quiet out in the far yard.
+**4. Notice (the humans)** (revised; Against the Storm's Hostility, RimWorld's raid points). Notice points come from:
+
+- each year that passes
+- every 10 ants
+- each region opened, with regions near the house counting double
+- surface traffic and treats taken near the house
+
+Stored food counts for little, so saving up isn't punished. Points come off when you lose ants, move activity away from the house, or take the Senses node *Quiet trails*.
+
+It is the player's choice: grow loud by the house (the richest crumbs) or quiet out in the far yard.
 
 | Notice | What the humans do |
 |---|---|
@@ -307,6 +396,7 @@ What never runs out:
 After the yard:
 
 - **Act 2, the house:** the handoff's tiers. The edges (sidewalk, driveway, porch, doormat), then the ground floor (kitchen, pantry, bathroom), then the deep house (walls, basement, attic). New materials, bosses and rivals, and the Notice dial is at its fiercest indoors.
+- **The yard turns harder** (revised; Terraria's Hardmode): beating the fire ant queen sets the yard to a harder state. New spawns and stronger rivals return to ground you've already held, so it stays alive while you push into the house.
 - **A new property (New Game+):** a mating flight to the next yard, carrying one trait.
 - **Endless:** the years go on, each one harder (with seasons).
 
@@ -323,7 +413,7 @@ A year of four seasons, about 12–15 minutes each:
 
 Each new year, rivals and the director step up.
 
-Seasons give the whole game a rhythm: build, harvest, prepare, survive. They make the storage rooms and the Notice choice matter. It's biologically right too: real colonies overwinter. They are also the biggest change on this page, so they're Mark's call.
+Seasons give the whole game a rhythm: build, harvest, prepare, survive. They make the storage rooms and the Notice choice matter. It's biologically right too: real colonies overwinter. Seasons are also the most proven rhythm in colony games: Northgard's winters, Frostpunk's cold and Against the Storm's storm season. They are still the biggest change on this page, so they're Mark's call, with a recommendation of yes.
 
 ## Built today vs proposed
 
@@ -338,6 +428,8 @@ Seasons give the whole game a rhythm: build, harvest, prepare, survive. They mak
 | Challenge | Distance hazards, the spider, growing raids | 10 more bosses, 4 more rivals that spread, Notice, the director, seasons |
 
 ## Order to build it in
+
+The research changes step 1 a little: discovery (studying a thing the first time it comes home) and the themed goal sets join Genes as the first things built.
 
 Each step is a few pieces, playable on its own:
 
@@ -363,4 +455,4 @@ Each step is a few pieces, playable on its own:
 3. **Claiming the map:** outposts first, then satellite nests (proposed)?
 4. **After the yard:** into the house (the original plan), a new yard (New Game+), or both?
 5. **How big a colony?** Hundreds of ants across several nests (proposed), or keep it to one nest of about 100?
-6. **The lineage pick** (Acid, Trap-jaw or Bullet): keep it as the one permanent fork, or add more exclusive choices, such as room upgrades with two branches?
+6. **Permanent choices.** Proposed, after the research: the lineage pick plus the caste upgrades' pick-one-of-two abilities, as in Empires of the Undergrowth. Too many, too few, or right?
