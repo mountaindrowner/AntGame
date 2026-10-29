@@ -1,0 +1,267 @@
+<title>Underfoot Progression Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a swimlane schedule (tracks down, play time across), then the unlock chains and the tech tree. Soil palette. */
+:root {
+  --bg: #eceee6; --panel: #f8f9f4; --fg: #1e1c17; --muted: #5d5a50; --line: #cfd1c5;
+  --accent: #b5760f;
+  --terr: #3f7d34; --nest: #8a5a2b; --pop: #b5760f; --evo: #7048a8; --you: #2d6aa3;
+  --mat: #1f7f7a; --boss: #b23a2e; --push: #c4571c;
+  --display: "Chakra Petch", "Trebuchet MS", sans-serif;
+  --body: "Atkinson Hyperlegible", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #3a372d; --accent: #e3a443;
+  --terr: #7cc16c; --nest: #c99462; --pop: #e3a443; --evo: #b393e6; --you: #73aee6;
+  --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #3a372d; --accent: #e3a443;
+  --terr: #7cc16c; --nest: #c99462; --pop: #e3a443; --evo: #b393e6; --you: #73aee6;
+  --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
+.wrap { max-width: 1400px; margin: 0 auto; padding-block: 28px 60px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(28px, 5vw, 44px); }
+h2 { font-size: 22px; }
+.lede { max-width: 65ch; color: var(--muted); margin: 8px 0 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 14px; font-size: 13px; color: var(--muted); align-items: center; }
+.chip { display: inline-block; font-size: 12.5px; line-height: 1.3; padding: 3px 7px; border-radius: 4px;
+  border: 1.5px dashed var(--c, var(--muted)); color: var(--fg); background: transparent; }
+.chip.b { border-style: solid; background: color-mix(in srgb, var(--c, var(--muted)) 22%, transparent); }
+section > header { display: grid; gap: 4px; margin-bottom: 14px; }
+section > header p { margin: 0; color: var(--muted); max-width: 70ch; }
+
+/* The loop */
+.loop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-weight: 500; }
+.loop span.step { padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); }
+.loop span.arr { color: var(--accent); font-weight: 700; }
+
+/* Swimlanes */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.lanes { display: grid; grid-template-columns: 130px repeat(7, minmax(150px, 1fr)); min-width: 1180px; }
+.lanes > div { padding: 8px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; }
+.lanes .th { font-family: var(--display); font-weight: 700; font-size: 13px; background: var(--bg); display: block; position: sticky; top: 0; z-index: 1; }
+.lanes .th small { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 12px; }
+.lanes .lane { position: sticky; left: 0; z-index: 2; background: var(--panel); border-left: 4px solid var(--c);
+  font-family: var(--display); font-weight: 700; font-size: 14px; display: block; }
+.lanes .lane small { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 11.5px; }
+.lanes .corner { position: sticky; left: 0; z-index: 3; }
+
+/* Chains */
+.chains { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 10px; }
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.chain .arr { color: var(--muted); font-size: 13px; }
+
+/* Tree */
+.tree { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.branch { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 8px; align-content: start; }
+.branch h3 { font-family: var(--display); margin: 0; font-size: 17px; color: var(--evo); }
+.node { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 9px; border: 1.5px dashed var(--evo); border-radius: 6px; }
+.node b { font-weight: 700; }
+.node .cost { font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.node .fx { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
+.node.big { border-style: solid; background: color-mix(in srgb, var(--evo) 14%, transparent); }
+.tier { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 4px; }
+
+/* Materials */
+.mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; }
+.mat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 4px; align-content: start; }
+.mat .nm { font-family: var(--display); font-weight: 700; font-size: 16px; }
+.mat .when { font-size: 12px; color: var(--mat); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.mat p { margin: 0; font-size: 13.5px; color: var(--muted); }
+.stat { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.stat div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+.stat b { font-family: var(--display); font-size: 15px; display: block; }
+.stat .bar { height: 8px; border-radius: 4px; background: var(--line); margin: 8px 0 4px; overflow: hidden; }
+.stat .bar i { display: block; height: 100%; background: var(--accent); }
+.stat small { color: var(--muted); font-variant-numeric: tabular-nums; }
+</style>
+
+<div class="wrap">
+  <div>
+    <h1>Underfoot: the progression map</h1>
+    <p class="lede">Everything in the plan, laid out by play time. Solid chips are in the game today (build 11.6). Dashed chips are planned in <code>docs/PROGRESSION.md</code>. Times are targets for a first play-through; the bots will tune them.</p>
+    <div class="legend">
+      <span><span class="chip b" style="--c:var(--accent)">Built</span></span>
+      <span><span class="chip" style="--c:var(--accent)">Planned</span></span>
+    </div>
+  </div>
+
+  <section>
+    <header><h2>The loop you repeat all game</h2></header>
+    <div class="loop">
+      <span class="step">Explore</span><span class="arr">→</span>
+      <span class="step">Find food, materials, a boss, a rival</span><span class="arr">→</span>
+      <span class="step">Haul, hunt, fight</span><span class="arr">→</span>
+      <span class="step">Spend on eggs, rooms, upgrades, outposts</span><span class="arr">→</span>
+      <span class="step">Reach further</span><span class="arr">→</span>
+      <span class="step">The yard pushes back</span><span class="arr">↺</span>
+    </div>
+  </section>
+
+  <section>
+    <header><h2>The schedule</h2><p>Eight tracks running side by side. Read down a column to see what a player is doing at that point; read across a row to see one track grow. Swipe sideways on a phone.</p></header>
+    <div class="scroll"><div class="lanes" id="lanes"></div></div>
+  </section>
+
+  <section>
+    <header><h2>Unlock chains</h2><p>How the tracks hook together: a boss drops a trophy, the trophy unlocks a caste, and the caste opens ground you couldn't cross before.</p></header>
+    <div class="chains" id="chains"></div>
+  </section>
+
+  <section>
+    <header><h2>The evolution tree</h2><p>Paid in 🧬 Genes, which come from playing: hatching (1 per 10 eggs), scouting new regions, bringing home new things, bosses, goals and rival queens. About 24 nodes; a yard run affords about two-thirds, so every colony differs. Each node has a deed that halves its cost. Nodes can be refunded, except the lineage.</p></header>
+    <div class="tree" id="tree"></div>
+  </section>
+
+  <section>
+    <header><h2>Materials: one new one every 30 to 60 minutes</h2><p>Each has its own way to get it and its own catch, so a new material is a new way of playing.</p></header>
+    <div class="mats" id="mats"></div>
+  </section>
+
+  <section>
+    <header><h2>How far along each track is</h2><p>A rough count of built pieces against the plan.</p></header>
+    <div class="stat" id="stat"></div>
+  </section>
+</div>
+
+<script>
+const COLS = [['0–10 min', 'Founding'], ['10–30 min', 'The home ring'], ['30–60 min', 'First boss, first war'], ['1–2 h', 'The middle yard'], ['2–4 h', 'The outer yard'], ['4–6 h', 'The finale'], ['After', 'Act 2 and beyond']];
+// Each lane: [name, note, colour token, [cells per column]]; a leading * marks a built item.
+const LANES = [
+  ['Territory', 'the map', 'terr', [
+    ['*Land under the rock', '*First crumbs'],
+    ['*Scout the home ring', '*Forager range I–III', 'Waypoints: first outposts', 'Supplied regions'],
+    ['Hold the Flowerbed: berries ×2', 'Hold the Patio: their nest becomes yours', 'Lookout: +2 outposts'],
+    ['Hold Tomato rows, Rock garden, Sandbox', 'First satellite nest', 'Caste gates open'],
+    ['Hold Woodpile, Oak, Hedge, Leaf pile, Trash cans', 'Highways between nests'],
+    ['Wet strip', 'Fire ant country', 'The yard is yours'],
+    ['The yard turns harder', 'The house: porch, kitchen, walls', 'Or a new yard (New Game+)']]],
+  ['Nest', 'rooms and digging', 'nest', [
+    ['*Dig the first chamber', '*Hatchery', '*Food store'],
+    ['*Cistern', '*Workshop', '*Nursery', '*Spoil heap and hauling'],
+    ['*Barracks', 'Venom lab', 'Lookout', 'Hatchery II, Store II'],
+    ['Armory', 'Workshop II: the deep band', 'Royal chamber', 'Tier II rooms'],
+    ['Tier III rooms', 'Gate', 'Honeypot vault', 'Fungus garden', 'Midden'],
+    ['Several nests, each dug out'],
+    ['Nests inside the house']]],
+  ['Population', 'queen and castes', 'pop', [
+    ['*Queen I (20)', '*Foragers', '*Builders'],
+    ['*Queen II (40)', '*Nurses'],
+    ['*Queen III–IV (60–80)', '*Soldiers', '*Venom ants', 'Scouts', 'Caste upgrades tier 1'],
+    ['Queen V (sugar)', 'Majors', 'Armored foragers', 'Master builders', 'Sappers', 'Breeders', 'Upgrades tier 2: first permanent pick'],
+    ['Queen VI (120)', 'Trap-jaws', 'Acid sprayers', 'Night foragers', 'Carpenters', 'Repletes', 'Tier 3: second pick'],
+    ['200–400 ants across nests'],
+    []]],
+  ['Evolution', '🧬 the tech tree', 'evo', [
+    [],
+    ['First 🧬 Genes', 'Waypoints', 'Strong scent'],
+    ['Strong mandibles', 'Trail runners', 'Danger scent', 'Bigger crews 30'],
+    ['Big crop', 'Tough cuticle', 'Majors', 'Rally scent', 'Aphid farming', 'Insulation', 'Royal chamber'],
+    ['Formic spray', 'The lineage pick', 'Night sense', 'Bigger crews 45', 'Honeypot', 'Fungus garden', 'Highways'],
+    ['Hive mind', 'Supercolony'],
+    ['The other third of the tree']]],
+  ['You', 'your ant', 'you', [
+    ['*One forager body', '*Lead crews up to 20'],
+    ['Goals board: 3 goals open', 'Goal sets: Garden, Hunter, Builder, Explorer'],
+    ['Choose your rebirth: scout, soldier, venom ant'],
+    ['Rally marks', 'Crews of 30'],
+    ['Crews of 45', 'Danger and rally scents'],
+    ['Memorial wall'],
+    []]],
+  ['Materials', 'what you haul', 'mat', [
+    ['*🌾 Food', '*💧 Water'],
+    ['*🪨 Stone'],
+    ['*🥩 Protein'],
+    ['🍯 Sugar', '🪲 Chitin'],
+    ['🪵 Wood'],
+    [],
+    ['New house materials']]],
+  ['Bosses', 'each drops a trophy and a key', 'boss', [
+    [],
+    ['Caterpillar (first hunt)'],
+    ['*Wolf spider'],
+    ['Hornworm', 'Ground beetle', 'Antlion queen'],
+    ['Mantis (optional)', 'Wasp nest', 'Roach', 'Centipede', 'Termite queen'],
+    ['Toad (optional)', 'Fire ant queen'],
+    ['House bosses']]],
+  ['Pushback', 'rivals and humans', 'push', [
+    ['*Feet', '*Robins'],
+    ['*Pavement ant raids', '*The mower'],
+    ['Pavement war: kill their queen', 'Odorous house ants wake', 'Notice 25: more feet'],
+    ['Argentine ants spread', 'Notice 50: bait traps'],
+    ['Fire ants raid held ground', 'Notice 75: spray and powder lines'],
+    ['The fire ant war', 'Notice 100: the exterminator'],
+    ['Stronger rivals return', 'Humans at their fiercest indoors']]],
+];
+const chip = (t, c) => { const b = t[0] === '*'; return `<span class="chip${b ? ' b' : ''}" style="--c:var(--${c})">${b ? t.slice(1) : t}</span>`; };
+let h = '<div class="th corner"></div>' + COLS.map(([a, b]) => `<div class="th">${a}<small>${b}</small></div>`).join('');
+for (const [name, note, c, cells] of LANES) {
+  h += `<div class="lane" style="--c:var(--${c})">${name}<small>${note}</small></div>`;
+  h += cells.map((cell) => `<div>${cell.map((t) => chip(t, c)).join('')}</div>`).join('');
+}
+document.getElementById('lanes').innerHTML = h;
+
+// Chains: [boss, trophy-unlock caste, what the caste opens]
+const CHAINS = [
+  ['*Wolf spider', '*Venom ants', 'Kill big things; the Venom lab'],
+  ['Hornworm', 'Master builders', 'Tier III rooms, the deep band'],
+  ['Ground beetle', 'Armored foragers', 'Forage in danger; cross fire-ant ground'],
+  ['Antlion queen', 'Sappers', 'Dig deep sand and stone seams'],
+  ['Wasp nest', 'Acid sprayers', 'Melt silk-choked tunnels'],
+  ['Roach', 'Night foragers', 'Night-only paths: Trash cans, Leaf pile'],
+  ['Centipede', 'Trap-jaws', 'Jump gaps: Rock garden, the Oak roots'],
+  ['Termite queen', 'Carpenters', 'Chew bark; cut 🪵 wood'],
+  ['Mantis or Toad', 'A lineage trophy', 'Counts toward the lineage pick'],
+  ['Fire ant queen', 'The yard', 'The yard turns harder; on to the house'],
+];
+document.getElementById('chains').innerHTML = CHAINS.map(([a, b, c]) =>
+  `<div class="chain">${chip(a, 'boss')}<span class="arr">→</span>${chip(b, 'pop')}<span class="arr">→</span>${chip(c, 'terr')}</div>`).join('');
+
+// Tree: branch → [tier label, [name, cost, effect, big?]]
+const TREE = [
+  ['Bodies: what an ant is', [
+    ['Early', [['Strong mandibles', '🧬2 🥩10', 'Fighters bite 25% harder'], ['Trail runners', '🧬2 🌾30', 'Ants on a scent trail move 25% faster']]],
+    ['Middle', [['Big crop', '🧬3 🍯10', 'Foragers carry 8, not 5'], ['Tough cuticle', '🧬3 🪲10', '50% more health'], ['Majors', '🧬4 🪲20', 'The heavy fighter caste']]],
+    ['Late', [['Formic spray', '🧬4 🥩20', 'Soldiers bite at 2 tiles'], ['Heat tolerance', '🧬3', 'Work through summer heat (with seasons)'], ['Lineage: pick one forever', '🧬8 + 3 trophies', 'Acid (every fighter sprays), Trap-jaw (one-bite kills, jump), or Bullet (stuns bosses)', true]]]]],
+  ['Senses: how the colony thinks', [
+    ['Early', [['Waypoints', '🧬1 🪨10', 'Outposts: the first expansion tool'], ['Strong scent', '🧬2', 'Trails fade half as fast'], ['Danger scent', '🧬2', 'Foragers route round marked danger']]],
+    ['Middle', [['Rally scent', '🧬3', 'Fighters gather to a mark'], ['Bigger crews', '🧬3 / 🧬5', 'Crews of 30, then 45'], ['Lookout', '🧬3 🪨20', 'Scouts; +2 outposts; boss patrols on the map']]],
+    ['Late', [['Night sense', '🧬3', 'Forage at night'], ['Hive mind', '🧬6', 'Idle ants answer the colony\'s biggest need on their own: earned automation', true]]]]],
+  ['Nest: how the colony lives', [
+    ['Early', [['Hatchery II / III', '🧬1 each', 'More eggs at once'], ['Store II / III', '🧬1 each', 'More food stored']]],
+    ['Middle', [['Aphid farming', '🧬2', '🍯 sugar from tended aphids (garden held)'], ['Insulation', '🧬2', 'Rain cave-ins and floods halved'], ['Honeypot vault', '🧬3 🍯20', 'Repletes: living jars']]],
+    ['Late', [['Fungus garden', '🧬4', 'Leaves become food (Leaf pile held)'], ['Royal chamber', '🧬5 🪵20', 'Mating flights and satellite nests'], ['Highways', '🧬5 🪵30', 'Tunnels between nests'], ['Supercolony', 'later', 'Every nest one network', true]]]]],
+];
+document.getElementById('tree').innerHTML = TREE.map(([name, tiers]) => `<div class="branch"><h3>${name}</h3>` +
+  tiers.map(([t, nodes]) => `<div class="tier">${t}</div>` + nodes.map(([n, c, fx, big]) =>
+    `<div class="node${big ? ' big' : ''}"><b>${n}</b><span class="cost">${c}</span><span class="fx">${fx}</span></div>`).join('')).join('') + '</div>').join('');
+
+const MATS = [
+  ['🌾 Food', 'Built · from the start', 'Forage it. Everyone eats it, all the time.'],
+  ['💧 Water', 'Built · from the start', 'Dew lasts a minute; puddles are far.'],
+  ['🪨 Stone', 'Built · 10–30 min', 'Builders fetch pebbles. Heavy, and builders are busy. Pays for rooms and outposts.'],
+  ['🥩 Protein', 'Built · 30–60 min', 'Hunt and haul kills. Needs a squad; meat rots after 3 minutes.'],
+  ['🍯 Sugar', 'Planned · 1–2 h', 'Tend aphids, haul treats. Sticky: draws rivals and thieves.'],
+  ['🪲 Chitin', 'Planned · 1–2 h', 'Haul beetle shells and boss kills. Useless without an Armory.'],
+  ['🪵 Wood', 'Planned · 2–4 h', 'Only Carpenters cut it, and they need the termite queen beaten first.'],
+];
+document.getElementById('mats').innerHTML = MATS.map(([n, w, p]) => `<div class="mat"><span class="nm">${n}</span><span class="when">${w}</span><p>${p}</p></div>`).join('');
+
+const STAT = [
+  ['Territory', 2, 6, 'Exploring and forage range; outposts, held regions and satellites to come'],
+  ['Nest rooms', 6, 14, '6 rooms built; 8 new rooms planned, plus tiers'],
+  ['Castes', 5, 16, '5 castes built of 16'],
+  ['Queen levels', 4, 6, 'Queen I–IV built; V–VI need sugar'],
+  ['Evolution nodes', 0, 24, 'Not started: Genes come first in the build order'],
+  ['Materials', 4, 7, 'Food, water, stone, protein built'],
+  ['Bosses', 1, 11, 'The wolf spider is built'],
+  ['Rivals', 1, 5, 'Pavement ants are built'],
+];
+document.getElementById('stat').innerHTML = STAT.map(([n, a, b, t]) =>
+  `<div><b>${n}</b><div class="bar"><i style="width:${Math.round(a / b * 100)}%"></i></div><small>${a} of ${b} · ${t}</small></div>`).join('');
+</script>
