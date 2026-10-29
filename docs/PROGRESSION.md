@@ -208,6 +208,50 @@ Space is the economy (handoff pillar 7). Bigger and better rooms need bigger poc
 
 This is where the colony specialises without spending evolution points.
 
+### Upgrade trees for every caste (proposed)
+
+The full list, drawn as trees in `progression-map.html`. Level 1 is a boost; levels 2 and 3 add a boost and a permanent pick of one of two abilities. Costs are first guesses. The Forager's three range levels are built (Train foragers); its picks are not.
+
+**Gatherers**
+
+| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
+|---|---|---|---|---|
+| Forager | from the start | Range 55, 10% faster (🌾15) | Range 75, 20% faster (🌾40 🪨10): **Trailblazer** (trails it lays last twice as long) or **Sprinter** (25% faster off a trail) | Range 100, 30% faster (🌾80 🥩10 🪨25): **Pathfinder** (finds food twice as far off a trail) or **Hauler** (two foragers can carry a treat) |
+| Scout | Lookout room | 20% faster (🌾30 🪨10) | Sees 50% further (🌾60 🥩10): **Mapper** (ground it scouts shows its food for 2 minutes) or **Decoy** (draws a bird or spider away, then outruns it) | Never tires (🌾100 🍯15): **Spy** (shows a rival's raid before it leaves home) or **Pioneer** (outposts it builds reach 5 tiles further) |
+| Armored forager | Beetle shell + Armory | Carries 6 (🌾40 🪲5) | 50% more health (🌾60 🪲10): **Shellback** (survives two stomps or pecks) or **Mule** (carries 10) | 20% faster (🌾100 🪲20): **Rearguard** (foragers near it take half damage) or **Bird-proof** (birds ignore it) |
+| Night forager | Roach antenna | 25% faster at night (🌾40 🥩5) | Carries 6 (🌾60 🥩15): **Rain runner** (full speed in rain; never washed away) or **Glow trails** (its trails show on the map at night) | 40% more health (🌾100 🍯15): **Scavenger** (finds dead bugs at night: free 🥩) or **Ghost** (rivals and the roach don't notice it) |
+
+**Diggers**
+
+| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
+|---|---|---|---|---|
+| Builder | from the start | Digs 30% faster (🌾20 🪨10) | Carries 2 spoil loads (🌾50 🪨25): **Shorer** (tunnels near it never cave in) or **Mason** (rooms cost 25% less 🪨) | Builds 50% faster (🌾90 🪨40 🥩10): **Excavator** (digs room pockets twice as fast) or **Field engineer** (builds and repairs outposts in half the time) |
+| Master builder | Hornworm silk + Workshop II | Builds 30% faster (🌾60 🪨30) | 30% more health (🌾80 🪵10): **Architect** (rooms it builds hold 20% more) or **Vaulter** (tier iii rooms cost 30% less 🪵) | Deep band dug 50% faster (🌾120 🪵25): **Fortifier** (rooms it builds never flood) or **Planner** (queue three rooms at once) |
+| Sapper | Antlion jaw | Clay dug 40% faster (🌾50 🪨20) | 40% more health (🌾80 🥩15): **Tunneller** (digs a hidden tunnel out to an outpost) or **Demolisher** (collapses a tunnel onto raiders) | Deep band dug 2× faster (🌾120 🪲10): **Breacher** (digs into rival nests) or **Rescuer** (digs out ants trapped in cave-ins) |
+| Carpenter | Termite queen + Workshop II | Cuts 30% faster (🌾60 🪵5) | Carries 2 wood (🌾90 🪵15): **Woodcutter** (bark walls fall twice as fast) or **Gallery maker** (satellite nests in wood need no digging) | 40% more health (🌾120 🪲15): **Joiner** (gates and highways cost 30% less 🪵) or **Termite bane** (termites flee its trails) |
+
+**Fighters**
+
+| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
+|---|---|---|---|---|
+| Soldier | Barracks | 30% more health (🌾30 🥩5) | Bites 25% harder (🌾60 🥩15): **Doorkeeper** (blocks the entrance alone) or **Escort** (follows and guards foragers) | 20% faster (🌾100 🥩25 🪲5): **Alarm caller** (wakes every idle ant when attacked) or **Phalanx** (bites 50% harder with 3 or more soldiers) |
+| Venom ant | Spider fang | Venom 25% stronger (🥩20) | 30% more health (🌾40 🥩35): **Paralytic** (stung prey slows to half speed) or **Hunter** (kills leave a scent that calls haulers) | Stings faster (🥩60 🍯15): **Neurotoxin** (every fifth sting stuns a boss) or **Lethal dose** (small foes die in one sting) |
+| Acid sprayer | Wasp sting + Venom lab | Range 4 tiles (🥩30 🍯10) | 40% more health (🥩50 🍯20): **Acid cloud** (each spray hits a small area) or **Bird scarer** (birds won't strike near it) | Sprays faster (🥩80 🪲15): **Silk melter** (webs and silk walls melt at once) or **Corrosive** (armored foes take double damage) |
+| Major | Barracks II + 🪲 | 40% more health (🥩20 🪲10) | Bites 30% harder (🥩40 🪲20): **Bulwark** (plugs a tunnel completely) or **Porter** (carries a treat alone at full speed) | 20% faster (🥩70 🪲35): **Crusher** (cracks shells: 2× 🪲 from kills) or **Shield wall** (ants behind it take no damage) |
+| Trap-jaw | Centipede plate + Armory II | Snaps 30% harder (🥩30 🪲10) | Jumps 50% further (🥩50 🪲20): **Snap guard** (kills the first small foe through the door) or **Long jump** (clears two gaps in one jump) | 30% more health (🥩80 🪵10): **Hair trigger** (always bites first) or **Escape artist** (always jumps clear of feet and beaks) |
+
+**Nest and royals**
+
+| Caste | Unlocked by | L1 | L2 (pick one) | L3 (pick one) |
+|---|---|---|---|---|
+| Nurse | Nursery | Eggs hatch 15% faster (🌾20 💧10) | Tends 2 eggs at once (🌾40 💧20): **Wet nurse** (larvae eat 30% less) or **Medic** (heals hurt ants in the nest) | Works 30% faster (🌾70 🍯10): **Brood guard** (fights like a soldier inside the nest) or **Attendant** (the queen lays 20% faster) |
+| Replete | Honeypot vault | Holds 25% more (🍯10) | Holds 25% more again (🍯20 💧20): **Sugar keg** (holds twice the 🍯) or **Water keg** (holds twice the 💧) | Hides in a safe room (🍯40): **Living larder** (feeds ants directly: upkeep −15%) or **Drought store** (never spoils; lasts the winter) |
+| Breeder | Royal chamber + 🍯 | Flies 30% further (🌾60 🍯20) | Founds nests 30% faster (🍯40 🪵10): **Twin queens** (a new nest starts with two queens) or **Swift founding** (a new nest starts with 10 workers) | Survives birds on the way (🍯60 🪵20): **Long flight** (can found a nest on any scouted ground) or **Strong line** (satellite queens start at level ii) |
+
+Caste family lines: Forager → Scout, Armored forager, Night forager. Builder → Master builder, Sapper, Carpenter. Soldier → Venom ant → Acid sprayer, and Soldier → Major → Trap-jaw. Queen → Nurse → Replete, and Queen → Breeder.
+
+Evolution prerequisites: Strong mandibles → Formic spray; Trail runners → Big crop; Tough cuticle → Majors; Waypoints → Lookout; Strong scent → Danger scent → Rally scent → Hive mind; Bigger crews → Bigger crews II; Hatchery II → III; Store II → III; Aphid farming → Honeypot vault; Royal chamber → Highways → Supercolony.
+
 ## Track 4: Evolution (the tech tree)
 
 **The currency is 🧬 Genes,** earned by growing, exploring and hunting, so the tree advances with play, not with waiting:

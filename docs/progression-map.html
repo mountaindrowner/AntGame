@@ -2,9 +2,9 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
-/* Layout: a swimlane schedule (tracks down, play time across), then the unlock chains and the tech tree. Soil palette. */
+/* Layout: family trees of the ants, then one upgrade tree per ant, then the evolution tree, then the schedule. Soil palette. */
 :root {
-  --bg: #eceee6; --panel: #f8f9f4; --fg: #1e1c17; --muted: #5d5a50; --line: #cfd1c5;
+  --bg: #eceee6; --panel: #f8f9f4; --fg: #1e1c17; --muted: #5d5a50; --line: #bfc2b4;
   --accent: #b5760f;
   --terr: #3f7d34; --nest: #8a5a2b; --pop: #b5760f; --evo: #7048a8; --you: #2d6aa3;
   --mat: #1f7f7a; --boss: #b23a2e; --push: #c4571c;
@@ -12,191 +12,351 @@
   --body: "Atkinson Hyperlegible", system-ui, sans-serif;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
-  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #3a372d; --accent: #e3a443;
+  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #4a4639; --accent: #e3a443;
   --terr: #7cc16c; --nest: #c99462; --pop: #e3a443; --evo: #b393e6; --you: #73aee6;
   --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; color-scheme: dark } }
 :root[data-theme="dark"] {
-  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #3a372d; --accent: #e3a443;
+  --bg: #15140f; --panel: #1f1d17; --fg: #ece8dc; --muted: #a49f90; --line: #4a4639; --accent: #e3a443;
   --terr: #7cc16c; --nest: #c99462; --pop: #e3a443; --evo: #b393e6; --you: #73aee6;
   --mat: #5fc8c1; --boss: #ee7466; --push: #f08f55; color-scheme: dark }
 body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 .wrap { max-width: 1400px; margin: 0 auto; padding-block: 28px 60px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: grid; gap: 40px; }
-h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
+  display: grid; gap: 44px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.15; }
 h1 { font-size: clamp(28px, 5vw, 44px); }
-h2 { font-size: 22px; }
-.lede { max-width: 65ch; color: var(--muted); margin: 8px 0 0; }
-.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 14px; font-size: 13px; color: var(--muted); align-items: center; }
+h2 { font-size: 24px; }
+h3 { font-size: 18px; }
+.lede { max-width: 68ch; color: var(--muted); margin: 8px 0 0; }
+nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+nav a { font-family: var(--display); font-weight: 500; font-size: 14px; color: var(--fg); text-decoration: none; padding: 5px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); }
+nav a:hover, nav a:focus-visible { border-color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-top: 12px; font-size: 13px; color: var(--muted); align-items: center; }
 .chip { display: inline-block; font-size: 12.5px; line-height: 1.3; padding: 3px 7px; border-radius: 4px;
   border: 1.5px dashed var(--c, var(--muted)); color: var(--fg); background: transparent; }
 .chip.b { border-style: solid; background: color-mix(in srgb, var(--c, var(--muted)) 22%, transparent); }
-section > header { display: grid; gap: 4px; margin-bottom: 14px; }
-section > header p { margin: 0; color: var(--muted); max-width: 70ch; }
-
-/* The loop */
-.loop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-weight: 500; }
-.loop span.step { padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); }
-.loop span.arr { color: var(--accent); font-weight: 700; }
-
-/* Swimlanes */
+section > header { display: grid; gap: 4px; margin-bottom: 16px; }
+section > header p { margin: 0; color: var(--muted); max-width: 72ch; }
 .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+
+/* Org-chart trees (ul/li with drawn connectors) */
+.ft { padding: 18px 12px 20px; min-width: max-content; }
+.ft ul { position: relative; display: flex; justify-content: center; padding: 20px 0 0; margin: 0; }
+.ft > ul { padding-top: 0; }
+.ft li { list-style: none; position: relative; padding: 20px 6px 0; display: flex; flex-direction: column; align-items: center; }
+.ft li::before, .ft li::after { content: ""; position: absolute; top: 0; right: 50%; width: 50%; height: 20px; border-top: 2px solid var(--line); }
+.ft li::after { right: auto; left: 50%; border-left: 2px solid var(--line); }
+.ft li:only-child::before, .ft li:only-child::after { display: none; }
+.ft li:only-child { padding-top: 0; }
+.ft li:first-child::before, .ft li:last-child::after { border: 0 none; }
+.ft li:last-child::before { border-right: 2px solid var(--line); border-radius: 0 6px 0 0; }
+.ft li:first-child::after { border-radius: 6px 0 0 0; }
+.ft ul ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 20px; border-left: 2px solid var(--line); }
+.ft > ul > li { padding-top: 0; }
+.ft > ul > li::before, .ft > ul > li::after { display: none; }
+.box { display: grid; gap: 1px; justify-items: center; text-align: center; padding: 7px 11px; border: 2px dashed var(--c); border-radius: 7px; background: var(--panel); color: var(--fg); text-decoration: none; max-width: 190px; }
+.box.b { border-style: solid; background: color-mix(in srgb, var(--c) 18%, var(--panel)); }
+.box b { font-family: var(--display); font-size: 15px; }
+.box small { font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+.box .key { font-size: 11px; color: var(--c); font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+a.box:hover, a.box:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+.box.root { border-style: solid; background: var(--c); color: var(--bg); }
+.box.root small { color: var(--bg); opacity: .85; }
+.fams { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; }
+.fam { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.fam h3 { color: var(--c); }
+.fam p { margin: 0; font-size: 13.5px; color: var(--muted); }
+
+/* Per-ant upgrade trees */
+.group { display: grid; gap: 12px; }
+.group > h3 { color: var(--c); font-size: 20px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 10px; align-content: start; scroll-margin-top: 16px; min-width: 0; }
+.card:target { outline: 2px solid var(--c); }
+.card .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.card .top b { font-family: var(--display); font-size: 19px; }
+.card .role { font-size: 13.5px; color: var(--muted); margin: -4px 0 0; }
+.card .unl { font-size: 12.5px; }
+.card .unl span { color: var(--muted); }
+.lv { display: grid; grid-template-columns: 34px 1fr; gap: 0 10px; position: relative; }
+.lv + .lv::before { content: ""; position: absolute; left: 16px; top: -10px; height: 10px; border-left: 2px solid var(--line); }
+.lv .n { width: 34px; height: 34px; border-radius: 50%; border: 2px dashed var(--c); display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 14px; }
+.lv.b .n { border-style: solid; background: color-mix(in srgb, var(--c) 22%, var(--panel)); }
+.lv .body { display: grid; gap: 6px; min-width: 0; }
+.lv .stat { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; align-items: baseline; padding-top: 6px; }
+.cost { font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pick { display: grid; grid-template-columns: 1fr auto 1fr; gap: 6px; align-items: stretch; }
+.pick .or { font-size: 11px; color: var(--muted); align-self: center; text-transform: uppercase; letter-spacing: .06em; }
+.opt { border: 1.5px dashed var(--c); border-radius: 6px; padding: 6px 8px; font-size: 12.5px; line-height: 1.35; min-width: 0; }
+.opt b { display: block; font-size: 13.5px; }
+.picknote { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.queen { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 8px; }
+.ql { border: 2px dashed var(--pop); border-radius: 8px; padding: 8px 10px; display: grid; gap: 2px; }
+.ql.b { border-style: solid; background: color-mix(in srgb, var(--pop) 18%, var(--panel)); }
+.ql b { font-family: var(--display); font-size: 16px; }
+.ql small { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+
+/* Evolution */
+.evo .box { --c: var(--evo); }
+.evo .box .cost { font-size: 11.5px; }
+.tree-wrap { display: grid; gap: 14px; }
+
+/* Schedule */
 .lanes { display: grid; grid-template-columns: 130px repeat(7, minmax(150px, 1fr)); min-width: 1180px; }
 .lanes > div { padding: 8px; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line);
   display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; }
-.lanes .th { font-family: var(--display); font-weight: 700; font-size: 13px; background: var(--bg); display: block; position: sticky; top: 0; z-index: 1; }
+.lanes .th { font-family: var(--display); font-weight: 700; font-size: 13px; background: var(--bg); display: block; }
 .lanes .th small { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 12px; }
 .lanes .lane { position: sticky; left: 0; z-index: 2; background: var(--panel); border-left: 4px solid var(--c);
   font-family: var(--display); font-weight: 700; font-size: 14px; display: block; }
 .lanes .lane small { display: block; font-family: var(--body); font-weight: 400; color: var(--muted); font-size: 11.5px; }
 .lanes .corner { position: sticky; left: 0; z-index: 3; }
-
-/* Chains */
-.chains { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 10px; }
-.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
-.chain .arr { color: var(--muted); font-size: 13px; }
-
-/* Tree */
-.tree { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
-.branch { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 8px; align-content: start; }
-.branch h3 { font-family: var(--display); margin: 0; font-size: 17px; color: var(--evo); }
-.node { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 9px; border: 1.5px dashed var(--evo); border-radius: 6px; }
-.node b { font-weight: 700; }
-.node .cost { font-size: 12.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.node .fx { grid-column: 1 / -1; font-size: 13px; color: var(--muted); }
-.node.big { border-style: solid; background: color-mix(in srgb, var(--evo) 14%, transparent); }
-.tier { font-size: 11.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-top: 4px; }
-
-/* Materials */
+.loop { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-family: var(--display); font-weight: 500; margin-bottom: 14px; }
+.loop span.step { padding: 6px 10px; border: 1.5px solid var(--line); border-radius: 6px; background: var(--panel); }
+.loop span.arr { color: var(--accent); font-weight: 700; }
 .mats { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); gap: 10px; }
 .mat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 4px; align-content: start; }
 .mat .nm { font-family: var(--display); font-weight: 700; font-size: 16px; }
 .mat .when { font-size: 12px; color: var(--mat); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 .mat p { margin: 0; font-size: 13.5px; color: var(--muted); }
-.stat { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
-.stat div { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
-.stat b { font-family: var(--display); font-size: 15px; display: block; }
-.stat .bar { height: 8px; border-radius: 4px; background: var(--line); margin: 8px 0 4px; overflow: hidden; }
-.stat .bar i { display: block; height: 100%; background: var(--accent); }
-.stat small { color: var(--muted); font-variant-numeric: tabular-nums; }
 </style>
 
 <div class="wrap">
   <div>
-    <h1>Underfoot: the progression map</h1>
-    <p class="lede">Everything in the plan, laid out by play time. Solid chips are in the game today (build 11.6). Dashed chips are planned in <code>docs/PROGRESSION.md</code>. Times are targets for a first play-through; the bots will tune them.</p>
+    <h1>Underfoot: ants, upgrades and the tech tree</h1>
+    <p class="lede">Every ant in the plan, what it grows into, and how each one levels up. Solid outlines are in the game today (build 11.6); dashed ones are proposed. Costs are first guesses for the bots to tune.</p>
     <div class="legend">
-      <span><span class="chip b" style="--c:var(--accent)">Built</span></span>
-      <span><span class="chip" style="--c:var(--accent)">Planned</span></span>
+      <span class="chip b" style="--c:var(--accent)">Built</span>
+      <span class="chip" style="--c:var(--accent)">Proposed</span>
     </div>
+    <nav>
+      <a href="#families">Ant family trees</a>
+      <a href="#upgrades">Upgrade tree for each ant</a>
+      <a href="#queen">The queen</a>
+      <a href="#evolution">Evolution tree</a>
+      <a href="#schedule">Schedule</a>
+      <a href="#materials">Materials</a>
+    </nav>
   </div>
 
-  <section>
-    <header><h2>The loop you repeat all game</h2></header>
+  <section id="families">
+    <header><h2>Ant family trees</h2><p>Every new ant grows out of one you already have. The label above each one is what unlocks it: usually a boss's trophy plus a room. Tap an ant to jump to its upgrades.</p></header>
+    <div class="fams" id="fams"></div>
+  </section>
+
+  <section id="upgrades">
+    <header><h2>Upgrade tree for each ant</h2><p>Every ant type has three levels, bought with materials (never 🧬 Genes). Level 1 is a straight boost. Levels 2 and 3 add a boost plus a <b>choice of two abilities</b>. The choice is permanent for that colony, so two players' soldiers end up different.</p></header>
+    <div class="group" id="groups" style="gap:28px"></div>
+  </section>
+
+  <section id="queen">
+    <header><h2>The queen</h2><p>Her level sets how many ants the colony can hold. Each satellite nest's queen adds 20 more.</p></header>
+    <div class="queen" id="queens"></div>
+  </section>
+
+  <section id="evolution" class="evo">
+    <header><h2>Evolution tree</h2><p>Paid in 🧬 Genes plus materials. Genes come from playing: 1 per 10 eggs hatched, 1 per new region, 1 per new kind of thing brought home, 2–5 per boss, 1–2 per goal, 5 per rival queen. Lines show what must come first. About 24 nodes; a yard run affords about two-thirds, so choose. Each node has a deed that halves its cost, and any node can be refunded except the lineage.</p></header>
+    <div class="tree-wrap" id="evo"></div>
+  </section>
+
+  <section id="schedule">
+    <header><h2>When it all arrives</h2><p>The same pieces laid out by play time. Read down a column for what a player is doing then; read across a row to watch one track grow. Swipe sideways on a phone.</p></header>
     <div class="loop">
       <span class="step">Explore</span><span class="arr">→</span>
-      <span class="step">Find food, materials, a boss, a rival</span><span class="arr">→</span>
       <span class="step">Haul, hunt, fight</span><span class="arr">→</span>
       <span class="step">Spend on eggs, rooms, upgrades, outposts</span><span class="arr">→</span>
       <span class="step">Reach further</span><span class="arr">→</span>
       <span class="step">The yard pushes back</span><span class="arr">↺</span>
     </div>
-  </section>
-
-  <section>
-    <header><h2>The schedule</h2><p>Eight tracks running side by side. Read down a column to see what a player is doing at that point; read across a row to see one track grow. Swipe sideways on a phone.</p></header>
     <div class="scroll"><div class="lanes" id="lanes"></div></div>
   </section>
 
-  <section>
-    <header><h2>Unlock chains</h2><p>How the tracks hook together: a boss drops a trophy, the trophy unlocks a caste, and the caste opens ground you couldn't cross before.</p></header>
-    <div class="chains" id="chains"></div>
-  </section>
-
-  <section>
-    <header><h2>The evolution tree</h2><p>Paid in 🧬 Genes, which come from playing: hatching (1 per 10 eggs), scouting new regions, bringing home new things, bosses, goals and rival queens. About 24 nodes; a yard run affords about two-thirds, so every colony differs. Each node has a deed that halves its cost. Nodes can be refunded, except the lineage.</p></header>
-    <div class="tree" id="tree"></div>
-  </section>
-
-  <section>
-    <header><h2>Materials: one new one every 30 to 60 minutes</h2><p>Each has its own way to get it and its own catch, so a new material is a new way of playing.</p></header>
+  <section id="materials">
+    <header><h2>Materials</h2><p>One new material every 30 to 60 minutes, each with its own way to get it and its own catch.</p></header>
     <div class="mats" id="mats"></div>
-  </section>
-
-  <section>
-    <header><h2>How far along each track is</h2><p>A rough count of built pieces against the plan.</p></header>
-    <div class="stat" id="stat"></div>
   </section>
 </div>
 
 <script>
+// DATA
+// Ant families: a tree of {id, name, built, unlock, note, kids}
+const FAMILIES = [
+  { name: 'Gatherers', c: 'terr', note: 'Bring things home. They branch into ants that go further, survive danger, work at night.',
+    tree: { id: 'forager', name: 'Forager', built: true, note: 'from the start', kids: [
+      { id: 'scout', name: 'Scout', unlock: 'Lookout room' },
+      { id: 'armored', name: 'Armored forager', unlock: 'Beetle shell + Armory' },
+      { id: 'night', name: 'Night forager', unlock: 'Roach antenna' }] } },
+  { name: 'Diggers', c: 'nest', note: 'Dig, build, haul spoil. They branch into better builders, faster diggers and wood cutters.',
+    tree: { id: 'builder', name: 'Builder', built: true, note: 'from the start', kids: [
+      { id: 'master', name: 'Master builder', unlock: 'Hornworm silk + Workshop II' },
+      { id: 'sapper', name: 'Sapper', unlock: 'Antlion jaw' },
+      { id: 'carpenter', name: 'Carpenter', unlock: 'Termite queen + Workshop II' }] } },
+  { name: 'Fighters', c: 'boss', note: 'Two lines: the venom line (stings and sprays) and the heavy line (size and jaws). The lineage pick then changes every fighter.',
+    tree: { id: 'soldier', name: 'Soldier', built: true, unlock: 'Barracks', kids: [
+      { id: 'venom', name: 'Venom ant', built: true, unlock: 'Spider fang', kids: [
+        { id: 'acid', name: 'Acid sprayer', unlock: 'Wasp sting + Venom lab' }] },
+      { id: 'major', name: 'Major', unlock: 'Barracks II + 🪲', kids: [
+        { id: 'trapjaw', name: 'Trap-jaw', unlock: 'Centipede plate + Armory II' }] }] } },
+  { name: 'Nest and royals', c: 'pop', note: 'Ants that keep the nest running and the ones that start new nests.',
+    tree: { id: 'queen', name: 'Queen', built: true, note: 'levels I–VI', kids: [
+      { id: 'nurse', name: 'Nurse', built: true, unlock: 'Nursery', kids: [
+        { id: 'replete', name: 'Replete', unlock: 'Honeypot vault' }] },
+      { id: 'breeder', name: 'Breeder', unlock: 'Royal chamber + 🍯' }] } },
+];
+
+// Per-ant upgrades. L: [boost, cost, built?, [pickA, pickB]] ; pick = [name, effect]
+const ANTS = {
+  forager: { role: 'Gathers food and water; lays scent trails.', L: [
+    ['Range 55, 10% faster', '🌾15', true],
+    ['Range 75, 20% faster', '🌾40 🪨10', true, [['Trailblazer', 'Trails it lays last twice as long'], ['Sprinter', '25% faster off a trail']]],
+    ['Range 100, 30% faster', '🌾80 🥩10 🪨25', true, [['Pathfinder', 'Finds food twice as far off a trail'], ['Hauler', 'Two foragers can carry a treat']]]] },
+  scout: { role: 'Explores far and fast; lifts fog as it goes.', L: [
+    ['20% faster', '🌾30 🪨10'],
+    ['Sees 50% further', '🌾60 🥩10', false, [['Mapper', 'Ground it scouts shows its food for 2 minutes'], ['Decoy', 'Draws a bird or spider away, then outruns it']]],
+    ['Never tires', '🌾100 🍯15', false, [['Spy', 'Shows a rival\'s raid before it leaves home'], ['Pioneer', 'Outposts it builds reach 5 tiles further']]]] },
+  armored: { role: 'Forages in danger; survives one stomp or peck.', L: [
+    ['Carries 6', '🌾40 🪲5'],
+    ['50% more health', '🌾60 🪲10', false, [['Shellback', 'Survives two stomps or pecks'], ['Mule', 'Carries 10']]],
+    ['20% faster', '🌾100 🪲20', false, [['Rearguard', 'Foragers near it take half damage'], ['Bird-proof', 'Birds ignore it']]]] },
+  night: { role: 'Forages at night and in rain.', L: [
+    ['25% faster at night', '🌾40 🥩5'],
+    ['Carries 6', '🌾60 🥩15', false, [['Rain runner', 'Full speed in rain; never washed away'], ['Glow trails', 'Its trails show on the map at night']]],
+    ['40% more health', '🌾100 🍯15', false, [['Scavenger', 'Finds dead bugs at night: free 🥩'], ['Ghost', 'Rivals and the roach don\'t notice it']]]] },
+  builder: { role: 'Digs, builds rooms, hauls spoil, holds tunnels up.', L: [
+    ['Digs 30% faster', '🌾20 🪨10'],
+    ['Carries 2 spoil loads', '🌾50 🪨25', false, [['Shorer', 'Tunnels near it never cave in'], ['Mason', 'Rooms cost 25% less 🪨']]],
+    ['Builds 50% faster', '🌾90 🪨40 🥩10', false, [['Excavator', 'Digs room pockets twice as fast'], ['Field engineer', 'Builds and repairs outposts in half the time']]]] },
+  master: { role: 'Builds tier III rooms; digs the deep band; builds 2×.', L: [
+    ['Builds 30% faster', '🌾60 🪨30'],
+    ['30% more health', '🌾80 🪵10', false, [['Architect', 'Rooms it builds hold 20% more'], ['Vaulter', 'Tier III rooms cost 30% less 🪵']]],
+    ['Deep band dug 50% faster', '🌾120 🪵25', false, [['Fortifier', 'Rooms it builds never flood'], ['Planner', 'Queue three rooms at once']]]] },
+  sapper: { role: 'Digs fast through clay and stone; repairs cave-ins at once.', L: [
+    ['Clay dug 40% faster', '🌾50 🪨20'],
+    ['40% more health', '🌾80 🥩15', false, [['Tunneller', 'Digs a hidden tunnel out to an outpost'], ['Demolisher', 'Collapses a tunnel onto raiders']]],
+    ['Deep band dug 2× faster', '🌾120 🪲10', false, [['Breacher', 'Digs into rival nests'], ['Rescuer', 'Digs out ants trapped in cave-ins']]]] },
+  carpenter: { role: 'Chews through bark; the only ant that cuts 🪵 wood.', L: [
+    ['Cuts 30% faster', '🌾60 🪵5'],
+    ['Carries 2 wood', '🌾90 🪵15', false, [['Woodcutter', 'Bark walls fall twice as fast'], ['Gallery maker', 'Satellite nests in wood need no digging']]],
+    ['40% more health', '🌾120 🪲15', false, [['Joiner', 'Gates and Highways cost 30% less 🪵'], ['Termite bane', 'Termites flee its trails']]]] },
+  soldier: { role: 'Fights; guards the door.', L: [
+    ['30% more health', '🌾30 🥩5'],
+    ['Bites 25% harder', '🌾60 🥩15', false, [['Doorkeeper', 'Blocks the entrance alone'], ['Escort', 'Follows and guards foragers']]],
+    ['20% faster', '🌾100 🥩25 🪲5', false, [['Alarm caller', 'Wakes every idle ant when attacked'], ['Phalanx', 'Bites 50% harder with 3 or more soldiers']]]] },
+  venom: { role: 'Kills big things: an 8× sting.', L: [
+    ['Venom 25% stronger', '🥩20'],
+    ['30% more health', '🌾40 🥩35', false, [['Paralytic', 'Stung prey slows to half speed'], ['Hunter', 'Kills leave a scent that calls haulers']]],
+    ['Stings faster', '🥩60 🍯15', false, [['Neurotoxin', 'Every fifth sting stuns a boss'], ['Lethal dose', 'Small foes die in one sting']]]] },
+  acid: { role: 'Fights from 3 tiles away; scares birds off.', L: [
+    ['Range 4 tiles', '🥩30 🍯10'],
+    ['40% more health', '🥩50 🍯20', false, [['Acid cloud', 'Each spray hits a small area'], ['Bird scarer', 'Birds won\'t strike near it']]],
+    ['Sprays faster', '🥩80 🪲15', false, [['Silk melter', 'Webs and silk walls melt at once'], ['Corrosive', 'Armored foes take double damage']]]] },
+  major: { role: 'Heavy fighter; carries treats alone; blocks a tunnel.', L: [
+    ['40% more health', '🥩20 🪲10'],
+    ['Bites 30% harder', '🥩40 🪲20', false, [['Bulwark', 'Plugs a tunnel completely'], ['Porter', 'Carries a treat alone at full speed']]],
+    ['20% faster', '🥩70 🪲35', false, [['Crusher', 'Cracks shells: 2× 🪲 from kills'], ['Shield wall', 'Ants behind it take no damage']]]] },
+  trapjaw: { role: 'Snaps small foes in one bite; jumps clear of feet and gaps.', L: [
+    ['Snaps 30% harder', '🥩30 🪲10'],
+    ['Jumps 50% further', '🥩50 🪲20', false, [['Snap guard', 'Kills the first small foe through the door'], ['Long jump', 'Clears two gaps in one jump']]],
+    ['30% more health', '🥩80 🪵10', false, [['Hair trigger', 'Always bites first'], ['Escape artist', 'Always jumps clear of feet and beaks']]]] },
+  nurse: { role: 'Tends eggs; eggs hatch faster.', L: [
+    ['Eggs hatch 15% faster', '🌾20 💧10'],
+    ['Tends 2 eggs at once', '🌾40 💧20', false, [['Wet nurse', 'Larvae eat 30% less'], ['Medic', 'Heals hurt ants in the nest']]],
+    ['Works 30% faster', '🌾70 🍯10', false, [['Brood guard', 'Fights like a soldier inside the nest'], ['Attendant', 'The queen lays 20% faster']]]] },
+  replete: { role: 'A living jar: the colony\'s store of 🍯 and 💧.', L: [
+    ['Holds 25% more', '🍯10'],
+    ['Holds 25% more again', '🍯20 💧20', false, [['Sugar keg', 'Holds twice the 🍯'], ['Water keg', 'Holds twice the 💧']]],
+    ['Hides in a safe room', '🍯40', false, [['Living larder', 'Feeds ants directly: upkeep −15%'], ['Drought store', 'Never spoils; lasts the winter']]]] },
+  breeder: { role: 'Flies on a mating flight; founds a satellite nest.', L: [
+    ['Flies 30% further', '🌾60 🍯20'],
+    ['Founds nests 30% faster', '🍯40 🪵10', false, [['Twin queens', 'A new nest starts with two queens'], ['Swift founding', 'A new nest starts with 10 workers']]],
+    ['Survives birds on the way', '🍯60 🪵20', false, [['Long flight', 'Can found a nest on any scouted ground'], ['Strong line', 'Satellite queens start at level II']]]] },
+};
+
+const QUEEN = [['I', 20, 'start', true], ['II', 40, '🌾40 🥩10', true], ['III', 60, '🌾80 🥩20 🪨20', true], ['IV', 80, '🌾150 🥩40 🪨40', true], ['V', 100, '🌾250 🥩60 🍯20'], ['VI', 120, '🌾400 🥩90 🍯40']];
+
+// Evolution: branch → tree; node {name, cost, fx, kids}
+const EVO = [
+  { name: 'Bodies', note: 'what an ant is', kids: [
+    { name: 'Strong mandibles', cost: '🧬2 🥩10', fx: 'Fighters bite 25% harder', kids: [{ name: 'Formic spray', cost: '🧬4 🥩20', fx: 'Soldiers bite at 2 tiles' }] },
+    { name: 'Trail runners', cost: '🧬2 🌾30', fx: '25% faster on a scent trail', kids: [{ name: 'Big crop', cost: '🧬3 🍯10', fx: 'Foragers carry 8, not 5' }] },
+    { name: 'Tough cuticle', cost: '🧬3 🪲10', fx: '50% more health', kids: [{ name: 'Majors', cost: '🧬4 🪲20', fx: 'Unlocks the Major (with Barracks II)' }] },
+    { name: 'Heat tolerance', cost: '🧬3', fx: 'Work through summer heat (with seasons)' },
+    { name: 'Lineage: pick one, forever', cost: '🧬8 + 3 trophies', fx: 'Acid: every fighter sprays · Trap-jaw: one-bite kills and a jump · Bullet: a sting that stuns bosses' }] },
+  { name: 'Senses', note: 'how the colony thinks', kids: [
+    { name: 'Waypoints', cost: '🧬1 🪨10', fx: 'Outposts', kids: [{ name: 'Lookout', cost: '🧬3 🪨20', fx: 'Scouts; +2 outposts; boss patrols on the map' }] },
+    { name: 'Strong scent', cost: '🧬2', fx: 'Trails fade half as fast', kids: [{ name: 'Danger scent', cost: '🧬2', fx: 'Foragers route round a danger mark', kids: [{ name: 'Rally scent', cost: '🧬3', fx: 'Fighters gather to a mark', kids: [{ name: 'Hive mind', cost: '🧬6', fx: 'Idle ants answer the colony\'s biggest need on their own' }] }] }] },
+    { name: 'Bigger crews', cost: '🧬3', fx: 'Crews of 30', kids: [{ name: 'Bigger crews II', cost: '🧬5', fx: 'Crews of 45' }] },
+    { name: 'Night sense', cost: '🧬3', fx: 'Forage at night' }] },
+  { name: 'Nest', note: 'how the colony lives', kids: [
+    { name: 'Hatchery II', cost: '🧬1 + materials', fx: '3 eggs at once', kids: [{ name: 'Hatchery III', cost: '🧬1 + materials', fx: '5 eggs at once' }] },
+    { name: 'Store II', cost: '🧬1 + materials', fx: '400 food', kids: [{ name: 'Store III', cost: '🧬1 + materials', fx: '1000 food' }] },
+    { name: 'Aphid farming', cost: '🧬2', fx: '🍯 sugar from aphids (garden held)', kids: [{ name: 'Honeypot vault', cost: '🧬3 🍯20', fx: 'Repletes' }] },
+    { name: 'Insulation', cost: '🧬2', fx: 'Cave-ins and floods halved' },
+    { name: 'Fungus garden', cost: '🧬4', fx: 'Leaves become food (Leaf pile held)' },
+    { name: 'Royal chamber', cost: '🧬5 🪵20', fx: 'Breeders, mating flights, satellites', kids: [{ name: 'Highways', cost: '🧬5 🪵30', fx: 'Tunnels between nests', kids: [{ name: 'Supercolony', cost: 'late', fx: 'Every nest one network' }] }] }] },
+];
+// END DATA
+
+const famColor = {};
+for (const f of FAMILIES) (function walk(n) { famColor[n.id] = f.c; famColor[n.id + ':name'] = n; (n.kids || []).forEach(walk); })(f.tree);
+
+const antBox = (n, c, root) => `<a class="box${n.built ? ' b' : ''}${root ? ' root' : ''}" style="--c:var(--${c})" href="#ant-${n.id}">${n.unlock && !root ? `<span class="key">${n.unlock}</span>` : ''}<b>${n.name}</b>${root ? `<small>${n.unlock || n.note}</small>` : ''}</a>`;
+const antTree = (n, c, root) => `<li>${antBox(n, c, root)}${n.kids ? `<ul>${n.kids.map((k) => antTree(k, c)).join('')}</ul>` : ''}</li>`;
+document.getElementById('fams').innerHTML = FAMILIES.map((f) =>
+  `<div class="fam" style="--c:var(--${f.c})"><h3>${f.name}</h3><p>${f.note}</p><div class="scroll"><div class="ft"><ul>${antTree(f.tree, f.c, true)}</ul></div></div></div>`).join('');
+
+const card = (id) => {
+  const a = ANTS[id], n = famColor[id + ':name'], c = famColor[id];
+  const lv = a.L.map(([boost, cost, built, pick], i) => `<div class="lv${built ? ' b' : ''}"><div class="n">L${i + 1}</div><div class="body">
+    <div class="stat"><span>${boost}</span><span class="cost">${cost}</span></div>
+    ${pick ? `<span class="picknote">Pick one, permanent</span><div class="pick"><div class="opt"><b>${pick[0][0]}</b>${pick[0][1]}</div><span class="or">or</span><div class="opt"><b>${pick[1][0]}</b>${pick[1][1]}</div></div>` : ''}
+  </div></div>`).join('');
+  return `<article class="card" id="ant-${id}" style="--c:var(--${c})"><div class="top"><b>${n.name}</b><span class="chip${n.built ? ' b' : ''}" style="--c:var(--${c})">${n.built ? 'Built' : 'Proposed'}</span></div>
+    <p class="role">${a.role}</p><div class="unl"><span>Unlocked by:</span> ${n.unlock || n.note}</div>${lv}</article>`;
+};
+const ids = (n) => [n.id, ...(n.kids || []).flatMap(ids)];
+document.getElementById('groups').innerHTML = FAMILIES.map((f) =>
+  `<div class="group" style="--c:var(--${f.c})"><h3>${f.name}</h3><div class="cards">${ids(f.tree).filter((i) => ANTS[i]).map(card).join('')}</div></div>`).join('');
+
+document.getElementById('queens').innerHTML = QUEEN.map(([l, cap, cost, b]) =>
+  `<div class="ql${b ? ' b' : ''}"><b>Queen ${l}</b><small>Up to ${cap} ants</small><small>${cost}</small></div>`).join('');
+
+const evoBox = (n, root) => root
+  ? `<span class="box root"><b>${n.name}</b><small>${n.note}</small></span>`
+  : `<span class="box"><b>${n.name}</b><small class="cost">${n.cost}</small><small>${n.fx}</small></span>`;
+const evoTree = (n, root) => `<li>${evoBox(n, root)}${n.kids ? `<ul>${n.kids.map((k) => evoTree(k)).join('')}</ul>` : ''}</li>`;
+document.getElementById('evo').innerHTML = EVO.map((b) => `<div class="scroll"><div class="ft"><ul>${evoTree(b, true)}</ul></div></div>`).join('');
+
 const COLS = [['0–10 min', 'Founding'], ['10–30 min', 'The home ring'], ['30–60 min', 'First boss, first war'], ['1–2 h', 'The middle yard'], ['2–4 h', 'The outer yard'], ['4–6 h', 'The finale'], ['After', 'Act 2 and beyond']];
-// Each lane: [name, note, colour token, [cells per column]]; a leading * marks a built item.
 const LANES = [
   ['Territory', 'the map', 'terr', [
     ['*Land under the rock', '*First crumbs'],
-    ['*Scout the home ring', '*Forager range I–III', 'Waypoints: first outposts', 'Supplied regions'],
-    ['Hold the Flowerbed: berries ×2', 'Hold the Patio: their nest becomes yours', 'Lookout: +2 outposts'],
+    ['*Scout the home ring', '*Forager range I–III', 'Waypoints: first outposts'],
+    ['Hold the Flowerbed: berries ×2', 'Hold the Patio', 'Lookout: +2 outposts'],
     ['Hold Tomato rows, Rock garden, Sandbox', 'First satellite nest', 'Caste gates open'],
     ['Hold Woodpile, Oak, Hedge, Leaf pile, Trash cans', 'Highways between nests'],
     ['Wet strip', 'Fire ant country', 'The yard is yours'],
-    ['The yard turns harder', 'The house: porch, kitchen, walls', 'Or a new yard (New Game+)']]],
-  ['Nest', 'rooms and digging', 'nest', [
-    ['*Dig the first chamber', '*Hatchery', '*Food store'],
-    ['*Cistern', '*Workshop', '*Nursery', '*Spoil heap and hauling'],
+    ['The yard turns harder', 'The house', 'Or a new yard']]],
+  ['Nest', 'rooms', 'nest', [
+    ['*Hatchery', '*Food store'], ['*Cistern', '*Workshop', '*Nursery', '*Spoil heap'],
     ['*Barracks', 'Venom lab', 'Lookout', 'Hatchery II, Store II'],
-    ['Armory', 'Workshop II: the deep band', 'Royal chamber', 'Tier II rooms'],
-    ['Tier III rooms', 'Gate', 'Honeypot vault', 'Fungus garden', 'Midden'],
-    ['Several nests, each dug out'],
-    ['Nests inside the house']]],
-  ['Population', 'queen and castes', 'pop', [
-    ['*Queen I (20)', '*Foragers', '*Builders'],
-    ['*Queen II (40)', '*Nurses'],
-    ['*Queen III–IV (60–80)', '*Soldiers', '*Venom ants', 'Scouts', 'Caste upgrades tier 1'],
-    ['Queen V (sugar)', 'Majors', 'Armored foragers', 'Master builders', 'Sappers', 'Breeders', 'Upgrades tier 2: first permanent pick'],
-    ['Queen VI (120)', 'Trap-jaws', 'Acid sprayers', 'Night foragers', 'Carpenters', 'Repletes', 'Tier 3: second pick'],
-    ['200–400 ants across nests'],
-    []]],
-  ['Evolution', '🧬 the tech tree', 'evo', [
-    [],
-    ['First 🧬 Genes', 'Waypoints', 'Strong scent'],
-    ['Strong mandibles', 'Trail runners', 'Danger scent', 'Bigger crews 30'],
-    ['Big crop', 'Tough cuticle', 'Majors', 'Rally scent', 'Aphid farming', 'Insulation', 'Royal chamber'],
-    ['Formic spray', 'The lineage pick', 'Night sense', 'Bigger crews 45', 'Honeypot', 'Fungus garden', 'Highways'],
-    ['Hive mind', 'Supercolony'],
-    ['The other third of the tree']]],
-  ['You', 'your ant', 'you', [
-    ['*One forager body', '*Lead crews up to 20'],
-    ['Goals board: 3 goals open', 'Goal sets: Garden, Hunter, Builder, Explorer'],
-    ['Choose your rebirth: scout, soldier, venom ant'],
-    ['Rally marks', 'Crews of 30'],
-    ['Crews of 45', 'Danger and rally scents'],
-    ['Memorial wall'],
-    []]],
-  ['Materials', 'what you haul', 'mat', [
-    ['*🌾 Food', '*💧 Water'],
-    ['*🪨 Stone'],
-    ['*🥩 Protein'],
-    ['🍯 Sugar', '🪲 Chitin'],
-    ['🪵 Wood'],
-    [],
-    ['New house materials']]],
-  ['Bosses', 'each drops a trophy and a key', 'boss', [
-    [],
-    ['Caterpillar (first hunt)'],
-    ['*Wolf spider'],
-    ['Hornworm', 'Ground beetle', 'Antlion queen'],
-    ['Mantis (optional)', 'Wasp nest', 'Roach', 'Centipede', 'Termite queen'],
-    ['Toad (optional)', 'Fire ant queen'],
-    ['House bosses']]],
+    ['Armory', 'Workshop II', 'Royal chamber', 'Tier II rooms'],
+    ['Tier III rooms', 'Gate', 'Honeypot vault', 'Fungus garden'], ['Several nests'], ['Nests in the house']]],
+  ['Ants', 'castes and upgrades', 'pop', [
+    ['*Queen I', '*Foragers', '*Builders'], ['*Queen II', '*Nurses', 'Level 1 upgrades'],
+    ['*Queen III–IV', '*Soldiers', '*Venom ants', 'Scouts', 'Level 2: first picks'],
+    ['Queen V', 'Majors', 'Armored foragers', 'Master builders', 'Sappers', 'Breeders', 'Level 3: second picks'],
+    ['Queen VI', 'Trap-jaws', 'Acid sprayers', 'Night foragers', 'Carpenters', 'Repletes'], ['200–400 ants'], []]],
+  ['Evolution', '🧬', 'evo', [
+    [], ['First 🧬', 'Waypoints', 'Strong scent'], ['Strong mandibles', 'Trail runners', 'Danger scent', 'Bigger crews'],
+    ['Big crop', 'Tough cuticle', 'Majors', 'Rally scent', 'Aphid farming', 'Royal chamber'],
+    ['Formic spray', 'Lineage pick', 'Night sense', 'Honeypot', 'Highways'], ['Hive mind', 'Supercolony'], ['The rest of the tree']]],
+  ['Bosses', 'trophy + key', 'boss', [
+    [], ['Caterpillar'], ['*Wolf spider'], ['Hornworm', 'Ground beetle', 'Antlion queen'],
+    ['Mantis', 'Wasp nest', 'Roach', 'Centipede', 'Termite queen'], ['Toad', 'Fire ant queen'], ['House bosses']]],
   ['Pushback', 'rivals and humans', 'push', [
-    ['*Feet', '*Robins'],
-    ['*Pavement ant raids', '*The mower'],
-    ['Pavement war: kill their queen', 'Odorous house ants wake', 'Notice 25: more feet'],
-    ['Argentine ants spread', 'Notice 50: bait traps'],
-    ['Fire ants raid held ground', 'Notice 75: spray and powder lines'],
-    ['The fire ant war', 'Notice 100: the exterminator'],
-    ['Stronger rivals return', 'Humans at their fiercest indoors']]],
+    ['*Feet', '*Robins'], ['*Pavement raids', '*The mower'], ['Pavement war', 'Odorous house ants', 'Notice 25'],
+    ['Argentine ants spread', 'Notice 50: bait'], ['Fire ant raids', 'Notice 75: spray'], ['Fire ant war', 'The exterminator'], ['Stronger rivals return']]],
 ];
 const chip = (t, c) => { const b = t[0] === '*'; return `<span class="chip${b ? ' b' : ''}" style="--c:var(--${c})">${b ? t.slice(1) : t}</span>`; };
 let h = '<div class="th corner"></div>' + COLS.map(([a, b]) => `<div class="th">${a}<small>${b}</small></div>`).join('');
@@ -206,62 +366,14 @@ for (const [name, note, c, cells] of LANES) {
 }
 document.getElementById('lanes').innerHTML = h;
 
-// Chains: [boss, trophy-unlock caste, what the caste opens]
-const CHAINS = [
-  ['*Wolf spider', '*Venom ants', 'Kill big things; the Venom lab'],
-  ['Hornworm', 'Master builders', 'Tier III rooms, the deep band'],
-  ['Ground beetle', 'Armored foragers', 'Forage in danger; cross fire-ant ground'],
-  ['Antlion queen', 'Sappers', 'Dig deep sand and stone seams'],
-  ['Wasp nest', 'Acid sprayers', 'Melt silk-choked tunnels'],
-  ['Roach', 'Night foragers', 'Night-only paths: Trash cans, Leaf pile'],
-  ['Centipede', 'Trap-jaws', 'Jump gaps: Rock garden, the Oak roots'],
-  ['Termite queen', 'Carpenters', 'Chew bark; cut 🪵 wood'],
-  ['Mantis or Toad', 'A lineage trophy', 'Counts toward the lineage pick'],
-  ['Fire ant queen', 'The yard', 'The yard turns harder; on to the house'],
-];
-document.getElementById('chains').innerHTML = CHAINS.map(([a, b, c]) =>
-  `<div class="chain">${chip(a, 'boss')}<span class="arr">→</span>${chip(b, 'pop')}<span class="arr">→</span>${chip(c, 'terr')}</div>`).join('');
-
-// Tree: branch → [tier label, [name, cost, effect, big?]]
-const TREE = [
-  ['Bodies: what an ant is', [
-    ['Early', [['Strong mandibles', '🧬2 🥩10', 'Fighters bite 25% harder'], ['Trail runners', '🧬2 🌾30', 'Ants on a scent trail move 25% faster']]],
-    ['Middle', [['Big crop', '🧬3 🍯10', 'Foragers carry 8, not 5'], ['Tough cuticle', '🧬3 🪲10', '50% more health'], ['Majors', '🧬4 🪲20', 'The heavy fighter caste']]],
-    ['Late', [['Formic spray', '🧬4 🥩20', 'Soldiers bite at 2 tiles'], ['Heat tolerance', '🧬3', 'Work through summer heat (with seasons)'], ['Lineage: pick one forever', '🧬8 + 3 trophies', 'Acid (every fighter sprays), Trap-jaw (one-bite kills, jump), or Bullet (stuns bosses)', true]]]]],
-  ['Senses: how the colony thinks', [
-    ['Early', [['Waypoints', '🧬1 🪨10', 'Outposts: the first expansion tool'], ['Strong scent', '🧬2', 'Trails fade half as fast'], ['Danger scent', '🧬2', 'Foragers route round marked danger']]],
-    ['Middle', [['Rally scent', '🧬3', 'Fighters gather to a mark'], ['Bigger crews', '🧬3 / 🧬5', 'Crews of 30, then 45'], ['Lookout', '🧬3 🪨20', 'Scouts; +2 outposts; boss patrols on the map']]],
-    ['Late', [['Night sense', '🧬3', 'Forage at night'], ['Hive mind', '🧬6', 'Idle ants answer the colony\'s biggest need on their own: earned automation', true]]]]],
-  ['Nest: how the colony lives', [
-    ['Early', [['Hatchery II / III', '🧬1 each', 'More eggs at once'], ['Store II / III', '🧬1 each', 'More food stored']]],
-    ['Middle', [['Aphid farming', '🧬2', '🍯 sugar from tended aphids (garden held)'], ['Insulation', '🧬2', 'Rain cave-ins and floods halved'], ['Honeypot vault', '🧬3 🍯20', 'Repletes: living jars']]],
-    ['Late', [['Fungus garden', '🧬4', 'Leaves become food (Leaf pile held)'], ['Royal chamber', '🧬5 🪵20', 'Mating flights and satellite nests'], ['Highways', '🧬5 🪵30', 'Tunnels between nests'], ['Supercolony', 'later', 'Every nest one network', true]]]]],
-];
-document.getElementById('tree').innerHTML = TREE.map(([name, tiers]) => `<div class="branch"><h3>${name}</h3>` +
-  tiers.map(([t, nodes]) => `<div class="tier">${t}</div>` + nodes.map(([n, c, fx, big]) =>
-    `<div class="node${big ? ' big' : ''}"><b>${n}</b><span class="cost">${c}</span><span class="fx">${fx}</span></div>`).join('')).join('') + '</div>').join('');
-
 const MATS = [
   ['🌾 Food', 'Built · from the start', 'Forage it. Everyone eats it, all the time.'],
   ['💧 Water', 'Built · from the start', 'Dew lasts a minute; puddles are far.'],
-  ['🪨 Stone', 'Built · 10–30 min', 'Builders fetch pebbles. Heavy, and builders are busy. Pays for rooms and outposts.'],
+  ['🪨 Stone', 'Built · 10–30 min', 'Builders fetch pebbles. Heavy, and builders are busy.'],
   ['🥩 Protein', 'Built · 30–60 min', 'Hunt and haul kills. Needs a squad; meat rots after 3 minutes.'],
-  ['🍯 Sugar', 'Planned · 1–2 h', 'Tend aphids, haul treats. Sticky: draws rivals and thieves.'],
-  ['🪲 Chitin', 'Planned · 1–2 h', 'Haul beetle shells and boss kills. Useless without an Armory.'],
-  ['🪵 Wood', 'Planned · 2–4 h', 'Only Carpenters cut it, and they need the termite queen beaten first.'],
+  ['🍯 Sugar', 'Proposed · 1–2 h', 'Tend aphids, haul treats. Sticky: draws rivals and thieves.'],
+  ['🪲 Chitin', 'Proposed · 1–2 h', 'Haul beetle shells and boss kills. Useless without an Armory.'],
+  ['🪵 Wood', 'Proposed · 2–4 h', 'Only Carpenters cut it, after the termite queen falls.'],
 ];
 document.getElementById('mats').innerHTML = MATS.map(([n, w, p]) => `<div class="mat"><span class="nm">${n}</span><span class="when">${w}</span><p>${p}</p></div>`).join('');
-
-const STAT = [
-  ['Territory', 2, 6, 'Exploring and forage range; outposts, held regions and satellites to come'],
-  ['Nest rooms', 6, 14, '6 rooms built; 8 new rooms planned, plus tiers'],
-  ['Castes', 5, 16, '5 castes built of 16'],
-  ['Queen levels', 4, 6, 'Queen I–IV built; V–VI need sugar'],
-  ['Evolution nodes', 0, 24, 'Not started: Genes come first in the build order'],
-  ['Materials', 4, 7, 'Food, water, stone, protein built'],
-  ['Bosses', 1, 11, 'The wolf spider is built'],
-  ['Rivals', 1, 5, 'Pavement ants are built'],
-];
-document.getElementById('stat').innerHTML = STAT.map(([n, a, b, t]) =>
-  `<div><b>${n}</b><div class="bar"><i style="width:${Math.round(a / b * 100)}%"></i></div><small>${a} of ${b} · ${t}</small></div>`).join('');
 </script>
