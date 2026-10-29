@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 29: sound effects, the first batch (build 11.3)
+
+The plan is `docs/SOUND.md`. Built so far:
+
+- **An engine with no audio files** (`audio/sfx.js`): every sound is synthesized with Web Audio from a few blocks (blip, chirp, puff, thump, grain), like the film's score.
+- **Rules for every sound:**
+  - Heard from where it happens: panned, fading with distance from the camera, and quieter from inside the nest. Warnings stay audible from anywhere.
+  - A cooldown and a cap on copies at once, and a small random pitch and volume change on each play.
+  - Sound starts on the first tap, as browsers require.
+- **The sim knows nothing of sound.** `audio/watch.js` compares the game each frame with the frame before, plus the sim's new events, and plays what changed: a pickup, an egg, a stomp, a toad's tongue. Loops (rain, the mower, the spider's menace, fire ants) are set to a level every frame and fall silent behind the title screen.
+- **About 50 sounds,** covering most of the chart's priority-1 batch: buttons, your ant, the colony's key moments, rain, and every danger's warning and hit. The list is in `SOUND.md`.
+- **Options:** Sound on/off covers them. Separate Music and Effects volumes come with the music.
+
 ## Oct 29: less reading, and names on the buttons (build 11.2)
 
 Mark: "All the instructions and stuff tend to be a lot of text… we don't want to create reading fatigue." And: "text that revolves around the buttons… on the bottom of the screen."

@@ -4,7 +4,7 @@ Mark's wish list after build 11 (Oct 28), not started. Grouped by area, in his w
 
 ## Sound
 
-- **Charted:** every sound the game needs and how to make each one is in [`SOUND.md`](SOUND.md). Next is to build it, in that page's order: the engine, then the priority-1 batch, ambience and music, then polish.
+- **Charted** in [`SOUND.md`](SOUND.md), and the **first batch is built** (11.3). Next: ambience beds, the music layers, then priority 2 and 3 polish.
 
 ## Look and feel
 

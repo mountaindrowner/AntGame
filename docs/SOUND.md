@@ -1,6 +1,6 @@
 # Sound
 
-Status: **charted, not built.** Mark: "We need sound effects for almost everything… We can first chart out everything in the game and what sounds they make, and then we can chart out how to make those sounds." This page is both charts. Each row is one sound: when it plays (the hook in the code), what it should sound like, and how to make it.
+Status: **the engine and the first batch are built** (build 11.3): `game/src/audio/sfx.js` holds the engine and the recipes, `audio/watch.js` decides what plays. Most priority-1 rows play; the few still to do are listed under "Build order". Priority 2 and 3, the ambience and the music are next. Originally charted, not built. Mark: "We need sound effects for almost everything… We can first chart out everything in the game and what sounds they make, and then we can chart out how to make those sounds." This page is both charts. Each row is one sound: when it plays (the hook in the code), what it should sound like, and how to make it.
 
 ## How every sound is made
 
@@ -134,6 +134,23 @@ Charted here too. The plan is a few loops built from the film's instruments, so 
 - **Quiet by default** and ducked under big effects, with its own volume in Options.
 
 ## Build order
+
+Done in 11.3: the engine (unlocked by the first tap; panned and faded by distance; caps, cooldowns and pitch variation; Sound on/off in Options) and these priority-1 sounds:
+
+- **Buttons:** taps, the trail toggle, the explainer chime, the "too heavy" bonk.
+- **Your ant:** pick up, drop, deliver, recruit pips, release, lift, entering and leaving the nest, dying, hatching as you.
+- **The colony:** the queen digging, building the nest, placing and finishing a room, laying, hatching, the queen upgrade, a cave-in, starving, a treat landing.
+- **Dangers:**
+  - the spider's menace, bite and death, and the caterpillar's death
+  - the raid drums and the queen alarm
+  - winning and losing
+  - the mower; feet (whoosh, then stomp); robins (wings, chirp, pecks)
+  - toads (croak, tongue); acorns (whistle, bonk); bug spray (hiss); fire ants (crackle)
+- **Weather:** rain.
+
+Not in 11.3 from priority 1: the separate Music and Effects volumes (only on/off so far), and the "can't do that" bonk on disabled buttons (only "too heavy" plays it).
+
+The plan from here:
 
 1. The sound engine:
    - a shared `Sfx` module (`game/src/audio/`), unlocked by the first tap like the film

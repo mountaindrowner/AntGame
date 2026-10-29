@@ -3,6 +3,7 @@
 // the state now lives on the shared `app` object.
 import SIM from '../sim/sim.js';
 import { EXPL, HELP, INTRO } from './copy.js';
+import { sfx } from '../audio/sfx.js';
 import { YARD_MAP } from '../sim/yard.js';
 import { ICONS } from './icons.js';
 import { MapView } from './mapView.js';
@@ -91,6 +92,7 @@ export function createUI(app) {
     if (s.seen[key] || app.menu === 'info') return;
     s.seen[key] = true;
     const [t, b] = EXPL[key];
+    sfx.play('explainer');
     app.menu = 'info';
     el.sheet.classList.remove('hidden');
     el.sheet.innerHTML = `<div class="row head"><strong>${t}</strong></div><div class="h">${b}</div><div class="btns one"><button data-close="1" class="primary">Got it</button></div>`;

@@ -7,6 +7,8 @@ import { SurfaceView } from './render/views/surfaceView.js';
 import { NestView } from './render/views/nestView.js';
 import { createUI } from './ui/ui.js';
 import { TitleMenu, loadOptions } from './ui/title.js';
+import { sfx } from './audio/sfx.js';
+import { soundWatch, tapSounds } from './audio/watch.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
 import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED } from './game/save.js';
@@ -190,7 +192,11 @@ app.openTitle = () => title.open();
 // Graphics: Auto starts sharp and may step down; Sharp and Fast are fixed.
 function applyOptions() {
   pipeline.setQuality(app.opts.graphics === 'fast' ? 2 : 0);
+  sfx.setOn(app.opts.sound !== false);
 }
+// Game sounds (audio/): what changed each frame, and button taps.
+const hear = soundWatch(app, views);
+tapSounds();
 
 let cssW = 0, cssH = 0;
 // How much of the screen the HUD covers, so cameras can centre in the rest.
@@ -256,9 +262,13 @@ function frame(now) {
     requestAnimationFrame(frame);
     return;
   }
+  let newEvents = [];
+  const evSeen = s.events.length;
   if (!app.paused) {
     acc += dt;
     while (acc >= STEP) { snapshot(s); SIM.tick(s, STEP); acc -= STEP; }
+    // New sim events this frame (before the HUD's explainers take them).
+    newEvents = s.events.slice(evSeen);
     clock += dt;
   } else acc = 0;
   if (s.player.inNest !== wasInNest) {
@@ -278,6 +288,8 @@ function frame(now) {
   view.update(app, clock, pipeline.aspect);
   pipeline.render(view.scene, view.camera);
   restore();
+  if (!app.titleOpen) hear(s, newEvents);
+  else hear.quiet();
   // One map photo a frame, for regions just built.
   if (photoQ.length && view === views.surface && !shot.busy) { const i = photoQ.shift(); if (built(i)) app.photoRegion(i, false); }
   if (app.view === 'nest') {
@@ -315,4 +327,4 @@ requestAnimationFrame(frame);
 // For automated tests and debugging in the console.
 // filmStep(dt) advances the opening film by exactly dt and draws it, for recording.
 const filmStep = (dt) => { if (!cine) return false; clock += dt; views.surface.update(app, clock, pipeline.aspect); cine.step(dt); if (cine) cine.render(); return !!cine; };
-window.UNDERFOOT = { app, SIM, views, pipeline, ui, renderScoreWav, filmStep };
+window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, filmStep };

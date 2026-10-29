@@ -56,7 +56,11 @@ game/
 │   │   ├── ui.js           HUD, hints, queen and build sheets, explainers, intro, buttons
 │   │   ├── copy.js         every player-facing string (verbatim from build 6)
 │   │   ├── labels.js       crisp room and band labels over the 3D frame
+│   │   ├── title.js        the title screen and main menu, and the options
 │   │   └── ui.css
+│   ├── audio/
+│   │   ├── sfx.js          game sound effects, synthesized (docs/SOUND.md): blocks, recipes, loops
+│   │   └── watch.js        what plays: compares the game frame to frame, plus button taps
 │   ├── intro/
 │   │   ├── cinematic.js    the opening film: shots, title cards, actors, timeline
 │   │   └── sound.js        its WebAudio score and sound gags
