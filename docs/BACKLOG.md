@@ -4,12 +4,7 @@ Mark's wish list after build 11 (Oct 28), not started. Grouped by area, in his w
 
 ## Sound
 
-- **Music** while playing.
-- **Sound effects for almost everything**, not a few random ones: rain, digging, building, picking up, feet, birds, the mower, fights, the queen laying, buttons…
-- **Plan in two steps:**
-  1. Chart everything in the game and the sound each thing makes.
-  2. Chart how to make each sound.
-- Notes: the film's score and effects are already synthesized in code (`intro/sound.js`, Web Audio). The same approach would cover the game with no audio files to license or ship. The first chart can be built from the sim's events and messages, plus the UI's buttons.
+- **Charted:** every sound the game needs and how to make each one is in [`SOUND.md`](SOUND.md). Next is to build it, in that page's order: the engine, then the priority-1 batch, ambience and music, then polish.
 
 ## Look and feel
 
