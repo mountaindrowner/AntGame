@@ -7,6 +7,7 @@ An ant-colony game inspired by SimAnt: you are the mind of the colony, one body 
 - **[`docs/YARD.md`](docs/YARD.md)**: the yard as built (all 70 regions out to the fence, at double scale, loaded a region at a time), the map, and what comes next.
 - **[`docs/SOUND.md`](docs/SOUND.md)**: every sound and music track the game needs, and how each is synthesized (charted, not built yet).
 - **[`docs/BACKLOG.md`](docs/BACKLOG.md)**: Mark's wish list, not started yet: title screen, music and sound, look and feel, readability, gameplay.
+- **[`docs/PROGRESSION.md`](docs/PROGRESSION.md)**: the progression design (proposal): five growth tracks, the tech tree, bosses and trophies, rivals that spread, the humans' Notice, pacing over the first hours.
 - **[`docs/DEPTH.md`](docs/DEPTH.md)**: the design direction: the colony fights to survive, choices pay off, the power ladder.
 - **[`game/`](game/)**: the game. Build 6's simulation with a PS1-style Three.js renderer. `cd game && npm install && npm run dev`. See [`game/README.md`](game/README.md).
 - **[`prototype/`](prototype/)**: build 6 as handed off (frozen reference), a single HTML page with a DOM-free `sim.js`. Open `prototype/underfoot-poc.html` on a phone. Rebuild it with `cat page-head.html sim.js app.js page-tail.html > underfoot-poc.html`, then smoke-test with `node prototype/smoke-test.js`.

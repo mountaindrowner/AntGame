@@ -24,6 +24,8 @@ Mark's direction (Oct 26): "The colony is striving to survive. It's a fight. And
 | 3. Choices that cost | Room upgrades with exclusive branches; space limits; queen upgrades that change abilities, not just the cap | Later |
 | 4. Adventure | Fog over unscouted ground, scouting, second nest sites, nuptial flights, tier 2 areas | Later |
 
+The full plan for slices 2–4 (and beyond) is [`PROGRESSION.md`](PROGRESSION.md).
+
 ## Targets the playtest bot checks
 
 `node game/scripts/playtest.mjs <strategy> <seed> <minutes>` plays through the UI's actions.
