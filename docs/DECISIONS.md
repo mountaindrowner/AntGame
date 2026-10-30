@@ -2,6 +2,14 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 30: three progression decisions
+
+Mark, on the open questions in `PROGRESSION.md`: "No. Yes. House inside."
+
+- **No seasons.** The year-of-four-seasons layer is shelved. Anything that leaned on it (summer heat, winter stores, hibernation) gets another reason or goes.
+- **Three great evolutions per colony**, out of twelve, as proposed.
+- **After the yard comes the house**, the original plan's Act 2: the edges (sidewalk, driveway, porch, doormat), then the ground floor (kitchen, pantry, bathroom), then the deep house (walls, basement, attic). No separate New Game+ for now.
+
 ## Oct 30: no more lines across the ground, softer footsteps (build 12.1)
 
 Mark, playing on his iPhone: dark horizontal lines across the yard as he walks, and "the walking audio is too crisp and sharp. Maybe more muted and low to mid and rounded."

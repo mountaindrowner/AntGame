@@ -557,7 +557,7 @@ After the yard:
 - **A new property (New Game+):** a mating flight to the next yard, carrying one trait.
 - **Endless:** the years go on, each one harder (with seasons).
 
-## Seasons (a big optional layer)
+## Seasons (shelved: Mark said no, Oct 30)
 
 A year of four seasons, about 12–15 minutes each:
 
@@ -607,11 +607,11 @@ Each step is a few pieces, playable on its own:
 
 ## Decisions for Mark
 
-1. **Seasons:** yes or no, and how long a year?
+1. **Seasons:** decided Oct 30: **no.** The seasons section is shelved; nodes that need seasons (Heat tolerance's summer, winter stores) are reworded or dropped when built.
 2. **The tech tree's currency:** 🧬 Genes earned by growing, exploring and hunting (proposed), or research done in a room over time?
 3. **Claiming the map:** outposts first, then satellite nests (proposed)?
-4. **After the yard:** into the house (the original plan), a new yard (New Game+), or both?
+4. **After the yard:** decided Oct 30: **the house** (Act 2: the edges, then the ground floor, then the deep house).
 5. **How big a colony?** Hundreds of ants across several nests (proposed), or keep it to one nest of about 100?
 6. **Permanent choices.** Proposed, after the research: the lineage pick plus the caste upgrades' pick-one-of-two abilities, as in Empires of the Undergrowth. Too many, too few, or right?
-7. **Great evolutions:** three per colony out of twelve (proposed), or more or fewer?
+7. **Great evolutions:** decided Oct 30: **yes, three per colony** out of twelve.
 8. **Veterans:** a doctrine per ant type (proposed), or also let the player pick promotions by hand for named Elites?
