@@ -343,8 +343,21 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'pit': {
-        const p = l;
-        decals.push(paint(at(new THREE.CircleGeometry(p.r * T + 6 * S, 14, 0, Math.PI * 2).rotateX(-Math.PI / 2), p.x * T, 0, p.y * T), (x, y, z) => { const d = Math.hypot(x - p.x * T, z - p.y * T) / (p.r * T + 6 * S); return d < 0.25 ? '#3a2c1c' : d < 0.55 ? '#7a6446' : d < 0.8 ? '#a8926a' : '#bca880'; }));
+        // An antlion's funnel (build 14): a raised rim of sand, a slope with
+        // grains streaking down it, a dark hole, and the antlion's jaws.
+        const p = l, R = p.r * T, cx = p.x * T, cz = p.y * T, H = Math.max(5, R * 0.22);
+        const prof = [[0, 0.4], [R * 0.12, 0.5], [R * 0.35, H * 0.35], [R * 0.7, H * 0.8], [R * 0.95, H], [R * 1.1, H * 0.8], [R * 1.35, 0.2]].reverse().map(([x, y]) => new THREE.Vector2(x, y)); // outside in, so the faces look up
+        const cone = new THREE.LatheGeometry(prof, 24);
+        parts.push(paint(at(cone, cx, 0, cz), (x, y, z) => {
+          const d = Math.hypot(x - cx, z - cz) / R, a = Math.atan2(z - cz, x - cx);
+          if (d < 0.14) return '#1c140c';
+          if (d < 0.95) return Math.sin(a * 11 + d * 3) > 0.55 ? '#9c8258' : d < 0.4 ? '#8a7048' : '#b89c6c';
+          return d < 1.05 ? '#e2cc98' : '#c8b07c';
+        }));
+        for (const side of [-1, 1]) {
+          const jaw = new THREE.ConeGeometry(0.9, R * 0.22, 4).rotateZ(side * 0.5).rotateX(-0.6);
+          parts.push(paint(at(jaw, cx + side * R * 0.05, 1.2, cz), '#4a2e18'));
+        }
         break;
       }
       case 'can': {

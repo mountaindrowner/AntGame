@@ -75,7 +75,7 @@ export function soundWatch(app, views) {
       if (now.store && !p.store) sfx.play('ding');
       if (now.antlion > p.antlion) sfx.play('snap');
       if (p.rain && !now.rain) sfx.play('drips');
-      if (now.rain && Math.random() < 0.002) sfx.play('thunder');
+      if (now.rain && Math.random() < 0.0015) sfx.play('thunder', null, Math.random() * 0.6);
     }
     // The sim's events this frame.
     for (const e of events) {
@@ -86,6 +86,8 @@ export function soundWatch(app, views) {
       else if (e === 'queenhit') sfx.play('queenHit');
       else if (e === 'dew') sfx.play('twinkle');
       else if (e === 'bighaul') sfx.play('cheer');
+      else if (e === 'rainsoon') sfx.play('thunder', null, 0.85);
+      else if (e === 'rain') setTimeout(() => sfx.play('thunder', null, 0.2), 600);
     }
     // Visitors: a warning when one arrives, then its hit, pecks and exit.
     for (const st of s.strikes || []) {

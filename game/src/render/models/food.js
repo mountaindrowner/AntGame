@@ -208,8 +208,13 @@ function blade() {
   for (let i = 0; i < p.count; i++) { const y = p.getY(i); p.setXYZ(i, p.getX(i), y, p.getZ(i) + y * y * 0.12); }
   return bake([paint(g, (x, y) => (y > 2.5 ? '#7aa846' : '#4f7a2e'))]);
 }
+// A puddle (build 14): a lumpy pool in rings, deep blue in the middle,
+// shallow and bright at the shore, with a dark wet-mud edge. Flat rings
+// (each one colour) so the faces don't streak.
 function puddle() {
-  return bake([paint(new THREE.CylinderGeometry(1, 1, 0.08, 16), (x, y, z) => { const r = Math.hypot(x, z); return r > 0.88 ? '#bfe6ff' : r > 0.55 ? '#5ab0f0' : '#3a8ee0'; })]);
+  const lump = (g, y) => { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), a = Math.atan2(z, x), k = 1 + 0.12 * Math.sin(a * 3 + 1.3) + 0.07 * Math.sin(a * 5 + 0.4); p.setXYZ(i, x * k, y, z * k); } return g; };
+  const ring = (r0, r1, y, col) => paint(lump(r0 ? new THREE.RingGeometry(r0, r1, 32, 1).rotateX(-Math.PI / 2) : new THREE.CircleGeometry(r1, 32).rotateX(-Math.PI / 2), y), col);
+  return bake([ring(1.0, 1.14, 0.02, '#3e3020'), ring(0.9, 1.0, 0.05, '#bfe4f6'), ring(0.68, 0.9, 0.06, '#6fb2e6'), ring(0.4, 0.68, 0.07, '#3f86d0'), ring(0, 0.4, 0.08, '#2a6ab8')]);
 }
 
 export const FOOD = {

@@ -128,6 +128,8 @@ export class NestView {
     // Few, soft stones: a busy high-contrast fleck across the whole cutaway tires the eye.
     this.soilMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(3 + i, ramp, { size: 32, stones: [2, 3, 1][i], stone: [shade(ramp[1], 1.25), shade(ramp[2], 1.35)], repeat: [1 / 48, 1 / 48] }) }));
     this.sideMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(13 + i, ramp.map((c) => shade(c, 0.5)), { size: 16, repeat: [1 / 24, 1 / 24] }) }));
+    // Beyond the cutaway (build 14): the same soil bands carry on, a little darker, so zooming out shows ground, not a box's edge.
+    this.beyondMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(23 + i, ramp.map((c) => shade(c, 0.78)), { size: 32, stones: [2, 3, 1][i], stone: [shade(ramp[1], 0.95), shade(ramp[2], 1.05)], repeat: [1 / 48, 1 / 48] }) }));
     this.soil = new THREE.Group();
     this.scene.add(this.soil);
 
@@ -138,17 +140,20 @@ export class NestView {
     );
     this.scene.add(back);
     // Grass lip along the surface, and sky behind.
-    const grass = new THREE.Mesh(new THREE.BoxGeometry(NW * T + 40, 5, DEPTH + 10).translate((NW * T) / 2, 2.5, -DEPTH / 2), psx({ map: rampTexture(9, PALETTE.grass, { size: 16, repeat: [20, 1] }) }));
+    const grass = new THREE.Mesh(new THREE.BoxGeometry(NW * T + 6000, 5, DEPTH + 10).translate((NW * T) / 2, 2.5, -DEPTH / 2), psx({ map: rampTexture(9, PALETTE.grass, { size: 16, repeat: [20 * (NW * T + 6000) / (NW * T + 40), 1] }) }));
     this.scene.add(grass);
-    const sideDirt = psx({ map: rampTexture(4, PALETTE.soil[0], { size: 32, repeat: [1 / 48, 1 / 48] }) });
-    // Solid ground either side of and under the cutaway.
-    for (const sx of [-1, 1]) {
-      const slab = new THREE.Mesh(new THREE.BoxGeometry(400, NH * T + 400, DEPTH + 10), sideDirt);
-      slab.position.set(sx < 0 ? -200 : NW * T + 200, -(NH * T + 400) / 2, -DEPTH / 2 - 5);
-      this.scene.add(slab);
+    // Solid ground either side of and under the cutaway, in the same bands.
+    const W2 = 3000, edges = [0, SOIL_TOP[1] * T, SOIL_TOP[2] * T, NH * T + 1500];
+    for (let i = 0; i < 3; i++) {
+      const h = edges[i + 1] - edges[i];
+      for (const sx of [-1, 1]) {
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(W2, h, DEPTH + 10), this.beyondMats[i]);
+        slab.position.set(sx < 0 ? -W2 / 2 : NW * T + W2 / 2, -edges[i] - h / 2, -DEPTH / 2 - 5);
+        this.scene.add(slab);
+      }
     }
-    const under = new THREE.Mesh(new THREE.BoxGeometry(NW * T, 400, DEPTH + 10), psx({ map: rampTexture(5, PALETTE.soil[2], { size: 32, repeat: [1 / 48, 1 / 48] }) }));
-    under.position.set((NW * T) / 2, -NH * T - 200, -DEPTH / 2 - 5);
+    const under = new THREE.Mesh(new THREE.BoxGeometry(NW * T, 1500, DEPTH + 10), this.beyondMats[2]);
+    under.position.set((NW * T) / 2, -NH * T - 750, -DEPTH / 2 - 5);
     this.scene.add(under);
 
     this.dyn = new THREE.Group();
@@ -481,7 +486,8 @@ export class NestView {
     const fy = (app.focus ? app.focus.y : a ? a.ny : q.y + 0.5) * T + app.panY;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    const across = (CAMERA.nestCellsAcross * T * 1.06 * fitWide(aspect)) / app.zoomMul;
+    // Zoomed out, stop at a little more than the cutaway is wide (build 14).
+    const across = Math.min(NW * T * 1.35, (CAMERA.nestCellsAcross * T * 1.06 * fitWide(aspect)) / app.zoomMul);
     const dist = across / 2 / Math.tan(hfov / 2);
     const viewH = 2 * dist * Math.tan(vfov / 2);
     const shift = hudShift(app) * viewH;

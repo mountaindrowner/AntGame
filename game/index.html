@@ -14,7 +14,7 @@
 <div id="labels"></div>
 <div id="top">
   <div id="stats">…</div>
-  <div id="hunger"><div id="hungerbar"></div></div>
+  <div id="vitals"><div class="vital" data-tip="Your health. Fights, stings and bites take it; it heals when you rest."><i>❤</i><div class="track"><div id="hpbar"></div></div></div><div class="vital" data-tip="Your hunger. Eat at the nest or beside a forager carrying food."><i>🍖</i><div class="track" id="hunger"><div id="hungerbar"></div></div></div></div>
   <div id="msg"></div>
 </div>
 <div id="bar2">
@@ -40,6 +40,7 @@
   <button id="exitnest" class="ico"></button>
 </div>
 <div id="tip" class="hidden" role="tooltip"></div>
+<div id="hurt"></div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

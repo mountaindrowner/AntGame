@@ -24,7 +24,7 @@ const { W, H, T, CASTES, DROP, HUNT } = SIM;
 const SW = 96, SR = 2, TW = SW * SR; // window tiles; texels a tile
 const SMOKE = noise2(41);
 const TOAD = 48;
-const HALO = { food: '#ffd34d', water: '#6ac8ff', protein: '#ff6a5a', grit: '#d0ccc4' }; // toad model scale (px a unit): about six tiles nose to tail
+// toad model scale (px a unit): about six tiles nose to tail
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -371,18 +371,17 @@ export class SurfaceView {
       // A treat being carried rides on its crew, just ahead of you.
       const lifted = f.carried && f.px != null;
       const cx = lifted ? f.px : (f.x + 0.5) * T, cz = lifted ? f.py : (f.y + 0.5) * T, spin = (f.x * 7 + f.y * 13) % 6;
-      // A ring in its kind's colour under anything you can pick up, so items
-      // stand out from the ground: gold food, blue water, red protein, grey
-      // stone, pink treats. Puddles and carried things go without.
-      if (!lifted && f.type !== 'puddle') {
-        const col = L.treat ? '#ff8ad8' : HALO[f.kind] || HALO.food, pr = (L.dew ? 3.6 : L.r) * 1.75 * (1 + 0.07 * Math.sin(t * 3 + f.x + f.y));
-        tmpV.set(cx, 0.45, cz);
-        this.marks.pushAt('halo', PROPS.ring, tmpV, tmpQ.identity(), pr, col);
-      }
+      // (Build 14: the coloured rings under items are gone; Mark didn't like them.)
       if (L.dew) { this._dew(f, L, cx, cz, spin, t); continue; }
       tmpV.set(cx, L.water ? 0.3 : (L.lift || 0) * L.r + 0.15 + (lifted ? 5 + Math.abs(Math.sin(t * 9)) : 0), cz);
       tmpQ.setFromAxisAngle(UP, spin);
       (L.water ? this.water : this.items).pushAt(L.key, L.geo, tmpV, tmpQ, L.r, L.color);
+      // Puddles ripple now and then and catch the light (build 14).
+      if (f.type === 'puddle') for (let k = 0; k < 2; k++) {
+        const ph = ((t * 0.35 + k * 0.5 + (f.x * 0.37 + f.y * 0.21)) % 1);
+        tmpV.set(cx + Math.sin(f.x + k * 3) * L.r * 0.3, 0.5, cz + Math.cos(f.y + k * 2) * L.r * 0.25);
+        this.water.pushAt('ripple', PROPS.ring, tmpV, tmpQ2.identity(), L.r * (0.12 + ph * 0.5), ph < 0.8 ? '#e8f8ff' : '#8ac8f0');
+      }
       // Treats glint so they read as something special from across the yard.
       if (L.treat) {
         const tw = Math.max(0, Math.sin(t * 2.4 + f.x));

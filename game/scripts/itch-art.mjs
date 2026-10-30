@@ -125,8 +125,8 @@ await L.evaluate(SCENES.spider); await quiet(L); await L.waitForTimeout(1200); a
 await L.evaluate(SCENES.outpost); await quiet(L); await L.waitForTimeout(9000); await quiet(L); await L.waitForTimeout(300); await shot(L, 'shot-4-outpost');
 // Evolve, over the yard.
 await L.evaluate(SCENES.yard); await quiet(L); await L.waitForTimeout(2000); await quiet(L);
-await L.evaluate(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.colony, { genes: 14, genesTotal: 20, protein: 40, grit: 40 }); app.growTab = 'evo'; });
-await L.click('#evolvebtn', { force: true }); await L.waitForTimeout(500); await shot(L, 'shot-5-evolve');
+await L.evaluate(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.colony, { genes: 14, genesTotal: 20, protein: 40, grit: 40 }); });
+await L.click('#evolvebtn', { force: true }); await L.waitForTimeout(500); await L.click('#evo .evo-dots button[data-page="3"]', { force: true }); await L.waitForTimeout(400); await L.click('#evo .enode[data-node="mandibles"]', { force: true }); await L.waitForTimeout(500); await shot(L, 'shot-5-evolve');
 await L.close();
 
 // ---------- portrait phone screenshots (390×844 @3) ----------
@@ -135,7 +135,7 @@ await shot(Pp, 'phone-1-title');
 await Pp.click('#title button[data-t="new"]').catch(() => {});
 await Pp.waitForTimeout(300);
 await Pp.evaluate(SCENES.yard); await quiet(Pp); await Pp.waitForTimeout(1500);
-await Pp.evaluate(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.colony, { genes: 9, genesTotal: 14, foodTotal: 32, hatched: 6 }); app.s.colony.goals.done.scout2 = true; app.growTab = 'goals'; });
+await Pp.evaluate(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.colony, { genes: 9, genesTotal: 14, foodTotal: 32, hatched: 6 }); app.s.colony.goals.done.scout2 = true; });
 await quiet(Pp); await Pp.click('#evolvebtn', { force: true }); await Pp.waitForTimeout(800); await Pp.evaluate(() => { window.UNDERFOOT.app.s.player.msg = ''; }); await Pp.waitForTimeout(400); await shot(Pp, 'phone-2-goals');
 await Pp.close();
 

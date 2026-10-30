@@ -173,7 +173,7 @@ function create(seed){
     queen: { x: SHAFT, y: 0, energy: 30, placed: false, level: 0, room: null, hp: 100 },
     phase: 'dig', itemTimer: 0, dewTimer: 0, dew: false, won: false, lost: false,
     areaT: AREAS.map(() => 0), strikes: [], strikeT: AREAS.map(A => A.strike ? A.strike.every[0] + Math.random()*(A.strike.every[1] - A.strike.every[0]) : 0), mower: { state: 'idle', next: 420, t: 0, y: 0 },
-    rain: { t: 0, on: false, next: 240 }, repairs: [], seen: {}, events: [],
+    rain: { t: 0, on: false, next: 480 }, repairs: [], seen: {}, events: [],
   };
   s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
   // Every area starts with its own stock; home has the most, and it won't
@@ -338,9 +338,11 @@ function killAnt(s, a, cause){
   if (a.state === 'dead') return;
   // A Dodger slips the first foot, beak or acorn.
   if (!a.dodged && (cause === 'foot' || cause === 'bird' || cause === 'acorn' || cause === 'toad') && promo(s, a, 'dodger')){ a.dodged = true; a.flee = 2; return; }
+  // Survivor: once a life, a killing blow leaves your ant at 1 health.
+  if (a.isPlayer && !a.survived && picked(s, 'you', 'survivor')){ a.survived = true; a.hp = 1; s.player.hit = s.t; s.player.msg = 'That should have killed you. Get home!'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
-  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
+  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
   if (!a.team){ const i = idx(Math.min(W-1,Math.max(0,Math.floor(a.x/T))), Math.min(H-1,Math.max(0,Math.floor(a.y/T)))); s.alarm[i] += 3; s.hot.add(i); }
   const c = colonyOf(s, a); c.deaths[cause] = (c.deaths[cause]||0) + 1;
 }
@@ -386,6 +388,7 @@ function bite(s, a, vs){
   if (promo(s, a, 'guard') && Math.hypot(a.tx - s.colony.ex, a.ty - s.colony.ey) < 8) f *= 1.5;
   if (promo(s, a, 'hunter') && (vs === 'spider' || vs === 'cat')) f *= 1.5;
   if (C.fight >= 3 && setDone(s, 'hunter')) f *= 1.1;
+  if (a.follow && picked(s, 'you', 'hero')) f *= 1.2;
   return f;
 }
 // Fighters reach two tiles with Formic spray.
@@ -421,7 +424,11 @@ const hatchCapOf = s => 1 + (roomOf(s, 'hatchery') ? 2 + (has(s, 'hatchery2') ? 
 function eggCost(s, caste){ const cost = Object.assign({}, CASTES[caste].cost); if (picked(s, 'nurse', 'wetnurse') && cost.food) cost.food = Math.ceil(cost.food * 0.7); return cost; }
 function roomCost(s, key){ const cost = Object.assign({}, ROOMS[key].cost); if (picked(s, 'builder', 'mason') && cost.grit) cost.grit = Math.ceil(cost.grit * 0.75); return cost; }
 // Buy an ant type's next level; a level with picks needs one of them.
-function upgradeLock(s, caste){ return caste === 'forager' || caste === 'builder' ? '' : eggLock(s, caste); }
+function upgradeLock(s, caste){ return caste === 'forager' || caste === 'builder' || caste === 'you' ? '' : eggLock(s, caste); }
+// Your ant (build 14): pace, health, bite and carry from the You levels.
+const youL = s => s.colony.up.you || 0;
+const youPace = s => 66*(1 + (youL(s) >= 1 ? 0.15 : 0) + (youL(s) >= 4 ? 0.15 : 0) + (picked(s, 'you', 'sprint') ? 0.1 : 0));
+const youHp = s => youL(s) >= 2 ? 20 : 12;
 function upgradeCaste(s, caste, pick){
   const c = s.colony, L = UPGRADES[caste]; if (!L || upgradeLock(s, caste)) return false;
   const n = lvl(s, caste), U = L[n]; if (!U) return false;
@@ -430,6 +437,7 @@ function upgradeCaste(s, caste, pick){
   if (caste === 'forager') c.forage = n + 1; else c.up[caste] = n + 1;
   if (U.picks) (c.picks[caste] = c.picks[caste] || {})[n + 1] = pick;
   for (const a of s.ants) if (!a.team && a.caste === caste) a.hp = Math.max(a.hp, maxHp(s, a));
+  if (caste === 'you' && s.player.ant) s.player.ant.hp = Math.max(s.player.ant.hp, youHp(s));
   return true;
 }
 // Evolution: why a node can't be bought ('' if it can).
@@ -454,7 +462,7 @@ const qtrait = (s, key) => Object.values(s.colony.qtraits).includes(key);
 function possess(s, id){
   const P = s.player, a = s.ants.find(o => o.id === id && !o.team && o.state !== 'dead' && !o.isPlayer);
   if (!a || P.ant || !P.pending || rankOf(a) < 3) return false;
-  a.isPlayer = true; a.follow = false; a.task = null; a.taskCell = null; a.goal = null; a.exitTo = null; a.carry = 0; a.hp = Math.max(a.hp, 12);
+  a.isPlayer = true; a.follow = false; a.task = null; a.taskCell = null; a.goal = null; a.exitTo = null; a.carry = 0; a.hp = Math.max(a.hp, youHp(s));
   const inside = a.state === 'in' || a.state === 'build' || a.state === 'nest';
   P.ant = a; P.pending = false; P.hunger = 100; P.tx = null; P.ntx = null; P.inNest = inside; a.state = inside ? 'nest' : 'player';
   const qi = s.colony.eggQueue.indexOf('forager'); if (qi >= 0 && !s.colony.eggs.length) s.colony.eggQueue.splice(qi, 1);
@@ -597,7 +605,7 @@ function tick(s, dt){
     const reach = reachOf(s, a), en = enemiesNear(a, aggressive ? reach : 2);
     if (en.length){
       // Rival soldiers fight half again as hard on their own doorstep.
-      if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=reach && Math.abs(o.ty-a.ty)<=reach); if (o){ const dmg = bite(s, a)*dt*(a.team && Math.hypot(a.tx - w.rx, a.ty - w.ry) < 5 ? 1.5 : 1); o.hp -= dmg; gainXp(s, a, dmg/3); if (o.hp <= 0){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); } } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
+      if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=reach && Math.abs(o.ty-a.ty)<=reach); if (o){ const dmg = bite(s, a)*dt*(a.team && Math.hypot(a.tx - w.rx, a.ty - w.ry) < 5 ? 1.5 : 1); o.hp -= dmg; if (o.isPlayer) P.hit = s.t; gainXp(s, a, dmg/3); if (o.hp <= 0){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); } } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
       else if (en.some(o => CASTES[o.caste].fight >= 3 || o.follow)){ a.flee = 2.5; }
     }
     if (a.flee > 0 && a.state !== 'fight' && a.state !== 'follow' && a.state !== 'raid'){
@@ -629,7 +637,7 @@ function tick(s, dt){
       if (pd > 16*T){ a.follow = false; a.state = 'explore'; continue; }
       if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }
       // A crew that falls behind hurries to keep up with you.
-      if (pd > 1.3*T){ if (stepTo(a, a.tx, a.ty, pd > 3*T ? 95 : C.speed+15, dt)) chooseToward(s, a, P.ant.x + (Math.random()-0.5)*T, P.ant.y + (Math.random()-0.5)*T); }
+      if (pd > 1.3*T){ if (stepTo(a, a.tx, a.ty, (pd > 3*T ? 95 : C.speed+15)*(picked(s, 'you', 'hero') ? 1.25 : 1), dt)) chooseToward(s, a, P.ant.x + (Math.random()-0.5)*T, P.ant.y + (Math.random()-0.5)*T); }
       continue;
     }
     // A builder carrying a load of dug dirt out to the spoil heap.
@@ -750,7 +758,7 @@ function hatch(s, c, caste){
     // A head start: the Drill hall for fighters, Colony memory for everyone.
     if (has(s, 'memory') || (has(s, 'drillhall') && CASTES[caste].fight >= 3)) a.xp = RANKS[1].xp;
     for (const n of s.ants) if (n.caste === 'nurse' && !n.team && (n.state === 'in' || n.state === 'build')) gainXp(s, n, 1); const r = s.queen.room; a.nx = r.x0+1.5; a.ny = r.y0+1.5; a.ntx = r.x0+1; a.nty = r.y0+1; a.rest = 2;
-    if (s.player.pending){ a.isPlayer = true; a.hp = Math.max(12, maxHp(s, a)); s.player.rebirth = null; a.state = 'nest'; s.player.ant = a; s.player.pending = false; s.player.hunger = 100; s.player.inNest = true; s.player.tx = null; s.player.ntx = null; s.player.msg = ''; } }
+    if (s.player.pending){ a.isPlayer = true; a.hp = Math.max(youHp(s), maxHp(s, a)); s.player.rebirth = null; a.state = 'nest'; s.player.ant = a; s.player.pending = false; s.player.hunger = 100; s.player.inNest = true; s.player.tx = null; s.player.ntx = null; s.player.msg = ''; } }
 }
 function enterNest(s, a){
   a.state = 'in'; a.rest = 3 + Math.random()*8; a.explore = 0; a.goal = null;
@@ -882,7 +890,10 @@ function nestStep(s, a, speed, dt){
 function note(s, msg){ s.player.msg = msg; }
 function tickRain(s, dt){
   const r = s.rain; r.t += dt;
-  if (!r.on && r.t >= r.next){ r.on = true; r.t = 0; r.next = 200 + Math.random()*120; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
+  // Thunder in the distance twenty seconds before it rains (build 14).
+  if (!r.on && !r.warned && r.t >= r.next - 20 && s.queen.placed){ r.warned = true; s.events.push('rainsoon'); note(s, 'Thunder in the distance. Rain is coming: get your builders inside.'); }
+  // Rain every 8 to 12 minutes (build 14: was every 3 to 5).
+  if (!r.on && r.t >= r.next){ r.on = true; r.warned = false; r.t = 0; r.next = 480 + Math.random()*240; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
   else if (r.on){
     if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + 0.4*dt);
     if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed){ collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) collapse(s, true); note(s, 'The rain caved in a tunnel.'); } }
@@ -1041,7 +1052,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   if (P.inNest){
     // walk inside the nest
     if (P.ntx != null){ a.ntx = P.ntx; a.nty = P.nty; }
-    const arrived = nestStep(s, a, 85, dt);
+    const arrived = nestStep(s, a, 70, dt);
     if (arrived && P.ntx != null && Math.floor(a.nx) === SHAFT && Math.floor(a.ny) === 0 && P.exiting){ P.exiting = false; P.ntx = null; P.inNest = false; a.tx = w.ex; a.ty = w.ey; a.x = (w.ex+0.5)*T; a.y = (w.ey+0.5)*T; a.state = 'player'; P.tx = null; return; }
     if (arrived) P.ntx = null;
     P.hunger = Math.min(100, P.hunger + 10*dt);
@@ -1049,7 +1060,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   }
   let moving = false;
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
-  let speed = 85*SURF;
+  let speed = youPace(s)*SURF;
   if (P.big){ const crew = crewAt(s), need = FOODS[P.big.type].crew;
     if (crew < need){ dropBig(s); P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`; }
     else speed = Math.min(70, 30 + 6*(crew - need))*SURF*(heldFx(s, 'crew') ? 1.3 : 1); }
@@ -1070,7 +1081,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   }
   a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T);
   if (P.big){ P.big.x = a.tx; P.big.y = a.ty; P.big.px = a.x + a.dx*8; P.big.py = a.y + a.dy*8; }
-  P.hunger -= (moving ? 1.3 : 0.3)*dt;
+  P.hunger -= (moving ? 1.3 : 0.3)*dt*(picked(s, 'you', 'stomach') ? 0.5 : 1);
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 1.6;
   let fed = nearHome; if (!fed) for (const o of s.ants){ if (o !== a && !o.team && o.state === 'return' && o.carry && o.kind==='food' && Math.hypot(o.x-a.x, o.y-a.y) < 1.2*T){ fed = true; break; } }
   if (fed && P.hunger < 100) P.hunger = Math.min(100, P.hunger + 20*dt);
@@ -1079,9 +1090,9 @@ function stepPlayer(s, a, dt, enemiesNear){
   if (a.carry && nearHome){ deposit(s, a); }
   if (P.big && nearHome) deliverBig(s);
   // fight: player bites enemies / cat adjacent
-  const pm = Math.max(12, maxHp(s, a));
-  const en = enemiesNear(a, 1); if (en.length){ const dmg = bite(s, a)*2*dt; en[0].hp -= dmg; gainXp(s, a, dmg/3); if (en[0].hp <= 0){ killAnt(s, en[0], 'war'); gainXp(s, a, 5); } } else if (a.hp < pm) a.hp = Math.min(pm, a.hp + 1*dt);
-  if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; gainXp(s, a, dmg/3); }
+  const pm = Math.max(youHp(s), maxHp(s, a)), yb = youL(s) >= 3 ? 1.5 : 1;
+  const en = enemiesNear(a, 1); if (en.length){ const dmg = bite(s, a)*2*yb*dt; en[0].hp -= dmg; gainXp(s, a, dmg/3); if (en[0].hp <= 0){ killAnt(s, en[0], 'war'); gainXp(s, a, 5); } } else if (a.hp < pm) a.hp = Math.min(pm, a.hp + 1*dt);
+  if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH){ const dmg = bite(s, a, 'cat')*yb*dt; s.cat.hp -= dmg; gainXp(s, a, dmg/3); }
   if (P.enterReq && nearHome){ P.enterReq = false; P.inNest = true; P.tx = null; a.nx = SHAFT+0.5; a.ny = 0.5; a.ntx = SHAFT; a.nty = 0; P.ntx = null; a.state = 'nest'; }
 }
 
@@ -1111,7 +1122,7 @@ function doAction(s){
     if (crew >= need){ P.big = f; f.carried = true; P.msg = 'Lifted! Walk it home; your crew carries it with you.'; }
     else P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`;
     return; }
-  if (f){ const take = Math.min(5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; }
+  if (f){ const take = Math.min(picked(s, 'you', 'bigjaws') ? 8 : 5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; }
 }
 // You plus every recruited ant within three tiles.
 function crewAt(s){ const a = s.player.ant; if (!a) return 0; let n = 1; for (const o of s.ants) if (o.follow && o.state !== 'dead' && Math.hypot(o.x-a.x, o.y-a.y) < 3*T) n++; return n; }
@@ -1268,7 +1279,7 @@ function tickStings(s, dt){
   for (const z of w.stings) for (const a of s.ants){
     if (!outside(a) || a.team) continue;
     const d = Math.hypot(a.x/T - z.x, a.y/T - z.y); if (d > z.r) continue;
-    a.hp -= z.power * k * (a.isPlayer ? 0.6 : 1);
+    a.hp -= z.power * k * (a.isPlayer ? 0.6 : 1); if (a.isPlayer) s.player.hit = s.t;
     if (!a.isPlayer){ a.flee = Math.max(a.flee, 1); a.fleeFrom = { x: z.x*T, y: z.y*T }; }
     else if (!s.stungWarned){ s.stungWarned = true; s.events.push('fireants'); s.player.msg = 'Fire ants! Keep moving.'; }
     if (a.hp <= 0) killAnt(s, a, 'fireants');
@@ -1278,7 +1289,7 @@ function recruit(s, n){
   const a = s.player.ant; if (!a || s.player.inNest) return 0; const w = s.world; let got = 0;
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 3.5;
   const cands = s.ants.filter(o => !o.isPlayer && !o.team && o.state !== 'dead' && !o.follow && (
-    ((o.state==='explore' || o.state==='patrol' || (o.state==='return' && !o.carry)) && Math.hypot(o.x-a.x, o.y-a.y) < 7*T) || (nearHome && o.state === 'in' && o.goal !== 'job')));
+    ((o.state==='explore' || o.state==='patrol' || (o.state==='return' && !o.carry)) && Math.hypot(o.x-a.x, o.y-a.y) < (picked(s, 'you', 'rally') ? 10 : 7)*T) || (nearHome && o.state === 'in' && o.goal !== 'job')));
   // Fighters answer first, so a recruited crew near the nest can be an army.
   cands.sort((p,q) => CASTES[q.caste].fight - CASTES[p.caste].fight || (p.state==='in'?1:0) - (q.state==='in'?1:0) || Math.hypot(p.x-a.x,p.y-a.y) - Math.hypot(q.x-a.x,q.y-a.y));
   for (const o of cands){ if (got >= n) break; if (o.state === 'in'){ o.x = (w.ex+0.5)*T; o.y = (w.ey+0.5)*T; o.tx = w.ex; o.ty = w.ey; } o.follow = true; o.state = 'follow'; o.goal = null; got++; }
@@ -1339,7 +1350,7 @@ function deserialize(json){
   return s;
 }
 return { W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
-  upgradeCaste, upgradeLock, casteLevel: lvl, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
+  upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
 export default SIM;

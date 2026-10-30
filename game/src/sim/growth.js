@@ -38,6 +38,15 @@ export const PROMOS = {
 // choosing one of them, for good. Forager levels 1–3 are the old "Train
 // foragers" (range and pace, sim FORAGE).
 export const UPGRADES = {
+  // You: the ant you play (build 14). Slower than before at the start; these
+  // make it quicker, tougher and better at leading.
+  you: [
+    { boost: 'Long legs: 15% faster', cost: { food: 25 } },
+    { boost: 'Thick shell: health 12 → 20', cost: { food: 40, protein: 10 }, picks: [['sprint', 'Sprinter', '10% faster again'], ['stomach', 'Iron stomach', 'Hunger drains half as fast']] },
+    { boost: 'Strong jaws: bite 50% harder', cost: { protein: 25, grit: 15 }, picks: [['bigjaws', 'Big mandibles', 'Carry 8, not 5'], ['rally', 'Rallying cry', 'Recruit from 10 tiles, not 7']] },
+    { boost: 'Swift: 15% faster again', cost: { food: 80, grit: 30, genes: 1 } },
+    { boost: 'Mastery', cost: { food: 150, protein: 40, genes: 3 }, picks: [['hero', 'Hero', 'Your crew keeps up and bites 20% harder'], ['survivor', 'Survivor', 'Once a life, a killing blow leaves you at 1 health']] },
+  ],
   forager: [
     { boost: 'Range 55, 10% faster', cost: { food: 15 } },
     { boost: 'Range 75, 20% faster', cost: { food: 40, grit: 10 }, picks: [['trailblazer', 'Trailblazer', 'Trails it lays are twice as strong'], ['sprinter', 'Sprinter', '25% faster off a trail']] },

@@ -2,11 +2,12 @@
 // the intro. Ported from build 6's app.js; the behaviour is the same, only
 // the state now lives on the shared `app` object.
 import SIM from '../sim/sim.js';
-import { EXPL, HELP, INTRO } from './copy.js';
+import { EXPL, HELP_PAGES, INTRO } from './copy.js';
 import { sfx } from '../audio/sfx.js';
 import { YARD_MAP } from '../sim/yard.js';
 import { ICONS } from './icons.js';
 import { MapView } from './mapView.js';
+import { EvolveView } from './evolveView.js';
 import { RES as GRES, UPGRADES, BRANCHES, EVO, EVO_BY, evoCost, laterIn, LATER, RANKS, rankOf, PROMOS, FAMILY, QUEEN_TRAITS, GOALS, goalBoard, SETS, TIERS, prizeOf, GUARDIANS } from '../sim/growth.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
@@ -25,10 +26,10 @@ export function createUI(app) {
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
-  const ARC = { outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const ARC = { map: 'Map', evolve: 'Evolve', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
   const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
-    const name = b.closest('.dock') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
+    const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
     const key = icon + '|' + (badge ?? '') + '|' + name;
     if (b.dataset.key !== key) { b.dataset.key = key; b.innerHTML = ICONS[icon] + (badge != null && badge !== '' ? `<b class="badge">${badge}</b>` : '') + (name ? arc(b, name) : ''); }
     if (b.dataset.tip !== tip) { b.dataset.tip = tip; b.setAttribute('aria-label', tip); }
@@ -70,7 +71,7 @@ export function createUI(app) {
   document.addEventListener('click', (e) => { if (longPressed) { longPressed = false; e.stopPropagation(); e.preventDefault(); } }, true);
 
   // The buttons a hint is talking about pulse, so the icons are easy to learn.
-  const NAMED = [['Build nest', 'buildnest'], ['Enter nest', 'enter'], ['Exit nest', 'exitnest'], ['Pick up', 'act'], ['Mark trail', 'mark'], ['Recruit', 'recruit'], ['Release', 'release'], ['Lift', 'act'], ['Queen', 'queenbtn'], ['the queen', 'queenbtn'], ['Build', 'levelbtn'], ['Nest', 'viewbtn'], ['Map', 'mapbtn']];
+  const NAMED = [['Build nest', 'buildnest'], ['Enter nest', 'enter'], ['Exit nest', 'exitnest'], ['Pick up', 'act'], ['Mark trail', 'mark'], ['Recruit', 'recruit'], ['Release', 'release'], ['Lift', 'act'], ['Queen', 'queenbtn'], ['the queen', 'queenbtn'], ['Build', 'levelbtn'], ['Nest', 'viewbtn'], ['Map', 'mapbtn'], ['Trail', 'mark'], ['Evolve', 'evolvebtn'], ['Outpost', 'outpostbtn']];
   function pulseFor(text) {
     const on = new Set();
     let t = ' ' + (text || '') + ' ';
@@ -91,16 +92,27 @@ export function createUI(app) {
   function tickIntro() { const i = introStep(); if (i < 0) return; const st = INTRO[i]; if (st.done && st.done(app.s)) introAdvance(); }
 
   // ---------------------------------------------------------- sheets
+  // Tips (build 14): a small card under the hint that doesn't stop the game
+  // and fades by itself. Each shows once, ever: a tip seen in one colony
+  // isn't shown again in the next (Help → Menu → Show tips again).
+  const TIPS_KEY = 'underfoot-tips';
+  let tipsSeen = {}; try { tipsSeen = JSON.parse(localStorage.getItem(TIPS_KEY)) || {}; } catch (e) { /* none */ }
+  const tipCard = document.createElement('div'); tipCard.id = 'tipcard'; tipCard.className = 'hidden'; $('top').appendChild(tipCard);
+  tipCard.addEventListener('click', () => { tipCard.classList.add('hidden'); app.tipUntil = 0; });
+  const tipBusy = () => (app.tipUntil || 0) > performance.now();
   function showExplainer(key) {
     const s = app.s;
-    if (s.seen[key] || app.menu === 'info') return;
-    s.seen[key] = true;
+    if (s.seen[key]) return;
+    if (tipsSeen[key]) { s.seen[key] = true; return; }
+    if (tipBusy()) return; // one at a time; it shows the next time it comes up
+    s.seen[key] = tipsSeen[key] = true;
+    try { localStorage.setItem(TIPS_KEY, JSON.stringify(tipsSeen)); } catch (e) { /* blocked */ }
     const [t, b] = EXPL[key];
     sfx.play('explainer');
-    app.menu = 'info';
-    el.sheet.classList.remove('hidden');
-    el.sheet.innerHTML = `<div class="row head"><strong>${t}</strong></div><div class="h">${b}</div><div class="btns one"><button data-close="1" class="primary">Got it</button></div>`;
-    app.paused = true;
+    tipCard.innerHTML = `${t ? `<b>${t}</b>` : ''}<span>${b}</span><em>✕</em>`;
+    tipCard.classList.remove('hidden');
+    const until = (app.tipUntil = performance.now() + 9000);
+    setTimeout(() => { if (app.tipUntil === until) tipCard.classList.add('hidden'); }, 9000);
   }
   function checkExplainers() {
     const s = app.s;
@@ -109,7 +121,7 @@ export function createUI(app) {
     if (introStep() >= 0) {
       while (s.events.length) {
         const e = s.events.shift();
-        if (EXPL[e] && !['dig', 'nest', 'surface'].includes(e)) { showExplainer(e); if (app.menu === 'info') return; }
+        if (EXPL[e] && !['dig', 'nest', 'surface'].includes(e)) { showExplainer(e); if (tipBusy()) return; }
       }
       // The spider warning can't wait for the intro to finish.
       const a0 = P().ant;
@@ -119,8 +131,8 @@ export function createUI(app) {
     if (s.phase === 'dig') showExplainer('dig');
     else if (P().ant && P().inNest) showExplainer('nest');
     else if (P().ant && !P().inNest) showExplainer('surface');
-    if (app.menu === 'info') return;
-    while (s.events.length) { const e = s.events.shift(); if (EXPL[e]) { showExplainer(e); if (app.menu === 'info') return; } }
+    if (tipBusy()) return;
+    while (s.events.length) { const e = s.events.shift(); if (EXPL[e]) { showExplainer(e); if (tipBusy()) return; } }
     const a = P().ant;
     if (a && !P().inNest) {
       if (s.spider && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 9 * T) showExplainer('spider');
@@ -172,11 +184,11 @@ export function createUI(app) {
     }
     return h;
   }
-  function growAnts(s, c) {
-    let h = `<div class="note">Each level is bought once for every ant of that kind. Levels with two choices are for good: pick one.</div>`;
-    for (const k of CASTE_ORDER) {
-      const L = UPGRADES[k], n = SIM.casteLevel(s, k), lock = SIM.upgradeLock(s, k), C = CASTES[k];
-      h += `<div class="up"><div class="up-h">${sicon(k)}<b>${C.name}</b><span>level ${n} of ${L.length}${lock ? ' · ' + lock : ''}</span></div><div class="lv">`;
+  function growAnts(s, c, kinds = CASTE_ORDER) {
+    let h = kinds.includes('you') ? `<div class="note">The ant you play: quicker, tougher, a better leader. Bought once; it carries over every time you're reborn.</div>` : `<div class="note">Each level is bought once for every ant of that kind. Levels with two choices are for good: pick one.</div>`;
+    for (const k of kinds) {
+      const L = UPGRADES[k], n = SIM.casteLevel(s, k), lock = SIM.upgradeLock(s, k), C = k === 'you' ? { name: 'You' } : CASTES[k];
+      h += `<div class="up"><div class="up-h">${sicon(k === 'you' ? 'forager' : k)}<b>${C.name}</b><span>level ${n} of ${L.length}${lock ? ' · ' + lock : ''}</span></div><div class="lv">`;
       L.forEach((U, i) => {
         const pk = (c.picks[k] || {})[i + 1], pn = pk && U.picks.find((p) => p[0] === pk);
         h += `<span class="${i < n ? 'done' : i === n ? 'next' : ''}">${i + 1}. ${U.boost === 'Mastery' ? '★ Mastery' : U.boost}${pn ? ': ' + pn[1] : ''}</span>`;
@@ -189,8 +201,8 @@ export function createUI(app) {
         if (U.picks) h += `<div class="btns">` + U.picks.map(([pk, pn, pd]) => `<button data-upc="${k}:${pk}" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost === 'Mastery' ? '' : U.boost + ' + '}${pn}</b><i>${pd}</i><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button>`).join('') + `</div>`;
         else h += `<div class="btns one"><button data-upc="${k}:" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost}</b><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button></div>`;
       } else if (!U) h += `<div class="note">All levels bought.</div>`;
-      const P = PROMOS[FAMILY[k]], d = SIM.doctrineOf(s, k);
-      for (const [slot, label] of [[0, 'Veterans learn'], [1, 'Elites add']]) {
+      const P = PROMOS[FAMILY[k]] || [], d = P.length ? SIM.doctrineOf(s, k) : [];
+      if (P.length) for (const [slot, label] of [[0, 'Veterans learn'], [1, 'Elites add']]) {
         h += `<div class="doc">${label}:` + P.map(([pk, pn, pd]) => `<button data-doc="${k}:${slot}:${pk}" class="${d[slot] === pk ? 'on' : ''}" data-tip="${pd}">${pn}</button>`).join('') + `</div>`;
       }
       h += `</div>`;
@@ -239,7 +251,8 @@ export function createUI(app) {
   const REBORN_AS = { forager: 'Fast, carries food', builder: 'Digs; slow outside', nurse: 'Stays home', soldier: 'Bites hard; a fighter', venom: 'Kills big things' };
   function renderReborn() {
     const s = app.s, list = rebornChoices();
-    let h = `<div class="row head"><strong>Your ant is gone</strong></div>`;
+    const why = { spider: 'The spider got you.', rival: 'A rival soldier got you.', war: 'Killed in a fight.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad’s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', hunger: 'You starved: eat at the nest.' }[P().deathCause] || 'Your ant is gone.';
+    let h = `<div class="row head"><strong class="died">You died</strong></div><div class="note">${why}</div>`;
     if (list.length) h += `<div class="note">Come back as one of your named ants, where it stands…</div><div class="btns">` + list.map((a) => `<button data-possess="${a.id}">${sicon(a.caste)}<b>${a.name}${a.title ? ' ' + a.title : ''}</b><i>${RANKS[rankOf(a)].name} ${CASTES[a.caste].name}</i></button>`).join('') + `</div>`;
     h += `<div class="note">${list.length ? '…or hatch' : 'Hatch'} again, as:</div><div class="btns">`;
     for (const k of Object.keys(REBORN_AS)) { const lock = SIM.eggLock(s, k); h += `<button data-rebirth="${k}" ${lock ? 'disabled' : ''}>${sicon(k)}<b>${CASTES[k].name}</b><i>${lock || REBORN_AS[k]}</i></button>`; }
@@ -301,7 +314,7 @@ export function createUI(app) {
       h += `<button data-cleardigs="1" ${s.nest.digOrders.length || s.nest.fillOrders.length ? '' : 'disabled'}><b>Clear orders</b><i>Cancel pending digs and fills</i></button>`;
       h += `</div>`;
     }
-    if (el.sheet.innerHTML !== h) el.sheet.innerHTML = h;
+    if (el.sheet.dataset.h !== h) { el.sheet.dataset.h = h; el.sheet.innerHTML = h; }
   }
   // ---------------------------------------------------------- yard map
   // The whole backyard as a plan: all 70 regions, greyed until you've been
@@ -332,14 +345,20 @@ export function createUI(app) {
     const hold = s.colony.held[pickI] ? 'Held: yours while your outpost stands' : out ? (out.done ? (G ? `Outpost up; beat ${G[0]} to hold it` : 'Outpost up') : 'Outpost being raised') : P2 ? `Raise an outpost here${G ? ` and beat ${G[0]}` : ''} to hold it` : 'Home';
     h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}${P2 ? ` · held: ${P2.text.replace(/^./, (ch) => ch.toLowerCase())}` : ''}</dd><dt>Hold</dt><dd>${hold}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
     h += `<div class="note">${SIM.AREAS.length} regions. Grey ones you haven't explored yet.</div>`;
-    el.sheet.innerHTML = h;
+    el.sheet.dataset.h = ''; el.sheet.innerHTML = h;
   }
   function openMap() { app.menu = 'map'; app.mapPick = null; el.sheet.classList.remove('hidden'); renderMap(); app.paused = true; }
   // The plan of the whole backyard (all its regions, built or not), from the map's "Whole yard".
 
-  function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.classList.remove('hidden'); renderSheet(); }
+  // Sheets redraw only when their content changes (build 14): the browser rewrites HTML
+  // (disabled="", entities), so comparing innerHTML redrew them every tick and could eat a tap.
+  function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.dataset.h = ''; el.sheet.classList.remove('hidden'); renderSheet(); }
   function closeMenu() { app.menu = null; app.menuCell = null; el.sheet.classList.add('hidden'); app.paused = false; }
-  function openHelp() { app.menu = 'help'; el.sheet.classList.remove('hidden'); el.sheet.innerHTML = HELP; app.paused = true; }
+  function openHelp(tab) {
+    app.menu = 'help'; app.helpTab = tab ?? app.helpTab ?? 0; el.sheet.classList.remove('hidden'); app.paused = true;
+    el.sheet.dataset.h = '';
+    el.sheet.innerHTML = `<div class="row head"><strong>Help</strong><button class="x" data-close="1">Close</button></div><div class="tabs">${HELP_PAGES.map(([n], i) => `<button data-helptab="${i}" class="${i === app.helpTab ? 'on' : ''}">${n}</button>`).join('')}</div>${HELP_PAGES[app.helpTab][1]}`;
+  }
   // The full numbers behind the stat chips.
   function renderColony() {
     const s = app.s, c = s.colony, st = SIM.stats(s);
@@ -347,9 +366,9 @@ export function createUI(app) {
       + `<div class="h">Food ${Math.floor(c.store)} of ${c.cap} · water ${Math.floor(c.water)} of ${c.waterCap} · protein ${Math.floor(c.protein)} · stone ${Math.floor(c.grit)}</div>`
       + `<div class="h">${app.statsLine || ''}</div>`
       + `<div class="h">Ants by kind: ${Object.entries(st.byCaste).map(([k, n]) => `${CASTES[k].name} ${n}`).join(' · ') || 'none yet'}</div>`;
-    if (el.sheet.innerHTML !== h) el.sheet.innerHTML = h;
+    if (el.sheet.dataset.h !== h) { el.sheet.dataset.h = h; el.sheet.innerHTML = h; }
   }
-  function openColony() { app.menu = 'colony'; el.sheet.classList.remove('hidden'); renderColony(); }
+  function openColony() { el.sheet.dataset.h = ''; app.menu = 'colony'; el.sheet.classList.remove('hidden'); renderColony(); }
 
   // ---------------------------------------------------------- HUD
   function flash(text, test, ms) {
@@ -391,7 +410,7 @@ export function createUI(app) {
       + chip('🥩', Math.floor(c.protein), 'Protein: for soldiers and the queen')
       + chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
-      + (c.genesTotal ? chip('🧬', c.genes, 'Genes: spend them under Evolve') : '')
+      + (c.genesTotal ? chip('🧬', c.genes, 'Genes: tap to evolve').replace('<span class="chip', '<span data-genes="1" class="chip') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
       + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
       + (s.rain.on ? chip('🌧', '', 'Raining: trails wash out') : '')
@@ -402,12 +421,22 @@ export function createUI(app) {
     const a0 = P().ant;
     const it = introText();
     const istep = introStep() >= 0 ? INTRO[introStep()] : null;
-    if (it) { const want = istep.btn ? `${it} <button class="next" id="intronext">${istep.btn}</button>` : it; if (el.msg.innerHTML !== want) el.msg.innerHTML = want; }
+    if (it) { const want = istep.btn ? `${it} <button class="next" id="intronext">${istep.btn}</button>` : istep.skip ? `${it} <button class="next skip" id="introskip">Skip tips</button>` : it; if (el.msg.innerHTML !== want) el.msg.innerHTML = want; }
     else el.msg.textContent = hint();
     pulseFor(el.msg.textContent);
     // Crossing into another part of the yard: name it (and describe it the first time).
     if (a0 && !P().inNest) { const ai = SIM.areaOf(s, a0.tx, a0.ty); if (ai !== app.lastArea) { if (app.lastArea != null) { const A = SIM.AREAS[ai]; const first = !s.seen['area' + ai]; s.seen['area' + ai] = true; app.areaBanner = { text: first ? `${A.name}. ${A.blurb}` : A.name, until: performance.now() + (first ? 6000 : 2500) }; } app.lastArea = ai; } }
     el.hungerBar.style.width = Math.max(0, P().hunger) + '%';
+    // Health (build 14): a red bar, a red rim when you're hit, a slow pulse when low,
+    // and a dark one when you die.
+    const pa = P().ant, hpMax = pa ? Math.max(SIM.youHp(s), SIM.maxHp(s, pa)) : 1, hp = pa ? Math.max(0, pa.hp) / hpMax : 0;
+    $('hpbar').style.width = hp * 100 + '%';
+    const low = pa && hp < 0.4, hurt = $('hurt');
+    $('hpbar').closest('.vital').classList.toggle('low', !!low);
+    el.hungerBar.closest('.vital').classList.toggle('low', !!pa && P().hunger < 30);
+    if (P().hit && P().hit !== app.lastHit) { app.lastHit = P().hit; hurt.classList.add('on'); setTimeout(() => hurt.classList.remove('on'), 160); sfx.play('bonk'); }
+    if (P().died && P().died !== app.lastDied) { app.lastDied = P().died; hurt.classList.add('dead'); setTimeout(() => hurt.classList.remove('dead'), 1600); }
+    hurt.classList.toggle('low', !!low);
     el.hungerBar.style.background = P().hunger < 35 ? '#e4524a' : '#8fd36b';
     const lbl = SIM.actionLabel(s) || 'Pick up';
     const lift = /^Lift (\d+\/\d+)/.exec(lbl);
@@ -441,18 +470,19 @@ export function createUI(app) {
     const named = c.named; if (app.lastNamed != null && named > app.lastNamed) sfx.play('rankUp'); app.lastNamed = named;
     // Your ant died and you have named ants: offer them as your next body.
     if (P().ant) app.rebirthAsked = false;
-    else if (P().pending && !app.rebirthAsked && !app.menu && s.queen.placed) { app.rebirthAsked = true; openMenu('reborn'); app.paused = true; }
+    else if (P().pending && P().died && !app.rebirthAsked && !app.menu && s.queen.placed) { app.rebirthAsked = true; openMenu('reborn'); app.paused = true; }
+    evo.update();
     if (app.menu === 'colony') renderColony();
     if (app.menu) renderSheet();
   }
 
   // ---------------------------------------------------------- wiring
-  $('help').addEventListener('click', openHelp);
+  $('help').addEventListener('click', () => openHelp());
   // The map button opens the photo map; its "Whole yard" button opens the plan.
   const mapView = new MapView(app, () => openMap());
   el.map.addEventListener('click', () => { if (mapView.isOpen) mapView.close(); else { closeMenu(); mapView.open(); } });
-  el.stats.addEventListener('click', (e) => { if (e.target.closest('.more')) { if (app.menu === 'colony') closeMenu(); else openColony(); } });
-  el.msg.addEventListener('click', (e) => { if (e.target && e.target.id === 'intronext') introAdvance(); });
+  el.stats.addEventListener('click', (e) => { if (e.target.closest('.more')) { if (app.menu === 'colony') closeMenu(); else openColony(); } if (e.target.closest('[data-genes]')) openEvo('bodies'); });
+  el.msg.addEventListener('click', (e) => { if (e.target && e.target.id === 'intronext') introAdvance(); if (e.target && e.target.id === 'introskip') { const s = app.s; s.seen.intro = 'done'; s.seen.dig = s.seen.nest = s.seen.surface = true; } });
   el.sheet.addEventListener('click', (e) => {
     const s = app.s;
     const b = e.target.closest('button');
@@ -466,8 +496,10 @@ export function createUI(app) {
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.forage) { SIM.upgradeForage(s); renderSheet(); return; }
-    if (b.dataset.grow) { app.growTab = b.dataset.grow; openMenu('grow'); return; }
+    if (b.dataset.grow) { openEvo(b.dataset.grow); return; }
     if (b.dataset.tab) { app.growTab = b.dataset.tab; renderSheet(); return; }
+    if (b.dataset.helptab) { openHelp(+b.dataset.helptab); return; }
+    if (b.dataset.retips) { tipsSeen = {}; try { localStorage.removeItem(TIPS_KEY); } catch (e) { /* blocked */ } for (const k in EXPL) delete s.seen[k]; flash('Tips will show again.', /^Tips will/, 2500); return; }
     if (b.dataset.upc) { const [k, pk] = b.dataset.upc.split(':'); if (SIM.upgradeCaste(s, k, pk || undefined)) sfx.play('evolve'); renderSheet(); return; }
     if (b.dataset.evo) { if (SIM.buyEvo(s, b.dataset.evo)) sfx.play('evolve'); renderSheet(); return; }
     if (b.dataset.doc) { const [k, slot, pk] = b.dataset.doc.split(':'); SIM.setDoctrine(s, k, +slot, pk); renderSheet(); return; }
@@ -484,7 +516,7 @@ export function createUI(app) {
   el.act.addEventListener('click', () => SIM.doAction(app.s));
   el.release.addEventListener('click', () => SIM.release(app.s));
   el.outpost.addEventListener('click', () => { const why = SIM.outpostLock(app.s); if (why) flash('Outpost: ' + why + '.', /^Outpost:/, 2600); else if (SIM.placeOutpost(app.s)) sfx.play('roomPlaced'); });
-  el.mark.addEventListener('click', () => { P().mark = !P().mark; });
+  el.mark.addEventListener('click', () => { P().mark = !P().mark; if (P().mark) app.s.seen.marked = true; });
   el.enter.addEventListener('click', () => {
     const s = app.s, a = P().ant;
     if (!a) return;
@@ -495,7 +527,15 @@ export function createUI(app) {
   });
   el.buildNest.addEventListener('click', () => { if (SIM.buildNest(app.s)) closeMenu(); });
   el.queen.addEventListener('click', () => openMenu('egg'));
-  el.evolve.addEventListener('click', () => { if (app.menu === 'grow') closeMenu(); else { mapView.isOpen && mapView.close(); openMenu('grow'); app.paused = true; } });
+  // The Evolution window (build 14), opened by Evolve and the 🧬 chip.
+  const evo = new EvolveView(app, {
+    goals: () => growGoals(app.s, app.s.colony),
+    you: () => growAnts(app.s, app.s.colony, ['you']),
+    ants: () => growAnts(app.s, app.s.colony),
+    ranks: () => growRanks(app.s, app.s.colony),
+  });
+  const openEvo = (page) => { closeMenu(); if (mapView.isOpen) mapView.close(); evo.open(page); };
+  el.evolve.addEventListener('click', () => (evo.isOpen ? evo.close() : openEvo()));
   el.level.addEventListener('click', () => { if (app.placing) app.placing = null; else openMenu('catalog'); });
   el.exitNest.addEventListener('click', () => { P().ntx = SHAFT; P().nty = 0; P().exiting = true; });
 
@@ -523,11 +563,12 @@ export function createUI(app) {
     app.confirmAction = fn;
     app.menu = 'info';
     el.sheet.classList.remove('hidden');
+    el.sheet.dataset.h = '';
     el.sheet.innerHTML = `<div class="row head"><strong>${text}</strong></div><div class="btns"><button data-confirm="no">Keep playing</button><button data-confirm="yes" class="primary">${yes}</button></div>`;
     app.paused = true;
   }
 
-  return { update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText };
+  return { update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText, evo };
 }
 
 export const GRID = { NW, NH };

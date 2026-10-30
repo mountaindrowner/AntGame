@@ -217,7 +217,11 @@ const SOUNDS = {
   twinkle: { cool: 2, fn: (s, o, t) => { [84, 88, 91, 96].forEach((n, i) => s.blip(o, t + i * 0.09, N(n), 0.4, 0.1, 'sine')); return 0.8; } },
   drip: { cool: 0.1, fn: (s, o, t) => { s.chirp(o, t, 1400, 2000, 0.04, 0.25); return 0.06; } },
   cheer: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 16; i++) s.blip(o, t + i * 0.035 + Math.random() * 0.03, N(84 + Math.floor(Math.random() * 12)), 0.05, 0.08 * (1 - Math.abs(i - 8) / 10), 'sine'); return 0.8; } },
-  thunder: { cool: 8, vol: 0.8, fn: (s, o, t) => { s.puff(o, t, 2.5, 140 + Math.random() * 80, 0.6, 'lowpass', 60, 0.4); return 3; } },
+  // Thunder: a crack (softer the farther off), then a long low roll in waves.
+  thunder: { cool: 6, vol: 0.9, fn: (s, o, t, far = 0) => {
+    if (far < 0.7) s.puff(o, t, 0.35, 900, 0.35 * (1 - far), 'lowpass', 300, 0.1);
+    for (let i = 0; i < 4; i++) s.puff(o, t + 0.15 + i * (0.7 + Math.random() * 0.5), 1.6 + Math.random(), 110 + Math.random() * 60, (0.5 - i * 0.08) * (1 - far * 0.5), 'lowpass', 45, 0.5);
+    return 4.5; } },
   drips: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 8; i++) s.puff(o, t + i * (0.2 + i * 0.08), 0.03, 1500 + Math.random() * 800, 0.18, 'bandpass'); return 4; } },
   snap: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.4, 2000, 0.15, 'bandpass', 600, 0.1); s.puff(o, t + 0.4, 0.05, 1200, 0.4, 'bandpass'); s.thump(o, t + 0.4, 150, 60, 0.12, 0.4); return 0.6; } },
 };
@@ -226,9 +230,10 @@ const SOUNDS = {
 const LOOPS = {
   rain: (s, o) => {
     const c = s.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
-    n.buffer = s.noise; n.loop = true; f.type = 'highpass'; f.frequency.value = 2500; g.gain.value = 0.25;
+    // A soft patter (build 14: was a bright 2.5 kHz hiss with a drip every 90 ms).
+    n.buffer = s.noise; n.loop = true; f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 0.5; g.gain.value = 0.12;
     n.connect(f).connect(g).connect(o); n.start();
-    const drip = setInterval(() => { if (s.ready) s.puff(o, c.currentTime + Math.random() * 0.2, 0.03, 1200 + Math.random() * 1500, 0.25, 'bandpass'); }, 90);
+    const drip = setInterval(() => { if (s.ready && Math.random() < 0.6) s.puff(o, c.currentTime + Math.random() * 0.2, 0.04, 700 + Math.random() * 700, 0.1, 'bandpass'); }, 180);
     return () => { clearInterval(drip); n.stop(); };
   },
   mower: (s, o) => {

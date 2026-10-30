@@ -36,22 +36,41 @@ export const EXPL = {
   cap: ['The queen’s reach', 'She’s at her ant limit. Upgrade her to raise it.'],
 };
 
-export const HELP = `
-<div class="row head"><strong>Help</strong><button class="x" data-close="1">Close</button></div>
-<div class="h"><button data-title="1" style="width:100%">Main menu</button></div>
-<div class="h btnrow"><button data-reset="1">Start over</button><button data-stress="1">+200 ants (speed test)</button></div>
-<div class="h"><b>Buttons</b> Hold any button to see its name. ⋯ in the top bar shows the colony's numbers.</div>
-<div class="h"><b>Goal</b> Grow, then kill the rival queen on the Patio: hold her hole with eight fighters until she falls. Lose your queen and it's over.</div>
-<div class="h"><b>Outside</b> Tap to walk. Pick up, carry home. Your path is a trail others follow. Hold Recruit for a crew; Lift carries treats.</div>
-<div class="h"><b>The nest</b> Tap dirt to dig. Build places rooms. Tap the queen for eggs and upgrades.</div>
-<div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: soldiers. 🪨 Stone: rooms and upgrades.</div>
-<div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs and big kills. Spend them on the evolution tree; spend materials on each kind of ant's levels. Ants rank up as they work: Veterans learn a promotion, Elites get a name, and when you die you can come back as one.</div>
-<div class="h"><b>Outposts</b> Evolve Waypoints, walk out into the yard and press Outpost: you and your crew pile a cairn (10 stone). Foragers range round it and along the road home, and trails beside it never fade. An outpost in a region whose guardian is beaten holds it, and its prize is yours. Feet and the mower knock outposts flat.</div>
-<div class="h"><b>Goals</b> Under Evolve → Goals: three at a time, each paying 🧬. Finish a whole set for a reward for good.</div>
-<div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders.</div>
+// Help, in pages (build 14): the tabs along the top pick one.
+export const HELP_PAGES = [
+  ['Basics', `
+<div class="h"><b>Your goal</b> Grow the colony, then take the yard: kill the rival queen on the Patio by holding her hole with eight fighters until she falls. Lose your own queen and it's over.</div>
+<div class="h"><b>Outside</b> Tap to walk, and hold to keep walking. Stand on food and press <b>Pick up</b>, then carry it to the dark hole. Your path home is a scent trail other ants follow.</div>
+<div class="h"><b>Your ant</b> ❤ is your health, 🍖 your hunger. Eat at the nest, or stand beside a forager carrying food. A red edge means you're hurt. When you die, choose what to come back as.</div>
+<div class="h"><b>Buttons</b> Every button has its name on it. Hold one to hear more. ⋯ in the top bar shows the colony's numbers.</div>`],
+  ['Colony', `
+<div class="h"><b>The nest</b> Tap <b>Nest</b> (top right). Tap dirt beside a tunnel to order digging. <b>Build</b> places a room in a pocket you've dug. Tap the queen for eggs.</div>
+<div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, hauls dirt out, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders.</div>
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging.</div>
-<div class="h"><b>Dangers</b> Spider, rival raids, the mower, antlion pits, feet, birds, toads, acorns, bug spray, fire ants, rain and cave-ins. Each explains itself the first time.</div>`;
+<div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades.</div>
+<div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>`],
+  ['Growth', `
+<div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs, big kills and goals. Spend them on the evolution tree.</div>
+<div class="h"><b>Upgrades</b> Each kind of ant, and you, has levels bought with materials. Some levels make you pick one of two abilities, for good.</div>
+<div class="h"><b>Veterans</b> Ants get better at their jobs. Veterans learn a promotion, Elites get a name, a big kill makes a Legend.</div>
+<div class="h"><b>Outposts</b> Evolve Waypoints, walk out and press <b>Outpost</b>: you and your crew pile a cairn (10 stone). Foragers range round it. Beat a region's guardian and its prize is yours.</div>
+<div class="h"><b>Goals</b> Three at a time, each paying 🧬. Finish a set for a reward for good.</div>`],
+  ['Dangers', `
+<div class="h"><b>Spider</b> Waits by its web in the Flowerbed and lunges. Thirty ants, or five Venom ants, can kill it.</div>
+<div class="h"><b>Raids</b> Rival pavement ants grow bolder. Keep Soldiers at your door or they reach the queen.</div>
+<div class="h"><b>From above</b> A shadow means a foot or an acorn is coming; mist means bug spray. Robins and the toad hunt the nearest ant: run, or bring five fighters.</div>
+<div class="h"><b>The ground</b> The mower sweeps the Lawn; antlion funnels in the Sandbox pull ants down; fire ants sting anything that stops.</div>
+<div class="h"><b>Weather</b> Thunder means rain soon. Rain washes trails away and caves in tunnels unless Builders are inside.</div>`],
+  ['Menu', `
+<div class="h"><button data-title="1" style="width:100%">Main menu</button></div>
+<div class="h btnrow"><button data-retips="1">Show tips again</button><button data-reset="1">Start over</button></div>
+<div class="h btnrow"><button data-stress="1">+200 ants (speed test)</button></div>`],
+];
 
+// The first minutes, step by step (build 14: it now walks you through the
+// basics, not just the landing). `done` advances a step; `btn` waits for a
+// tap. From the eighth step on, "Skip tips" ends it.
+const followers = s => s.ants.filter(a => a.follow).length;
 export const INTRO = [
   { text: 'A young queen has landed. She must get underground tonight.', btn: 'Next' },
   { text: 'Tap the dirt under her to dig.', done: s => s.queen.energy < 30 },
@@ -60,5 +79,13 @@ export const INTRO = [
   { text: 'She lays her first egg. It hatches as you.', done: s => !!s.player.ant },
   { text: 'Tap the cells above you to climb out.', done: s => !s.player.inNest },
   { text: 'Find a crumb, press Pick up, bring it to the hole.', done: s => s.colony.delivered.reduce((a,b)=>a+b,0) > 0 },
-  { text: 'Food in, eggs out. Tap the queen to lay a Builder, then dig and Build.', btn: 'Done' },
+  { text: 'Good. Fetch a few more: food is everything. Watch ❤ health and 🍖 hunger, top left.', done: s => (s.colony.foodTotal || 0) >= 15, skip: true },
+  { text: 'Tap Nest (top right), tap the queen, and lay a Builder.', done: s => s.ants.some(a => a.caste === 'builder' && !a.team) || s.colony.eggQueue.includes('builder') || s.colony.eggs.some(e => e.caste === 'builder'), skip: true },
+  { text: 'In the nest, tap dirt beside a tunnel to dig. A Hatchery needs a 4×3 pocket.', done: s => s.nest.digOrders.length > 0 || (s.colony.dug || 0) >= 4, skip: true },
+  { text: 'When the pocket is dug, press Build, pick Hatchery, and tap the green spot.', done: s => s.nest.rooms.some(r => r.key === 'hatchery') || s.colony.buildQueue.length > 0, skip: true },
+  { text: 'Lay Foragers: they bring food in on their own while you explore.', done: s => s.ants.filter(a => a.caste === 'forager' && !a.team && !a.isPlayer).length >= 3, skip: true },
+  { text: 'Outside, hold Recruit by the nest to call a crew. Lead them to a treat or a caterpillar.', done: s => followers(s) >= 3 || (s.colony.treats || 0) > 0, skip: true },
+  { text: 'Far from home, press Trail as you walk back: foragers follow your scent out to far food.', done: s => !!s.seen.marked, skip: true },
+  { text: 'You earn 🧬 Genes by playing. Tap Evolve (top right) to spend them.', done: s => !!s.seen.evolveOpened, skip: true },
+  { text: 'That’s the basics. Grow, explore, and take the yard.', btn: 'Done' },
 ];

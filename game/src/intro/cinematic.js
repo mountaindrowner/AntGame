@@ -127,6 +127,11 @@ export class Cinematic {
     this.t = 0;
     this.started = false;
     this.done = false;
+    // Pre-roll (build 14): the film waits behind black until the yard round
+    // it is built and its materials are compiled, then starts its clock and
+    // the score together. It used to roll straight away and stutter or skip
+    // while the scenery loaded under it.
+    this.ready = false; this.warm = 0; this.calm = 0; this.audioStart = null;
     this.camera = new THREE.PerspectiveCamera(50, 1, 2, 9000);
     // The yard's scenery is built round home, the patio and the flowerbed
     // for the film's wide shots, all at once when it rolls.
@@ -210,7 +215,7 @@ export class Cinematic {
     const el = document.createElement('div');
     el.id = 'cine';
     el.innerHTML = `
-      <div class="grain"></div><div class="vignette"></div>
+      <div class="grain"></div><div class="vignette"></div><div class="preroll">Loading the yard…</div>
       <div class="bar top"></div><div class="bar bottom"></div>
       <div class="caption" aria-live="polite"></div>
       <div class="title hidden"><div class="big">Underfoot!</div><div class="sub">One queen. One rock. One very big yard.</div><button class="go">Continue</button></div>
@@ -241,7 +246,7 @@ export class Cinematic {
     this.sound = new FilmSound();
     if (!this.sound.ctx) return;
     if (this.muted) this.sound.mute(true);
-    if (this.sound.ctx.state === 'running') { scoreFilm(this.sound, this.sound.now + 0.05); return; }
+    if (this.sound.ctx.state === 'running') { this.scoreWhenReady = true; return; }
     this.locked = true;
     this.muteBtn.textContent = 'Tap for sound';
     this.muteBtn.classList.add('ask');
@@ -252,7 +257,7 @@ export class Cinematic {
         if (this.done || !this.sound) return;
         this.locked = false; this.muted = false; this.sound.mute(false);
         this.muteBtn.classList.remove('ask'); this.muteBtn.textContent = 'Sound: on';
-        this._scoreFrom(this.t);
+        if (this.ready) this._scoreFrom(this.t); else this.scoreWhenReady = true;
       });
     };
     window.addEventListener('pointerdown', unlock, true);
@@ -267,6 +272,7 @@ export class Cinematic {
       return a >= now ? o[k](a, ...r) : null;
     }) });
     scoreFilm(late, now - t);
+    this.audioStart = now - t;
   }
 
   finish() {
@@ -340,8 +346,24 @@ export class Cinematic {
 
   update(dt) {
     if (this.manual) return; // a recording steps the film itself
-    if (this.started && !this.done) this.t += dt;
+    if (!this.ready) { this._preroll(); return; }
+    // Once the score plays, the film follows its clock, so a slow frame never
+    // lets picture and sound drift apart.
+    if (this.started && !this.done) this.t = this.audioStart != null && this.sound ? Math.max(this.t, this.sound.now - this.audioStart) : this.t + Math.min(dt, 0.1);
     this._advance(dt);
+  }
+
+  // Hold the first frame behind black until nothing is left to build for
+  // ten frames running, then compile, uncover and start.
+  _preroll() {
+    this._advance(0);
+    this.warm++;
+    this.calm = this.surface.scenery.busy ? 0 : this.calm + 1;
+    if (this.warm < 20 || this.calm < 10) return;
+    this.ready = true;
+    try { this.pipeline.renderer.compile(this.surface.scene, this.camera); } catch (e) { /* not fatal */ }
+    this.el.querySelector('.preroll').classList.add('gone');
+    if (this.sound && this.scoreWhenReady) { this.scoreWhenReady = false; this._scoreFrom(0); }
   }
 
   _advance(dt) {

@@ -2,6 +2,61 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 30: playtest notes, round two (build 14)
+
+Mark's list after playing on his phone, all addressed:
+
+- **The intro film stuttered and started badly.** It rolled its clock the moment it was made. The yard for its wide shots was built in one hitch on the first frame, more regions loaded mid-film, and every long frame made it jump ahead.
+  - It now holds the first frame behind black ("Loading the yard…") until nothing is left to build for ten frames running. Then it compiles its materials, uncovers, and starts its clock and the music together.
+  - After that the picture follows the music's clock, so a slow frame never lets them drift apart.
+- **No more coloured rings under food.**
+- **Pop-ups are simpler and rarer.** Tips are now a small card under the hint that doesn't pause the game and fades after 9 s (tap to dismiss).
+  - Each tip shows once, ever: one seen in an earlier colony isn't shown again.
+  - Help → Menu → "Show tips again" brings them back.
+- **Names on the side buttons.** Nest/Yard, Map, Evolve, Zoom and Help wear their names curved round the circle, like the bottom buttons.
+- **Evolution opens its own window.** Evolve, or a tap on the 🧬 chip, opens a full-screen book:
+  - dark soil and gold, with drifting spores
+  - pages you flip with ‹ › or a swipe: Goals, You, The Ants, Bodies, Senses, Nest, Society, Symbiosis, Ranks
+  - each branch drawn as a tree, with nodes glowing gold (evolved), pulsing green (ready), dim (not yet) or dashed (a later build)
+  - tap a node for its card (effect, cost, deed), then a big Evolve button, with a burst of light when you do
+
+  The old Evolve sheet is gone.
+- **Help is organised** into tabs: Basics, Colony, Growth, Dangers, Menu (main menu, show tips again, start over, the speed test).
+- **Water pools.** Puddles are lumpy pools in rings: deep blue in the middle, bright at the shore, a dark wet-mud edge, and ripples spreading across them.
+- **Antlion pits look like pits.** Each is a real sand funnel: a raised pale rim, grains streaking down the slope, a dark hole, and the antlion's jaws at the bottom.
+- **Your health shows, and so do hits and death.**
+  - A labelled ❤ health bar sits beside 🍖 hunger. Both pulse when low.
+  - The screen edge flashes red when you're bitten or stung, and beats red while health is under 40%.
+  - Dying darkens the screen. The rebirth sheet now opens with "You died" and what killed you, then the choice of what to come back as.
+- **The nest's edges don't show.** Zoomed out underground, the soil bands carry on past the cutaway, a little darker, instead of ending at a box edge. Zooming out stops at a little more than the nest's width.
+- **Hand-holding for the first minutes.** The intro now runs past the landing, through:
+  - fetching food (and what ❤ and 🍖 mean)
+  - laying a Builder
+  - digging a pocket and placing a Hatchery
+  - laying Foragers
+  - recruiting a crew
+  - laying a trail
+  - opening Evolve
+
+  Each step waits for you to do it, pulses the button it names, and has a "Skip tips" button.
+- **Your ant is slower, and you can improve it.**
+  - It walks at 66 instead of 85, barely faster than a forager's 60.
+  - A new **You** page under Evolve has five levels:
+    1. Long legs, +15% speed
+    2. Thick shell, health 12 → 20, then pick Sprinter (+10% speed) or Iron stomach (hunger drains half as fast)
+    3. Strong jaws, bite +50%, then pick Big mandibles (carry 8) or Rallying cry (recruit from 10 tiles)
+    4. Swift, +15% speed again
+    5. Mastery: Hero (your crew keeps up and bites 20% harder) or Survivor (once a life, a killing blow leaves you at 1 health)
+
+    These carry over every time you're reborn.
+- **Weather is gentler.**
+  - Rain comes every 8–12 minutes (was 3–5), and the first after 8 minutes (was 4).
+  - Twenty seconds before it, thunder rumbles in the distance with a warning to get builders inside.
+  - The rain itself is a soft patter (was a bright hiss with a drip every 90 ms), with long rolling thunder now and then.
+- **Found while testing: sheets redrew five times a second.** They compared against the browser's own rewrite of their HTML, which never matches, so a tap could land on a button just as it was replaced. They now redraw only when their content changes.
+- **Bots** (6 games, 20 minutes): the same pattern as build 13. Seed 21 still loses its queen to raiders; the rest hold 8–15 ants. A slower ant doesn't starve the bot colonies.
+- **Tests:** 30 (new: your ant's pace and levels, Thick shell, thunder before rain and the rain interval). The browser test walks the Evolution window's pages, picks and evolves a node, and opens Help's tabs.
+
 ## Oct 30: outposts, held regions and the goals board (build 13)
 
 Mark: "Let's build it and then test it." The rest of step 1 of `PROGRESSION.md`. Data in `growth.js` (OUTPOST, GUARDIANS, PRIZES, GOALS, SETS); logic in `sim.js`.

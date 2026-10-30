@@ -102,6 +102,8 @@ try {
 
   // Stress: +200 foragers, then look at the swarm from above.
   await page.click('#help');
+  await shot('help');
+  await page.click('#sheet button[data-helptab="4"]');
   await page.click('#sheet [data-stress]');
   await fastForward(20);
   await page.click('#zoom');
@@ -283,23 +285,30 @@ try {
   });
   await page.waitForTimeout(500);
   await shot('ranks-on-ants');
+  // The Evolution window (build 14): pages, a tree, a node's card, Evolve.
   await page.click('#evolvebtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(500);
+  await shot('evolve-goals');
+  await page.click('#evo .evo-next', { force: true, timeout: 5000 });
+  await page.waitForTimeout(400);
+  await shot('evolve-you');
+  await page.click('#evo .evo-dots button[data-page="3"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(400);
+  await page.click('#evo .enode[data-node="mandibles"]', { force: true, timeout: 5000 });
   await page.waitForTimeout(300);
-  await shot('evolve-ants');
-  await page.click('#sheet button[data-tab="evo"]', { force: true, timeout: 5000 });
-  await page.waitForTimeout(200);
-  await page.click('#sheet button[data-evo="mandibles"]', { force: true, timeout: 5000 });
-  await page.waitForTimeout(200);
+  await shot('evolve-tree-pick');
+  await page.click('#evo .evo-buy', { force: true, timeout: 5000 });
+  await page.waitForTimeout(400);
   await shot('evolve-tree');
   const bought = await sim(() => window.UNDERFOOT.SIM.has(window.UNDERFOOT.app.s, 'mandibles'));
   console.log('evolve: mandibles'.padEnd(22), '|', bought);
   if (!bought) errors.push('test: Strong mandibles did not buy');
-  await page.click('#sheet button[data-tab="ranks"]', { force: true, timeout: 5000 });
-  await page.waitForTimeout(200);
+  await page.click('#evo .evo-dots button[data-page="8"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(400);
   await shot('evolve-ranks');
-  await page.click('#sheet button[data-close]');
+  await page.click('#evo .evo-x', { force: true, timeout: 5000 });
   // Your ant dies with named ants alive: the rebirth choice opens.
-  await sim(() => { const { app } = window.UNDERFOOT, s = app.s, a = s.player.ant; if (a) { a.state = 'dead'; s.ants = s.ants.filter((o) => o !== a); s.player.ant = null; } s.player.pending = true; app.rebirthAsked = false; });
+  await sim(() => { const { app } = window.UNDERFOOT, s = app.s, a = s.player.ant; if (a) { a.state = 'dead'; s.ants = s.ants.filter((o) => o !== a); s.player.ant = null; } s.player.pending = true; s.player.died = s.t; s.player.deathCause = 'spider'; app.rebirthAsked = false; });
   await page.waitForTimeout(700);
   // Explainers (Genes, Goals…) come first; dismiss them, then the choice opens.
   const dismiss = async () => { for (let k = 0; k < 6; k++) { const ok = await page.$('#sheet:not(.hidden) .btns.one button[data-close]'); if (!ok) break; await ok.click({ force: true }); await page.waitForTimeout(400); } };
@@ -336,10 +345,10 @@ try {
   await shot('outpost-raised');
   await page.click('#evolvebtn', { force: true, timeout: 5000 });
   await page.waitForTimeout(300);
-  await page.click('#sheet button[data-tab="goals"]', { force: true, timeout: 5000 });
+  await page.click('#evo .evo-dots button[data-page="0"]', { force: true, timeout: 5000 });
   await page.waitForTimeout(200);
   await shot('goals');
-  await page.click('#sheet button[data-close]', { force: true, timeout: 5000 });
+  await page.click('#evo .evo-x', { force: true, timeout: 5000 });
   await page.click('#mapbtn', { force: true, timeout: 5000 });
   await page.waitForTimeout(500);
   await shot('map-outpost');

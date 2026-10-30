@@ -36,7 +36,7 @@ Priority: **1** is the first batch (the core loop and the dangers), **2** the se
 
 | Sound | When | Sounds like | How | P |
 |---|---|---|---|---|
-| Footsteps | Your ant walking (surface and nest) | Faint skittering | grain: 3 tiny ticks per stride, 6 kHz band-pass, quiet; faster when you run | 2 |
+| Footsteps | Your ant walking (surface and nest) | A soft, low pad | grain: 2 low-passed puffs near 520 Hz plus a tiny thump (build 12.1; was 6 kHz ticks) | 2 |
 | Pick up | `doAction` picks something up | A crisp "tuk" | Blip 600 Hz, then 900 Hz 30 ms later | 1 |
 | Drop / set down | Drop, or set a treat down | A soft "dup" | Low-pass puff plus a sine at 300 Hz, 60 ms | 1 |
 | Deliver home | Food, water or protein reaches the store | A happy coin-like chime | Two-note chirp up, by food kind: grain = wood, water = glassy, protein = low | 1 |
@@ -90,8 +90,8 @@ Priority: **1** is the first batch (the core loop and the dangers), **2** the se
 
 | Sound | When | Sounds like | How | P |
 |---|---|---|---|---|
-| Rain | `rain` event, for the whole shower | Steady rain with fat drops | High-pass noise bed (swell in, fade out) plus random low-pass "plips" | 1 |
-| Thunder | Now and then during rain | A far rumble | Low-pass noise, slow attack, 2–3 s decay, random pitch | 2 |
+| Rain | `rain` event, for the whole shower | A soft patter | Band-passed noise near 1.1 kHz, quiet, plus sparse low drops (build 14; was a bright high-pass hiss) | 1 |
+| Thunder | 20 s before rain (far off), as it starts, and now and then during it | A crack, then a long rolling rumble | A low-passed crack (softer the farther off), then four overlapping low rolls over about 4 s (build 14) | 2 |
 | Rain ends | Rain stops | Drips slowing | plips thinning out over 4 s | 3 |
 
 ## Creatures and dangers
