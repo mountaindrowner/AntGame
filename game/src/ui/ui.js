@@ -7,7 +7,7 @@ import { sfx } from '../audio/sfx.js';
 import { YARD_MAP } from '../sim/yard.js';
 import { ICONS } from './icons.js';
 import { MapView } from './mapView.js';
-import { RES as GRES, UPGRADES, BRANCHES, EVO, EVO_BY, evoCost, laterIn, LATER, RANKS, rankOf, PROMOS, FAMILY, QUEEN_TRAITS } from '../sim/growth.js';
+import { RES as GRES, UPGRADES, BRANCHES, EVO, EVO_BY, evoCost, laterIn, LATER, RANKS, rankOf, PROMOS, FAMILY, QUEEN_TRAITS, GOALS, goalBoard, SETS, TIERS, prizeOf, GUARDIANS } from '../sim/growth.js';
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
 const $ = (id) => document.getElementById(id);
@@ -17,7 +17,7 @@ export function createUI(app) {
   const el = {
     stats: $('stats'), msg: $('msg'), hungerBar: $('hungerbar'), act: $('act'), release: $('release'), mark: $('mark'),
     recruit: $('recruit'), enter: $('enter'), barS: $('bar'), barN: $('barn'), sheet: $('sheet'), buildNest: $('buildnest'),
-    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'), evolve: $('evolvebtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
+    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'), evolve: $('evolvebtn'), outpost: $('outpostbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
   };
 
   // ---------------------------------------------------------- icon buttons
@@ -25,7 +25,7 @@ export function createUI(app) {
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
-  const ARC = { pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const ARC = { outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
   const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
@@ -35,7 +35,7 @@ export function createUI(app) {
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
-  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.evolve, 'evolve', 'Evolve: ants, evolution, ranks'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
+  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
   setIcon(el.act, 'pick', 'Pick up');
 
   // ---------------------------------------------------------- tips
@@ -140,12 +140,36 @@ export function createUI(app) {
   const CASTE_ORDER = ['forager', 'builder', 'nurse', 'soldier', 'venom'];
   const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
   function renderGrow() {
-    const s = app.s, c = s.colony, tab = app.growTab || 'ants';
+    const s = app.s, c = s.colony, tab = app.growTab || 'goals';
     let h = `<div class="row head"><strong>Evolve · <span class="genes">🧬 ${c.genes}</span></strong><button class="x" data-close="1">Close</button></div>`;
-    h += `<div class="tabs">${[['ants', 'Ants'], ['evo', 'Evolution'], ['ranks', 'Ranks']].map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
-    if (tab === 'ants') h += growAnts(s, c);
+    h += `<div class="tabs">${[['goals', 'Goals'], ['ants', 'Ants'], ['evo', 'Evolution'], ['ranks', 'Ranks']].map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
+    if (tab === 'goals') h += growGoals(s, c);
+    else if (tab === 'ants') h += growAnts(s, c);
     else if (tab === 'evo') h += growEvo(s, c);
     else h += growRanks(s, c);
+    return h;
+  }
+  const there = (A) => A.name.replace(/^The /, 'the ');
+  function growGoals(s, c) {
+    let h = `<div class="note">Three goals at a time. Each pays 🧬; finish a whole set for a reward for good.</div>`;
+    for (const g of goalBoard(s)) {
+      if (!g) continue;
+      const n = Math.min(g.of, Math.floor(g.n(s)));
+      h += `<div class="goal"><div class="tier">${TIERS[g.tier].name} · ${SETS[g.set].name} · 🧬${TIERS[g.tier].genes}</div><b>${g.text}</b>${g.of > 1 ? ` <span class="note">${n} of ${g.of}</span>` : ''}<div class="bar"><i style="width:${(n / g.of) * 100}%"></i></div></div>`;
+    }
+    h += `<div class="t" style="margin-top:10px">Sets</div><div class="sets">`;
+    for (const k in SETS) {
+      const all = GOALS.filter((g) => g.set === k), d = all.filter((g) => c.goals.done[g.key]).length;
+      h += `<div class="${c.goals.sets[k] ? 'done' : ''}"><b>${SETS[k].name}</b> ${d}/${all.length}<br>${SETS[k].reward}</div>`;
+    }
+    h += `</div><div class="t" style="margin-top:10px">Outposts · ${s.outposts.length} of ${SIM.outpostCap(s)}</div>`;
+    if (!SIM.has(s, 'waypoints')) h += `<div class="note">Evolve Waypoints (Senses) to raise outposts: cairns far from home your foragers range round. Put one in a region, beat its guardian, and its prize is yours.</div>`;
+    else if (!s.outposts.length) h += `<div class="note">Walk out into the yard and press Outpost. You and your crew pile the pebbles.</div>`;
+    for (const o of s.outposts) {
+      const A = SIM.AREAS[o.region], G = GUARDIANS[A.key], held = c.held[o.region];
+      const st = !o.done ? `being raised (${Math.floor((o.work / 30) * 100)}%)` : held ? `held · ${prizeOf(A.key).text}` : G ? `beat ${G[0]} to hold it` : A.key === 'rock' ? 'home ground' : 'holding…';
+      h += `<div class="named"><b>${A.name}</b> · ${st}</div>`;
+    }
     return h;
   }
   function growAnts(s, c) {
@@ -211,11 +235,15 @@ export function createUI(app) {
   }
   // Your ant died: come back as one of your named ants, or wait for an egg.
   function rebornChoices() { return app.s.ants.filter((a) => !a.team && a.state !== 'dead' && !a.isPlayer && rankOf(a) >= 3).sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 4); }
+  // Or hatch again as any kind of ant you've unlocked.
+  const REBORN_AS = { forager: 'Fast, carries food', builder: 'Digs; slow outside', nurse: 'Stays home', soldier: 'Bites hard; a fighter', venom: 'Kills big things' };
   function renderReborn() {
-    const list = rebornChoices();
-    return `<div class="row head"><strong>Your ant is gone</strong></div><div class="note">Come back as one of your named ants, or wait for the next hatchling.</div><div class="btns">`
-      + list.map((a) => `<button data-possess="${a.id}">${sicon(a.caste)}<b>${a.name}${a.title ? ' ' + a.title : ''}</b><i>${RANKS[rankOf(a)].name} ${CASTES[a.caste].name}</i></button>`).join('')
-      + `<button data-wait="1"><b>Wait</b><i>for the next hatchling</i></button></div>`;
+    const s = app.s, list = rebornChoices();
+    let h = `<div class="row head"><strong>Your ant is gone</strong></div>`;
+    if (list.length) h += `<div class="note">Come back as one of your named ants, where it stands…</div><div class="btns">` + list.map((a) => `<button data-possess="${a.id}">${sicon(a.caste)}<b>${a.name}${a.title ? ' ' + a.title : ''}</b><i>${RANKS[rankOf(a)].name} ${CASTES[a.caste].name}</i></button>`).join('') + `</div>`;
+    h += `<div class="note">${list.length ? '…or hatch' : 'Hatch'} again, as:</div><div class="btns">`;
+    for (const k of Object.keys(REBORN_AS)) { const lock = SIM.eggLock(s, k); h += `<button data-rebirth="${k}" ${lock ? 'disabled' : ''}>${sicon(k)}<b>${CASTES[k].name}</b><i>${lock || REBORN_AS[k]}</i></button>`; }
+    return h + `</div>`;
   }
 
   function renderSheet() {
@@ -295,12 +323,14 @@ export function createUI(app) {
     // Built regions sit on top of the planned zones they belong to.
     for (let i = 0; i < SIM.AREAS.length; i++) {
       const A = SIM.AREAS[i], [c, r] = A.at, pos = `grid-column:${c + 1};grid-row:${r + 1}`, seen = s.seen['area' + i] || i === SIM.REGION.rock;
-      const tag = i === SIM.REGION.patio && s.rival.queenAlive ? '⚔' : count[i] ? '🐜' + count[i] : '';
+      const tag = i === SIM.REGION.patio && s.rival.queenAlive ? '⚔' : s.colony.held[i] ? '★' : s.outposts.some((o) => o.region === i) ? '⛳' : count[i] ? '🐜' + count[i] : '';
       h += `<button class="z${seen ? '' : ' unseen'}${i === here ? ' here' : ''}${i === pickI ? ' pick' : ''}" style="${pos};background:${GROUND[A.ground]}" data-region="${i}" aria-label="${A.name}">${A.short}${tag ? `<em>${tag}</em>` : ''}</button>`;
     }
     h += `</div>`;
     const A = SIM.AREAS[pickI], seen = s.seen['area' + pickI] || pickI === SIM.REGION.rock;
-    h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
+    const G = GUARDIANS[A.key], P2 = prizeOf(A.key), out = s.outposts.find((o) => o.region === pickI);
+    const hold = s.colony.held[pickI] ? 'Held: yours while your outpost stands' : out ? (out.done ? (G ? `Outpost up; beat ${G[0]} to hold it` : 'Outpost up') : 'Outpost being raised') : P2 ? `Raise an outpost here${G ? ` and beat ${G[0]}` : ''} to hold it` : 'Home';
+    h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}${P2 ? ` · held: ${P2.text.replace(/^./, (ch) => ch.toLowerCase())}` : ''}</dd><dt>Hold</dt><dd>${hold}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
     h += `<div class="note">${SIM.AREAS.length} regions. Grey ones you haven't explored yet.</div>`;
     el.sheet.innerHTML = h;
   }
@@ -386,6 +416,10 @@ export function createUI(app) {
     setIcon(el.release, 'release', st.followers ? `Release ${st.followers}` : 'Release', st.followers || '');
     el.release.disabled = !st.followers;
     el.mark.classList.toggle('on', !!P().mark);
+    // Outpost: once Waypoints is evolved, while you're out in the yard.
+    const showOut = SIM.has(s, 'waypoints') && P().ant && !P().inNest;
+    el.outpost.classList.toggle('hidden', !showOut);
+    if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', why ? 'Outpost: ' + why : 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('dim', !!why); }
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;
     el.enter.classList.toggle('hidden', !nearHome);
@@ -407,7 +441,7 @@ export function createUI(app) {
     const named = c.named; if (app.lastNamed != null && named > app.lastNamed) sfx.play('rankUp'); app.lastNamed = named;
     // Your ant died and you have named ants: offer them as your next body.
     if (P().ant) app.rebirthAsked = false;
-    else if (P().pending && !app.rebirthAsked && !app.menu && s.queen.placed && rebornChoices().length) { app.rebirthAsked = true; openMenu('reborn'); app.paused = true; }
+    else if (P().pending && !app.rebirthAsked && !app.menu && s.queen.placed) { app.rebirthAsked = true; openMenu('reborn'); app.paused = true; }
     if (app.menu === 'colony') renderColony();
     if (app.menu) renderSheet();
   }
@@ -440,6 +474,7 @@ export function createUI(app) {
     if (b.dataset.qt) { const [lv, k] = b.dataset.qt.split(':'); SIM.pickQueenTrait(s, +lv, k); renderSheet(); return; }
     if (b.dataset.possess) { SIM.possess(s, +b.dataset.possess); closeMenu(); return; }
     if (b.dataset.wait) { app.rebirthAsked = true; closeMenu(); return; }
+    if (b.dataset.rebirth) { P().rebirth = b.dataset.rebirth; const q = s.colony.eggQueue, i = q.indexOf('forager'); if (i >= 0 && !s.colony.eggs.length) q[i] = b.dataset.rebirth; app.rebirthAsked = true; closeMenu(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; renderSheet(); return; }
     if (b.dataset.place) { app.placing = { kind: 'room', key: b.dataset.place }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.tool) { app.placing = { kind: b.dataset.tool }; closeMenu(); app.view = 'nest'; return; }
@@ -448,6 +483,7 @@ export function createUI(app) {
   el.view.addEventListener('click', () => { app.view = app.view === 'nest' ? 'surface' : 'nest'; closeMenu(); });
   el.act.addEventListener('click', () => SIM.doAction(app.s));
   el.release.addEventListener('click', () => SIM.release(app.s));
+  el.outpost.addEventListener('click', () => { const why = SIM.outpostLock(app.s); if (why) flash('Outpost: ' + why + '.', /^Outpost:/, 2600); else if (SIM.placeOutpost(app.s)) sfx.play('roomPlaced'); });
   el.mark.addEventListener('click', () => { P().mark = !P().mark; });
   el.enter.addEventListener('click', () => {
     const s = app.s, a = P().ant;

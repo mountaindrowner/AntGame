@@ -107,7 +107,7 @@ export const EVO = [
   { key: 'longlived', branch: 'bodies', after: 'heat', name: 'Long-lived workers', cost: { genes: 10, sugar: 40 }, fx: 'Ants live twice as long', soon: true, big: true },
   { key: 'lineage', branch: 'bodies', name: 'Lineage', cost: { genes: 8 }, fx: 'Pick one forever: Acid, Trap-jaw or Bullet', soon: true, big: true },
   // Senses
-  { key: 'waypoints', branch: 'senses', name: 'Waypoints', cost: { genes: 1, grit: 10 }, fx: 'Outposts', soon: true },
+  { key: 'waypoints', branch: 'senses', name: 'Waypoints', cost: { genes: 1, grit: 10 }, fx: 'Outposts: claim ground far from the nest', deed: ['Scout 3 regions', (s) => Object.keys(s.colony.scouted).length >= 3] },
   { key: 'lookout', branch: 'senses', after: 'waypoints', name: 'Lookout', cost: { genes: 3, grit: 20 }, fx: 'Scouts; boss patrols on the map', soon: true },
   { key: 'suncompass', branch: 'senses', after: 'lookout', name: 'Sun compass', cost: { genes: 6 }, fx: 'Foragers never get lost', soon: true },
   { key: 'scent', branch: 'senses', name: 'Strong scent', cost: { genes: 2 }, fx: 'Trails fade half as fast', deed: ['Bring home 500 food', (s) => (s.colony.foodTotal || 0) >= 500] },
@@ -163,4 +163,90 @@ export function evoCost(s, n) {
   const cost = Object.assign({}, n.cost);
   if (n.deed && cost.genes && n.deed[1](s)) cost.genes = Math.ceil(cost.genes / 2);
   return cost;
+}
+
+// ---------- the map: outposts, held regions, prizes (build 13) ----------
+// An outpost is a cairn of pebbles you raise far from home. Foragers range
+// round it (and along the road back to the nest) as they do round the nest,
+// trails near it never fade, and it lifts the fog round it.
+export const OUTPOST = { cost: { grit: 10 }, work: 30, spacing: 14, reach: 26, road: 2, keep: 6, see: 20, hp: 2 };
+// What must be beaten before a region can be held. Bosses from later builds
+// don't stop you holding their ground yet; the fire ants do.
+export const GUARDIANS = {
+  flowerbed: ['the spider', (s) => (s.colony.kills.spider || 0) >= 1],
+  patio: ['the pavement ants’ queen', (s) => !s.rival.queenAlive],
+  fireout: ['the fire ants', () => false],
+  firemound: ['the fire ants', () => false],
+};
+// Each held region's prize, for good while you hold it. The sim reads `fx`.
+const GARDEN = { text: 'Aphids here refill twice as fast', fx: 'aphids' };
+const OAKS = { text: 'Acorns fall twice as often', fx: 'acorns' };
+export const PRIZES = {
+  steps: { text: 'Feet come half as often', fx: 'calm' },
+  patio: { text: 'Their nest becomes your outpost; no more raids', fx: 'none' },
+  flowerbed: { text: 'Berries grow back twice as fast', fx: 'food2' },
+  woodpile: { text: 'Twice the pebbles turn up here', fx: 'stone' },
+  grill: { text: 'Scraps grow back twice as fast', fx: 'food2' },
+  tomatoes: GARDEN, beans: GARDEN, peppers: GARDEN, herbs: GARDEN,
+  spigot: { text: 'Water cap +40', fx: 'water' },
+  rock: null,
+  compost: { text: 'Eggs hatch 15% faster (it’s warm)', fx: 'warm' },
+  feeder: { text: 'Seed rain twice as heavy', fx: 'food2' },
+  sandbox: { text: 'Crews carry treats 30% faster', fx: 'crew' },
+  lawn: { text: 'The mower warns you twice as early', fx: 'mower' },
+  picnic: { text: 'A treat lands here every few minutes', fx: 'picnic' },
+  birdbath: { text: 'Birds come half as often', fx: 'calm' },
+  rockgarden: { text: 'Twice the pebbles turn up here', fx: 'stone' },
+  rockgarden2: { text: 'Twice the pebbles turn up here', fx: 'stone' },
+  oakroots: OAKS, oak: OAKS, acorns: OAKS, branches: OAKS, oakeast: OAKS,
+};
+export const prizeOf = (key) => (key in PRIZES ? PRIZES[key] : { text: 'Food grows back half again as fast', fx: 'food15' });
+
+// ---------- the goals board (build 13) ----------
+// Three goals open at once: one short, one medium, one long. Each pays 🧬 and
+// points at something the colony hasn't done. Goals come in themed sets;
+// finishing a set pays a reward for good.
+const scouted = (s) => Object.keys(s.colony.scouted).length;
+const held = (s) => Object.keys(s.colony.held || {}).length;
+const roomsBuilt = (s) => s.nest.rooms.filter((r) => r.key !== 'queen').length;
+const ours = (s) => s.ants.filter((a) => !a.team && a.state !== 'dead');
+export const SETS = {
+  explorer: { name: 'Explorer', reward: 'One more outpost', fx: 'outpost' },
+  garden: { name: 'Garden', reward: 'Foragers carry one more', fx: 'carry' },
+  hunter: { name: 'Hunter', reward: 'Fighters bite 10% harder', fx: 'bite' },
+  builder: { name: 'Builder', reward: 'Rooms build 25% faster', fx: 'build' },
+  colony: { name: 'Colony', reward: 'Eggs hatch 10% faster', fx: 'eggs' },
+};
+export const TIERS = { short: { name: 'Next', genes: 1 }, medium: { name: 'Soon', genes: 2 }, long: { name: 'Later', genes: 3 } };
+// In board order: the first unfinished goal of each tier is the one shown.
+export const GOALS = [
+  { key: 'food50', set: 'garden', tier: 'short', text: 'Bring home 50 food', n: (s) => s.colony.foodTotal, of: 50 },
+  { key: 'scout2', set: 'explorer', tier: 'short', text: 'Scout 2 new regions', n: scouted, of: 2 },
+  { key: 'hatch10', set: 'colony', tier: 'short', text: 'Hatch 10 eggs', n: (s) => s.colony.hatched, of: 10 },
+  { key: 'hatchery', set: 'builder', tier: 'short', text: 'Build a Hatchery', n: (s) => (s.nest.rooms.some((r) => r.key === 'hatchery') ? 1 : 0), of: 1 },
+  { key: 'cat', set: 'hunter', tier: 'short', text: 'Hunt a caterpillar', n: (s) => s.colony.kills.caterpillar || 0, of: 1 },
+  { key: 'treat1', set: 'garden', tier: 'medium', text: 'Haul a treat home with a crew', n: (s) => s.colony.treats, of: 1 },
+  { key: 'outpost1', set: 'explorer', tier: 'medium', text: 'Raise an outpost', n: (s) => (s.outposts || []).filter((o) => o.done).length, of: 1 },
+  { key: 'dig40', set: 'builder', tier: 'medium', text: 'Dig 40 cells', n: (s) => s.colony.dug || 0, of: 40 },
+  { key: 'ants30', set: 'colony', tier: 'medium', text: 'Grow to 30 ants', n: (s) => ours(s).length, of: 30 },
+  { key: 'rivals10', set: 'hunter', tier: 'medium', text: 'Kill 10 rival ants', n: (s) => s.rival.deaths.war || 0, of: 10 },
+  { key: 'scout6', set: 'explorer', tier: 'medium', text: 'Scout 6 regions', n: scouted, of: 6 },
+  { key: 'store100', set: 'garden', tier: 'medium', text: 'Fill the store to 100 food', n: (s) => Math.floor(s.colony.storePeak), of: 100 },
+  { key: 'rooms4', set: 'builder', tier: 'medium', text: 'Build 4 rooms', n: roomsBuilt, of: 4 },
+  { key: 'evolve3', set: 'colony', tier: 'medium', text: 'Evolve 3 times', n: (s) => Object.keys(s.colony.evo).length, of: 3 },
+  { key: 'hold1', set: 'explorer', tier: 'long', text: 'Hold a region: an outpost, its guardian beaten', n: held, of: 1 },
+  { key: 'spider', set: 'hunter', tier: 'long', text: 'Kill the spider', n: (s) => s.colony.kills.spider || 0, of: 1 },
+  { key: 'food1000', set: 'garden', tier: 'long', text: 'Bring home 1,000 food', n: (s) => s.colony.foodTotal, of: 1000 },
+  { key: 'rooms6', set: 'builder', tier: 'long', text: 'Build all six rooms', n: roomsBuilt, of: 6 },
+  { key: 'queen3', set: 'colony', tier: 'long', text: 'Raise the queen to level III', n: (s) => s.queen.level + 1, of: 3 },
+  { key: 'vets3', set: 'hunter', tier: 'long', text: 'Have 3 Veteran fighters', n: (s) => ours(s).filter((a) => (a.caste === 'soldier' || a.caste === 'venom') && rankOf(a) >= 2).length, of: 3 },
+  { key: 'hold3', set: 'explorer', tier: 'long', text: 'Hold 3 regions', n: held, of: 3 },
+  { key: 'treat5', set: 'garden', tier: 'long', text: 'Haul 5 treats home', n: (s) => s.colony.treats, of: 5 },
+  { key: 'elite', set: 'colony', tier: 'long', text: 'Raise an Elite (it gets a name)', n: (s) => s.colony.named, of: 1 },
+  { key: 'scout15', set: 'explorer', tier: 'long', text: 'Scout 15 regions', n: scouted, of: 15 },
+];
+export const GOAL_BY = Object.fromEntries(GOALS.map((g) => [g.key, g]));
+export function goalBoard(s) {
+  const done = (s.colony.goals || {}).done || {};
+  return ['short', 'medium', 'long'].map((t) => GOALS.find((g) => g.tier === t && !done[g.key]) || null);
 }

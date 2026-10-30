@@ -301,12 +301,48 @@ try {
   // Your ant dies with named ants alive: the rebirth choice opens.
   await sim(() => { const { app } = window.UNDERFOOT, s = app.s, a = s.player.ant; if (a) { a.state = 'dead'; s.ants = s.ants.filter((o) => o !== a); s.player.ant = null; } s.player.pending = true; app.rebirthAsked = false; });
   await page.waitForTimeout(700);
+  // Explainers (Genes, Goals…) come first; dismiss them, then the choice opens.
+  const dismiss = async () => { for (let k = 0; k < 6; k++) { const ok = await page.$('#sheet:not(.hidden) .btns.one button[data-close]'); if (!ok) break; await ok.click({ force: true }); await page.waitForTimeout(400); } };
+  await dismiss();
   await shot('reborn');
   const reborn = await page.$('#sheet button[data-possess]');
   if (!reborn) errors.push('test: no rebirth choice');
   else { await reborn.click({ force: true, timeout: 5000 }); await page.waitForTimeout(300); }
   const who = await sim(() => { const a = window.UNDERFOOT.app.s.player.ant; return a ? a.name : null; });
   console.log('reborn as'.padEnd(22), '|', who);
+  // Build 13: an outpost at the Spigot, raised, holding the region; the Goals tab; the map card.
+  const held = await sim(() => {
+    const { app, SIM } = window.UNDERFOOT, s = app.s, c = s.colony, T = SIM.T;
+    Object.assign(c, { genes: Math.max(c.genes, 5), grit: 40 }); SIM.buyEvo(s, 'waypoints');
+    const i = SIM.AREAS.findIndex((A) => A.key === 'spigot'), b = SIM.areaBounds(i), w = s.world;
+    let x = Math.floor((b.x0 + b.x1) / 2), y = Math.floor((b.y0 + b.y1) / 2);
+    while (w.blocked[y * SIM.W + x]) x++;
+    if (!s.player.ant) { s.player.pending = true; for (let k = 0; k < 20 * 40 && !s.player.ant; k++) SIM.tick(s, 0.05); }
+    const a = s.player.ant; s.player.inNest = false; a.state = 'player'; a.tx = x; a.ty = y; a.x = (x + 0.5) * T; a.y = (y + 0.5) * T;
+    s.spider = null; s.strikes = []; app.view = 'surface'; app.zoomMul = 1.3;
+    return SIM.outpostLock(s) || 'ok';
+  });
+  console.log('outpost lock'.padEnd(22), '|', held);
+  await page.waitForTimeout(400);
+  await dismiss();
+  await page.click('#outpostbtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(300);
+  await shot('outpost-started');
+  const raised = await sim(() => { const { app, SIM } = window.UNDERFOOT, s = app.s, a = s.player.ant; for (let k = 0; k < 20 * 40; k++) { s.player.hunger = 100; SIM.tick(s, 0.05); a.x = (a.tx + 0.5) * SIM.T; a.y = (a.ty + 0.5) * SIM.T; } const o = s.outposts.at(-1); return { done: o && o.done, held: Object.keys(s.colony.held).length }; });
+  console.log('outpost raised/held'.padEnd(22), '|', JSON.stringify(raised));
+  if (!raised.done || !raised.held) errors.push('test: outpost not raised or region not held');
+  await page.waitForTimeout(600);
+  await dismiss();
+  await shot('outpost-raised');
+  await page.click('#evolvebtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(300);
+  await page.click('#sheet button[data-tab="goals"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(200);
+  await shot('goals');
+  await page.click('#sheet button[data-close]', { force: true, timeout: 5000 });
+  await page.click('#mapbtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(500);
+  await shot('map-outpost');
 } catch (e) {
   errors.push('test: ' + e.message);
 }

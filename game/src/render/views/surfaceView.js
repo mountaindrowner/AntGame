@@ -72,6 +72,7 @@ export function antColor(a) {
 export const rankScale = (a) => (a.team ? 1 : [1, 1, 1.05, 1.1, 1.15][rankOf(a)]);
 export const rankRing = (a) => (a.team ? null : [null, null, null, '#d9c48a', '#ffd34d'][rankOf(a)]);
 
+const CAIRN_WORK = 30;
 export class SurfaceView {
   constructor() {
     this.scene = new THREE.Scene();
@@ -163,6 +164,25 @@ export class SurfaceView {
   }
 
   // Build everything that only depends on the world layout.
+  // One cairn per outpost; stones appear as the work goes on.
+  _cairns(s, t) {
+    const live = new Set();
+    for (const o of s.outposts || []) {
+      live.add(o.id);
+      let c = this.cairns.get(o.id);
+      if (!c) {
+        c = new THREE.Group(); c.parts = this.cairnParts.map((p) => { const m = new THREE.Mesh(p.geo, p.mat); c.add(m); return m; });
+        c.position.set((o.x + 0.5) * T, 0, (o.y + 0.5) * T); c.rotation.y = (o.id * 2.4) % 6.28;
+        this.cairnGroup.add(c); this.cairns.set(o.id, c);
+      }
+      const k = o.done ? 1 : o.work / CAIRN_WORK;
+      c.parts.forEach((m, i) => { m.visible = i < 4 ? k >= i / 4 : o.done; });
+      c.parts[5].rotation.y = Math.sin(t * 2 + o.id) * 0.35;
+      c.scale.setScalar(1.3);
+    }
+    for (const [id, c] of this.cairns) if (!live.has(id)) { this.cairnGroup.remove(c); this.cairns.delete(id); }
+  }
+
   setState(s) {
     this.state = s;
     this.camInit = false;
@@ -212,6 +232,16 @@ export class SurfaceView {
     this.heap.position.set((s.spoilAt.x + 0.5) * T, 0, (s.spoilAt.y + 0.5) * T);
     this.heap.visible = false;
     g.add(this.heap);
+    // Outposts (build 13): a cairn of pebbles with a twig and a leaf for a
+    // flag. It rises stone by stone while your ants build it.
+    this.cairnGroup = new THREE.Group(); g.add(this.cairnGroup); this.cairns = new Map();
+    const stone = psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.5, 0.5] }) });
+    this.cairnParts = [[0, 4.2, 0, 9, 4.6, 8], [1.2, 10.4, 0.8, 6.6, 3.8, 6], [-0.6, 15.4, 0.2, 4.6, 3, 4.4], [0.4, 19.2, -0.4, 3, 2.2, 3]].map(([x, y, z, sx, sy, sz], i) => {
+      const geo = new THREE.IcosahedronGeometry(1, 1); geo.scale(sx, sy, sz); geo.rotateY(i * 1.3); geo.translate(x, y, z); return { geo, mat: stone };
+    });
+    const twig = new THREE.CylinderGeometry(0.5, 0.6, 18, 5).translate(0, 29, 0);
+    const leaf = new THREE.PlaneGeometry(8, 5).translate(4.2, 34, 0);
+    this.cairnParts.push({ geo: twig, mat: psx({ color: '#6e4c2e' }), flag: true }, { geo: leaf, mat: psx({ color: '#d8a02a', side: THREE.DoubleSide }), flag: true });
 
         // Scent overlay: a lingering, drifting haze over the trails, for a
     // window of tiles round the camera, rewritten from the sim each frame
@@ -302,6 +332,7 @@ export class SurfaceView {
     const pile = s.spoilPile || 0;
     this.heap.visible = pile > 0;
     if (pile > 0) { const r = Math.min(5.5, 0.9 + Math.sqrt(pile) * 0.32) * T; this.heap.scale.set(r, Math.min(r * 0.42, 6 + Math.sqrt(pile) * 2.2), r); }
+    this._cairns(s, t);
     this.holes[1].ring.visible = s.rival.queenAlive;
     // Our entrance only exists once the queen has dug in and founded the nest.
     this.holes[0].mound.visible = this.holes[0].hole.visible = s.queen.placed;

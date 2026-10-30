@@ -2,6 +2,33 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 30: outposts, held regions and the goals board (build 13)
+
+Mark: "Let's build it and then test it." The rest of step 1 of `PROGRESSION.md`. Data in `growth.js` (OUTPOST, GUARDIANS, PRIZES, GOALS, SETS); logic in `sim.js`.
+
+- **Outposts.** Evolve **Waypoints** (Senses: 🧬1 🪨10; its deed, scouting 3 regions, halves the 🧬). Then, out in the yard, an **Outpost** button joins the dock.
+  - It costs 10 stone and goes up as a cairn of pebbles with a twig and a leaf for a flag. You and any of your ants within 3 tiles pile it: 30 ant-seconds, so about 30 s alone or a few with a crew. It rises stone by stone.
+  - At least 14 tiles from the nest and from other outposts. You can have 2, plus one per queen level, plus one for the Explorer set. None in fire-ant ground.
+  - Raised, it lifts the fog 20 tiles round it, and **foragers may roam 26 tiles round it and along a band of road back to the nest**, as they do round home. Trails within 6 tiles of it never fade (except in rain).
+  - A foot coming down on it twice, or one pass of the mower, knocks it flat.
+  - The button says why when you can't (too close, out of stone, at the cap). Outposts show on the yard map, with ⛳ on the plan.
+- **Held regions.** A region is **held** while a raised outpost stands in it and its guardian is beaten. That pays 🧬1 the first time, and the region's **prize**, for as long as the outpost stands.
+  - Guardians so far: the spider (the Flowerbed), the pavement ants' queen (the Patio), the fire ants (their two regions, not holdable). Regions whose bosses come in later builds can be held with an outpost alone for now. Home (Under the Rock) has no prize.
+  - Prizes: berries, scraps and seed rain grow back twice as fast (Flowerbed, Grill, Feeder); garden aphids refill twice as fast (Tomato Rows, Beans, Peppers, Herbs); water cap +40 (Spigot); eggs hatch 15% faster (Compost); crews carry treats 30% faster (Sandbox); the mower warns twice as early (Lawn); a treat lands every few minutes (Picnic Blanket); feet or birds half as often (Back Steps, Birdbath); twice the pebbles (Woodpile, Rock Garden); acorns (the Oak). Every other region: its food grows half again as fast.
+  - Killing the rival queen makes their nest your outpost.
+  - The yard plan's region cards now say how to hold each region and what its prize is; held regions show ★.
+- **The goals board** (Evolve → Goals, the first tab now):
+  - Three goals at a time, next, soon and later, paying 🧬1, 2 and 3. A goal completes once it reaches the board, so the board always points at something new.
+  - 24 goals in five themed sets. Finishing a set pays for good:
+    - Explorer: one more outpost
+    - Garden: foragers carry one more
+    - Hunter: fighters bite 10% harder
+    - Builder: rooms build 25% faster
+    - Colony: eggs hatch 10% faster
+- **Choose your rebirth.** When your ant dies, a sheet always opens: come back as a named Elite (build 12), or hatch again as any kind you've unlocked (Forager, Builder, Nurse, Soldier, Venom ant).
+- **Tests:** `tests/outposts.test.js` covers the outpost rules, raising one, roaming and lasting trails, holding and losing a region and its prize, the board, a finished set, rebirth as a soldier, and saves. The browser test raises an outpost at the Spigot, holds it, and shoots the Goals tab and the map.
+- **Bots:** the bot buys Waypoints after the queen's first upgrade and raises outposts far out. Colony sizes and losses look like build 12.1. Head-to-head, six games a side on two seeds: food income was 33 vs 24 on one seed and 21 vs 27 on the other, so the swing is noise. The bot places outposts blindly, mostly in the home region (no prize), so it rarely holds anything. A player choosing rich regions will.
+
 ## Oct 30: three progression decisions
 
 Mark, on the open questions in `PROGRESSION.md`: "No. Yes. House inside."

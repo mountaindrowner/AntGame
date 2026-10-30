@@ -238,3 +238,12 @@ body.title-on .card-tip, body.cine-on .card-tip { display: none !important; }
 #sheet table.ranks th, #sheet table.ranks td { padding: 4px; border-bottom: 1px solid var(--line); text-align: center; }
 #sheet table.ranks th:first-child, #sheet table.ranks td:first-child { text-align: left; }
 #sheet .named { font-size: 13px; padding: 4px 0; border-bottom: 1px dotted var(--line); }
+/* Goals and the map (build 13) */
+#sheet .goal { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin: 6px 0; }
+#sheet .goal .tier { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mute); }
+#sheet .goal .bar { height: 6px; border-radius: 3px; background: rgba(0,0,0,0.12); margin-top: 6px; overflow: hidden; }
+#sheet .goal .bar i { display: block; height: 100%; background: var(--accent); }
+#sheet .sets { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; font-size: 12px; }
+#sheet .sets div { border: 1px dashed var(--line); border-radius: 8px; padding: 6px 8px; }
+#sheet .sets div.done { border-style: solid; background: rgba(111,194,106,0.25); }
+.ico.dim { opacity: 0.55; }

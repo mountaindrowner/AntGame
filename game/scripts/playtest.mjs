@@ -47,6 +47,10 @@ function spiderNear(x, y, r) { return s.spider && dist(s.spider.x, s.spider.y, x
 // ---------- surface play: forage by hand ----------
 function playSurface() {
   const a = ant();
+  // Build 13: stay by an outpost being raised; raise one when out far with stone to spare.
+  const building = s.outposts.find((o) => !o.done && dist(o.x, o.y, a.tx, a.ty) < 2.5);
+  if (building && !a.carry && P.hunger > 35 && !spiderNear(a.x, a.y, 6)) { P.tx = null; return; }
+  if (!process.env.NOOUT && !a.carry && strategy !== 'cheese' && c.grit >= 10 + ((SIM.QUEEN_UP[s.queen.level] || {}).grit || 0) && !SIM.outpostLock(s) && dist(a.tx, a.ty, w.ex, w.ey) > 25) { if (SIM.placeOutpost(s)) { note(`outpost at ${SIM.AREAS[SIM.areaOf(s, a.tx, a.ty)].key}`); return; } }
   if (a.carry) { home(); return; }
   if (P.hunger < 30) { home(); plan.target = null; return; }
   if (spiderNear(a.x, a.y, 5)) { home(); plan.target = null; return; }
@@ -151,8 +155,8 @@ function eggs() {
 // ---------- growth (build 12): evolution nodes and ant upgrades ----------
 // A rough order of what a player would want; each bought when affordable,
 // keeping some food back for eggs.
-const EVO_WANT = { sensible: ['hatchery2', 'scent', 'trailrunners', 'insulation', 'division', 'store2', 'mandibles', 'crews', 'hatchery3', 'drillhall', 'formic', 'stridulation', 'crews2', 'store3', 'memory'],
-  military: ['mandibles', 'drillhall', 'division', 'formic', 'stridulation', 'hatchery2', 'trailrunners', 'scent', 'insulation', 'store2', 'crews', 'hatchery3', 'crews2', 'memory'] };
+const EVO_WANT = { sensible: ['waypoints', 'hatchery2', 'scent', 'trailrunners', 'insulation', 'division', 'store2', 'mandibles', 'crews', 'hatchery3', 'drillhall', 'formic', 'stridulation', 'crews2', 'store3', 'memory'],
+  military: ['waypoints', 'mandibles', 'drillhall', 'division', 'formic', 'stridulation', 'hatchery2', 'trailrunners', 'scent', 'insulation', 'store2', 'crews', 'hatchery3', 'crews2', 'memory'] };
 const PICKS = { forager: ['trailblazer', 'pathfinder'], builder: ['shorer', 'engineer'], soldier: ['doorkeeper'], venom: ['paralytic'], nurse: ['wetnurse'] };
 function grow() {
   // Spend on growth only with food to spare: a full store, or no room for more ants.
@@ -163,6 +167,7 @@ function grow() {
   const order = EVO_WANT[strategy] || EVO_WANT.sensible;
   for (const k of order) {
     if (SIM.evoLock(s, k) || (process.env.SKIP || '').split(',').includes(k)) continue;
+    if (k === 'waypoints' && s.queen.level < 1) continue; // stone goes to the queen first
     if (!spare && (EVO_BY[k].cost.food || 0) > 0) break; // food nodes wait for spare food
     if (SIM.buyEvo(s, k)) { note(`evolved ${k} (🧬${c.genes} left)`); mile('first evolution'); }
     break;
@@ -260,14 +265,14 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
     minute++;
     if (minute % 5 === 0) {
       const st = SIM.stats(s);
-      note(`[min ${minute}] ants ${SIM.antCount(s)}/${SIM.queenCap(s.queen.level)} ${JSON.stringify(st.byCaste)} food ${Math.round(c.store)}/${c.cap} water ${Math.round(c.water)}/${c.waterCap} prot ${Math.round(c.protein)} grit ${c.grit} 🧬${c.genes}/${c.genesTotal} evo ${Object.keys(c.evo).length} vets ${mine().filter((a) => (a.xp || 0) >= 50).length} named ${c.named} queen ${Math.round(s.queen.hp)} rooms ${s.nest.rooms.length - 1} dug ${SIM.dugCount(s)} rival ${st.rival} income ${st.income} upkeep ${st.upkeep} deaths ${JSON.stringify(c.deaths)}`);
+      note(`[min ${minute}] ants ${SIM.antCount(s)}/${SIM.queenCap(s.queen.level)} ${JSON.stringify(st.byCaste)} food ${Math.round(c.store)}/${c.cap} water ${Math.round(c.water)}/${c.waterCap} prot ${Math.round(c.protein)} grit ${c.grit} out ${s.outposts.filter((o) => o.done).length} held ${Object.keys(c.held).length} goals ${Object.keys(c.goals.done).length} 🧬${c.genes}/${c.genesTotal} evo ${Object.keys(c.evo).length} vets ${mine().filter((a) => (a.xp || 0) >= 50).length} named ${c.named} queen ${Math.round(s.queen.hp)} rooms ${s.nest.rooms.length - 1} dug ${SIM.dugCount(s)} rival ${st.rival} income ${st.income} upkeep ${st.upkeep} deaths ${JSON.stringify(c.deaths)}`);
     }
   }
   if ((s.won || s.lost) && s.t > 60 * 3) break;
 }
 const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), queenMinHp: Math.round(qmin), lost: s.lost, won: s.won, miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /Raid!/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
 console.log(JSON.stringify(out, null, 1));
-console.log(log.filter((l) => /\[min|placed|upgraded|trained|evolved|hunt|siege|died|treat|lifted/.test(l)).join('\n'));
+console.log(log.filter((l) => /\[min|placed|upgraded|trained|evolved|outpost|hunt|siege|died|treat|lifted/.test(l)).join('\n'));
 const uniq = [...new Set(msgs.map((m) => m.slice(m.indexOf(' ') + 1)))];
 console.log('--- distinct messages:', uniq.length); console.log(uniq.slice(0, 40).join('\n'));
 if (process.env.WHY) { const g = {}; for (const d of whyLog) { const k = d.st + ' home~' + Math.min(20, Math.floor(d.home / 5) * 5) + (d.passing ? ' passing' : ''); g[k] = (g[k] || 0) + 1; } console.log(g); }

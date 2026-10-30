@@ -28,6 +28,9 @@ export const EXPL = {
   queen: ['', 'Tap a caste to lay an egg. A Hatchery lets her lay more at once.'],
   build: ['', 'Each room needs a dug pocket its size. You pay now; Builders finish it.'],
   soil: ['Soil', 'Deeper is harder. Packed soil needs a Workshop; clay also needs a queen upgrade.'],
+  outpost: ['An outpost', 'Foragers now range round it as they do round the nest, and along the road back home. Trails beside it never fade. Hold its region: beat any guardian there and the region’s prize is yours.'],
+  held: ['A region held', 'An outpost stands here and nothing guards it: its prize is yours for as long as the outpost does. Feet and the mower can knock outposts flat.'],
+  goal: ['Goals', 'Three goals at a time: next, soon and later. Each pays 🧬 Genes. Finish a whole set (Garden, Hunter…) for a reward for good. See them under Evolve → Goals.'],
   genes: ['🧬 Genes', 'You earn Genes by playing: scouting new ground, bringing home new finds, hatching eggs, killing big game. Spend them on the evolution tree. Press Evolve (the twist of DNA).'],
   veteran: ['A Veteran', 'Ants get better at their jobs. They hatch pale, darken as they learn, and Veterans pick up a promotion. Elites get names. Choose what they learn under Evolve → Ants.'],
   cap: ['The queen’s reach', 'She’s at her ant limit. Upgrade her to raise it.'],
@@ -43,6 +46,8 @@ export const HELP = `
 <div class="h"><b>The nest</b> Tap dirt to dig. Build places rooms. Tap the queen for eggs and upgrades.</div>
 <div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: soldiers. 🪨 Stone: rooms and upgrades.</div>
 <div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs and big kills. Spend them on the evolution tree; spend materials on each kind of ant's levels. Ants rank up as they work: Veterans learn a promotion, Elites get a name, and when you die you can come back as one.</div>
+<div class="h"><b>Outposts</b> Evolve Waypoints, walk out into the yard and press Outpost: you and your crew pile a cairn (10 stone). Foragers range round it and along the road home, and trails beside it never fade. An outpost in a region whose guardian is beaten holds it, and its prize is yours. Feet and the mower knock outposts flat.</div>
+<div class="h"><b>Goals</b> Under Evolve → Goals: three at a time, each paying 🧬. Finish a whole set for a reward for good.</div>
 <div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders.</div>
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging.</div>
 <div class="h"><b>Dangers</b> Spider, rival raids, the mower, antlion pits, feet, birds, toads, acorns, bug spray, fire ants, rain and cave-ins. Each explains itself the first time.</div>`;

@@ -69,7 +69,7 @@ game/
 │   │   └── sound.js        its WebAudio score and sound gags
 │   └── input/
 │       └── pointer.js      tap, hold to walk, pinch, drag; raycasts into the active view
-├── tests/                  node:test checks on the sim (sim, builders, creatures, strikes, growth)
+├── tests/                  node:test checks on the sim (sim, builders, creatures, strikes, growth, outposts)
 └── scripts/
     ├── e2e.mjs             browser playthrough with screenshots
     ├── playtest.mjs        headless bot that plays whole sessions (sensible, military, cheese, idle)

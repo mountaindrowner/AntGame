@@ -141,6 +141,7 @@ export class MapView {
     };
     if (s.queen.placed) pin((w.ex + 0.5) * T, (w.ey + 0.5) * T, '#8fd36b', 'Nest');
     if (seen(w.rx, w.ry) && s.rival.queenAlive) pin((w.rx + 0.5) * T, (w.ry + 0.5) * T, '#e4524a', 'Rival nest');
+    for (const o of s.outposts || []) if (seen(o.x, o.y)) pin((o.x + 0.5) * T, (o.y + 0.5) * T, o.done ? '#c9b27a' : '#8a8272', s.colony.held[o.region] ? 'Held' : o.done ? 'Outpost' : 'Building');
     const a = s.player.ant;
     if (a && !s.player.inNest) pin(a.x, a.y, '#ffd34d', 'You', true);
   }
