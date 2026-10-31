@@ -102,3 +102,18 @@ Mark's answers after reading the list:
   So a second Hatchery is worth it only when food can feed it.
 - **Priorities per ant type (answers 36):** a Jobs page where each ant type has a short ranked list of duties (Forage, Dig, Haul, Build, Guard, Hunt, Nurse, Explore). The colony fills its needs from the top of each list; ants fall back down the list when there's nothing to do. That also fixes 27, idle ants.
 - **An event director:** one system for outbreaks (Cordyceps), floods, antlion surges and the like, scaled to the colony's strength (it's already in `PROGRESSION.md`).
+
+## Build phases (proposed Oct 31)
+
+Mark: "PC vs phone isn't a priority right now, keep building the way you were." So item 37 (PC controls) waits, apart from what clarity needs anyway (an obvious menu button, Escape). Numbers refer to the list above.
+
+| Build | Theme | Items |
+|---|---|---|
+| **15** | **Clarity and feedback**: what everything is, what just happened | 1, 2, 3, 10–19, 23, 24: colour-coded notices, "built" notices, an ant card (tap an ant: name, rank, job, xp), looks for named ants, the crew ring and cap, plain-English Veterans and outposts text, one-line "what it's for" on every ant, room and treat, a visible menu button and save indicator, a battle report, the idle-queen nudge, the mystery sound |
+| **16** | **Living creatures**: fights you can see | 21, 22, 25, 26, 28: spider animations (stalk, lunge, bite, die), bite sparks and hit flashes, the spider eats then rests, rain that splashes ants, and the first new living bugs |
+| **17** | **Running the colony** | 27, 34, 36: a Jobs page with duties ranked per ant type, idle ants that find work, more than one of each room (capped, with upkeep) |
+| **18** | **Sugar and chitin** (PROGRESSION step 2) | 30, 31: the two new materials, the tech nodes, upgrade levels and queen levels they unlock, region-specific abilities |
+| **19** | **Bosses and events** | 29, 30: hornworm, ground beetle, antlion queen with their trophies and ant types, and an event director starting with a Cordyceps outbreak |
+| **20** | **The world's look and pull** | 5, 6, 7, 32, 33: an asset pass on the models, the Patio's texture, the rock clipping, rain over the whole view, things worth exploring for |
+| **21** | **The house, sketched** | 35: the house's edges (porch, doormat, doorway) on the map and as a first look inside |
+| later | **The grand arc** | 38: a design document first (scale, camera, what carries over), then build |
