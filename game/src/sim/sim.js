@@ -175,7 +175,7 @@ function create(seed){
     areaT: AREAS.map(() => 0), strikes: [], strikeT: AREAS.map(A => A.strike ? A.strike.every[0] + Math.random()*(A.strike.every[1] - A.strike.every[0]) : 0), mower: { state: 'idle', next: 420, t: 0, y: 0 },
     rain: { t: 0, on: false, next: 480 }, repairs: [], seen: {}, events: [],
     // Build 16: small creatures, and what the renderer shows of fights and rain.
-    critters: [], bugCool: {}, hits: [], splashes: [], spiderCorpse: null, catCorpse: null,
+    critters: [], bugGone: {}, hits: [], splashes: [], spiderCorpse: null, catCorpse: null,
   };
   s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
   // Every area starts with its own stock; home has the most, and it won't
@@ -193,6 +193,7 @@ function create(seed){
   spawnSpider(s);
   s.spoilAt = spoilSpot(s); s.spoilPile = 0;
   s.outposts = []; outpostsChanged(s);
+  for (let i=0;i<AREAS.length;i++) if (s.active[i]) populateBugs(s, i);
   return s;
 }
 // Where diggers dump the dirt: open ground about eight tiles from the
@@ -588,7 +589,7 @@ function tick(s, dt){
   tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickOutposts(s, dt); tickGoals(s, dt);
   s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player);
     // Walking into a dormant region wakes it: its food appears and starts to grow.
-    const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); }
+    const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); populateBugs(s, ai); }
     if (!c.scouted[ai] && ai !== REGION.rock){ c.scouted[ai] = true; gainGenes(s, 1, 'scouting ' + AREAS[ai].name.replace(/^The /, 'the ')); } } }
   stepSpider(s, dt); if (!s.spider){ if (s.spiderAway){ s.spiderAway.t -= dt; if (s.spiderAway.t <= 0){ spiderEnter(s, s.spiderAway.hp); s.spiderAway = null; } } else { s.spiderRespawn -= dt; if (s.spiderRespawn <= 0){ spiderEnter(s, 150); s.spiderRespawn = 120; } } }
   stepBugs(s, dt);
@@ -1324,16 +1325,14 @@ function tickStings(s, dt){
 }
 // ---------- small creatures (build 16) ----------
 // Ladybugs eat your aphids, earwigs pinch, crickets hop away, millipedes curl
-// up. Each turns up where its kind would live, a few at a time and only near
-// your ants, and wanders off again once nobody is about. speed is px/s; reach
-// in tiles; every is how long (s) before another of the kind can turn up.
+// up. Each lives where its kind would (ground), spread over the yard. speed
+// is px/s; reach in tiles.
 const BUGS = {
-  ladybug:  { name: 'ladybug', hp: 14, speed: 12, meat: 8, reach: 1.3, max: 2, every: [50, 90] },
-  earwig:   { name: 'earwig', hp: 18, speed: 14, rush: 48, meat: 15, reach: 1.5, pinch: 2, pinchEvery: 1.6, max: 2, every: [45, 80], ground: /bark|mulch|compost|soil|hedge|leaf/ },
-  cricket:  { name: 'cricket', hp: 9, speed: 0, meat: 25, reach: 1.4, max: 2, every: [35, 70], ground: /lawn|long|grass|wild/ },
-  millipede:{ name: 'millipede', hp: 30, speed: 7, meat: 20, reach: 1.9, max: 2, every: [45, 90], armour: 0.35, ground: /compost|mulch|bark|soil|mud|wet|hedge|leaf/ },
+  ladybug:  { name: 'ladybug', hp: 14, speed: 12, meat: 8, reach: 1.3 },
+  earwig:   { name: 'earwig', hp: 18, speed: 14, rush: 48, meat: 15, reach: 1.5, pinch: 2, pinchEvery: 1.6, ground: /bark|mulch|compost|soil|hedge|leaf/ },
+  cricket:  { name: 'cricket', hp: 9, speed: 0, meat: 25, reach: 1.4, ground: /lawn|long|grass|wild/ },
+  millipede:{ name: 'millipede', hp: 30, speed: 7, meat: 20, reach: 1.9, armour: 0.35, ground: /compost|mulch|bark|soil|mud|wet|hedge|leaf/ },
 };
-const BUG_MAX = 6;
 // A bright spark where a bite lands (the renderer draws them). One every so
 // often per biter, so a crowd on the spider reads as a scrap, not a fire.
 function spark(s, by, x, y, k){
@@ -1353,44 +1352,74 @@ function bugMove(s, b, gx, gy, speed, dt){
   b.stuck = (b.stuck || 0) + dt; if (b.stuck > 1.5){ b.stuck = 0; return true; } return false;
 }
 function bugWander(s, b, r){
-  for (let k = 0; k < 10; k++){ const ang = Math.random()*Math.PI*2, d = (1 + Math.random()*r)*T, x = b.x + Math.cos(ang)*d, y = b.y + Math.sin(ang)*d; if (bugTile(s, x, y)){ b.gx = x; b.gy = y; return; } }
+  // It keeps to its own patch: strayed far from home, it heads back.
+  const hx = b.hx != null ? (b.hx + 0.5)*T : b.x, hy = b.hy != null ? (b.hy + 0.5)*T : b.y, far = Math.hypot(b.x - hx, b.y - hy) > 9*T;
+  const ox = far ? hx : b.x, oy = far ? hy : b.y;
+  for (let k = 0; k < 10; k++){ const ang = Math.random()*Math.PI*2, d = (1 + Math.random()*r)*T, x = ox + Math.cos(ang)*d, y = oy + Math.sin(ang)*d; if (bugTile(s, x, y)){ b.gx = x; b.gy = y; return; } }
   b.gx = b.x; b.gy = b.y;
 }
 function nearAnt(s, b, r, pred){ let best = null, bd = r; for (const a of s.ants){ if (!outside(a) || (pred && !pred(a))) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < bd){ bd = d; best = a; } } return best ? [best, bd] : null; }
 const playerNear = (s, x, y, r) => { const pa = s.player.ant; return !!pa && !s.player.inNest && Math.hypot(pa.x - x, pa.y - y) < r*T; };
-function spawnBugs(s, dt){
-  if (!s.queen.placed) return;
-  s.bugT = (s.bugT || 0) + dt; if (s.bugT < 5) return; s.bugT = 0;
-  const cool = s.bugCool; for (const k in cool) cool[k] -= 5;
-  if (s.critters.length >= BUG_MAX) return;
-  const w = s.world, P = s.player, pa = P.ant && !P.inNest ? P.ant : null;
-  const out = s.ants.filter(a => !a.team && outside(a)); if (!out.length) return;
-  const anchor = pa && Math.random() < 0.6 ? pa : out[Math.floor(Math.random()*out.length)];
-  const ai = areaOf(s, anchor.tx, anchor.ty); if (!s.active[ai]) return;
-  const A = AREAS[ai], b = areaBounds(ai);
-  const aph = s.items.filter(f => f.type === 'aphids' && w.area[idx(f.x,f.y)] === ai && f.amt >= 3);
-  const kinds = Object.keys(BUGS).filter(k => !(cool[k] > 0) && s.critters.filter(o => o.kind === k).length < BUGS[k].max && !(k === 'earwig' && s.t < 240) && (k === 'ladybug' ? aph.length > 0 : BUGS[k].ground.test(A.ground || '')));
-  if (!kinds.length) return;
-  const k = kinds[Math.floor(Math.random()*kinds.length)], B = BUGS[k];
-  for (let tries = 0; tries < 40; tries++){
-    let x, y; const ang = Math.random()*Math.PI*2;
-    if (k === 'ladybug'){ const f = aph[Math.floor(Math.random()*aph.length)]; x = Math.round(f.x + Math.cos(ang)*6); y = Math.round(f.y + Math.sin(ang)*6); }
-    else { const d = 10 + Math.random()*12; x = Math.round(anchor.tx + Math.cos(ang)*d); y = Math.round(anchor.ty + Math.sin(ang)*d); }
+// Build 16.1: the yard is populated region by region, each bug placed
+// anywhere in its region and keeping to its own patch, so they are spread
+// across the yard rather than turning up round your ants. A region holds one
+// of each kind its ground suits (ladybugs where there are aphids), three at
+// most. One that dies or leaves is replaced a couple of minutes later, out
+// of your sight. Dormant regions get theirs when you first walk in.
+const BUG_BACK = [100, 160]; // seconds before a gone bug is replaced
+function bugSlots(s, ai){
+  const g = AREAS[ai].ground || '', out = [];
+  if (s.items.some(f => f.type === 'aphids' && s.world.area[idx(f.x,f.y)] === ai)) out.push('ladybug');
+  for (const k of ['earwig', 'cricket', 'millipede']) if (BUGS[k].ground.test(g)) out.push(k);
+  return out.slice(0, 3);
+}
+function placeBug(s, ai, k, hidden){
+  const w = s.world, b = areaBounds(ai), B = BUGS[k], P = s.player, pa = P.ant && !P.inNest ? P.ant : null;
+  const aph = k === 'ladybug' ? s.items.filter(f => f.type === 'aphids' && w.area[idx(f.x,f.y)] === ai) : null;
+  for (let tries = 0; tries < 60; tries++){
+    const ang = Math.random()*Math.PI*2; let x, y;
+    if (aph){ if (!aph.length) return false; const f = aph[Math.floor(Math.random()*aph.length)]; x = Math.round(f.x + Math.cos(ang)*5); y = Math.round(f.y + Math.sin(ang)*5); }
+    else { x = b.x0 + 4 + Math.floor(Math.random()*(AREA - 8)); y = b.y0 + 4 + Math.floor(Math.random()*(AREA - 8)); }
     if (x < b.x0 + 2 || y < b.y0 + 2 || x > b.x1 - 2 || y > b.y1 - 2) continue;
-    if (!bugTile(s, (x+0.5)*T, (y+0.5)*T) || Math.hypot(x - w.ex, y - w.ey) < 14 || Math.hypot(x - w.rx, y - w.ry) < 8) continue;
-    if (s.critters.some(o => Math.hypot(o.x/T - x, o.y/T - y) < 6)) continue;
-    s.critters.push({ id: s.nextId++, kind: k, x: (x+0.5)*T, y: (y+0.5)*T, dx: Math.cos(ang), dy: Math.sin(ang), hp: B.hp, maxHp: B.hp, state: k === 'ladybug' ? 'land' : 'walk', t: 0, life: 0, far: 0 });
-    cool[k] = B.every[0] + Math.random()*(B.every[1] - B.every[0]);
-    return;
+    if (!bugTile(s, (x+0.5)*T, (y+0.5)*T) || Math.hypot(x - w.ex, y - w.ey) < (k === 'earwig' ? 30 : 14) || Math.hypot(x - w.rx, y - w.ry) < 8) continue;
+    if (s.critters.some(o => Math.hypot(o.x/T - x, o.y/T - y) < 12)) continue;
+    if (hidden && pa && Math.hypot(pa.x/T - x, pa.y/T - y) < 18) continue;
+    s.critters.push({ id: s.nextId++, kind: k, region: ai, hx: x, hy: y, x: (x+0.5)*T, y: (y+0.5)*T, dx: Math.cos(ang), dy: Math.sin(ang), hp: B.hp, maxHp: B.hp, state: hidden && k === 'ladybug' ? 'land' : 'walk', t: Math.random()*5, life: 0 });
+    return true;
   }
+  return false;
+}
+function populateBugs(s, ai){ for (const k of bugSlots(s, ai)) placeBug(s, ai, k, false); }
+function spawnBugs(s, dt){
+  s.bugT = (s.bugT || 0) + dt; if (s.bugT < 4) return; s.bugT = 0;
+  const gone = s.bugGone;
+  for (let ai = 0; ai < AREAS.length; ai++){
+    if (!s.active[ai]) continue;
+    for (const k of bugSlots(s, ai)){
+      const key = ai + ':' + k, at = gone[key];
+      if (at == null || s.critters.some(o => o.region === ai && o.kind === k)) continue;
+      if (s.t - at < BUG_BACK[0] + (ai * 37 % 60)) continue;
+      // Ladybugs fly in where you can see; the rest turn up out of sight.
+      if (placeBug(s, ai, k, k !== 'ladybug')) delete gone[key];
+    }
+  }
+}
+// Which bugs have ants near enough to matter: only those are stepped.
+const BUG_CELL = 16, BUG_GW = Math.ceil(W/BUG_CELL), bugOcc = new Uint8Array(BUG_GW*Math.ceil(H/BUG_CELL));
+function bugsAwake(s){
+  bugOcc.fill(0);
+  for (const a of s.ants) if (outside(a)) bugOcc[Math.floor(a.y/T/BUG_CELL)*BUG_GW + Math.floor(a.x/T/BUG_CELL)] = 1;
+  return (b) => { const cx = Math.floor(b.x/T/BUG_CELL), cy = Math.floor(b.y/T/BUG_CELL);
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++){ const x = cx + dx, y = cy + dy; if (x >= 0 && y >= 0 && x < BUG_GW && bugOcc[y*BUG_GW + x]) return true; }
+    return false; };
 }
 function stepBugs(s, dt){
   spawnBugs(s, dt);
-  const P = s.player, c = s.colony, yb = youL(s) >= 3 ? 1.5 : 1;
+  const P = s.player, yb = youL(s) >= 3 ? 1.5 : 1, awake = bugsAwake(s);
   for (const b of s.critters){
+    // With no ant within about fifty tiles it waits where it is.
+    if (!awake(b)) continue;
     const B = BUGS[b.kind]; b.t += dt; b.life += dt; if (b.slowT > 0) b.slowT -= dt;
-    // Nobody about for half a minute: it wanders off.
-    b.far = nearAnt(s, b, 40*T, a => !a.team) ? 0 : b.far + dt; if (b.far > 25){ b.gone = true; continue; }
     // Bitten: fighters, your crew and you. Off the ground (hopping, flying) it can't be.
     if (b.state !== 'fly' && b.state !== 'hop' && b.state !== 'land'){
       const R = B.reach*T, arm = b.state === 'curl' ? B.armour : 1;
@@ -1410,6 +1439,7 @@ function stepBugs(s, dt){
     else if (b.kind === 'cricket') stepCricket(s, b, B, dt);
     else stepMillipede(s, b, B, dt);
   }
+  for (const b of s.critters) if ((b.gone || b.hp <= 0) && b.region != null) s.bugGone[b.region + ':' + b.kind] = s.t;
   s.critters = s.critters.filter(b => !b.gone && b.hp > 0);
 }
 function bugDies(s, b){
@@ -1565,7 +1595,7 @@ function stats(s){
 }
 // ---------- save / load ----------
 function serialize(s){
-  return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugCool: s.bugCool,
+  return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
@@ -1576,7 +1606,7 @@ function deserialize(json){
   const d = JSON.parse(json); if (d.v !== 10 && d.v !== 11) throw new Error('old save'); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.colony = fill(d.colony); s.rival = fill(d.rival); s.raidLive = !!d.raidLive; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || []; s.bugCool = d.bugCool || {}; s.nextId = d.nextId;
+  s.t = d.t; s.colony = fill(d.colony); s.rival = fill(d.rival); s.raidLive = !!d.raidLive; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);

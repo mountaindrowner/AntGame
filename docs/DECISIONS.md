@@ -6,7 +6,12 @@ What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full
 
 The second build phase from `PLAYTEST-2.md` (items 21, 22, 25, 26 and 28): the yard's animals act like animals, and you can see a fight land.
 
-- **Four new creatures**, each turning up where its kind lives, only near your ants, a few at a time (at most six in the yard, two of a kind). They wander off when nobody has been near for 25 s.
+- **Four new creatures, spread across the yard.** Mark: "have them spread out through the area, not all bunched in the beginning."
+  - Each region holds one of each kind its ground suits (ladybugs where there are aphids), three at most, placed anywhere in the region and at least 12 tiles apart. That's 21 to start, over 14 regions; none within 14 tiles of your nest, and no earwigs within 30.
+  - Each keeps to its own patch, wandering within about 9 tiles of where it started.
+  - A dormant region gets its bugs when you first walk in.
+  - One that dies or leaves is replaced 100–160 s later, out of your sight (ladybugs fly in where you can see them).
+  - Bugs with no ant within about 50 tiles wait where they are, which keeps the sim cheap.
   - **Ladybug:** flies in beside your aphids and eats them (1.2 food a second, so a patch stays empty while it feeds). Bite it to half health and it flies off (+1 🧬 the first time). Full, or after three minutes, it leaves anyway. 8 protein if you kill it outright.
   - **Earwig** (bark, mulch, compost, soil, hedges; not in the first four minutes): rushes any ant within 3.5 tiles and pinches for 2 (a forager dies; a soldier takes three). Foragers give it a wide berth. Below 30% health it runs for cover and is gone. 15 protein.
   - **Cricket** (lawns and long grass): hops 3–5 tiles away from any ant that comes near. Five hops and it's worn out for 5 s: that's when you catch it. 25 protein, the richest small game.
@@ -24,7 +29,7 @@ The second build phase from `PLAYTEST-2.md` (items 21, 22, 25, 26 and 28): the y
 - **Fights you can see:** every bite throws a spark (pale for yours, red for the spider's and the earwig's, and for rival bites). Whatever is bitten flickers red: ants, the spider, the caterpillar, the new bugs. The caterpillar sags flat when it dies.
 - **Rain knocks ants about.** Drops hit ants outside: they tumble a tile or two with a splash, and about a third drop what they carry (it stays on the ground). Your ant gets a smaller push. Raindrops pock the ground all round the view.
 - **Sounds:** a tick when a bite lands, the spider's lunge hiss and its crunching meal, the earwig's pinch, the cricket's chirp and hop, the ladybug's buzz, the millipede curling, a squelch when a small bug dies, and a plip when a drop knocks an ant. All are charted in `SOUND.md`.
-- **Tests:** 44 (new: the cricket's hops and tiring, the millipede's armour, the ladybug eating and fleeing, the earwig's pinch and the foragers keeping clear, the spider's meals and fullness, its crouch before the lunge, the bodies, rain knocks, sparks, and spawning near your ants then wandering off, kept across a save). The browser test bites a millipede till it curls, taps a cricket for its card, and runs rain.
+- **Tests:** 45 (new: the cricket's hops and tiring, the millipede's armour, the ladybug eating and fleeing, the earwig's pinch and the foragers keeping clear, the spider's meals and fullness, its crouch before the lunge, the bodies, rain knocks, sparks, bugs spread over the yard from the start and in a newly woken region, and bugs keeping still with nobody near, replaced out of sight, kept across a save). The browser test bites a millipede till it curls, taps a cricket for its card, and runs rain.
 
 ## Oct 31: clarity and feedback (build 15)
 

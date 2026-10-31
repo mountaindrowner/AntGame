@@ -9,7 +9,7 @@ function founded() {
   const s = SIM.create(7), q = s.queen;
   SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s);
   for (let i = 0; i < 30 * 20; i++) SIM.tick(s, 0.05);
-  s.spider = null; s.spiderRespawn = 1e9; s.cat = null; s.catRespawn = 1e9; s.bugT = -1e9; s.strikes = []; s.strikeT = s.strikeT.map(() => 1e9);
+  s.spider = null; s.spiderRespawn = 1e9; s.cat = null; s.catRespawn = 1e9; s.bugT = -1e9; s.critters = []; s.strikes = []; s.strikeT = s.strikeT.map(() => 1e9);
   return s;
 }
 const step = (s, sec, each) => { for (let i = 0; i < sec * 20; i++) { SIM.tick(s, 0.05); if (each && each() === false) return; } };
@@ -158,21 +158,41 @@ test('bites leave sparks and a flash on what they hit', () => {
   assert.ok(s.t - b.hitT < 0.1);
 });
 
-test('bugs turn up near your ants on their own ground, and leave when nobody is near', () => {
+test('bugs are spread across the yard from the start, each region its own', () => {
+  const s = SIM.create(7), w = s.world;
+  const bugs = s.critters;
+  assert.ok(bugs.length >= 8, `${bugs.length} bugs in the yard`);
+  const regions = new Set(bugs.map((b) => b.region));
+  assert.ok(regions.size >= 5, `in ${regions.size} regions`);
+  for (const b of bugs) assert.ok(Math.hypot(b.x / T - w.ex, b.y / T - w.ey) >= 14, 'none on the doorstep');
+  for (const a of bugs) for (const b of bugs) if (a !== b) assert.ok(Math.hypot(a.x - b.x, a.y - b.y) >= 12 * T, 'never bunched');
+  for (const b of bugs) assert.equal(SIM.areaOf(s, Math.floor(b.x / T), Math.floor(b.y / T)), b.region, 'it lives in its own region');
+  // A dormant region gets its bugs when you first walk in.
+  const di = SIM.AREAS.findIndex((A, i) => !s.active[i] && /long|grass|soil|bark|leaf|hedge/.test(A.ground));
+  assert.ok(!bugs.some((b) => b.region === di));
+  const q = s.queen; SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s);
+  for (let i = 0; i < 30 * 20; i++) SIM.tick(s, 0.05);
+  const b0 = areaBounds(di), [x, y] = [Math.floor((b0.x0 + b0.x1) / 2), Math.floor((b0.y0 + b0.y1) / 2)];
+  const a = you(s, x, y); step(s, 0.5, () => { a.x = px(x); a.y = px(y); });
+  assert.ok(s.critters.some((b) => b.region === di), 'woken region populated');
+});
+
+test('bugs keep to their patch, wait while nobody is near, and a lost one is replaced out of sight', () => {
   const s = founded(), [x, y] = open(s, 'lawn');
-  s.bugT = 0; s.t = Math.max(s.t, 300);
-  const a = you(s, x, y);
-  step(s, 120, () => { a.x = px(x); a.y = px(y); a.hp = 99; s.player.hunger = 100; s.player.tx = null; if (s.critters.length) return false; });
-  assert.ok(s.critters.length, 'something turned up');
-  const b = s.critters[0];
-  assert.ok(b.kind === 'cricket' || b.kind === 'ladybug', `a ${b.kind} on the lawn`);
-  // Saved and loaded, it is still there.
+  const b = bug(s, 'cricket', x, y); b.region = SIM.areaOf(s, x, y); b.hx = x; b.hy = y;
+  // Nobody out: it doesn't move or age.
+  s.player.inNest = true; s.player.ant.state = 'nest'; for (const o of s.ants) if (!o.team && !o.isPlayer) o.state = 'in';
+  const t0 = b.t; step(s, 5); assert.equal(b.t, t0, 'asleep');
+  // Killed: a new one turns up in the same region a couple of minutes later, not beside you.
+  const a = you(s, x, y); b.hp = 0;
+  step(s, 0.1);
+  assert.ok(!s.critters.includes(b) && s.bugGone[b.region + ':cricket'] != null);
+  s.bugT = 0;
+  step(s, 200, () => { a.x = px(x); a.y = px(y); a.hp = 99; s.player.hunger = 100; s.player.tx = null; if (s.critters.some((o) => o.region === b.region && o.kind === 'cricket')) return false; });
+  const n = s.critters.find((o) => o.region === b.region && o.kind === 'cricket');
+  assert.ok(n, 'replaced');
+  assert.ok(Math.hypot(n.x - a.x, n.y - a.y) >= 18 * T, 'out of sight');
+  // Saved and loaded, the yard's bugs are still there.
   const s2 = SIM.deserialize(SIM.serialize(s));
   assert.equal(s2.critters.length, s.critters.length);
-  assert.equal(s2.critters[0].kind, b.kind);
-  // Everyone goes home: it wanders off.
-  s.player.inNest = true; a.state = 'nest'; for (const o of s.ants) if (!o.team && !o.isPlayer) o.state = 'in';
-  s.bugT = -1e9;
-  step(s, 30);
-  assert.equal(s.critters.length, 0);
 });
