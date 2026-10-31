@@ -2,6 +2,24 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 31: clarity and feedback (build 15)
+
+The first of the build phases from Mark's brother's playtest (`PLAYTEST-2.md`, items 1–3 and 10–24): the game now says what everything is and what just happened.
+
+- **Notices are colour-coded:** red edge for danger (a raid, the spider, a cave-in, the mower, hunger), green for good news (Genes, a goal, a room finished, an outpost up), gold for something new (a region you walk into), blue for a battle report. The tutorial's own lines stay plain.
+- **Things say when they're done:** "Hatchery finished: +2 eggs at a time." When Waypoints is evolved: "Outposts unlocked! Walk far from the nest and press Outpost."
+- **Battle reports:** when a raid is beaten off, "Raid over. You lost 3 ants, killed 5 raiders, and they carried off 4 food." When the spider dies: "It cost you 6 ants."
+- **The idle queen:** if she sits with no eggs, food to spare and room for more ants for 25 s, "The queen is idle and you have food: tap her in the nest and lay eggs." At most once every 90 s.
+- **The ant card:** tap any ant for its name (if it has one), rank, kind, what it's doing ("Elite Forager, on guard", "carrying food home"), its experience and the next rank, and what its kind is for.
+- **Names over named ants:** Elites wear their name over them on the surface; Legends get a ★ and gold. That's the twelve nearest the middle of the view.
+- **The crew's reach:** holding Recruit shows a gold ring for how far the call carries (7 tiles, 10 with Rallying cry). While you lead a crew, a faint blue ring shows how far they'll follow (16 tiles) before giving up. The Recruit button shows your crew against the cap, such as "12/20", and its tip says how to raise it.
+- **What everything is for:** each egg in the queen's sheet has a line ("Nurse: tends the eggs: they hatch faster"). The ant upgrades say "At Veteran (50 xp) it learns" and "At Elite (150 xp) it also learns", not "Veterans learn / Elites add".
+- **A Menu button** tops the side column (Main menu: options, sound, new colony). **Escape** opens the menu, or closes whatever is open.
+- **"Saved ✓"** shows for a moment each time the game autosaves (every 10 s).
+- **Bigger badges** on the buttons, with a dark border, so counts read.
+- **The puzzling noise** was the caterpillar's munching, a dull thud every third of a second in the Compost heap. It's now crisp leaf-chewing crunches in uneven pairs, quieter.
+- **Tests:** 34 (new: the raid report, a room finished, the idle-queen nudge, the spider's cost). The browser test checks the ant card's text, the names over ants, the recruit ring and the Menu button.
+
 ## Oct 30: playtest notes, round two (build 14)
 
 Mark's list after playing on his phone, all addressed:

@@ -235,6 +235,12 @@ export class SurfaceView {
     // Outposts (build 13): a cairn of pebbles with a twig and a leaf for a
     // flag. It rises stone by stone while your ants build it.
     this.cairnGroup = new THREE.Group(); g.add(this.cairnGroup); this.cairns = new Map();
+    // Your crew's reach (build 15): gold while you hold Recruit (how far the
+    // call carries), faint blue while you lead a crew (how far they follow).
+    const thin = new THREE.RingGeometry(0.97, 1, 72).rotateX(-Math.PI / 2);
+    this.callRing = new THREE.Mesh(thin, psxBasic({ color: '#ffd34d', transparent: true, opacity: 0.55, depthWrite: false }));
+    this.leashRing = new THREE.Mesh(thin, psxBasic({ color: '#9cc8ff', transparent: true, opacity: 0.3, depthWrite: false }));
+    this.callRing.visible = this.leashRing.visible = false; g.add(this.callRing, this.leashRing);
     const stone = psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.5, 0.5] }) });
     this.cairnParts = [[0, 4.2, 0, 9, 4.6, 8], [1.2, 10.4, 0.8, 6.6, 3.8, 6], [-0.6, 15.4, 0.2, 4.6, 3, 4.4], [0.4, 19.2, -0.4, 3, 2.2, 3]].map(([x, y, z, sx, sy, sz], i) => {
       const geo = new THREE.IcosahedronGeometry(1, 1); geo.scale(sx, sy, sz); geo.rotateY(i * 1.3); geo.translate(x, y, z); return { geo, mat: stone };
@@ -399,6 +405,10 @@ export class SurfaceView {
       if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
     const pa = P.ant;
+    const out = pa && !P.inNest, crew = out && s.ants.some((o) => o.follow);
+    this.callRing.visible = !!(out && app.recruiting); this.leashRing.visible = !!crew;
+    if (this.callRing.visible) { const r = (SIM.picked(s, 'you', 'rally') ? 10 : 7) * T; this.callRing.position.set(pa.x, 0.7, pa.y); this.callRing.scale.setScalar(r * (1 + 0.03 * Math.sin(t * 6))); }
+    if (crew) { this.leashRing.position.set(pa.x, 0.65, pa.y); this.leashRing.scale.setScalar(16 * T); }
     if (pa && !P.inNest) {
       ant(pa, COLORS.player, 1.25);
       tmpV.set(pa.x, 0.5, pa.y);

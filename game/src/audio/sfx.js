@@ -288,8 +288,10 @@ const LOOPS = {
     n.buffer = s.noise; n.loop = true; f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 2; g.gain.value = 0.05;
     n.connect(f).connect(g).connect(o); n.start(); return () => n.stop();
   },
+  // A caterpillar chewing leaves (build 15: was a dull thud every 330 ms that
+  // nobody could place): crisp little crunches in uneven pairs, with pauses.
   munch: (s, o) => {
-    const c = s.ctx, tick = setInterval(() => { if (s.ready) s.puff(o, c.currentTime, 0.05, 500, 0.15); }, 330);
+    const c = s.ctx, tick = setInterval(() => { if (!s.ready || Math.random() < 0.35) return; const t = c.currentTime + Math.random() * 0.1; s.grain(o, t, 3, 0.012, 2400, 0.07, 'bandpass'); if (Math.random() < 0.6) s.grain(o, t + 0.13, 3, 0.012, 2000, 0.06, 'bandpass'); }, 420);
     return () => clearInterval(tick);
   },
 };

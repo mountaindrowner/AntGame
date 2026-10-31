@@ -18,7 +18,7 @@ export function createUI(app) {
   const el = {
     stats: $('stats'), msg: $('msg'), hungerBar: $('hungerbar'), act: $('act'), release: $('release'), mark: $('mark'),
     recruit: $('recruit'), enter: $('enter'), barS: $('bar'), barN: $('barn'), sheet: $('sheet'), buildNest: $('buildnest'),
-    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), map: $('mapbtn'), evolve: $('evolvebtn'), outpost: $('outpostbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
+    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), menu: $('menubtn'), map: $('mapbtn'), evolve: $('evolvebtn'), outpost: $('outpostbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
   };
 
   // ---------------------------------------------------------- icon buttons
@@ -26,7 +26,7 @@ export function createUI(app) {
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
-  const ARC = { map: 'Map', evolve: 'Evolve', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
   const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
@@ -36,7 +36,7 @@ export function createUI(app) {
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
-  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
+  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.menu, 'menu', 'Main menu: options, sound, new colony (Esc)'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
   setIcon(el.act, 'pick', 'Pick up');
 
   // ---------------------------------------------------------- tips
@@ -202,7 +202,7 @@ export function createUI(app) {
         else h += `<div class="btns one"><button data-upc="${k}:" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost}</b><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button></div>`;
       } else if (!U) h += `<div class="note">All levels bought.</div>`;
       const P = PROMOS[FAMILY[k]] || [], d = P.length ? SIM.doctrineOf(s, k) : [];
-      if (P.length) for (const [slot, label] of [[0, 'Veterans learn'], [1, 'Elites add']]) {
+      if (P.length) for (const [slot, label] of [[0, 'At Veteran (50 xp) it learns'], [1, 'At Elite (150 xp) it also learns']]) {
         h += `<div class="doc">${label}:` + P.map(([pk, pn, pd]) => `<button data-doc="${k}:${slot}:${pk}" class="${d[slot] === pk ? 'on' : ''}" data-tip="${pd}">${pn}</button>`).join('') + `</div>`;
       }
       h += `</div>`;
@@ -259,6 +259,8 @@ export function createUI(app) {
     return h + `</div>`;
   }
 
+  // What each kind of ant is for, under its egg (build 15: "what is a nurse for?").
+  const EGG_WHAT = { forager: 'Gathers food and water on its own', builder: 'Digs, builds rooms, hauls dirt out, stops cave-ins', nurse: 'Tends the eggs: they hatch faster', soldier: 'Guards the door, fights raiders; eats protein', venom: 'An 8× sting: kills the spider' };
   function renderSheet() {
     const s = app.s, c = s.colony;
     if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map' || app.menu === 'colony') return;
@@ -269,7 +271,7 @@ export function createUI(app) {
         const C = CASTES[k];
         const lock = SIM.eggLock(s, k);
         const ec = SIM.eggCost(s, k), dis = lock || !SIM.canPay(c, ec) || c.eggQueue.length >= 10;
-        h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${lock || costIcons(ec) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
+        h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${EGG_WHAT[k] || ''}</i><i>${lock || costIcons(ec) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
       }
       h += `</div>`;
       const cap = SIM.queenCap(s.queen.level), up = SIM.QUEEN_UP[s.queen.level];
@@ -375,6 +377,10 @@ export function createUI(app) {
     P().msg = text;
     setTimeout(() => { if (test.test(P().msg)) P().msg = ''; }, ms);
   }
+  const DANGER = /raid|spider|starv|killed|died|attack|cave|rain|thunder|mower|robin|toad|acorn|spray|fire ants|shadow|lost|idle|hungry|too heavy|knocked/i;
+  const GOOD = /^\+|down!|finished|raised|you hold|goal|genes|elite|legend|lifted|hauls in|raid over|unlocked|all done/i;
+  const NEWS = /^(the |an? )?[A-Z][a-z]+( [A-Za-z]+)?\. |landed|is back/;
+  function noticeKind(t) { if (!t) return ''; if (GOOD.test(t) && !/lost your hold|knocked/i.test(t)) return /raid over/i.test(t) ? 'report' : 'good'; if (DANGER.test(t)) return 'danger'; if (NEWS.test(t)) return 'news'; return ''; }
   function hint() {
     const s = app.s, c = s.colony, a = P().ant, q = s.queen;
     if (P().msg) return P().msg;
@@ -423,6 +429,8 @@ export function createUI(app) {
     const istep = introStep() >= 0 ? INTRO[introStep()] : null;
     if (it) { const want = istep.btn ? `${it} <button class="next" id="intronext">${istep.btn}</button>` : istep.skip ? `${it} <button class="next skip" id="introskip">Skip tips</button>` : it; if (el.msg.innerHTML !== want) el.msg.innerHTML = want; }
     else el.msg.textContent = hint();
+    // Colour by kind (build 15): red for danger, green for good news, gold for something new.
+    el.msg.dataset.kind = it ? 'tip' : noticeKind(el.msg.textContent);
     pulseFor(el.msg.textContent);
     // Crossing into another part of the yard: name it (and describe it the first time).
     if (a0 && !P().inNest) { const ai = SIM.areaOf(s, a0.tx, a0.ty); if (ai !== app.lastArea) { if (app.lastArea != null) { const A = SIM.AREAS[ai]; const first = !s.seen['area' + ai]; s.seen['area' + ai] = true; app.areaBanner = { text: first ? `${A.name}. ${A.blurb}` : A.name, until: performance.now() + (first ? 6000 : 2500) }; } app.lastArea = ai; } }
@@ -443,6 +451,8 @@ export function createUI(app) {
     setIcon(el.act, /^(Drop|Set down)/.test(lbl) ? 'drop' : 'pick', lbl, lift ? lift[1] : '');
     el.act.disabled = !SIM.actionLabel(s);
     setIcon(el.release, 'release', st.followers ? `Release ${st.followers}` : 'Release', st.followers || '');
+    // Recruit shows your crew against the cap (build 15), when it isn't being held.
+    if (!app.recruiting) { const capN = SIM.crewCap(s); setIcon(el.recruit, 'recruit', `Recruit (hold for more): crew ${st.followers} of ${capN}. They follow you up to 16 tiles away.`, st.followers ? `${st.followers}/${capN}` : ''); }
     el.release.disabled = !st.followers;
     el.mark.classList.toggle('on', !!P().mark);
     // Outpost: once Waypoints is evolved, while you're out in the yard.
@@ -543,7 +553,7 @@ export function createUI(app) {
   el.recruit.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     if (!P().ant || P().inNest) return;
-    recN = 1;
+    recN = 1; app.recruiting = true;
     setIcon(el.recruit, 'recruit', 'Recruit 1', 1);
     recTimer = setInterval(() => { if (recN < SIM.crewCap(app.s)) { recN++; setIcon(el.recruit, 'recruit', 'Recruit ' + recN, recN); } }, 140);
   });
@@ -551,7 +561,7 @@ export function createUI(app) {
     if (!recTimer) return;
     clearInterval(recTimer);
     recTimer = null;
-    const got = SIM.recruit(app.s, recN);
+    const got = SIM.recruit(app.s, recN); app.recruiting = false;
     setIcon(el.recruit, 'recruit', 'Recruit (hold for more)');
     if (got < recN) flash(got ? `${got} ants answered. Recruit near the nest or near other ants.` : 'No ants in range. Walk back toward the nest and try again.', /answered|in range/, 3000);
   };
@@ -568,7 +578,15 @@ export function createUI(app) {
     app.paused = true;
   }
 
-  return { update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText, evo };
+  // The main menu (build 15): a button, and Escape. Escape also closes whatever is open.
+  el.menu.addEventListener('click', () => { closeMenu(); if (evo.isOpen) evo.close(); app.openTitle(); });
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || document.body.classList.contains('cine-on')) return;
+    if (evo.isOpen) evo.close(); else if (mapView.isOpen) mapView.close(); else if (app.menu) closeMenu(); else if (!app.titleOpen) app.openTitle();
+  });
+  // A small "Saved ✓" when the game autosaves.
+  function saved() { const e = $('saved'); e.classList.add('on'); clearTimeout(saved.t); saved.t = setTimeout(() => e.classList.remove('on'), 1400); }
+  return { saved, update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText, evo };
 }
 
 export const GRID = { NW, NH };

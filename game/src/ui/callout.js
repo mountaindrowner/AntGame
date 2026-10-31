@@ -3,6 +3,7 @@
 // and fades after a couple of seconds. The tap still walks your ant there.
 import * as THREE from 'three';
 import SIM from '../sim/sim.js';
+import { RANKS, rankOf } from '../sim/growth.js';
 
 const { T, FOODS, CASTES } = SIM;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -21,6 +22,19 @@ function itemCard(f) {
   const F = FOODS[f.type];
   if (F && F.crew) return ['🍬', cap(F.name), `A treat: ${Math.round(f.amt)} food. Needs a crew of ${F.crew}.`];
   return ['🌾', cap(F ? F.name : 'Food'), `Food: ${Math.round(f.amt)}. Pick it up and bring it home.`];
+}
+
+// An ant's card (build 15): its name if it has one, its rank, kind and what
+// it's doing. Mark's brother tried hovering over ants to find "Thorn".
+const JOB = { explore: 'foraging', return: 'heading home', patrol: 'on guard', fight: 'fighting', follow: 'following you', spoil: 'hauling dirt out', raid: 'raiding', player: 'you' };
+const WHAT = { forager: 'Gathers food and water.', builder: 'Digs, builds and hauls dirt out.', nurse: 'Tends eggs so they hatch faster.', soldier: 'Guards the door and fights. Eats protein.', venom: 'Kills big things.' };
+function antCard(s, a) {
+  if (a.team) return ['🐜', 'Pavement ant', 'A rival. Their nest is in the Patio.'];
+  const C = CASTES[a.caste], R = RANKS[rankOf(a)], job = a.carry && a.state === 'return' ? 'carrying ' + (a.kind === 'food' ? 'food' : a.kind === 'water' ? 'water' : a.kind === 'grit' ? 'a pebble' : a.kind === 'protein' ? 'meat' : 'a load') + ' home' : JOB[a.state] || a.state;
+  const next = RANKS[rankOf(a) + 1], xp = Math.floor(a.xp || 0);
+  const icon = a.isPlayer ? '⭐' : rankOf(a) >= 4 ? '🏆' : rankOf(a) >= 3 ? '🎖' : '🐜';
+  const name = a.name ? `${a.name}${a.title ? ' ' + a.title : ''}` : a.isPlayer ? 'You' : C.name;
+  return [icon, name, `${R.name} ${C.name}${a.isPlayer && a.name ? ' (you)' : ''}, ${job}. ${xp} xp${next && !a.legend ? ` (${next.name} at ${next.xp})` : ''}. ${WHAT[a.caste] || ''}`];
 }
 
 export class Callout {
@@ -45,7 +59,7 @@ export class Callout {
     if (s.cat) take(s.cat.x, s.cat.y, 3 * T, () => ['🐛', 'Caterpillar', 'Harmless. 40 protein if a crew brings it down.'], 14);
     for (const a of s.ants) {
       if (a.state === 'dead' || a.state === 'in' || a.state === 'nest' || a.state === 'build') continue;
-      take(a.x, a.y, 1.1 * T, () => (a.isPlayer ? ['⭐', 'You', 'Your ant. Lead the colony by example.'] : a.team ? ['🐜', 'Pavement ant', 'A rival. Their nest is in the Patio.'] : ['🐜', CASTES[a.caste].name, a.follow ? 'Following you.' : 'One of yours.']), 6, a.isPlayer ? 3 : 1.8);
+      take(a.x, a.y, 1.1 * T, () => antCard(s, a), 6, a.isPlayer ? 3 : 1.8);
     }
     for (const st of s.strikes || []) if (st.kind === 'bird' || st.kind === 'toad') take(st.x * T, st.y * T, 3 * T, () => (st.kind === 'bird' ? ['🐦', 'Robin', 'Hunting ants. Five fighters chase it off.'] : ['🐸', 'Toad', 'Its tongue reaches five tiles. Keep away.']), 20);
     if (s.queen.placed) take((w.ex + 0.5) * T, (w.ey + 0.5) * T, 2 * T, () => ['🏠', 'Your nest', 'Bring food here.']);
@@ -56,8 +70,8 @@ export class Callout {
     this.el.classList.remove('hidden', 'fade');
     this.target = best.at;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.el.classList.add('fade'), 2200);
-    this.hideAt = performance.now() + 2700;
+    this.timer = setTimeout(() => this.el.classList.add('fade'), 3200);
+    this.hideAt = performance.now() + 3700;
     if (!this.raf) this._follow();
     return true;
   }

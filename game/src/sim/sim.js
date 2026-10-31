@@ -259,7 +259,7 @@ const areaOf = (s, x, y) => s.world.area[idx(Math.max(0, Math.min(W-1, x)), Math
 // The spider lives at its web in the Flowerbed.
 function spawnSpider(s){
   const w = s.world;
-  s.spider = { x:(w.web.x+0.5)*T, y:(w.web.y+2*SCALE+0.5)*T, hp: 150, maxHp: 150, wander: 0, bite: 0 };
+  s.spider = { x:(w.web.x+0.5)*T, y:(w.web.y+2*SCALE+0.5)*T, hp: 150, maxHp: 150, wander: 0, bite: 0, cost0: s.colony ? s.colony.deaths.spider || 0 : 0 };
 }
 // Caterpillars graze the Lawn, the Compost heap, the Flowerbed, the
 // vegetable garden and the great lawn.
@@ -453,6 +453,7 @@ function buyEvo(s, key){
   if (evoLock(s, key)) return false; const c = s.colony;
   if (!payCost(c, evoCost(s, EVO_BY[key]))) return false;
   c.evo[key] = true; c.cap = storeCap(s); c.hatchCap = hatchCapOf(s);
+  if (key === 'waypoints'){ s.player.msg = 'Outposts unlocked! Walk far from the nest and press Outpost on the bottom bar.'; s.events.push('waypoints'); }
   return true;
 }
 function setDoctrine(s, caste, slot, key){ const L = PROMOS[FAMILY[caste]]; if (!L || !L.some(p => p[0] === key)) return false; const d = doctrineOf(s, caste); d[slot] = key; if (d[0] === d[1]) d[1 - slot] = L.find(p => p[0] !== key)[0]; s.colony.doctrine[caste] = d; return true; }
@@ -533,6 +534,7 @@ function tickOutposts(s, dt){
 }
 // An outpost knocked about by a foot or flattened by the mower.
 function hitOutpost(s, o, dmg){ o.hp -= dmg; if (o.hp > 0) return; s.outposts.splice(s.outposts.indexOf(o), 1); outpostsChanged(s); s.player.msg = `An outpost in ${AREAS[o.region].name.replace(/^The /, 'the ')} was knocked flat.`; s.events.push('outpostlost'); }
+const deathTotal = c => Object.values(c.deaths).reduce((t, n) => t + n, 0);
 const waterCapOf = s => (roomOf(s, 'cistern') ? 60 : 10) + (heldFx(s, 'water') ? 40 : 0);
 // ---------- the goals board ----------
 function tickGoals(s, dt){
@@ -674,7 +676,9 @@ function tick(s, dt){
     if (s.spider.hp <= 0){ s.items.push({ x: Math.floor(s.spider.x/T), y: Math.floor(s.spider.y/T), kind:'protein', type:'spider', amt: 40 });
       const ours = biters.filter(a => !a.team);
       if (ours.length){ for (const a of ours) gainXp(s, a, 50); makeLegend(s, ours[Math.floor(Math.random()*ours.length)], 'Spider-bane'); if (picked(s, 'venom', 'hunter')) trailHome(s, s.spider.x, s.spider.y); }
-      if (!c.trophies.spider){ c.trophies.spider = true; P.msg = 'Spider down! Venom ants unlocked.'; gainGenes(s, 3, 'the spider is dead'); } else gainGenes(s, 1, 'the spider again');
+      const cost = (c.deaths.spider || 0) - (s.spider.cost0 || 0);
+      if (!c.trophies.spider){ c.trophies.spider = true; gainGenes(s, 3, 'the spider is dead'); P.msg = `Spider down! It cost you ${cost} ant${cost === 1 ? '' : 's'}. Venom ants unlocked.`; } else { gainGenes(s, 1, 'the spider again'); P.msg = `Spider down again! It cost you ${cost} ant${cost === 1 ? '' : 's'}.`; }
+      s.report = { kind: 'spider', lost: cost, t: s.t };
       c.kills.spider = (c.kills.spider||0)+1; s.spider = null; s.spiderRespawn = 120; }
   }
   if (s.cat && s.cat.hp <= 0){ s.items.push({ x: Math.floor(s.cat.x/T), y: Math.floor(s.cat.y/T), kind:'protein', type:'cat', amt: 40 });
@@ -732,6 +736,9 @@ function tickColony(s, c, dt){
     const q = s.queen;
     if (q.placed && !s.lost){ q.hp = Math.min(100, q.hp + 0.1*dt); if (q.hp >= 99) s.queenWarned = false;
       if (q.hp <= 0){ q.hp = 0; s.lost = true; c.queenAlive = false; s.events.push('lost'); P.msg = 'The queen is dead. The colony is lost.'; } }
+    // The queen sitting idle with food to spare: say so (build 15).
+    if (s.queen.placed && !c.eggs.length && !c.eggQueue.length && !P.pending && c.store >= 8 && c.water >= 1 && !overCap){ c.idleT = (c.idleT || 0) + dt;
+      if (c.idleT > 25 && s.t - (c.nudgeT || -999) > 90){ c.nudgeT = s.t; s.events.push('idlequeen'); P.msg = 'The queen is idle and you have food: tap her in the nest and lay eggs.'; } } else c.idleT = 0;
     if (P.pending && !P.ant && !c.eggs.length && !c.eggQueue.length && s.queen.placed){ c.eggQueue.push(P.rebirth && !eggLock(s, P.rebirth) ? P.rebirth : 'forager'); P.msg = 'Waiting for the next hatchling.'; }
     const ws = roomOf(s, 'workshop') ? 2 : 1;
     // Construction only advances for builders standing at their own job.
@@ -747,6 +754,7 @@ function tickColony(s, c, dt){
 }
 function finishRoom(s, job){
   const c = s.colony; carveRoom(s, job, job.room);
+  s.player.msg = `${ROOMS[job.room].name} finished: ${ROOMS[job.room].desc.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone');
   if (job.room === 'hatchery') c.hatchCap = hatchCapOf(s);
   if (job.room === 'store') c.cap = storeCap(s);
   if (job.room === 'cistern') c.waterCap = waterCapOf(s);
@@ -926,7 +934,11 @@ function nearAlarm(s){ const w = s.world; let m = 0; for (let dy=-3;dy<=3;dy++) 
 function rivalBrain(s, dt){
   const r = s.rival; if (!r.queenAlive) return;
   r.raidT += dt; if (r.raidT < 10) return; r.raidT = 0;
-  if (s.raidLive && !s.ants.some(a => a.team && a.state === 'raid')){ s.raidLive = false; s.colony.raidsBeaten++; }
+  if (s.raidLive && !s.ants.some(a => a.team && a.state === 'raid')){ s.raidLive = false; s.colony.raidsBeaten++;
+    // The battle report (build 15): what the raid cost on both sides.
+    const R = s.raidStart || {}, lost = deathTotal(s.colony) - (R.lost || 0), killed = (s.rival.deaths.war || 0) - (R.killed || 0), took = Math.round(s.colony.stolen - (R.stolen || 0));
+    s.report = { kind: 'raid', lost, killed, took, t: s.t }; s.events.push('report');
+    s.player.msg = `Raid over. You lost ${lost} ant${lost === 1 ? '' : 's'}, killed ${killed} raider${killed === 1 ? '' : 's'}${took > 0 ? `, and they carried off ${took} food` : ''}.`; }
   const mine = s.ants.filter(a => a.team===1 && a.state!=='dead'); const foragers = mine.filter(a => a.caste==='forager').length, soldiers = mine.filter(a => a.caste==='soldier');
   // grow
   if (r.store >= 10 && r.eggQueue.length < 2 && mine.length < Math.min(60, 12 + s.t/30)){ r.eggQueue.push(soldiers.length < foragers/2 ? 'soldier' : 'forager'); r.store -= 4; }
@@ -936,7 +948,7 @@ function rivalBrain(s, dt){
   const idle = soldiers.filter(a => a.state==='in' || a.state==='patrol');
   // Raids start at six minutes and grow: 3 soldiers, then one more every 2.5 minutes.
   const size = Math.min(14, 3 + Math.floor(Math.max(0, s.t - 360)/150));
-  if (s.t > 360 && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.player.msg = `Raid! ${size} rivals are coming.`; s.events.push('raid'); }
+  if (s.t > 360 && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.raidStart = { lost: deathTotal(s.colony), killed: s.rival.deaths.war || 0, stolen: s.colony.stolen }; s.player.msg = `Raid! ${size} rivals are coming.`; s.events.push('raid'); }
 }
 
 // The spider roams the whole yard: landmark to landmark, past our nest every
@@ -992,7 +1004,7 @@ function spiderEnter(s, hp){
     u = 0.2 + Math.random()*0.6;
   const out = side===0 ? [-2, u*H] : side===1 ? [W+2, u*H] : side===2 ? [u*W, -2] : [u*W, H+2];
   const inn = side===0 ? [5, u*H] : side===1 ? [W-5, u*H] : side===2 ? [u*W, 5] : [u*W, H-5];
-  s.spider = { x: out[0]*T, y: out[1]*T, hp, maxHp: 150, bite: 0, legs: 0, route: [[inn[0]*T, inn[1]*T]], entering: true, stuck: 0 };
+  s.spider = { cost0: s.colony.deaths.spider || 0, x: out[0]*T, y: out[1]*T, hp, maxHp: 150, bite: 0, legs: 0, route: [[inn[0]*T, inn[1]*T]], entering: true, stuck: 0 };
   if (!s.player.msg) s.player.msg = 'The spider is back, walking in from the edge of the yard.';
 }
 function stepSpider(s, dt){

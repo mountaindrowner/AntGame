@@ -247,6 +247,7 @@ function blend(s, k) {
 }
 
 let slow = 0;
+const nameV = new THREE.Vector3();
 let last = performance.now(), acc = 0, hudT = 0, saveT = 0, frames = 0, fpsT = 0, clock = 0;
 let wasInNest = app.s.player.inNest;
 
@@ -304,6 +305,17 @@ function frame(now) {
       const p = views.nest.project(l.x, l.y, l.z, cssW, cssH);
       return { text: l.text, x: l.kind === 'band' ? Math.max(8, p.x) : p.x, y: p.y, kind: l.kind };
     }));
+  } else if (app.view === 'surface' && !app.titleOpen) {
+    // Names over your Elites and Legends (build 15), the twelve nearest the view's middle.
+    const cam = views.surface.camera, tg = views.surface.target, out = [];
+    const named = s.ants.filter((a) => !a.team && a.name && a.state !== 'dead' && a.state !== 'in' && a.state !== 'build' && a.state !== 'nest')
+      .sort((a, b) => Math.hypot(a.x - tg.x, a.y - tg.z) - Math.hypot(b.x - tg.x, b.y - tg.z)).slice(0, 12);
+    for (const a of named) {
+      nameV.set(a.x, 9, a.y).project(cam);
+      if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue;
+      out.push({ text: a.legend || a.title ? `★ ${a.name}` : a.name, x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: a.legend || a.title ? 'legend' : 'name' });
+    }
+    labels.set(out);
   } else labels.set([]);
 
   frames++;
@@ -318,7 +330,7 @@ function frame(now) {
   hudT += dt;
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }
   saveT += dt;
-  if (saveT > 10) { saveT = 0; saveGame(app.s); saveMapIfNew(); }
+  if (saveT > 10) { saveT = 0; saveGame(app.s); saveMapIfNew(); if (!app.titleOpen && app.s.queen.placed) ui.saved(); }
   requestAnimationFrame(frame);
 }
 

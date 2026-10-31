@@ -124,7 +124,7 @@ export function soundWatch(app, views) {
     const chipping = !outside && s.ants.some((o) => o.caste === 'builder' && o.atWork && o.task && o.task[0] !== 'h');
     sfx.loop('chipping', chipping ? 0.6 : 0);
     sfx.loop('trail', a && !P.inNest && P.mark && P.tx != null ? 0.6 : 0);
-    if (s.cat) { const e = ear(s.cat.x, s.cat.y); sfx.loop('munch', e.gain * e.gain * 0.6, e.pan); } else sfx.loop('munch', 0);
+    if (s.cat) { const e = ear(s.cat.x, s.cat.y); sfx.loop('munch', e.gain * e.gain * 0.45, e.pan); } else sfx.loop('munch', 0);
     p = now;
   }
   let stepAcc = 0;

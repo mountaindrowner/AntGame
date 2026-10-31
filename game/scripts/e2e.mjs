@@ -352,6 +352,39 @@ try {
   await page.click('#mapbtn', { force: true, timeout: 5000 });
   await page.waitForTimeout(500);
   await shot('map-outpost');
+  await page.click('#mapview button', { force: true, timeout: 5000 }).catch(() => {});
+  await page.keyboard.press('Escape');
+  // Build 15: names over Elites, tapping an ant for its card, the recruit ring, the menu.
+  const tapAt = await sim(() => {
+    const { app, views, SIM } = window.UNDERFOOT, s = app.s, a = s.player.ant;
+    const nm = s.ants.find((o) => !o.team && !o.isPlayer && o.name && o.state !== 'in' && o.state !== 'build');
+    if (!nm || !a) return null;
+    nm.x = a.x + 3 * SIM.T; nm.y = a.y; nm.tx = Math.floor(nm.x / SIM.T); nm.ty = Math.floor(nm.y / SIM.T); nm.state = 'patrol'; nm.follow = false;
+    app.view = 'surface'; app.zoomMul = 1.6; app.paused = true; s.player.msg = 'Raid over. You lost 3 ants, killed 5 raiders.';
+    return { x: nm.x, y: nm.y };
+  });
+  await page.waitForTimeout(600);
+  await shot('names-and-report');
+  if (tapAt) {
+    const p = await sim((t) => { const { views } = window.UNDERFOOT; const v = new views.surface.camera.position.constructor(t.x, 4, t.y).project(views.surface.camera); return [(v.x * 0.5 + 0.5) * innerWidth, (-v.y * 0.5 + 0.5) * innerHeight]; }, tapAt);
+    await sim((xy) => window.UNDERFOOT.app.callout.tap(xy.x, xy.y), tapAt);
+    await page.waitForTimeout(300);
+    await shot('ant-card');
+    const card = await page.$eval('#callout', (e) => e.textContent).catch(() => '');
+    console.log('ant card'.padEnd(22), '|', card.slice(0, 80));
+    if (!/xp/.test(card)) errors.push('test: ant card shows no rank or xp');
+  }
+  await sim(() => { const { app } = window.UNDERFOOT; app.paused = false; });
+  await page.dispatchEvent('#recruit', 'pointerdown');
+  await page.waitForTimeout(500);
+  await shot('recruit-ring');
+  await page.dispatchEvent('#recruit', 'pointerup');
+  await page.click('#menubtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(400);
+  const menu = await sim(() => window.UNDERFOOT.app.titleOpen);
+  console.log('menu button'.padEnd(22), '|', menu);
+  if (!menu) errors.push('test: Menu button did not open the main menu');
+  await page.click('#title button[data-t="continue"]', { force: true, timeout: 5000 }).catch(() => {});
 } catch (e) {
   errors.push('test: ' + e.message);
 }
