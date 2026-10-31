@@ -50,7 +50,8 @@ export const HELP_PAGES = [
   ['Colony', `
 <div class="h"><b>The nest</b> Tap <b>Nest</b> (top right). Tap dirt beside a tunnel to order digging. <b>Build</b> places a room in a pocket you've dug. Tap the queen for eggs.</div>
 <div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, hauls dirt out, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders.</div>
-<div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging.</div>
+<div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging. You can build one of each per queen level; extras cost more, and every room eats a little food to run.</div>
+<div class="h"><b>Jobs</b> The clipboard button. Each kind of ant does the first job on its list that needs doing (gather food, fetch water or stone, hunt, dig and build, tend eggs, guard the door), then helps with the next. Tap a job to put it first; ✕ turns it off.</div>
 <div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades.</div>
 <div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>`],
   ['Growth', `

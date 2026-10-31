@@ -400,6 +400,16 @@ try {
     }
   }
   await sim(() => { const s = window.UNDERFOOT.app.s; s.rain.on = false; s.critters = []; });
+  // Build 17: the Jobs page. Put stone first for foragers, switch soldiers off food.
+  await page.click('#jobsbtn', { force: true, timeout: 5000 });
+  await page.waitForTimeout(400);
+  await page.click('#sheet [data-jobfirst="forager:stone"]', { force: true, timeout: 5000 });
+  await page.waitForTimeout(200);
+  await shot('jobs');
+  const jobs = await sim(() => { const { app, SIM } = window.UNDERFOOT; return SIM.jobsOf(app.s, 'forager').map((j) => j[0]).join(','); });
+  console.log('jobs: foragers'.padEnd(22), '|', jobs);
+  if (!/^stone,/.test(jobs)) errors.push('test: putting stone first on the Jobs page did not stick');
+  await page.click('#jobsbtn', { force: true, timeout: 5000 });
   await sim(() => { const { app } = window.UNDERFOOT; app.paused = false; });
   await page.dispatchEvent('#recruit', 'pointerdown');
   await page.waitForTimeout(500);

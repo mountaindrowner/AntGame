@@ -23,13 +23,19 @@ const CASTES = {
 };
 const ROOMS = {
   queen:   {name:'Queen\u2019s chamber', cost:{}, work:0, w:4, h:3, desc:'Eggs, one at a time'},
-  hatchery:{name:'Hatchery', cost:{food:10}, work:20, w:4, h:3, desc:'+2 eggs at a time'},
-  store:   {name:'Food store', cost:{food:10, grit:5}, work:20, w:5, h:3, desc:'Food cap 20 to 150'},
-  cistern: {name:'Cistern', cost:{food:15, grit:5}, work:20, w:4, h:4, desc:'Water cap 10 to 60'},
-  nursery: {name:'Nursery', cost:{food:20, water:10}, work:25, w:4, h:3, desc:'Nurses; eggs hatch 30% faster'},
-  barracks:{name:'Barracks', cost:{food:30, protein:5}, work:30, w:6, h:3, desc:'Unlocks Soldiers'},
-  workshop:{name:'Workshop', cost:{food:25, grit:10}, work:25, w:5, h:4, desc:'Builders dig packed soil and build 2× faster'},
+  hatchery:{name:'Hatchery', cost:{food:10}, work:20, w:4, h:3, desc:'+2 eggs at a time', more:'+2 more eggs at a time'},
+  store:   {name:'Food store', cost:{food:10, grit:5}, work:20, w:5, h:3, desc:'Food cap 20 to 150', more:'+50% food cap'},
+  cistern: {name:'Cistern', cost:{food:15, grit:5}, work:20, w:4, h:4, desc:'Water cap 10 to 60', more:'+30 water cap'},
+  nursery: {name:'Nursery', cost:{food:20, water:10}, work:25, w:4, h:3, desc:'Nurses; eggs hatch 30% faster', more:'Eggs 15% faster, 3 more nurses can help'},
+  barracks:{name:'Barracks', cost:{food:30, protein:5}, work:30, w:6, h:3, desc:'Unlocks Soldiers', more:'Fighters eat 25% less protein'},
+  workshop:{name:'Workshop', cost:{food:25, grit:10}, work:25, w:5, h:4, desc:'Builders dig packed soil and build 2× faster', more:'Builders work another half again faster'},
 };
+// Build 17: more than one of a room. Each kind allows one per queen level;
+// each copy costs half again more than the last, and every room eats food
+// to run: half a unit a minute for the first of a kind, one for each extra.
+const roomCount = (s, key) => s.nest.rooms.filter(r => r.key === key).length;
+const roomCap = s => s.queen.level + 1;
+function roomUpkeep(s){ let u = 0; const seen = {}; for (const r of s.nest.rooms){ if (r.key === 'queen') continue; u += seen[r.key] ? 1 : 0.5; seen[r.key] = true; } return u; }
 const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop'];
 // Food on the ground: amt is how much it holds (an ant carries 5). Treats are
 // rare drops from people: worth a crew and a trail.
@@ -129,8 +135,8 @@ function toggleFillOrder(s, x, y){
 function removeRoom(s, x, y){
   const r = roomAt(s, x, y); if (!r || r.key === 'queen') return false; const c = s.colony;
   s.nest.rooms.splice(s.nest.rooms.indexOf(r), 1); for (const [cx,cy] of rectCells(r)) s.nest.cells[nidx(cx,cy)] = 1; s.nest.ver++;
-  const cost = roomCost(s, r.key); for (const k in cost){ const half = Math.floor(cost[k]/2); if (k === 'food') c.store = Math.min(c.cap, c.store + half); else c[k] += half; }
-  if (r.key === 'hatchery') c.hatchCap = hatchCapOf(s); if (r.key === 'store'){ c.cap = 20; c.store = Math.min(c.store, 20); } if (r.key === 'cistern'){ c.waterCap = waterCapOf(s); c.water = Math.min(c.water, c.waterCap); } if (r.key === 'nursery') c.hatchMul = 1;
+  const cost = roomCost(s, r.key, roomCount(s, r.key)); for (const k in cost){ const half = Math.floor(cost[k]/2); if (k === 'food') c.store = Math.min(c.cap, c.store + half); else c[k] += half; }
+  roomsChanged(s);
   return true;
 }
 function dugCount(s){ let n = 0; for (let i=0;i<NW*NH;i++) if (s.nest.cells[i] === 1) n++; return n; }
@@ -325,6 +331,10 @@ function wanted(s, a){
   want.protein = 1.5;
   // Enough stone for the next queen upgrade, never less than 30.
   if (!a.team && (a.caste==='builder' || c.store > c.cap*0.6) && c.grit < Math.max(30, (QUEEN_UP[s.queen.level] || {}).grit || 0)) want.grit = 0.8;
+  // On a duty (build 17): that's what it looks for; anything else it wants
+  // only if it's much nearer.
+  const D = !a.team && a.duty && DUTIES[a.duty];
+  if (D && D.kind){ for (const k in want) want[k] *= 0.35; want[D.kind] = 1.5; }
   return want;
 }
 function nearestItem(s, a, r, want){ let best=null, bd=r; for (const f of s.items){ if (f.amt<=0 || !want[f.kind] || (heavy(f) && !a.team && !chewsTreats(s, a)) || f.carried) continue; const d = Math.hypot(f.x-a.tx, f.y-a.ty)/want[f.kind]; if (d < bd){ bd = d; best = f; } } return best; }
@@ -422,10 +432,14 @@ function workOf(s, a, kind){
   if (kind === 'r' && (picked(s, 'builder', 'engineer') || promo(s, a, 'fixer'))) m *= 2;
   return m;
 }
-const storeCap = s => roomOf(s, 'store') ? (has(s, 'store3') ? 1000 : has(s, 'store2') ? 400 : 150) : 20;
-const hatchCapOf = s => 1 + (roomOf(s, 'hatchery') ? 2 + (has(s, 'hatchery2') ? 1 : 0) + (has(s, 'hatchery3') ? 1 : 0) : 0);
+const storeCap = s => { const n = roomCount(s, 'store'); return n ? Math.round((has(s, 'store3') ? 1000 : has(s, 'store2') ? 400 : 150)*(1 + 0.5*(n - 1))) : 20; };
+const hatchCapOf = s => { const n = roomCount(s, 'hatchery'); return 1 + (n ? 2*n + (has(s, 'hatchery2') ? 1 : 0) + (has(s, 'hatchery3') ? 1 : 0) : 0); };
 function eggCost(s, caste){ const cost = Object.assign({}, CASTES[caste].cost); if (picked(s, 'nurse', 'wetnurse') && cost.food) cost.food = Math.ceil(cost.food * 0.7); return cost; }
-function roomCost(s, key){ const cost = Object.assign({}, ROOMS[key].cost); if (picked(s, 'builder', 'mason') && cost.grit) cost.grit = Math.ceil(cost.grit * 0.75); return cost; }
+function roomCost(s, key, nth){
+  // nth: which copy (0 the first); by default the next one you'd build.
+  const n = nth != null ? nth : roomCount(s, key) + s.colony.buildQueue.filter(j => j.room === key).length, k = 1 + 0.5*n;
+  const cost = {}; for (const x in ROOMS[key].cost) cost[x] = Math.ceil(ROOMS[key].cost[x]*k);
+  if (picked(s, 'builder', 'mason') && cost.grit) cost.grit = Math.ceil(cost.grit * 0.75); return cost; }
 // Buy an ant type's next level; a level with picks needs one of them.
 function upgradeLock(s, caste){ return caste === 'forager' || caste === 'builder' || caste === 'you' ? '' : eggLock(s, caste); }
 // Your ant (build 14): pace, health, bite and carry from the You levels.
@@ -538,7 +552,7 @@ function tickOutposts(s, dt){
 // An outpost knocked about by a foot or flattened by the mower.
 function hitOutpost(s, o, dmg){ o.hp -= dmg; if (o.hp > 0) return; s.outposts.splice(s.outposts.indexOf(o), 1); outpostsChanged(s); s.player.msg = `An outpost in ${AREAS[o.region].name.replace(/^The /, 'the ')} was knocked flat.`; s.events.push('outpostlost'); }
 const deathTotal = c => Object.values(c.deaths).reduce((t, n) => t + n, 0);
-const waterCapOf = s => (roomOf(s, 'cistern') ? 60 : 10) + (heldFx(s, 'water') ? 40 : 0);
+const waterCapOf = s => { const n = roomCount(s, 'cistern'); return (n ? 60 + 30*(n - 1) : 10) + (heldFx(s, 'water') ? 40 : 0); };
 // ---------- the goals board ----------
 function tickGoals(s, dt){
   s.goalT = (s.goalT || 0) + dt; if (s.goalT < 1 || !s.queen.placed) return; s.goalT = 0;
@@ -628,9 +642,22 @@ function tick(s, dt){
       let tx = null, ty = null;
       if (a.goal === 'spider' && s.spider){ tx = s.spider.x; ty = s.spider.y; }
       else if (a.goal === 'bug'){ const b = s.critters.find(o => o.id === a.bugId); if (b && b.state !== 'fly' && Math.hypot(a.x - b.x, a.y - b.y) < 14*T){ tx = b.x; ty = b.y; } }
+      else if (a.goal === 'cat'){ if (s.cat && Math.hypot(a.x - s.cat.x, a.y - s.cat.y) < 14*T){ tx = s.cat.x; ty = s.cat.y; } }
       else { const e2 = enemiesNear(a, 6); if (e2.length){ tx = e2[0].x; ty = e2[0].y; } else if (s.spider && Math.hypot(a.x-s.spider.x, a.y-s.spider.y) < 8*T){ tx = s.spider.x; ty = s.spider.y; } }
-      if (tx == null){ a.state = a.carry ? 'return' : (a.team ? 'return' : 'patrol'); a.explore = 0; continue; }
+      if (tx == null){ a.state = a.carry ? 'return' : a.team ? 'return' : a.duty === 'hunt' ? 'hunt' : 'patrol'; a.explore = 0; continue; }
       if (Math.hypot(a.x-tx, a.y-ty) > 0.9*T){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)) chooseToward(s, a, tx, ty); }
+      continue;
+    }
+    // Hunting (build 17): fighters range out after small game and the
+    // caterpillar, and leave the meat for foragers to haul.
+    if (a.state === 'hunt'){
+      a.explore += dt;
+      if (a.explore > 50 || s.rain.on){ a.state = 'return'; a.explore = 0; continue; }
+      let prey = null, pd = 10*T;
+      if (s.cat){ const d = Math.hypot(a.x - s.cat.x, a.y - s.cat.y); if (d < pd){ pd = d; prey = s.cat; } }
+      for (const b of s.critters){ if (b.state === 'fly') continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < pd){ pd = d; prey = b; } }
+      if (prey){ a.state = 'fight'; a.goal = prey === s.cat ? 'cat' : 'bug'; a.bugId = prey.id; continue; }
+      if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)){ const p = preyNear(s, 60); if (p && Math.random() < 0.6) chooseToward(s, a, p.x, p.y); else chooseExplore(s, a, 40); }
       continue;
     }
     if (a.state === 'raid'){
@@ -664,6 +691,8 @@ function tick(s, dt){
       const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
       if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.state = 'return'; continue; }
+      // Nothing of its duty in sight for a while: help with the next one instead.
+      if (!a.team && a.state === 'explore' && a.duty && Math.floor(a.explore/20) > Math.floor((a.explore - dt)/20)){ const n = chooseDuty(s, a, a.duty); if (n && DUTIES[n].out && (n !== 'hunt' || C.fight < 3)) a.duty = n; }
       if (a.explore > (a.state === 'patrol' ? 25 : 60)){ a.state = 'return'; a.explore = 0; continue; }
       if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, sightOf(s, a), want) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : picked(s, 'soldier', 'escort') ? 18 : 9) : a.team ? 64 : forageRange(s)); }
       continue;
@@ -724,6 +753,7 @@ function tick(s, dt){
 function tickColony(s, c, dt){
   c.secAcc += dt; while (c.secAcc >= 1){ c.secAcc -= 1; c.delivered.pop(); c.delivered.unshift(0); c.eaten.pop(); c.eaten.unshift(0); }
   let eat = 0; for (const a of s.ants) if (a.state !== 'dead' && a.team === c.team) eat += CASTES[a.caste].eat;
+  if (!c.team) eat += roomUpkeep(s); // rooms cost food to run (build 17)
   const bite = eat/60*dt; c.eaten[0] += bite; c.store -= bite; if (!c.team && c.store > c.storePeak) c.storePeak = c.store;
   if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The colony is starving. Forage farther.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
   if (c.starve > 20 && (c.starve - 20) % 5 < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); }
@@ -732,7 +762,7 @@ function tickColony(s, c, dt){
     while (c.eggQueue.length && c.eggs.length < c.hatchCap){ const caste = c.eggQueue.shift(); c.eggs.push({ caste, t: 0, need: CASTES[caste].hatch * c.hatchMul }); }
     // Nurses inside speed the eggs: three can help (six with Nurse II), each by its rank.
     let rate = 1;
-    if (!c.team){ const nurses = s.ants.filter(a => a.caste==='nurse' && a.team===0 && (a.state==='in'||a.state==='build')).slice(0, lvl(s, 'nurse') >= 2 ? 6 : 3);
+    if (!c.team){ const nurses = s.ants.filter(a => a.caste==='nurse' && a.team===0 && (a.state==='in'||a.state==='build')).slice(0, (lvl(s, 'nurse') >= 2 ? 6 : 3) + 3*Math.max(0, roomCount(s, 'nursery') - 1));
       for (const a of nurses) rate += 0.12*jobMul(a)*(promo(s, a, 'gentle') ? 1.3 : 1);
       if (nurses.length && lvl(s, 'nurse') >= 1) rate *= 1.15;
       if (qtrait(s, 'fertile')) rate *= 1.25;
@@ -747,7 +777,7 @@ function tickColony(s, c, dt){
     if (picked(s, 'nurse', 'medic') || s.ants.some(a => !a.team && a.caste === 'nurse' && (a.state === 'in' || a.state === 'build') && promo(s, a, 'healer')))
       for (const a of s.ants) if (!a.team && (a.state === 'in' || a.state === 'build') && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
-    if (fighters.length){ c.protein -= fighters.length*0.5/60*dt;
+    if (fighters.length){ c.protein -= fighters.length*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
       if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
       else c.pstarve = 0; }
     // The queen heals slowly; if raiders kill her, the colony is lost.
@@ -758,7 +788,7 @@ function tickColony(s, c, dt){
     if (s.queen.placed && !c.eggs.length && !c.eggQueue.length && !P.pending && c.store >= 8 && c.water >= 1 && !overCap){ c.idleT = (c.idleT || 0) + dt;
       if (c.idleT > 25 && s.t - (c.nudgeT || -999) > 90){ c.nudgeT = s.t; s.events.push('idlequeen'); P.msg = 'The queen is idle and you have food: tap her in the nest and lay eggs.'; } } else c.idleT = 0;
     if (P.pending && !P.ant && !c.eggs.length && !c.eggQueue.length && s.queen.placed){ c.eggQueue.push(P.rebirth && !eggLock(s, P.rebirth) ? P.rebirth : 'forager'); P.msg = 'Waiting for the next hatchling.'; }
-    const ws = roomOf(s, 'workshop') ? 2 : 1;
+    const nw = roomCount(s, 'workshop'), ws = nw ? 1.5 + 0.5*nw : 1;
     // Construction only advances for builders standing at their own job.
     const crewOf = key => s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === key);
     const atWork = key => crewOf(key).reduce((t, a) => t + workOf(s, a, key[0]), 0);
@@ -773,10 +803,13 @@ function tickColony(s, c, dt){
 function finishRoom(s, job){
   const c = s.colony; carveRoom(s, job, job.room);
   s.player.msg = `${ROOMS[job.room].name} finished: ${ROOMS[job.room].desc.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone');
-  if (job.room === 'hatchery') c.hatchCap = hatchCapOf(s);
-  if (job.room === 'store') c.cap = storeCap(s);
-  if (job.room === 'cistern') c.waterCap = waterCapOf(s);
-  if (job.room === 'nursery') c.hatchMul = 0.7;
+  roomsChanged(s);
+}
+// What the rooms add up to: recomputed whenever one is built or torn out.
+function roomsChanged(s){
+  const c = s.colony, nn = roomCount(s, 'nursery');
+  c.hatchCap = hatchCapOf(s); c.cap = storeCap(s); c.waterCap = waterCapOf(s); c.hatchMul = nn ? 0.7*Math.pow(0.85, nn - 1) : 1;
+  c.store = Math.min(c.store, c.cap); c.water = Math.min(c.water, c.waterCap);
 }
 function hatch(s, c, caste){
   const a = mkAnt(s, caste, 'in', c.ex, c.ey, c.team);
@@ -814,10 +847,12 @@ function tickInside(s, a, dt){
   if (a.state === 'nest') return; // player inside: handled in stepPlayer
   const c = col; const q = s.queen;
   if (!q.placed){ a.rest = 1; return; }
-  // decide job: builders claim one task and keep it until it is finished
+  // Builders claim one task and keep it until it is finished. Free, they take
+  // nest work when Dig and build is the first of their duties that needs doing.
   if (a.caste === 'builder'){
-    if (!builderTaskValid(s, a)) pickBuilderTask(s, a);
-    if (a.task){ a.state = 'build'; a.ntx = a.taskCell[0]; a.nty = a.taskCell[1]; }
+    if (a.task && !builderTaskValid(s, a)){ a.task = null; a.taskCell = null; }
+    if (!a.task && a.goal !== 'exit' && chooseDuty(s, a) === 'build') pickBuilderTask(s, a);
+    if (a.task){ a.state = 'build'; a.duty = 'build'; a.ntx = a.taskCell[0]; a.nty = a.taskCell[1]; }
     else if (a.state === 'build'){ a.state = 'in'; a.goal = null; }
   }
   if (a.state === 'in' && a.goal == null){ const [tx,ty] = roomTarget(s, a); a.ntx = tx; a.nty = ty; a.goal = 'idle'; }
@@ -831,17 +866,104 @@ function tickInside(s, a, dt){
   if (a.state !== 'in') return;
   if (!arrived || a.goal === 'exit') return;
   a.rest -= dt; if (a.rest > 0) return;
-  // leave?
-  const hunger = Math.max(0, 1 - c.store/c.cap);
+  // What next: the first of its duties that needs doing (build 17).
+  const d = chooseDuty(s, a); a.duty = d;
   let go = null;
-  if (C.fight >= 3){ const al = s.alarm[idx(c.ex,c.ey)] + nearAlarm(s), stim = 0.35 + Math.min(1, al); if (stim > a.thr.d || (al > 0.2 && has(s, 'stridulation'))) go = 'fight'; else if (Math.random() < 0.15) go = 'patrol'; }
-  else if (a.caste === 'nurse'){ if (Math.random() < 0.05 && c.water < c.waterCap*0.5) go = 'explore'; }
-  else { const stim = 0.3 + hunger*0.9 + (c.water < c.waterCap*0.4 ? 0.3 : 0); if (stim > a.thr.f && s.alarm[idx(c.ex,c.ey)] < 0.5) go = 'explore'; }
+  if (d === 'guard') go = doorAlarm(s) > 0.05 ? 'fight' : 'patrol';
+  else if (d === 'hunt' && C.fight >= 3) go = 'hunt';
+  else if (d && DUTIES[d].out && s.alarm[idx(c.ex,c.ey)] < 0.5) go = 'explore';
   if (go){ a.goal = 'exit'; a.ntx = SHAFT; a.nty = 0; a.state = 'in'; a.rest = 0;
     // walk to exit over following ticks; mark pending
     a.exitTo = go; }
   else a.rest = 2 + Math.random()*3;
 }
+// ---------- jobs (build 17) ----------
+// Each kind of ant works down its own list of duties, in the order you set
+// on the Jobs page: the first one that needs doing is what it does, so its
+// main duty comes first and it helps elsewhere when that is done. A duty can
+// be switched off. Ants differ in how readily they answer (their thresholds),
+// so a colony spreads itself across what needs doing.
+const DUTIES = {
+  food:  { name: 'Gather food', icon: '🌾', out: true, kind: 'food' },
+  water: { name: 'Fetch water', icon: '💧', out: true, kind: 'water' },
+  stone: { name: 'Fetch stone', icon: '🪨', out: true, kind: 'grit' },
+  hunt:  { name: 'Hunt', icon: '🥩', out: true, kind: 'protein' },
+  build: { name: 'Dig and build', icon: '⛏' },
+  nurse: { name: 'Tend eggs', icon: '🥚' },
+  guard: { name: 'Guard the door', icon: '🛡' },
+};
+// Who can do what, main duty first.
+const JOBS0 = {
+  forager: ['food', 'water', 'stone', 'hunt'],
+  builder: ['build', 'stone', 'food', 'water'],
+  nurse:   ['nurse', 'water', 'food'],
+  soldier: ['guard', 'hunt', 'food'],
+  venom:   ['hunt', 'guard', 'food'],
+};
+function jobsOf(s, caste){
+  const c = s.colony; if (!c.jobs) c.jobs = {};
+  if (!c.jobs[caste]) c.jobs[caste] = (JOBS0[caste] || []).map(d => [d, 1]);
+  return c.jobs[caste];
+}
+// Make a duty this kind's main one (first), or switch it on or off.
+function setJobFirst(s, caste, duty){ const L = jobsOf(s, caste), i = L.findIndex(j => j[0] === duty); if (i < 0) return false; const [j] = L.splice(i, 1); j[1] = 1; L.unshift(j); return true; }
+function toggleJob(s, caste, duty){ const L = jobsOf(s, caste), j = L.find(j => j[0] === duty); if (!j) return false; j[1] = j[1] ? 0 : 1; return true; }
+const stoneGoal = s => Math.max(30, (QUEEN_UP[s.queen.level] || {}).grit || 0);
+function buildWork(s){ const n = s.nest, spoil = n.spoil || 0; return s.colony.buildQueue.length > 0 || s.repairs.length > 0 || spoil > 0 || n.fillOrders.length > 0 || (n.digOrders.length > 0 && spoil < SPOIL_MAX); }
+const doorAlarm = s => { const c = s.colony; return s.alarm[idx(c.ex, c.ey)] + nearAlarm(s); };
+// Prey for hunters: a small creature or the caterpillar within reach of home.
+function preyNear(s, r){ const c = s.colony; if (s.cat && Math.hypot(s.cat.x/T - c.ex, s.cat.y/T - c.ey) < r) return s.cat; for (const b of s.critters) if (b.state !== 'fly' && Math.hypot(b.x/T - c.ex, b.y/T - c.ey) < r) return b; return null; }
+// Ants already on a duty: out, or on their way out.
+function onDuty(s, d, me){ let n = 0; for (const o of s.ants) if (o !== me && !o.team && o.duty === d && (outside(o) || o.goal === 'exit')) n++; return n; }
+// Enough hands on a gathering duty already for what's short (each ant
+// carries about 5): then it doesn't need this one, so ants spread out.
+function covered(s, a, d, short){ return onDuty(s, d, a) >= Math.max(1, Math.ceil(short/5)); }
+// How much a duty needs doing right now, for this ant (0: not at all).
+function dutyNeed(s, a, d){
+  const c = s.colony, raining = s.rain.on;
+  if (DUTIES[d].out && raining && d !== 'hunt') return 0;
+  if (d === 'food' && covered(s, a, d, c.cap - c.store)) return 0;
+  if (d === 'water' && covered(s, a, d, c.waterCap - c.water)) return 0;
+  if (d === 'stone' && covered(s, a, d, stoneGoal(s) - c.grit)) return 0;
+  switch (d){
+    case 'food': return c.store < c.cap - 1 ? 0.3 + Math.max(0, 1 - c.store/c.cap)*0.9 : 0;
+    case 'water': return c.water < c.waterCap*0.9 ? 0.3 + (1 - c.water/c.waterCap)*0.9 : 0;
+    case 'stone': return c.grit < stoneGoal(s) ? 0.3 + (1 - c.grit/stoneGoal(s))*0.9 : 0;
+    case 'hunt':
+      if (raining) return 0;
+      if (CASTES[a.caste].fight >= 3) return preyNear(s, 60) ? (c.protein < 60 ? 0.9 : 0.4) : 0;
+      return s.items.some(f => f.kind === 'protein' && f.amt > 0 && !heavy(f) && !f.carried && Math.hypot(f.x - c.ex, f.y - c.ey) < forageRange(s)) ? 0.9 : 0;
+    case 'build': return a.caste === 'builder' && buildWork(s) ? 1 : 0;
+    case 'nurse': return a.caste === 'nurse' && (c.eggs.length || c.eggQueue.length) ? 1 : 0;
+    case 'guard': {
+      const al = doorAlarm(s); if (al > 0.2 && has(s, 'stridulation')) return 2;
+      if (al > 0.05) return 0.35 + Math.min(1, al);
+      // Enough on guard already (half the fighters, at least two): free for other work.
+      let out = 0, all = 0; for (const o of s.ants) if (o !== a && !o.team && CASTES[o.caste].fight >= 3 && !o.isPlayer){ all++; if (o.duty === 'guard' && (o.state === 'patrol' || o.state === 'fight' || o.goal === 'exit')) out++; }
+      all++;
+      return out < Math.max(2, Math.ceil(all*0.5)) ? 0.9 : 0;
+    }
+  }
+  return 0;
+}
+// The first duty on its list that needs doing, past its threshold.
+function chooseDuty(s, a, except){
+  for (const [d, on] of jobsOf(s, a.caste)){
+    if (!on || d === except) continue;
+    const n = dutyNeed(s, a, d), thr = d === 'build' || d === 'nurse' ? 0 : d === 'guard' || d === 'hunt' && CASTES[a.caste].fight >= 3 ? a.thr.d : a.thr.f;
+    if (n > thr) return d;
+  }
+  return null;
+}
+// What each kind is busy with right now, for the Jobs page.
+function dutyCounts(s){
+  const out = {};
+  for (const a of s.ants){ if (a.team || a.isPlayer || a.state === 'dead') continue; const o = out[a.caste] || (out[a.caste] = { n: 0, idle: 0 });
+    o.n++; const busy = a.follow ? 'crew' : a.state === 'build' ? 'build' : a.state === 'spoil' ? 'build' : a.state === 'in' ? (a.caste === 'nurse' && a.duty === 'nurse' ? 'nurse' : null) : a.duty || null;
+    if (busy) o[busy] = (o[busy] || 0) + 1; else o.idle++; }
+  return out;
+}
+
 // ---------- builder tasks ----------
 // One builder per dig, fill or repair order, up to three on a room. A dig
 // can only be worked from a dug neighbour, so chained orders wait their turn.
@@ -979,10 +1101,25 @@ const SPIDER_REACH = 1.4*T, CAT_REACH = 1.8*T;
 const SPIDER = { windup: 0.25, ambush: 4*T, see: 5*T, passing: 1.5*T, lunge: 0.8, lungeSpeed: 100, chaseSpeed: 40, roamSpeed: 16, giveUp: 6, tired: 4, home: 60 };
 // For the first four minutes it keeps well away, so the opening is safe to learn.
 const spiderNearNest = (s, x, y) => Math.hypot(x/T - (s.world.ex+0.5), y/T - (s.world.ey+0.5)) < (s.t < 240 ? 12 : 6) || Math.hypot(x/T - (s.world.rx+0.5), y/T - (s.world.ry+0.5)) < 4;
+// Room round each tile: tiles to the nearest rock, wall or fence (capped at
+// 6). The spider is about five tiles across, so it keeps two clear (build
+// 17: it used to hug rocks by its middle tile and its body went through).
+function clearOf(s){
+  const w = s.world; if (w.clear) return w.clear;
+  const cl = new Uint8Array(W*H).fill(6), q = new Int32Array(W*H); let qh = 0, qt = 0;
+  for (let i = 0; i < W*H; i++) if (w.blocked[i]){ cl[i] = 0; q[qt++] = i; }
+  while (qh < qt){ const i = q[qh++], x = i % W, y = (i - x)/W, v = cl[i] + 1; if (v >= 6) continue;
+    for (const [dx, dy] of N8){ const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const j = ny*W + nx; if (cl[j] > v){ cl[j] = v; q[qt++] = j; } } }
+  return (w.clear = cl);
+}
+const SPIDER_ROOM = 3;
+const spiderRoom = (s, x, y) => { const tx = Math.floor(x/T), ty = Math.floor(y/T); return tx < 0 || ty < 0 || tx >= W || ty >= H ? 6 : clearOf(s)[ty*W + tx]; };
 // Plan a walk to (px, py) around rocks and clear of the nests; rest there.
+// Legs chain on from the last waypoint already planned.
 function spiderRoute(s, sp, px, py, rest){
-  const avoid = (x, y) => spiderNearNest(s, (x+0.5)*T, (y+0.5)*T);
-  const path = findPath(s, Math.floor(sp.x/T), Math.floor(sp.y/T), Math.floor(px/T), Math.floor(py/T), avoid);
+  const last = sp.route.length ? sp.route[sp.route.length - 1] : [sp.x, sp.y], sx = Math.floor(last[0]/T), sy = Math.floor(last[1]/T), cl = clearOf(s);
+  const avoid = (x, y) => spiderNearNest(s, (x+0.5)*T, (y+0.5)*T) || (cl[y*W + x] < SPIDER_ROOM && Math.hypot(x - sx, y - sy) > 3);
+  const path = findPath(s, sx, sy, Math.floor(px/T), Math.floor(py/T), avoid);
   for (const [x, y] of path) sp.route.push([(x+0.5)*T, (y+0.5)*T]);
   if (rest && sp.route.length) sp.route[sp.route.length-1][2] = rest;
 }
@@ -992,8 +1129,8 @@ function spiderPlan(s, sp){
   if (sp.legs % 4 === 0 && s.t >= 240){ // stroll past the nest along an arc 7.5 tiles out, not hunting
     const a0 = Math.random()*Math.PI*2, dir = Math.random() < 0.5 ? 1 : -1;
     const a = a0; spiderRoute(s, sp, (w.ex+0.5+Math.cos(a)*7.5)*T, (w.ey+0.5+Math.sin(a)*7.5)*T);
-    const pts = []; for (let k=1;k<5;k++){ const t = a0 + dir*k*0.5; pts.push([(w.ex+0.5+Math.cos(t)*7.5)*T, (w.ey+0.5+Math.sin(t)*7.5)*T]); }
-    sp.route.push(...pts.filter(([x, y]) => walk(s, Math.floor(x/T), Math.floor(y/T)))); sp.passing = true; return;
+    for (let k=1;k<5;k++){ const t = a0 + dir*k*0.5, x = (w.ex+0.5+Math.cos(t)*7.5)*T, y = (w.ey+0.5+Math.sin(t)*7.5)*T; if (spiderRoom(s, x, y) >= SPIDER_ROOM) spiderRoute(s, sp, x, y); }
+    sp.passing = true; return;
   }
   if (Math.random() < 0.45){ // back to its web in the Flowerbed
     const a = Math.random()*Math.PI*2; spiderRoute(s, sp, (w.web.x+0.5+Math.cos(a)*2.5*SCALE)*T, (w.web.y+(2+Math.abs(Math.sin(a))*2)*SCALE)*T, 30 + Math.random()*40); return;
@@ -1067,6 +1204,9 @@ function stepSpider(s, dt){
     // The fence is two tiles deep; a spider coming or going climbs over it.
     const inside = tx>1 && ty>0 && tx<W-2 && ty<H-2;
     if (inside ? s.world.blocked[idx(tx,ty)] : !free) continue;
+    // Keep its body off rocks: never into a tighter spot than two tiles' room,
+    // unless it is already squeezed in somewhere (then only to roomier ground).
+    if (inside && !free){ const room = spiderRoom(s, nx, ny); if (room < SPIDER_ROOM && room < spiderRoom(s, sp.x, sp.y)) continue; }
     if (spiderNearNest(s, nx, ny)) continue;
     sp.x = nx; sp.y = ny; sp.stuck = 0; return;
   }
@@ -1575,9 +1715,16 @@ function queueEgg(s, caste){
   if (!payCost(c, eggCost(s, caste))) return false; c.eggQueue.push(caste); return true;
 }
 function eggLock(s, caste){ const c = s.colony; if (caste==='soldier' && roomSlotIndex(s,'barracks')<0) return 'needs Barracks'; if (caste==='nurse' && roomSlotIndex(s,'nursery')<0) return 'needs Nursery'; if (caste==='venom' && !c.trophies.spider) return 'needs spider fang'; return ''; }
+// Why another of this room can't be placed now, or ''.
+function roomLock(s, room){
+  const n = roomCount(s, room), q = s.colony.buildQueue.filter(j => j.room === room).length;
+  if (q) return 'being built';
+  if (n >= roomCap(s)) return n ? `${n} of ${roomCap(s)}: upgrade the queen for another` : 'upgrade the queen';
+  return '';
+}
 function queueRoom(s, room, cell){
   const c = s.colony, R = ROOMS[room]; if (!R || !s.queen.placed || !cell) return false;
-  if (roomOf(s, room) || c.buildQueue.some(j=>j.room===room)) return false;
+  if (roomLock(s, room)) return false;
   const rect = findRoomRect(s, cell[0], cell[1], R.w, R.h); if (!rect) return false;
   if (!payCost(c, roomCost(s, room))) return false;
   c.buildQueue.push({ room, x0: rect.x0, y0: rect.y0, w: R.w, h: R.h, progress: 0, x: rect.x0+1, y: rect.y0+1 }); return true;
@@ -1619,7 +1766,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

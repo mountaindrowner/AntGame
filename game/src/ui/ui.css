@@ -48,6 +48,19 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 #sheet .h { font-size: 14px; line-height: 1.4; padding: 6px 0; border-top: 1px solid var(--line); }
 #sheet .h:first-of-type { border-top: 0; }
 #sheet .btns.one { grid-template-columns: 1fr; margin-top: 8px; }
+/* Jobs (build 17) */
+#sheet .jobrow { border-top: 1px solid rgba(0,0,0,.12); padding: 8px 0; }
+#sheet .jobrow .jt { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+#sheet .jobrow .jt .si { width: 22px; height: 22px; color: var(--accent, #3e7a2a); }
+#sheet .jobrow .jt .si svg { width: 22px; height: 22px; }
+#sheet .jobrow .jt i { font-style: normal; font-size: 12px; color: var(--mute); margin-left: auto; text-align: right; }
+#sheet .jobs { display: flex; flex-wrap: wrap; gap: 6px; }
+#sheet .job { display: inline-flex; border-radius: 999px; overflow: hidden; border: 2px solid var(--ink, #2a1a0e); background: #fffaf0; }
+#sheet .job button { border: 0; border-radius: 0; background: transparent; padding: 6px 10px; font-size: 13px; min-height: 0; }
+#sheet .job button em { font-style: normal; font-weight: 700; display: inline-block; min-width: 1.2em; margin-right: 4px; color: var(--accent, #3e7a2a); }
+#sheet .job .jx { border-left: 1px solid rgba(0,0,0,.15); padding: 6px 9px; color: var(--mute); }
+#sheet .job.off { opacity: .5; background: transparent; border-style: dashed; }
+#sheet .cnt { font-size: 12px; font-weight: 400; color: var(--mute); }
 #sheet button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
 #stats { pointer-events: auto; }
 #barn button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }

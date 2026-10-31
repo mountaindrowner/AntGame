@@ -49,6 +49,7 @@ export const ICONS = {
   film: svg('<rect x="3" y="8" width="18" height="12" rx="1.5"/><path d="M3 8l2.5-4 4 1-2.5 4M10 5l4 1-2.5 4M15 6l4 1-2 3"/>'),
   back: svg('<path d="M15 5l-7 7 7 7"/>'),
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
+  jobs: svg('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10l1.5 1.5L13 8.5M8.5 16l1.5 1.5 3-3M15 11h1.5M15 17h1.5"/>'),
   // Outpost: a cairn of pebbles with a little flag.
   outpost: svg('<ellipse cx="12" cy="19" rx="7" ry="2.4"/><ellipse cx="11" cy="14.6" rx="4.6" ry="2"/><ellipse cx="12" cy="10.8" rx="2.8" ry="1.6"/><path d="M13 9V3l5 2-5 2"/>'),
   // Evolve: a twist of DNA.

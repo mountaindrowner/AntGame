@@ -2,6 +2,46 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 31: running the colony (build 17)
+
+The third build phase from `PLAYTEST-2.md` (items 27, 34 and 36), and the spider walking through a rock.
+
+- **A Jobs page** (the clipboard button on the right): each kind of ant has a list of duties in order.
+  - Duties: gather food, fetch water, fetch stone, hunt, dig and build, tend eggs, guard the door.
+  - Defaults:
+    - Foragers: food, water, stone, hunt (they haul meat).
+    - Builders: dig and build, stone, food, water.
+    - Nurses: tend eggs, water, food.
+    - Soldiers: guard, hunt, food.
+    - Venom ants: hunt, guard, food.
+  - Tap a duty to put it first; ✕ turns it off. Each row shows what that kind is doing right now ("12 · 🌾 6 · 💧 2 · 🪨 2 · 2 resting"). Kept with the save.
+  - This is the per-ant-type setting Mark asked for, with one simple page rather than a menu per ant.
+- **How ants choose.** An ant ready for work takes the first duty on its kind's list that needs doing. Main duty first, then it helps with the next.
+  - A gathering duty only needs more hands while what's short isn't already covered by the ants out on it (about one ant per 5 units short), so a colony spreads itself out. All the foragers no longer pile onto water.
+  - Ants differ in how readily they answer, as before.
+  - In rain nobody goes out to gather.
+  - Fighters on guard keep at least two, or half of them, by the door. The rest hunt (a new state: they range out after small game and the caterpillar, and leave the meat for foragers) or forage.
+- **Idle ants find work** (insight 27): with nothing of its duty in sight for 20 s, an ant out gathering switches to its next duty that needs doing. With nothing on their list to do, ants rest in their room, and the Jobs page says so.
+- **More than one of each room** (insight 34, the proposal Mark approved):
+  - **Cap:** one of each per queen level (two at level 2, three at level 3…).
+  - **Cost:** each copy costs half again more than the last.
+  - **Upkeep:** rooms eat food, half a unit a minute for the first of a kind and one for each extra.
+  - **Space:** each needs its own dug pocket.
+  - What extras add:
+    - Hatchery: +2 eggs at a time.
+    - Food store: +50% cap.
+    - Cistern: +30 water.
+    - Nursery: eggs 15% faster, and 3 more nurses can help.
+    - Barracks: fighters eat 25% less protein.
+    - Workshop: builders half again faster.
+  - Tearing one out takes its share away again.
+  - The Build sheet shows "1/2" and the upkeep now.
+- **The spider kept its body on a rock** (Mark: "the spider clipped through the rock").
+  - Cause: it only checked the one tile under its middle, but it's about five tiles across, so its body hung over rocks it skirted. Its stroll past the nest also joined waypoints with straight lines, cutting corners through rock.
+  - Fix: it now keeps three tiles of room from any rock, wall or fence, both when planning its walk and when steering. The stroll is a planned path. If it's ever squeezed in somewhere, it only moves to roomier ground.
+  - Over 45 simulated minutes its body was over a rock 21.6% of the time; now 0%. It roams as far as before.
+- **Tests:** 53 (new: duties ordered and kept across a save, foragers on stone, food first when short and helping elsewhere when full, soldiers keeping a guard and hunting, nurses with and without eggs, the room cap, cost and upkeep, extra rooms adding up and coming off, the spider clear of rocks). The browser test puts stone first on the Jobs page.
+
 ## Oct 31: living creatures (build 16)
 
 The second build phase from `PLAYTEST-2.md` (items 21, 22, 25, 26 and 28): the yard's animals act like animals, and you can see a fight land.

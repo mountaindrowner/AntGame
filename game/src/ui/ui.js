@@ -18,7 +18,7 @@ export function createUI(app) {
   const el = {
     stats: $('stats'), msg: $('msg'), hungerBar: $('hungerbar'), act: $('act'), release: $('release'), mark: $('mark'),
     recruit: $('recruit'), enter: $('enter'), barS: $('bar'), barN: $('barn'), sheet: $('sheet'), buildNest: $('buildnest'),
-    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), menu: $('menubtn'), map: $('mapbtn'), evolve: $('evolvebtn'), outpost: $('outpostbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
+    exitNest: $('exitnest'), queen: $('queenbtn'), level: $('levelbtn'), view: $('viewbtn'), menu: $('menubtn'), map: $('mapbtn'), evolve: $('evolvebtn'), jobs: $('jobsbtn'), outpost: $('outpostbtn'), zoom: $('zoom'), help: $('help'), tip: $('tip'),
   };
 
   // ---------------------------------------------------------- icon buttons
@@ -26,7 +26,7 @@ export function createUI(app) {
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
-  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
   const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
@@ -36,7 +36,7 @@ export function createUI(app) {
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
-  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.menu, 'menu', 'Main menu: options, sound, new colony (Esc)'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
+  setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.menu, 'menu', 'Main menu: options, sound, new colony (Esc)'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.jobs, 'jobs', 'Jobs: what each kind of ant does first'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
   setIcon(el.act, 'pick', 'Pick up');
 
   // ---------------------------------------------------------- tips
@@ -260,6 +260,24 @@ export function createUI(app) {
     return h + `</div>`;
   }
 
+  // Jobs (build 17): each kind of ant's duties in order. Tap one to make it
+  // that kind's main job; ✕ switches it off.
+  function renderJobs() {
+    const s = app.s, c = s.colony, counts = SIM.dutyCounts(s), D = SIM.DUTIES;
+    const show = Object.keys(SIM.JOBS0).filter((k) => counts[k] || k === 'forager' || k === 'builder' || !SIM.eggLock(s, k));
+    let h = `<div class="row head"><strong>Jobs</strong><button class="x" data-close="1">Close</button></div>`;
+    h += `<div class="note">Each kind of ant does the first job on its list that needs doing, then the next. Tap a job to put it first; ✕ turns it off.</div>`;
+    for (const k of show) {
+      const o = counts[k] || { n: 0, idle: 0 }, L = SIM.jobsOf(s, k);
+      const doing = L.filter(([d]) => o[d]).map(([d]) => `${D[d].icon} ${o[d]}`).concat(o.crew ? [`⭐ ${o.crew} with you`] : []).concat(o.idle ? [`${o.idle} resting`] : []).join(' · ');
+      h += `<div class="jobrow"><div class="jt">${sicon(k)}<b>${CASTES[k].name}s</b><i>${o.n ? o.n + ' · ' + (doing || 'resting') : 'none yet'}</i></div><div class="jobs">`;
+      let rank = 0;
+      for (const [d, on] of L) h += `<span class="job${on ? '' : ' off'}"><button data-jobfirst="${k}:${d}" title="Put ${D[d].name.toLowerCase()} first"><em>${on ? ++rank : '–'}</em>${D[d].icon} ${D[d].name}</button><button class="jx" data-jobtoggle="${k}:${d}" title="${on ? 'Turn off' : 'Turn on'}">${on ? '✕' : '✓'}</button></span>`;
+      h += `</div></div>`;
+    }
+    h += `<div class="note">In the rain nobody goes out to gather. Fighters on guard keep at least two, or half of them, by the door; the rest hunt or forage.</div>`;
+    return h;
+  }
   // What each kind of ant is for, under its egg (build 15: "what is a nurse for?").
   const EGG_WHAT = { forager: 'Gathers food and water on its own', builder: 'Digs, builds rooms, hauls dirt out, stops cave-ins', nurse: 'Tends the eggs: they hatch faster', soldier: 'Guards the door, fights raiders; eats protein', venom: 'An 8× sting: kills the spider' };
   function renderSheet() {
@@ -298,18 +316,21 @@ export function createUI(app) {
       h = renderGrow();
     } else if (app.menu === 'reborn') {
       h = renderReborn();
+    } else if (app.menu === 'jobs') {
+      h = renderJobs();
     } else if (app.menu === 'catalog') {
       const builders = s.ants.filter((a) => a.caste === 'builder').length;
       h += `<div class="row head"><strong>Build</strong><button class="x" data-close="1">Close</button></div>`;
-      h += `<div class="note">Pick a room, then tap a green spot in the nest to place it. ${builders} builder${builders === 1 ? '' : 's'}. Dug cells: ${SIM.dugCount(s)}. Dig orders: ${s.nest.digOrders.length}, fill orders: ${s.nest.fillOrders.length}.</div><div class="btns">`;
+      h += `<div class="note">Pick a room, then tap a green spot in the nest to place it. ${builders} builder${builders === 1 ? '' : 's'}. Dug cells: ${SIM.dugCount(s)}. Dig orders: ${s.nest.digOrders.length}, fill orders: ${s.nest.fillOrders.length}.</div>`;
+      h += `<div class="note">You can build ${SIM.roomCap(s)} of each room (one per queen level); each extra costs half again more. Rooms eat food to run: ½ 🌾 a minute for the first of a kind, 1 for each extra. Now: ${SIM.roomUpkeep(s)} 🌾 a minute.</div><div class="btns">`;
       for (const k of ROOM_KEYS) {
         const R = ROOMS[k];
-        const have = SIM.roomOf(s, k), queued = c.buildQueue.some((j) => j.room === k);
+        const n = SIM.roomCount(s, k), lock = SIM.roomLock(s, k);
         const rc = SIM.roomCost(s, k), fits = app.anyFit(R.w, R.h), pay = SIM.canPay(c, rc);
         // A cost above the food cap can never be paid: say what unlocks it.
         const overCap = (rc.food || 0) > c.cap;
-        const status = have ? 'built' : queued ? 'being built' : overCap ? `needs a Food store first (food cap ${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(rc) : 'ready to place';
-        h += `<button data-place="${k}" ${have || queued || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}</b><i>${costIcons(rc)} · ${R.desc}</i><i>${status}</i></button>`;
+        const status = lock ? (n && lock !== 'being built' ? 'built · ' + lock : lock) : overCap ? `needs more food cap (${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(rc) : n ? `ready: a ${['', 'second', 'third', 'fourth', 'fifth'][n] || 'another'} one` : 'ready to place';
+        h += `<button data-place="${k}" ${lock || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}${n ? ` <span class="cnt">${n}/${SIM.roomCap(s)}</span>` : ''}</b><i>${costIcons(rc)} · ${n ? R.more : R.desc}</i><i>${status}</i></button>`;
       }
       h += `</div><div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
       h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
@@ -518,6 +539,8 @@ export function createUI(app) {
     if (b.dataset.possess) { SIM.possess(s, +b.dataset.possess); closeMenu(); return; }
     if (b.dataset.wait) { app.rebirthAsked = true; closeMenu(); return; }
     if (b.dataset.rebirth) { P().rebirth = b.dataset.rebirth; const q = s.colony.eggQueue, i = q.indexOf('forager'); if (i >= 0 && !s.colony.eggs.length) q[i] = b.dataset.rebirth; app.rebirthAsked = true; closeMenu(); return; }
+    if (b.dataset.jobfirst) { const [k, d] = b.dataset.jobfirst.split(':'); SIM.setJobFirst(s, k, d); renderSheet(); return; }
+    if (b.dataset.jobtoggle) { const [k, d] = b.dataset.jobtoggle.split(':'); SIM.toggleJob(s, k, d); renderSheet(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; renderSheet(); return; }
     if (b.dataset.place) { app.placing = { kind: 'room', key: b.dataset.place }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.tool) { app.placing = { kind: b.dataset.tool }; closeMenu(); app.view = 'nest'; return; }
@@ -547,6 +570,7 @@ export function createUI(app) {
   });
   const openEvo = (page) => { closeMenu(); if (mapView.isOpen) mapView.close(); evo.open(page); };
   el.evolve.addEventListener('click', () => (evo.isOpen ? evo.close() : openEvo()));
+  el.jobs.addEventListener('click', () => (app.menu === 'jobs' ? closeMenu() : openMenu('jobs')));
   el.level.addEventListener('click', () => { if (app.placing) app.placing = null; else openMenu('catalog'); });
   el.exitNest.addEventListener('click', () => { P().ntx = SHAFT; P().nty = 0; P().exiting = true; });
 
