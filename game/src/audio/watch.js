@@ -17,6 +17,8 @@ export function soundWatch(app, views) {
   };
   let p = null;
   const seenStrike = new WeakMap();
+  const seenBug = new WeakMap(); // build 16: each small creature's last state
+  let spiderMode = null, sparks = 0, splashes = 0;
 
   function hear(s, events) {
     const P = s.player, a = P.ant, c = s.colony, w = s.world;
@@ -30,7 +32,7 @@ export function soundWatch(app, views) {
       menu: app.menu, digs: s.nest.digOrders.length, fills: s.nest.fillOrders.length, repairs: s.repairs.length, dug: s.nest.ver,
       full: SIM.antCount(s) >= SIM.queenCap(s.queen.level), store: c.store >= c.cap - 0.5, rain: s.rain.on,
       rivalWar: s.rival.deaths.war || 0, oursWar: c.deaths.rival || 0, antlion: c.deaths.antlion || 0,
-      ax: a ? a.x : 0, ay: a ? a.y : 0,
+      ax: a ? a.x : 0, ay: a ? a.y : 0, bugDead: s.bugDead,
     };
     if (p && p.world === w) {
       const at = a ? { x: a.x, y: a.y } : null;
@@ -105,6 +107,29 @@ export function soundWatch(app, views) {
       }
       seenStrike.set(st, { phase: st.phase, peckAt: st.peckAt });
     }
+    // Build 16: the small creatures, the spider's lunge and its meal, bites
+    // landing, raindrops knocking ants over.
+    for (const b of s.critters || []) {
+      const was = seenBug.get(b), pos = { x: b.x, y: b.y };
+      if (was) {
+        if (b.pinchAt !== was.pinchAt) sfx.play('pinch', pos);
+        if (b.chirpAt !== was.chirpAt) sfx.play('chirp', pos);
+        if (b.state !== was.state) {
+          if (b.state === 'hop') sfx.play('hop', pos);
+          else if (b.state === 'fly') sfx.play('buzz', pos);
+          else if (b.state === 'curl') sfx.play('curl', pos);
+        }
+      } else if (b.state === 'land') sfx.play('buzz', pos);
+      seenBug.set(b, { state: b.state, pinchAt: b.pinchAt, chirpAt: b.chirpAt });
+    }
+    if (s.bugDead && s.bugDead !== p?.bugDead) sfx.play('bugDie', s.bugDead);
+    const sp = s.spider;
+    if (sp && sp.mode !== spiderMode) { if (sp.mode === 'lunge') sfx.play('spiderLunge', sp); else if (sp.mode === 'eat') sfx.play('spiderEat', sp); }
+    spiderMode = sp ? sp.mode : null;
+    const hits = s.hits || [];
+    if (sparks > s.t) sparks = 0; if (splashes > s.t) splashes = 0; // a new game
+    for (const h of hits) if (h.t > sparks) { sparks = h.t; if (!h.k) sfx.play('hitTick', { x: h.x, y: h.y }); }
+    for (const sp2 of s.splashes || []) if (sp2.t > splashes) { splashes = sp2.t; sfx.play('plip', sp2); }
     // Beds: rain, the mower, the spider's menace, fire ants underfoot.
     const ear = (x, y) => sfx.ear(x, y);
     sfx.loop('rain', s.rain.on ? (app.view === 'nest' ? 0.25 : 0.55) : 0);

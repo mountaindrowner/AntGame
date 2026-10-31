@@ -374,6 +374,32 @@ try {
     console.log('ant card'.padEnd(22), '|', card.slice(0, 80));
     if (!/xp/.test(card)) errors.push('test: ant card shows no rank or xp');
   }
+  // Build 16: a cricket and a millipede by you; bite the millipede till it
+  // curls, tap the cricket for its card, rain knocks ants about.
+  const bugAt = await sim(() => {
+    const { app, SIM } = window.UNDERFOOT, s = app.s, a = s.player.ant, T = SIM.T;
+    if (!a) return null;
+    const mk = (kind, dx) => { const B = SIM.BUGS[kind], b = { id: s.nextId++, kind, x: a.x + dx * T, y: a.y, dx: 1, dy: 0, hp: B.hp, maxHp: B.hp, state: 'walk', t: 0, life: 0, far: 0 }; s.critters.push(b); return b; };
+    mk('millipede', 0.5); const cr = mk('cricket', 6);
+    s.rain.on = true; s.rain.t = 0; app.paused = false;
+    return { x: cr.x, y: cr.y };
+  });
+  await page.waitForTimeout(1500);
+  await shot('bugs-and-rain');
+  const bugs = await sim(() => { const s = window.UNDERFOOT.app.s; return { kinds: s.critters.map((b) => b.kind + ':' + b.state), hits: s.hits.length, splashes: s.splashes.length }; });
+  console.log('small creatures'.padEnd(22), '|', JSON.stringify(bugs));
+  if (!bugs.kinds.some((k) => k === 'millipede:curl')) errors.push('test: the bitten millipede did not curl');
+  if (bugAt) {
+    const c = await sim(() => { const s = window.UNDERFOOT.app.s, b = s.critters.find((o) => o.kind === 'cricket'); return b ? { x: b.x, y: b.y } : null; });
+    if (c) {
+      await sim((xy) => window.UNDERFOOT.app.callout.tap(xy.x, xy.y), c);
+      await page.waitForTimeout(200);
+      const card = await page.$eval('#callout', (e) => e.textContent).catch(() => '');
+      console.log('cricket card'.padEnd(22), '|', card.slice(0, 80));
+      if (!/Cricket/.test(card)) errors.push('test: tapping the cricket shows no card');
+    }
+  }
+  await sim(() => { const s = window.UNDERFOOT.app.s; s.rain.on = false; s.critters = []; });
   await sim(() => { const { app } = window.UNDERFOOT; app.paused = false; });
   await page.dispatchEvent('#recruit', 'pointerdown');
   await page.waitForTimeout(500);

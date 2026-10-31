@@ -137,6 +137,7 @@ export function createUI(app) {
     if (a && !P().inNest) {
       if (s.spider && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 9 * T) showExplainer('spider');
       if (s.cat && Math.hypot(a.x - s.cat.x, a.y - s.cat.y) < 9 * T) showExplainer('cat');
+      for (const b of s.critters || []) if (b.state !== 'fly' && Math.hypot(a.x - b.x, a.y - b.y) < 9 * T) { showExplainer(b.kind); if (tipBusy()) return; }
     }
     if (!s.seen.grit && s.colony.grit > 0) showExplainer('grit');
   }
@@ -377,8 +378,8 @@ export function createUI(app) {
     P().msg = text;
     setTimeout(() => { if (test.test(P().msg)) P().msg = ''; }, ms);
   }
-  const DANGER = /raid|spider|starv|killed|died|attack|cave|rain|thunder|mower|robin|toad|acorn|spray|fire ants|shadow|lost|idle|hungry|too heavy|knocked/i;
-  const GOOD = /^\+|down!|finished|raised|you hold|goal|genes|elite|legend|lifted|hauls in|raid over|unlocked|all done/i;
+  const DANGER = /raid|spider|starv|killed|died|attack|cave|rain|thunder|mower|robin|toad|acorn|spray|fire ants|shadow|lost|idle|hungry|too heavy|knocked|pinch|eating your/i;
+  const GOOD = /^\+|down!|finished|raised|you hold|goal|genes|elite|legend|lifted|hauls in|raid over|unlocked|all done|flies off|worn out/i;
   const NEWS = /^(the |an? )?[A-Z][a-z]+( [A-Za-z]+)?\. |landed|is back/;
   function noticeKind(t) { if (!t) return ''; if (GOOD.test(t) && !/lost your hold|knocked/i.test(t)) return /raid over/i.test(t) ? 'report' : 'good'; if (DANGER.test(t)) return 'danger'; if (NEWS.test(t)) return 'news'; return ''; }
   function hint() {

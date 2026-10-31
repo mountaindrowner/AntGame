@@ -8,7 +8,11 @@ export const EXPL = {
   dew: ['Dew', 'Water beads, for a minute at a time. Each egg costs 1 water.'],
   cat: ['Caterpillar', 'Harmless, and 40 protein. Hold Recruit, lead your crew onto it, then haul the meat home.'],
   treat: ['A treat', 'Too big for one ant. Hold Recruit for a crew, lead them to it, press Lift.'],
-  spider: ['Spider', 'Run! It bites anything close. Thirty ants, or five Venom ants, can kill it.'],
+  spider: ['Spider', 'Run! It crouches, then lunges. After a kill it stops to eat. Thirty ants, or five Venom ants, can kill it.'],
+  ladybug: ['Ladybug', 'It eats your aphids. Bite it, and it flies off. A crew drives it away fast.'],
+  earwig: ['Earwig', 'It pinches any ant that comes close, and foragers keep clear of it. Bring fighters, or go round.'],
+  cricket: ['Cricket', '25 protein, if you can catch it. It hops away; chase it and after five hops it’s worn out.'],
+  millipede: ['Millipede', 'Harmless. Bitten, it curls into an armoured ball and takes a third of the damage. 20 protein for a patient crew.'],
   raid: ['Rival raid', 'Pavement ants from the Patio. Keep Soldiers at your door or they reach the queen.'],
   queenhit: ['Queen under attack', 'Raiders got in. Lay Soldiers to guard the door.'],
   soldierfood: ['Soldiers need protein', 'Fighters eat protein. Hunt caterpillars or bring dead bugs from the Woodpile.'],
@@ -56,11 +60,12 @@ export const HELP_PAGES = [
 <div class="h"><b>Outposts</b> Evolve Waypoints, walk out and press <b>Outpost</b>: you and your crew pile a cairn (10 stone). Foragers range round it. Beat a region's guardian and its prize is yours.</div>
 <div class="h"><b>Goals</b> Three at a time, each paying 🧬. Finish a set for a reward for good.</div>`],
   ['Dangers', `
-<div class="h"><b>Spider</b> Waits by its web in the Flowerbed and lunges. Thirty ants, or five Venom ants, can kill it.</div>
+<div class="h"><b>Spider</b> Waits by its web in the Flowerbed. It crouches, then lunges. After a kill it stops to eat, and after three it goes back to its web to sleep. Thirty ants, or five Venom ants, can kill it.</div>
+<div class="h"><b>Small creatures</b> Ladybugs eat your aphids: bite them and they fly off. Earwigs pinch: bring fighters. Crickets hop away until they tire: 25 protein. Millipedes curl up armoured: 20 protein for a patient crew.</div>
 <div class="h"><b>Raids</b> Rival pavement ants grow bolder. Keep Soldiers at your door or they reach the queen.</div>
 <div class="h"><b>From above</b> A shadow means a foot or an acorn is coming; mist means bug spray. Robins and the toad hunt the nearest ant: run, or bring five fighters.</div>
 <div class="h"><b>The ground</b> The mower sweeps the Lawn; antlion funnels in the Sandbox pull ants down; fire ants sting anything that stops.</div>
-<div class="h"><b>Weather</b> Thunder means rain soon. Rain washes trails away and caves in tunnels unless Builders are inside.</div>`],
+<div class="h"><b>Weather</b> Thunder means rain soon. Rain washes trails away, knocks ants about so some drop their loads, and caves in tunnels unless Builders are inside.</div>`],
   ['Menu', `
 <div class="h"><button data-title="1" style="width:100%">Main menu</button></div>
 <div class="h btnrow"><button data-retips="1">Show tips again</button><button data-reset="1">Start over</button></div>

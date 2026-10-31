@@ -15,6 +15,7 @@ function itemCard(f) {
   if (f.kind === 'grit') return ['🪨', 'Pebble', 'Stone, for rooms and upgrades.'];
   if (f.kind === 'protein') {
     if (f.type === 'spider' || f.type === 'cat') return ['🥩', 'Meat', `${Math.round(f.amt)} protein. Haul it home.`];
+    if (SIM.BUGS[f.type]) return ['🥩', 'Dead ' + SIM.BUGS[f.type].name, `${Math.round(f.amt)} protein. Haul it home.`];
     const F = FOODS[f.type];
     return ['🥩', cap(F ? F.name : 'Meat'), `Protein for soldiers. ${Math.round(f.amt)} left.`];
   }
@@ -37,6 +38,15 @@ function antCard(s, a) {
   return [icon, name, `${R.name} ${C.name}${a.isPlayer && a.name ? ' (you)' : ''}, ${job}. ${xp} xp${next && !a.legend ? ` (${next.name} at ${next.xp})` : ''}. ${WHAT[a.caste] || ''}`];
 }
 
+// The small creatures (build 16).
+function bugCard(b) {
+  const hurt = b.hp < b.maxHp ? ` ${Math.ceil(b.hp)} of ${b.maxHp} health.` : '';
+  if (b.kind === 'ladybug') return ['🐞', 'Ladybug', (b.state === 'eat' ? 'Eating your aphids! ' : 'Eats aphids. ') + 'Bite it and it flies off.' + hurt];
+  if (b.kind === 'earwig') return ['🪲', 'Earwig', 'Pinches ants that come close; foragers keep clear. Bring fighters. 15 protein.' + hurt];
+  if (b.kind === 'cricket') return ['🦗', 'Cricket', (b.state === 'tired' ? 'Worn out: catch it now! ' : 'Hops away from ants. Chase it till it tires. ') + '25 protein.' + hurt];
+  return ['🐛', 'Millipede', (b.state === 'curl' ? 'Curled into an armoured ball. Keep biting. ' : 'Harmless and slow, but armoured. ') + '20 protein.' + hurt];
+}
+
 export class Callout {
   constructor(app, views) {
     this.app = app;
@@ -57,6 +67,7 @@ export class Callout {
     for (const f of s.items) if (f.amt > 0) take(f.carried && f.px != null ? f.px : (f.x + 0.5) * T, f.carried && f.py != null ? f.py : (f.y + 0.5) * T, 1.6 * T, () => itemCard(f));
     if (s.spider) take(s.spider.x, s.spider.y, 3.5 * T, () => ['🕷', 'Wolf spider', 'Run! Thirty ants or five Venom ants can kill it.'], 30);
     if (s.cat) take(s.cat.x, s.cat.y, 3 * T, () => ['🐛', 'Caterpillar', 'Harmless. 40 protein if a crew brings it down.'], 14);
+    for (const b of s.critters || []) take(b.x, b.y, 2 * T, () => bugCard(b), 10);
     for (const a of s.ants) {
       if (a.state === 'dead' || a.state === 'in' || a.state === 'nest' || a.state === 'build') continue;
       take(a.x, a.y, 1.1 * T, () => antCard(s, a), 6, a.isPlayer ? 3 : 1.8);

@@ -9,7 +9,8 @@ import { psx, psxBasic } from '../ps1/materials.js';
 import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
-import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS } from '../models/bugs.js';
+import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
+import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
@@ -30,6 +31,19 @@ const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 const tmpQ2 = new THREE.Quaternion();
 const ZAX = new THREE.Vector3(0, 0, 1);
+const XAX = new THREE.Vector3(1, 0, 0);
+const tmpQ3 = new THREE.Quaternion();
+// Build 16: the small creatures. Model scale (px a unit), how far one walk
+// cycle carries each (px), and how high its health bar floats.
+const BUG = {
+  ladybug: { k: 1.8, stride: 9, bar: 18, back: 5.1 },
+  earwig: { k: 2.2, stride: 12, bar: 18, back: 2.7 },
+  cricket: { k: 2.4, stride: 10, bar: 22, back: 5.4 },
+  millipede: { k: 1.9, stride: 7, bar: 14, back: 2.6 },
+};
+const HIT = '#ff7a6a';   // the flash on whatever a bite lands on
+// Under attack it flickers, so a long fight doesn't just turn it red.
+const flashed = (s, o) => s.t - (o.hitT ?? -9) < 0.12 && (s.t * 9) % 1 < 0.5;
 const SPIDER_SCALE = 2.6;
 // Caterpillar: segment size and spacing (px), and the crawl wave.
 const CAT = { r: 5.6, head: 5.2, gap: 7, lift: 2.6, waveLen: 12 };
@@ -100,10 +114,15 @@ export class SurfaceView {
     this.spiderRest = spiderGeometry(-1);
     this.spiderUp = spiderGeometry(-2);
     this.spider = new THREE.Mesh(this.spiderRest, psx({ vertexColors: true }));
+    this.spider.rotation.order = 'YZX'; // yaw, then pitch (nose down), then roll
     this.spiderHead = { x: 0, y: 0, yaw: 0, aim: 0, phase: 0, moved: -9, seen: false };
+    // Build 16: crouched to spring or resting low, rearing to bite, dead.
+    this.spiderCrouch = spiderGeometry(-4);
+    this.spiderRear = spiderGeometry(-5);
+    this.spiderDead = spiderGeometry(-3);
     // Caterpillar: segments follow the path the head took, with a wave of
     // lifting segments rolling forward as it crawls.
-    const catMat = psx({ vertexColors: true });
+    const catMat = (this.catMat = psx({ vertexColors: true }));
     const segGeo = new Map();
     this.cat = CAT_KIND.map((kind, i) => {
       const key = kind + CAT_LEGS[i];
@@ -117,6 +136,22 @@ export class SurfaceView {
     this.mower.visible = false;
     this.bars = [this._bar(), this._bar()];
     this.dyn.add(this.spider, this.mower, ...this.cat, ...this.bars.map((b) => b.group));
+
+    // Build 16: ladybugs, earwigs, crickets and millipedes, each a few baked
+    // poses drawn instanced; bars for the hurt ones; sparks and splashes.
+    this.bugs = new Crowd(this.dyn, psx({ vertexColors: true }));
+    const walk = (fn) => Array.from({ length: BUG_WALK }, (_, i) => fn(i));
+    this.bugGeo = {
+      lb: walk((i) => ladybugGeometry(i)), lbStill: ladybugGeometry(-1), lbFly: [ladybugGeometry(-1, 1), ladybugGeometry(-1, 2)],
+      ew: walk((i) => earwigGeometry(i, 0)), ewUp: walk((i) => earwigGeometry(i, 0.85)), ewStill: earwigGeometry(-1, 0), ewSnap: earwigGeometry(-1, 1, true),
+      cr: Object.fromEntries(['sit', 'walk0', 'walk1', 'crouch', 'leap', 'chirp'].map((p) => [p, cricketGeometry(p)])),
+      mpHead: millipedeSegment('head', 0), mp: walk((i) => millipedeSegment('body', i)), mpTail: walk((i) => millipedeSegment('tail', i)),
+    };
+    this.bugAnim = new Map();
+    this.bugBars = Array.from({ length: 6 }, () => this._bar());
+    this.dyn.add(...this.bugBars.map((b) => b.group));
+    this.fx = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
+    this.drops = [];
 
     // Visitors (sim strikes): a sneaker, a falling acorn, a cloud of bug
     // spray, a robin, a toad, and the shadow each casts first. Pooled;
@@ -356,6 +391,9 @@ export class SurfaceView {
       const plan = planFor(a.caste);
       tmpQ.setFromAxisAngle(UP, Math.atan2(-a.dy, a.dx));
       tmpV.set(a.x, FOOT * k, a.y);
+      // Bitten: a red flash. Knocked by a raindrop: it tumbles (build 16).
+      if (flashed(s, a)) color = HIT;
+      if (a.knockT > 0) { const u = 1 - a.knockT / 0.3; tmpQ.multiply(tmpQ3.setFromAxisAngle(XAX, u * Math.PI * 2)); tmpV.y += Math.sin(u * Math.PI) * 6; }
       // Still ants stand and breathe instead of walking on the spot.
       this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
       if (a.carry) {
@@ -373,6 +411,7 @@ export class SurfaceView {
     this.glints.begin();
     for (const f of s.items) {
       if (f.amt <= 0) continue;
+      if (f.kind === 'protein' && BUG[f.type]) continue; // a dead bug lies where it fell (_critters)
       const L = itemLook(f, COLORS);
       // A treat being carried rides on its crew, just ahead of you.
       const lifted = f.carried && f.px != null;
@@ -433,6 +472,8 @@ export class SurfaceView {
     this.lastT = t;
     this._spider(s, t, fdt);
     this._caterpillar(s, t, fdt);
+    this._critters(s, t, fdt);
+    this._fx(s, t, fdt);
     this._strikes(s, t, fdt);
 
     // Weather and light.
@@ -562,24 +603,48 @@ export class SurfaceView {
 
   // Spider: turns smoothly, walks a gait synced to distance, rests and
   // breathes when still, and now and then lifts a foreleg to taste the air.
+  // Build 16: it crouches before it springs, rears to bite, hunches over a
+  // kill to eat, sleeps low at its web when full, and dies on its back.
   _spider(s, t, fdt) {
-    const sp = s.spider, h = this.spiderHead;
-    this.spider.visible = !!sp;
+    const sp = s.spider, h = this.spiderHead, m = this.spider, S = SPIDER_SCALE;
     this.bars[0].group.visible = false;
-    if (!sp) { h.seen = false; return; }
+    m.material.color.set(sp && flashed(s, sp) ? HIT : '#ffffff');
+    if (!sp) {
+      h.seen = false;
+      const dead = s.spiderCorpse;
+      m.visible = !!dead;
+      if (!dead) return;
+      // Over on its back with a little hop, legs curled; then it sinks away.
+      const age = s.t - dead.t, u = Math.min(1, age / 0.55), gone = Math.max(0, (age - 4) / 2);
+      m.geometry = this.spiderDead;
+      m.position.set(dead.x, (SPIDER_FOOT + (8.6 - SPIDER_FOOT) * u) * S + Math.sin(Math.PI * u) * 14 - gone * 26, dead.y);
+      m.rotation.set(Math.PI * u, h.yaw, 0);
+      m.scale.setScalar(S * (1 - gone * 0.3));
+      return;
+    }
+    m.visible = true;
     const dx = sp.x - h.x, dy = sp.y - h.y, d = Math.hypot(dx, dy);
     if (!h.seen || d > 60) { h.seen = true; h.yaw = h.aim; }
-    else if (d > 0.05) { h.aim = Math.atan2(-dy, dx); h.phase += d / (SPIDER_STRIDE * SPIDER_SCALE); h.moved = t; }
+    else if (d > 0.05) { h.aim = Math.atan2(-dy, dx); h.phase += d / (SPIDER_STRIDE * S); h.moved = t; }
     h.x = sp.x; h.y = sp.y;
-    h.yaw += wrapAngle(h.aim - h.yaw) * Math.min(1, fdt * 7);
+    const mode = sp.mode || 'walk';
+    // Crouched or eating it faces its prey.
+    if ((mode === 'crouch' || mode === 'eat') && (sp.dx || sp.dy)) h.aim = Math.atan2(-sp.dy, sp.dx);
+    h.yaw += wrapAngle(h.aim - h.yaw) * Math.min(1, fdt * (mode === 'crouch' ? 14 : 7));
     const walking = t - h.moved < 0.2;
     const frame = Math.floor(h.phase * SPIDER_FRAMES) % SPIDER_FRAMES;
-    this.spider.geometry = walking ? this.spiderWalk[frame] : (s.t % 4) < 0.5 ? this.spiderUp : this.spiderRest;
-    const bob = walking ? Math.abs(Math.sin(h.phase * Math.PI * 2)) * 0.5 : 0;
-    this.spider.position.set(sp.x, (SPIDER_FOOT + bob) * SPIDER_SCALE, sp.y);
-    const sb = walking ? 0 : Math.sin(t * 1.9);
-    this.spider.scale.set(SPIDER_SCALE, SPIDER_SCALE * (1 + 0.03 * sb), SPIDER_SCALE * (1 + 0.02 * sb));
-    this.spider.rotation.set(0, h.yaw, 0);
+    let geo = this.spiderRest, y = SPIDER_FOOT, pitch = 0, breathe = Math.sin(t * 1.9), shiver = 0;
+    const bit = s.t - (sp.biteAt ?? -9);
+    if (bit < 0.35) { geo = this.spiderRear; pitch = 0.22 * Math.sin((bit / 0.35) * Math.PI); }
+    else if (walking) { geo = this.spiderWalk[frame]; y += Math.abs(Math.sin(h.phase * Math.PI * 2)) * 0.5; breathe = 0; if (mode === 'lunge') pitch = 0.1; }
+    else if (mode === 'crouch') { geo = this.spiderCrouch; y -= SPIDER_CROUCH; shiver = Math.sin(t * 60) * 0.25; breathe = 0; }
+    else if (mode === 'eat') { geo = this.spiderRest; pitch = -0.2 + Math.sin(t * 7) * 0.05; y -= 0.6; breathe = 0; }
+    else if (mode === 'rest') { geo = this.spiderCrouch; y -= SPIDER_CROUCH; breathe = Math.sin(t * (sp.full > 0 ? 0.9 : 1.4)) * 1.6; }
+    else geo = (s.t % 4) < 0.5 ? this.spiderUp : this.spiderRest;
+    m.geometry = geo;
+    m.position.set(sp.x + shiver, y * S, sp.y);
+    m.scale.set(S, S * (1 + 0.03 * breathe), S * (1 + 0.02 * breathe));
+    m.rotation.set(0, h.yaw, pitch);
     this._placeBar(this.bars[0], sp.x, sp.y, 62, sp.hp / sp.maxHp, '#e4524a');
   }
 
@@ -587,8 +652,22 @@ export class SurfaceView {
   _caterpillar(s, t, fdt) {
     const ct = s.cat, path = this.catPath, A = this.catAnim;
     this.bars[1].group.visible = false;
+    this.catMat.color.set(ct && flashed(s, ct) ? HIT : '#ffffff');
     this.cat.forEach((m) => (m.visible = !!ct));
-    if (!ct) { path.length = 0; return; }
+    if (!ct) {
+      // Build 16: a dead caterpillar sags flat and rolls a little, then is gone.
+      const dead = s.catCorpse;
+      if (dead && this.catLast) {
+        const u = Math.min(1, (s.t - dead.t) / 0.6), gone = Math.max(0, (s.t - dead.t - 2) / 1);
+        this.cat.forEach((m, i) => {
+          const L = this.catLast[i]; m.visible = gone < 1;
+          m.position.set(L.x, L.y * (1 - 0.45 * u) - gone * 6, L.z);
+          m.rotation.set(0.5 * u * (i % 2 ? 1 : -1) * 0.3, L.yaw, 0);
+          m.scale.set(L.r * (1 + 0.15 * u), L.r * (1 - 0.4 * u), L.r * (1 + 0.2 * u));
+        });
+      }
+      path.length = 0; return;
+    }
     const need = CAT.gap * CAT_SEGMENTS + 20;
     if (!path.length || Math.hypot(path[0][0] - ct.x, path[0][1] - ct.y) > 40) {
       // First sight: lay the body out straight behind where it is heading.
@@ -632,8 +711,158 @@ export class SurfaceView {
       m.position.set(pts[i][0], r * (i === 0 ? 0.9 : 1.05) + up, pts[i][1]);
       m.rotation.set(0, yaw || 0, i === 0 ? -0.15 + up * 0.04 : 0);
       m.scale.set(r, r * (1 + 0.04 * breathe), r * (1 + 0.03 * breathe));
+      (this.catLast || (this.catLast = []))[i] = { x: pts[i][0], y: r * (i === 0 ? 0.9 : 1.05), z: pts[i][1], yaw: yaw || 0, r };
     });
     this._placeBar(this.bars[1], pts[4][0], pts[4][1], 22, ct.hp / ct.maxHp, '#8fd36b');
+  }
+
+  // Build 16: ladybugs, earwigs, crickets and millipedes, live and dead.
+  _critters(s, t, fdt) {
+    const B = this.bugs, G = this.bugGeo, live = new Set();
+    B.begin();
+    let bars = 0;
+    const put = (geo, x, y, z, q, k, color, sy) => { tmpV.set(x, y, z); if (sy) B.pushAtScale(geo.uuid, geo, tmpV, q, k, k * sy, k, color); else B.pushAt(geo.uuid, geo, tmpV, q, k, color); };
+    // yaw about up, then pitch (nose up +) about the body's side, then roll about its length.
+    const orient = (yaw, pitch = 0, roll = 0) => {
+      tmpQ.setFromAxisAngle(UP, yaw);
+      if (pitch) tmpQ.multiply(tmpQ2.setFromAxisAngle(ZAX, pitch));
+      if (roll) tmpQ.multiply(tmpQ2.setFromAxisAngle(XAX, roll));
+      return tmpQ;
+    };
+    for (const b of s.critters || []) {
+      live.add(b.id);
+      const K = BUG[b.kind], k = K.k;
+      let A = this.bugAnim.get(b.id);
+      const aim = Math.atan2(-(b.dy || 0), b.dx || 1);
+      if (!A) { A = { x: b.x, y: b.y, yaw: aim, phase: 0, moved: -9, path: [], curl: b.state === 'curl' ? 1 : 0 }; this.bugAnim.set(b.id, A); }
+      const d = Math.hypot(b.x - A.x, b.y - A.y);
+      if (d > 0.05 && d < 80) { A.phase += d / K.stride; A.moved = t; }
+      A.x = b.x; A.y = b.y;
+      A.yaw += wrapAngle(aim - A.yaw) * Math.min(1, fdt * 9);
+      const walking = t - A.moved < 0.15, frame = Math.floor(A.phase * BUG_WALK) % BUG_WALK;
+      const color = flashed(s, b) ? HIT : '#ffffff';
+      if (b.kind === 'ladybug') {
+        if (b.state === 'land' || b.state === 'fly') {
+          // Drops in from above, wings a blur; leaves the same way.
+          const u = Math.min(1, b.t / (b.state === 'land' ? 1.2 : 1.6));
+          const up = b.state === 'land' ? (1 - u) * (1 - u) * 90 : u * u * 150 + u * 8;
+          const go = b.state === 'fly' ? u * 70 : -(1 - u) * 30;
+          const geo = u > 0.97 && b.state === 'land' ? G.lbStill : G.lbFly[Math.floor(t * 34) % 2];
+          put(geo, b.x + (b.dx || 1) * go, up, b.y + (b.dy || 0) * go, orient(A.yaw, b.state === 'fly' ? 0.35 : 0.15), k, color);
+        } else if (b.state === 'eat') put(G.lbStill, b.x, 0, b.y, orient(A.yaw, -0.12 + Math.sin(t * 6) * 0.08), k, color);
+        else put(walking ? G.lb[frame] : G.lbStill, b.x, 0, b.y, orient(A.yaw), k, color);
+      } else if (b.kind === 'earwig') {
+        const snap = s.t - (b.pinchAt ?? -9) < 0.3;
+        const geo = snap ? G.ewSnap : b.state === 'rush' ? G.ewUp[walking ? frame : 0] : walking ? G.ew[frame] : G.ewStill;
+        const lunge = snap ? Math.sin(((s.t - b.pinchAt) / 0.3) * Math.PI) * 5 : 0;
+        put(geo, b.x + (b.dx || 0) * lunge, 0, b.y + (b.dy || 0) * lunge, orient(A.yaw), k, color);
+      } else if (b.kind === 'cricket') {
+        if (b.state === 'hop') {
+          const u = Math.min(1, b.t / 0.55), L = Math.hypot(b.hx1 - b.hx0, b.hy1 - b.hy0);
+          const geo = u < 0.12 ? G.cr.crouch : u < 0.82 ? G.cr.leap : G.cr.sit;
+          put(geo, b.x, Math.sin(Math.PI * u) * Math.min(40, L * 0.55), b.y, orient(A.yaw, (0.45 - u) * 0.9), k, color);
+        } else if (b.state === 'tired') put(G.cr.sit, b.x, -0.5 * k, b.y, orient(A.yaw, -0.08), k, color, 1 + Math.sin(t * 7) * 0.05);
+        else {
+          const chirp = s.t - (b.chirpAt ?? -9) < 0.9 && Math.floor(t * 14) % 2;
+          put(chirp ? G.cr.chirp : G.cr.sit, b.x, 0, b.y, orient(A.yaw), k, color);
+        }
+      } else this._millipede(s, b, A, t, fdt, put, orient, color, walking);
+      if (b.hp < b.maxHp && bars < this.bugBars.length) this._placeBar(this.bugBars[bars++], b.x, b.y, K.bar + (b.kind === 'cricket' && b.state === 'hop' ? 30 : 0), b.hp / b.maxHp, '#f0b040');
+    }
+    for (const id of this.bugAnim.keys()) if (!live.has(id)) this.bugAnim.delete(id);
+    for (let i = bars; i < this.bugBars.length; i++) this.bugBars[i].group.visible = false;
+    // Dead ones lie on their backs, legs in the air, smaller as they're eaten away.
+    for (const f of s.items) {
+      if (f.kind !== 'protein' || !BUG[f.type] || f.amt <= 0) continue;
+      const K = BUG[f.type], k = K.k * (0.55 + 0.45 * Math.min(1, f.amt / SIM.BUGS[f.type].meat)), x = (f.x + 0.5) * T, z = (f.y + 0.5) * T;
+      const yaw = -(f.yaw || 0);
+      if (f.type === 'millipede') { this._coil(x, z, yaw, k, put, orient, '#ffffff', 1, 0); continue; }
+      const geo = f.type === 'ladybug' ? G.lbStill : f.type === 'earwig' ? G.ewStill : G.cr.sit;
+      put(geo, x, K.back * k * 0.9, z, orient(yaw, 0, Math.PI), k, '#ffffff');
+    }
+    B.end();
+  }
+
+  // Millipede: rings along the head's trail, a leg wave rolling down them;
+  // bitten, it coils up into a tight spiral, legs in.
+  _millipede(s, b, A, t, fdt, put, orient, color, walking) {
+    const k = BUG.millipede.k, gap = MILLI.gap * k, n = MILLI.n, path = A.path;
+    if (!path.length || Math.hypot(path[0][0] - b.x, path[0][1] - b.y) > 60) {
+      path.length = 0;
+      for (let i = 0; i <= n; i++) path.push([b.x - (b.dx || 1) * i * gap, b.y - (b.dy || 0) * i * gap]);
+    } else if (Math.hypot(path[0][0] - b.x, path[0][1] - b.y) > 0.8) path.unshift([b.x, b.y]);
+    // Points along the trail, a gap apart.
+    const pts = [[b.x, b.y]];
+    let acc = 0, want = gap, prev = path[0];
+    for (let i = 1; i < path.length && pts.length < n; i++) {
+      const cur = path[i], l = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]);
+      while (pts.length < n && acc + l >= want) { const u = (want - acc) / l; pts.push([prev[0] + (cur[0] - prev[0]) * u, prev[1] + (cur[1] - prev[1]) * u]); want += gap; }
+      acc += l; prev = cur;
+      if (acc > gap * (n + 4)) { path.length = i + 1; break; }
+    }
+    while (pts.length < n) { const p = pts[pts.length - 1]; pts.push([p[0] - (b.dx || 1) * gap, p[1] - (b.dy || 0) * gap]); }
+    A.curl += ((b.state === 'curl' ? 1 : 0) - A.curl) * Math.min(1, fdt * 5);
+    if (A.curl > 0.02) { this._coil(b.x, b.y, A.yaw, k, put, orient, color, A.curl, 0, pts); return; }
+    const ph = Math.floor(A.phase * BUG_WALK);
+    for (let i = 0; i < n; i++) {
+      const a = pts[Math.max(0, i - 1)], c = pts[Math.min(n - 1, i + 1)];
+      const yaw = i === 0 ? A.yaw : Math.atan2(-(a[1] - c[1]), a[0] - c[0]);
+      const f = walking ? (ph + n - i) % BUG_WALK : 0;
+      const geo = i === 0 ? this.bugGeo.mpHead : i >= n - 2 ? this.bugGeo.mpTail[f] : this.bugGeo.mp[f];
+      put(geo, pts[i][0], 0, pts[i][1], orient(yaw), k, color);
+    }
+  }
+  // A flat spiral round (cx, cz): head in the middle, tail outside, the rings
+  // rolled onto their sides so the legs point in. curl blends from pts.
+  _coil(cx, cz, yaw0, k, put, orient, color, curl, phase, pts) {
+    const n = MILLI.n, gap = MILLI.gap * k * 0.9, r0 = 1.6 * k, pitch = 2.7 * k / (Math.PI * 2);
+    let th = 0;
+    for (let i = 0; i < n; i++) {
+      const r = r0 + pitch * th, ang = yaw0 + th;
+      let x = cx + Math.cos(ang) * r, z = cz - Math.sin(ang) * r, yaw = ang + Math.PI / 2, y = 1.3 * k * curl;
+      if (pts && curl < 1) {
+        const a = pts[Math.max(0, i - 1)], c = pts[Math.min(n - 1, i + 1)], sy = Math.atan2(-(a[1] - c[1]), a[0] - c[0]);
+        x = pts[i][0] + (x - pts[i][0]) * curl; z = pts[i][1] + (z - pts[i][1]) * curl; yaw = sy + wrapAngle(yaw - sy) * curl;
+      }
+      const geo = i === 0 ? this.bugGeo.mpHead : i >= n - 2 ? this.bugGeo.mpTail[0] : this.bugGeo.mp[0];
+      put(geo, x, y, z, orient(yaw, 0, curl * Math.PI / 2), k, color);
+      th += gap / r;
+    }
+  }
+
+  // Sparks where bites land, splashes where raindrops hit ants, and drops
+  // pocking the ground all round while it rains.
+  _fx(s, t, fdt) {
+    const F = this.fx, cq = this.camera.quaternion;
+    F.begin();
+    for (const h of s.hits || []) {
+      const u = (s.t - h.t) / 0.35; if (u < 0 || u > 1) continue;
+      const c = h.k ? '#ff5236' : '#fff0b0';
+      tmpV.set(h.x, 8 + u * 5, h.y);
+      tmpQ.copy(cq).multiply(tmpQ2.setFromAxisAngle(ZAX, h.t * 13 + u));
+      F.pushAt('star', FOOD.star, tmpV, tmpQ, 12 * (1 - u) + 3, c);
+      for (let j = 0; j < 4; j++) {
+        const a = h.t * 31 + j * 1.7, r = u * 13;
+        tmpV.set(h.x + Math.cos(a) * r, 8 + u * 9 - u * u * 10, h.y + Math.sin(a) * r);
+        F.pushAt('star', FOOD.star, tmpV, tmpQ, 4 * (1 - u), c);
+      }
+    }
+    const splash = (x, z, u, big) => {
+      tmpV.set(x, 0.8, z);
+      F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), (big ? 5 : 1.5) + u * (big ? 16 : 5), u < 0.5 ? '#e4f2fb' : '#9cb8c8');
+      if (u < 0.7) for (let j = 0; j < (big ? 5 : 2); j++) {
+        const a = j * 2.4 + x, r = u * (big ? 16 : 7);
+        tmpV.set(x + Math.cos(a) * r, Math.sin(Math.PI * u) * (big ? 12 : 5), z + Math.sin(a) * r);
+        F.pushAt('bead', FOOD.bead, tmpV, tmpQ2, big ? 1.8 : 1.1, '#dff0fa');
+      }
+    };
+    for (const sp of s.splashes || []) { const u = (s.t - sp.t) / 0.6; if (u >= 0 && u <= 1) splash(sp.x, sp.y, u, true); }
+    if (s.rain.on) {
+      for (let n = Math.round(fdt * 70 + Math.random() * 0.5); n > 0; n--) this.drops.push({ x: this.target.x + (Math.random() - 0.5) * 420, z: this.target.z + (Math.random() - 0.5) * 300, t });
+    }
+    this.drops = this.drops.filter((d) => t - d.t < 0.4);
+    for (const d of this.drops) splash(d.x, d.z, (t - d.t) / 0.4, false);
+    F.end();
   }
 
   _updateRain(t) {

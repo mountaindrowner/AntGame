@@ -55,6 +55,7 @@ const hash = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return
 
 export const SPIDER_FOOT = 7.3;      // feet rest this far below the body origin
 export const SPIDER_FRAMES = 8;      // walk cycle
+export const SPIDER_CROUCH = 2.4;    // how much lower the body sits crouched (build 16)
 const SP = {
   dark: '#2a1c13', base: '#3e2b1d', mid: '#5a4130', pale: '#8f7152', band: '#a88a64', eye: '#070505',
 };
@@ -67,11 +68,14 @@ const LEGS = [
   { hx: -0.1, ang: 150, reach: 15.5 },
 ];
 
-function leg(side, i, swing, lift, raise) {
+function leg(side, i, swing, lift, raise, pose) {
   const L = LEGS[i];
   const hip = V(L.hx, 1.5, side * 2.1);
   const a = (L.ang * Math.PI) / 180;
-  const foot = V(hip.x + Math.cos(a) * L.reach + swing, -SPIDER_FOOT + lift + raise, side * (2.1 + Math.sin(a) * L.reach));
+  // pose 'crouch': feet wide and the body low; 'dead': legs curled in.
+  const reach = L.reach * (pose === 'crouch' ? 1.12 : pose === 'dead' ? 0.3 : 1);
+  const footY = pose === 'crouch' ? -(SPIDER_FOOT - SPIDER_CROUCH) : pose === 'dead' ? 2.5 : -SPIDER_FOOT;
+  const foot = V(hip.x + Math.cos(a) * reach + swing, footY + lift + raise, side * (2.1 + Math.sin(a) * reach));
   if (raise) foot.x += 3;
   // Two-bone IK in the vertical plane through hip and foot; leg lengths are
   // fixed from the resting pose so the knee rises as the foot comes in.
@@ -101,7 +105,9 @@ function leg(side, i, swing, lift, raise) {
   return parts;
 }
 
-// frame: 0..SPIDER_FRAMES-1 walking, -1 standing, -2 standing with a foreleg raised.
+// frame: 0..SPIDER_FRAMES-1 walking, -1 standing, -2 standing with a foreleg
+// raised, -3 dead (legs curled), -4 crouched to spring, -5 rearing to strike
+// (both forelegs up).
 export function spiderGeometry(frame) {
   const parts = [];
   // Abdomen: dark with a pale lance down the back and speckled flanks.
@@ -144,8 +150,8 @@ export function spiderGeometry(frame) {
       const ph = phase + (groupB ? Math.PI : 0);
       const swing = frame >= 0 ? Math.sin(ph) * 2.2 : 0;
       const lift = frame >= 0 ? Math.max(0, Math.cos(ph)) * 2.6 : 0;
-      const raise = frame === -2 && i === 0 && side > 0 ? 6 : 0;
-      parts.push(...leg(side, i, swing, lift, raise));
+      const raise = (frame === -2 && i === 0 && side > 0) || (frame === -5 && i === 0) ? 6 : frame === -5 && i === 1 ? 2.5 : 0;
+      parts.push(...leg(side, i, swing, lift, raise, frame === -3 ? 'dead' : frame === -4 ? 'crouch' : null));
     }
   }
   return bake(parts);
@@ -201,3 +207,6 @@ export function caterpillarSegment(kind, legs) {
   }
   return bake(parts);
 }
+
+// Shared with critters.js (build 16).
+export { paint, blob, strut, bake, hash };

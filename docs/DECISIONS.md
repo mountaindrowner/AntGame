@@ -2,6 +2,30 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Oct 31: living creatures (build 16)
+
+The second build phase from `PLAYTEST-2.md` (items 21, 22, 25, 26 and 28): the yard's animals act like animals, and you can see a fight land.
+
+- **Four new creatures**, each turning up where its kind lives, only near your ants, a few at a time (at most six in the yard, two of a kind). They wander off when nobody has been near for 25 s.
+  - **Ladybug:** flies in beside your aphids and eats them (1.2 food a second, so a patch stays empty while it feeds). Bite it to half health and it flies off (+1 🧬 the first time). Full, or after three minutes, it leaves anyway. 8 protein if you kill it outright.
+  - **Earwig** (bark, mulch, compost, soil, hedges; not in the first four minutes): rushes any ant within 3.5 tiles and pinches for 2 (a forager dies; a soldier takes three). Foragers give it a wide berth. Below 30% health it runs for cover and is gone. 15 protein.
+  - **Cricket** (lawns and long grass): hops 3–5 tiles away from any ant that comes near. Five hops and it's worn out for 5 s: that's when you catch it. 25 protein, the richest small game.
+  - **Millipede** (compost, mulch, bark, soil, mud): harmless and slow. Bitten, it curls into an armoured ball for 8 s and takes 35% damage. 20 protein for a patient crew.
+  - Patrolling fighters within 6 tiles go after them. Your crew and you bite them as you would the caterpillar. Kills pay xp, and the first of each kind +1 🧬.
+  - Dead ones lie on their backs, legs up, and shrink as they're carried off.
+  - Tap one for its card. Each has a first-sight tip, and a line in Help → Dangers.
+- **The spider has habits.**
+  - It crouches for a quarter second before it lunges (the tell), then springs.
+  - It rears to bite.
+  - After a kill it stops for 3.5 s to eat, facing its meal; it only bites back if bitten.
+  - Three meals and it is full: it walks back to its web and sleeps for a minute, hunting nothing. "The spider has eaten its fill."
+  - It dies on its back with its legs curled, then sinks away.
+  - At its web it rests low, breathing slowly.
+- **Fights you can see:** every bite throws a spark (pale for yours, red for the spider's and the earwig's, and for rival bites). Whatever is bitten flickers red: ants, the spider, the caterpillar, the new bugs. The caterpillar sags flat when it dies.
+- **Rain knocks ants about.** Drops hit ants outside: they tumble a tile or two with a splash, and about a third drop what they carry (it stays on the ground). Your ant gets a smaller push. Raindrops pock the ground all round the view.
+- **Sounds:** a tick when a bite lands, the spider's lunge hiss and its crunching meal, the earwig's pinch, the cricket's chirp and hop, the ladybug's buzz, the millipede curling, a squelch when a small bug dies, and a plip when a drop knocks an ant. All are charted in `SOUND.md`.
+- **Tests:** 44 (new: the cricket's hops and tiring, the millipede's armour, the ladybug eating and fleeing, the earwig's pinch and the foragers keeping clear, the spider's meals and fullness, its crouch before the lunge, the bodies, rain knocks, sparks, and spawning near your ants then wandering off, kept across a save). The browser test bites a millipede till it curls, taps a cricket for its card, and runs rain.
+
 ## Oct 31: clarity and feedback (build 15)
 
 The first of the build phases from Mark's brother's playtest (`PLAYTEST-2.md`, items 1–3 and 10–24): the game now says what everything is and what just happened.

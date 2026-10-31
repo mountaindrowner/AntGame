@@ -229,7 +229,7 @@ resize();
 // of more than two tiles (into or out of the nest) is drawn as a jump.
 function snapshot(s) {
   for (const a of s.ants) { a.x0 = a.x; a.y0 = a.y; a.nx0 = a.nx; a.ny0 = a.ny; }
-  for (const c of [s.spider, s.cat]) if (c) { c.x0 = c.x; c.y0 = c.y; }
+  for (const c of [s.spider, s.cat, ...(s.critters || [])]) if (c) { c.x0 = c.x; c.y0 = c.y; }
 }
 function blend(s, k) {
   const saved = [];
@@ -241,7 +241,7 @@ function blend(s, k) {
   };
   if (k < 1) {
     for (const a of s.ants) { mix(a, 'x', 'y', 'x0', 'y0', 2 * SIM.T); mix(a, 'nx', 'ny', 'nx0', 'ny0', 2); }
-    for (const c of [s.spider, s.cat]) if (c) mix(c, 'x', 'y', 'x0', 'y0', 2 * SIM.T);
+    for (const c of [s.spider, s.cat, ...(s.critters || [])]) if (c) mix(c, 'x', 'y', 'x0', 'y0', 2 * SIM.T);
   }
   return () => { for (const [o, kx, ky, x, y] of saved) { o[kx] = x; o[ky] = y; } };
 }

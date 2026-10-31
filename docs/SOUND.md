@@ -93,11 +93,21 @@ Priority: **1** is the first batch (the core loop and the dangers), **2** the se
 | Rain | `rain` event, for the whole shower | A soft patter | Band-passed noise near 1.1 kHz, quiet, plus sparse low drops (build 14; was a bright high-pass hiss) | 1 |
 | Thunder | 20 s before rain (far off), as it starts, and now and then during it | A crack, then a long rolling rumble | A low-passed crack (softer the farther off), then four overlapping low rolls over about 4 s (build 14) | 2 |
 | Rain ends | Rain stops | Drips slowing | plips thinning out over 4 s | 3 |
+| Raindrop knocks an ant | A splash in the sim (build 16) | A small wet plip | Sine 0.9→1.7 kHz, 35 ms, and a soft noise puff | 2 |
 
 ## Creatures and dangers
 
 | Sound | When | Sounds like | How | P |
 |---|---|---|---|---|
+| Bite lands | A spark: one of your ants bites something (build 16) | A tiny dry tick | A 12 ms high-passed noise click and a short square blip; at most three at once | 2 |
+| Spider lunges | It springs out of its crouch | A hiss and a thud | Band-passed noise 2.5→1.2 kHz, and a low thump | 1 |
+| Spider eats | It stops over a kill | Slow crunching | Low-passed grain crunches every half second for 2 s | 2 |
+| Earwig pinch | Its forceps snap on an ant | A sharp double click | Two square clicks at 2.6 and 2.2 kHz, 50 ms apart | 1 |
+| Cricket chirp | Now and then while it sits | A real cricket | Three pulses of four 4.4 kHz sine pips | 2 |
+| Cricket hop | It jumps | A flick, then a soft landing | A noise puff and a quick rising chirp, a puff half a second later | 2 |
+| Ladybug wings | Flying in or away | A low buzz | A sawtooth near 170–210 Hz, swelling over a second | 2 |
+| Millipede curls | It rolls up | A crinkling roll | Band-passed grain, then a small thump | 2 |
+| Small bug killed | Any of the four dies | A squelch and a falling squeak | Band-passed noise sweep down, a triangle chirp 900→300 Hz | 2 |
 | Spider near | Spider on screen | A low, creeping menace | drone at 70 Hz plus slow high tremolo, fades with distance | 1 |
 | Spider steps | Spider walking, near | Light, many-legged taps | grain of 8 soft ticks per stride | 2 |
 | Spider bite | Spider kills or hits | A wet snap | Band-pass puff plus a sine thump | 1 |

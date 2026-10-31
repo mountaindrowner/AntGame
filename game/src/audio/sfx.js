@@ -224,6 +224,17 @@ const SOUNDS = {
     return 4.5; } },
   drips: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 8; i++) s.puff(o, t + i * (0.2 + i * 0.08), 0.03, 1500 + Math.random() * 800, 0.18, 'bandpass'); return 4; } },
   snap: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.4, 2000, 0.15, 'bandpass', 600, 0.1); s.puff(o, t + 0.4, 0.05, 1200, 0.4, 'bandpass'); s.thump(o, t + 0.4, 150, 60, 0.12, 0.4); return 0.6; } },
+  // Build 16: the small creatures, fights you can hear, rain on the ground.
+  pinch: { cool: 0.2, fn: (s, o, t) => { s.blip(o, t, 2600, 0.012, 0.28, 'square'); s.blip(o, t + 0.05, 2200, 0.014, 0.3, 'square'); s.puff(o, t + 0.05, 0.03, 3000, 0.2, 'highpass'); return 0.1; } },
+  chirp: { cool: 0.6, vol: 0.5, fn: (s, o, t) => { for (let i = 0; i < 3; i++) for (let k = 0; k < 4; k++) s.blip(o, t + i * 0.16 + k * 0.022, 4400, 0.016, 0.07, 'sine'); return 0.5; } },
+  hop: { cool: 0.2, fn: (s, o, t) => { s.puff(o, t, 0.05, 900, 0.18); s.chirp(o, t, 500, 1300, 0.08, 0.06, 'triangle'); s.puff(o, t + 0.5, 0.04, 600, 0.15); return 0.6; } },
+  buzz: { cool: 0.8, fn: (s, o, t) => { const c = s.ctx, x = c.createOscillator(), g = c.createGain(); x.type = 'sawtooth'; x.frequency.setValueAtTime(170, t); x.frequency.linearRampToValueAtTime(210, t + 0.9); s._env(g, t, 0.15, 0.8, 0.05); x.connect(g).connect(o); x.start(t); x.stop(t + 1.1); return 1.1; } },
+  curl: { cool: 0.6, fn: (s, o, t) => { s.grain(o, t, 7, 0.03, 1100, 0.14, 'bandpass'); s.thump(o, t + 0.2, 220, 120, 0.08, 0.2); return 0.35; } },
+  bugDie: { cool: 0.5, fn: (s, o, t) => { s.puff(o, t, 0.12, 1400, 0.25, 'bandpass', 500); s.chirp(o, t, 900, 300, 0.25, 0.14, 'triangle'); return 0.3; } },
+  hitTick: { cool: 0.09, cap: 3, vol: 0.5, fn: (s, o, t) => { s.puff(o, t, 0.012, 4200, 0.18, 'highpass'); s.blip(o, t, 1500 + Math.random() * 500, 0.015, 0.08, 'square'); return 0.04; } },
+  plip: { cool: 0.12, cap: 3, vol: 0.6, fn: (s, o, t) => { s.chirp(o, t, 900, 1700, 0.035, 0.16); s.puff(o, t, 0.05, 1200, 0.1); return 0.08; } },
+  spiderLunge: { cool: 1, fn: (s, o, t) => { s.puff(o, t, 0.25, 2500, 0.3, 'bandpass', 1200, 0.03); s.thump(o, t + 0.05, 130, 60, 0.12, 0.35); return 0.3; } },
+  spiderEat: { cool: 1.5, fn: (s, o, t) => { for (let i = 0; i < 5; i++) s.grain(o, t + i * 0.45, 3, 0.02, 900, 0.16, 'lowpass'); return 2.4; } },
 };
 
 // Looping beds: start(sfx, out) → stop().
