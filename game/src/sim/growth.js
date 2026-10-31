@@ -179,10 +179,12 @@ export function evoCost(s, n) {
 // round it (and along the road back to the nest) as they do round the nest,
 // trails near it never fade, and it lifts the fog round it.
 export const OUTPOST = { cost: { grit: 10 }, work: 30, spacing: 14, reach: 26, road: 2, keep: 6, see: 20, hp: 2 };
-// What must be beaten before a region can be held. Bosses from later builds
-// don't stop you holding their ground yet; the fire ants do.
+// What must be beaten before a region can be held: its boss (build 19).
 export const GUARDIANS = {
   flowerbed: ['the spider', (s) => (s.colony.kills.spider || 0) >= 1],
+  tomatoes: ['the hornworm', (s) => (s.colony.kills.hornworm || 0) >= 1],
+  rockgarden: ['the ground beetle', (s) => (s.colony.kills.beetle || 0) >= 1],
+  sandbox: ['the antlion queen', (s) => (s.colony.kills.antlion || 0) >= 1],
   patio: ['the pavement ants’ queen', (s) => !s.rival.queenAlive],
   fireout: ['the fire ants', () => false],
   firemound: ['the fire ants', () => false],

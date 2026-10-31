@@ -31,6 +31,8 @@ function itemCard(f) {
 const JOB = { explore: 'foraging', return: 'heading home', patrol: 'on guard', fight: 'fighting', follow: 'following you', spoil: 'hauling dirt out', raid: 'raiding', player: 'you' };
 const WHAT = { forager: 'Gathers food and water.', builder: 'Digs, builds and hauls dirt out.', nurse: 'Tends eggs so they hatch faster.', soldier: 'Guards the door and fights. Eats protein.', venom: 'Kills big things.' };
 function antCard(s, a) {
+  if (a.champion) return ['⚔', a.name, `Champion of the pavement ants, leading a war party. ${Math.ceil(a.hp)} health. Kill it and the rest break.`];
+  if (a.zombie) return ['🍄', 'Infected ant', 'The fungus has it: it climbs to spread spores. Kill it before a stalk bursts from it.'];
   if (a.team) return ['🐜', 'Pavement ant', 'A rival. Their nest is in the Patio.'];
   const C = CASTES[a.caste], R = RANKS[rankOf(a)], job = a.carry && a.state === 'return' ? 'carrying ' + (a.kind === 'food' ? 'food' : a.kind === 'water' ? 'water' : a.kind === 'grit' ? 'a pebble' : a.kind === 'protein' ? 'meat' : 'a load') + ' home' : JOB[a.state] || a.state;
   const next = RANKS[rankOf(a) + 1], xp = Math.floor(a.xp || 0);
@@ -69,6 +71,9 @@ export class Callout {
     if (s.spider) take(s.spider.x, s.spider.y, 3.5 * T, () => ['🕷', 'Wolf spider', 'Run! Thirty ants or five Venom ants can kill it.'], 30);
     if (s.cat) take(s.cat.x, s.cat.y, 3 * T, () => ['🐛', 'Caterpillar', 'Harmless. 40 protein if a crew brings it down.'], 14);
     for (const b of s.critters || []) take(b.x, b.y, 2 * T, () => bugCard(b), 10);
+    // Build 19: bosses, Cordyceps stalks.
+    for (const k in s.bosses || {}) { const b = s.bosses[k]; if (b.dead) continue; const D = SIM.BOSSES[k]; take(b.x, b.y, 4 * T, () => ['👑', D.name, `${D.title}. ${Math.ceil(b.hp)} of ${b.maxHp} health. ${D.tip}`], 40); }
+    for (const st of s.stalks || []) take(st.x, st.y, 2 * T, () => ['🍄', 'Cordyceps stalk', `It bursts in ${Math.max(0, Math.ceil(12 - st.t))} s and infects ants nearby. Bite it to pieces!`], 20);
     for (const a of s.ants) {
       if (a.state === 'dead' || a.state === 'in' || a.state === 'nest' || a.state === 'build') continue;
       take(a.x, a.y, 1.1 * T, () => antCard(s, a), 6, a.isPlayer ? 3 : 1.8);

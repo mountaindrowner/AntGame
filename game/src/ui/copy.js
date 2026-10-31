@@ -64,6 +64,8 @@ export const HELP_PAGES = [
 <div class="h"><b>Goals</b> Three at a time, each paying 🧬. Finish a set for a reward for good.</div>`],
   ['Dangers', `
 <div class="h"><b>Spider</b> Waits by its web in the Flowerbed. It crouches, then lunges. After a kill it stops to eat, and after three it goes back to its web to sleep. Thirty ants, or five Venom ants, can kill it.</div>
+<div class="h"><b>Bosses</b> Three great beasts guard their regions: the Hornworm in the Tomato Rows, the Ground Beetle in the Rock Garden, the Antlion Queen under the Sandbox. Red on the ground shows where a blow will land: get out of it. Each changes at half health. Killed, each stays dead and leaves a trophy that helps the colony for good, and only then can you hold its region.</div>
+<div class="h"><b>Events</b> Every few minutes something happens: a swarm of winged queens (free protein), a picnic (treats, and feet), a heatwave, a war party led by a champion, or a Cordyceps outbreak. In an outbreak, kill zombie ants and fungal stalks before they burst; nurses cure the newly infected inside.</div>
 <div class="h"><b>Small creatures</b> Ladybugs eat your aphids: bite them and they fly off. Earwigs pinch: bring fighters. Crickets hop away until they tire: 25 protein. Millipedes curl up armoured: 20 protein for a patient crew.</div>
 <div class="h"><b>Raids</b> Rival pavement ants grow bolder. Keep Soldiers at your door or they reach the queen.</div>
 <div class="h"><b>From above</b> A shadow means a foot or an acorn is coming; mist means bug spray. Robins and the toad hunt the nearest ant: run, or bring five fighters.</div>

@@ -6,6 +6,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { PROPS } from './props.js';
+import { alateGeometry } from './bosses.js';
+const ALATE = alateGeometry();
 
 const col = new THREE.Color();
 const UP = new THREE.Vector3(0, 1, 0);
@@ -264,6 +266,7 @@ export function itemLook(f, COLORS) {
   if (f.kind === 'chitin') return { geo: FOOD.shell, key: 'shell', color: '#ffffff', r: 3 + Math.min(f.amt, 15) * 0.15 };
   if (f.kind === 'protein' && f.type === 'hotdog') return { geo: FOOD.hotdog, key: 'hotdog', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.12) };
   if (f.kind === 'protein' && f.type === 'slug') return { geo: FOOD.slug, key: 'slug', color: '#ffffff', r: 6 };
+  if (f.kind === 'protein' && f.type === 'alate') return { geo: ALATE, key: 'alate', color: '#ffffff', r: 2.6 };
   if (f.kind === 'protein' && f.type === 'bug') return { geo: FOOD.bug, key: 'bug', color: '#ffffff', r: Math.min(5.5, 2.5 + f.amt * 0.2) };
   if (f.kind === 'protein') return { geo: PROPS.meat, key: 'meat', color: COLORS.protein, r: Math.min(6, 2.5 + f.amt * 0.08), lift: 0.6 };
   switch (f.type) {

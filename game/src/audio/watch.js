@@ -19,6 +19,7 @@ export function soundWatch(app, views) {
   const seenStrike = new WeakMap();
   const seenBug = new WeakMap(); // build 16: each small creature's last state
   let spiderMode = null, sparks = 0, splashes = 0;
+  const seenBoss = {}; let introT = 0, bannerT = 0, downT = 0; // build 19
 
   function hear(s, events) {
     const P = s.player, a = P.ant, c = s.colony, w = s.world;
@@ -130,6 +131,20 @@ export function soundWatch(app, views) {
     if (sparks > s.t) sparks = 0; if (splashes > s.t) splashes = 0; // a new game
     for (const h of hits) if (h.t > sparks) { sparks = h.t; if (!h.k) sfx.play('hitTick', { x: h.x, y: h.y }); }
     for (const sp2 of s.splashes || []) if (sp2.t > splashes) { splashes = sp2.t; sfx.play('plip', sp2); }
+    // Build 19: bosses (their intro, roar, every telegraph and blow) and events.
+    if (s.bossIntro && s.bossIntro.t !== introT) { introT = s.bossIntro.t; sfx.play('bossIntro'); }
+    if (s.bossDown && s.bossDown.t !== downT) { downT = s.bossDown.t; sfx.play('bossDie'); }
+    if (s.banner && s.banner.t !== bannerT) { bannerT = s.banner.t; const k = s.banner.kind; if (s.banner.key === 'warparty') sfx.play('raid'); else sfx.play(k === 'gift' ? 'eventGift' : k === 'hard' ? 'eventHard' : 'eventDark'); }
+    for (const k in s.bosses || {}) {
+      const b = s.bosses[k], was = seenBoss[k] || {}, pos = { x: b.x, y: b.y }, low = k === 'hornworm' ? 0.7 : k === 'beetle' ? 1 : 0.85;
+      if (b.mode === 'fight' && was.mode === 'idle') sfx.play('roar', pos, low);
+      if (b.atk && b.atk !== was.atk) sfx.play('warn', pos, b.atk.at);
+      if (b.charge && !was.charge) sfx.play('charge', pos);
+      if (b.dazeT > 0 && !(was.dazeT > 0)) sfx.play('dazed', pos);
+      const d = b.atkDone; if (d && d !== was.atkDone) { const at = d.x != null ? { x: d.x, y: d.y } : pos; if (d.kind === 'spit') sfx.play('splat', at); else if (d.kind === 'grab') sfx.play('sandSnap', at); else if (d.kind === 'toss') sfx.play('sandHiss', at); else if (d.kind === 'surface') sfx.play('roar', pos, low); else sfx.play('slam', at); }
+      seenBoss[k] = { mode: b.mode, atk: b.atk, charge: b.charge, dazeT: b.dazeT, atkDone: b.atkDone };
+    }
+    for (const e of events) { if (e === 'spores') sfx.play('spores', s.bursts && s.bursts.length ? s.bursts[s.bursts.length - 1] : null); else if (e === 'eventover') sfx.play('eventOver'); }
     // Beds: rain, the mower, the spider's menace, fire ants underfoot.
     const ear = (x, y) => sfx.ear(x, y);
     sfx.loop('rain', s.rain.on ? (app.view === 'nest' ? 0.25 : 0.55) : 0);
@@ -161,6 +176,9 @@ export function soundWatch(app, views) {
     if (s.ants.some((o) => o.team && o.state === 'raid')) d = Math.max(d, 0.8);
     if (s.queen.placed && s.queen.hp < 60) d = 1;
     if ((s.strikes || []).some((st) => Math.hypot(st.x * T - c.x, st.y * T - c.z) < 20 * T)) d = Math.max(d, 0.6);
+    // A boss fight on screen, or a lethal event under way (build 19).
+    for (const k in s.bosses || {}) { const b = s.bosses[k]; if (!b.dead && b.mode === 'fight' && Math.hypot(b.x - c.x, b.y - c.z) < 35 * T) d = 1; }
+    if (s.event && SIM.EVENTS[s.event.key].kind === 'lethal') d = Math.max(d, 0.75);
     return a || s.queen.placed ? d : 0;
   };
   // Behind the title screen: the beds fall silent.

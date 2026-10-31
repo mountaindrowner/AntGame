@@ -11,6 +11,7 @@ import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
+import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
@@ -152,6 +153,12 @@ export class SurfaceView {
     this.dyn.add(...this.bugBars.map((b) => b.group));
     this.fx = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
     this.drops = [];
+    this.diskGeo = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
+    // A plain white speck for sand, dust and spores (tinted per instance).
+    this.dotGeo = new THREE.IcosahedronGeometry(1, 0);
+    { const c = new Float32Array(this.dotGeo.attributes.position.count * 3).fill(1); this.dotGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
+    { const c = new Float32Array(this.diskGeo.attributes.position.count * 3).fill(1); this.diskGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
+    this._bossInit();
 
     // Visitors (sim strikes): a sneaker, a falling acorn, a cloud of bug
     // spray, a robin, a toad, and the shadow each casts first. Pooled;
@@ -393,6 +400,10 @@ export class SurfaceView {
       tmpV.set(a.x, FOOT * k, a.y);
       // Bitten: a red flash. Knocked by a raindrop: it tumbles (build 16).
       if (flashed(s, a)) color = HIT;
+      // Build 19: Cordyceps. The infected go a little grey; turned, they go
+      // grey-green, twitch, and a stalk pokes from the head.
+      if (a.infect != null) { color = tintCache.get('z' + (a.zombie ? 1 : 0)) || (tintCache.set('z' + (a.zombie ? 1 : 0), new THREE.Color(color).lerp(new THREE.Color('#8a9470'), a.zombie ? 0.85 : 0.35)), tintCache.get('z' + (a.zombie ? 1 : 0)));
+        if (a.zombie) { tmpQ.multiply(tmpQ3.setFromAxisAngle(UP, Math.sin(t * 23 + a.id) * 0.35)); if (a.clamp) tmpV.y += 3; } }
       if (a.knockT > 0) { const u = 1 - a.knockT / 0.3; tmpQ.multiply(tmpQ3.setFromAxisAngle(XAX, u * Math.PI * 2)); tmpV.y += Math.sin(u * Math.PI) * 6; }
       // Still ants stand and breathe instead of walking on the spot.
       this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
@@ -439,7 +450,10 @@ export class SurfaceView {
     }
     for (const a of s.ants) {
       if (a.isPlayer || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'dead') continue;
+      // A war party's champion: twice the size, ringed in red (build 19).
+      if (a.champion) { ant(a, '#5a1a12', 2); tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('champ', PROPS.ring, tmpV, tmpQ.identity(), 13, '#ff4030'); continue; }
       ant(a, antColor(a), rankScale(a));
+      if (a.zombie) { tmpV.set(a.x + a.dx * 3, 5 + (a.clamp ? 3 : 0), a.y + a.dy * 3); tmpQ.setFromAxisAngle(UP, a.id); this.items.pushAtScale('zstalk', this.stalkGeo, tmpV, tmpQ, 0.75, 0.8, 0.75, '#ffffff'); }
       const ring = rankRing(a);
       if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
@@ -472,8 +486,11 @@ export class SurfaceView {
     this.lastT = t;
     this._spider(s, t, fdt);
     this._caterpillar(s, t, fdt);
+    this.bugs.begin(); this.fx.begin();
     this._critters(s, t, fdt);
     this._fx(s, t, fdt);
+    this._bosses(s, t, fdt);
+    this.bugs.end(); this.fx.end();
     this._strikes(s, t, fdt);
 
     // Weather and light.
@@ -719,7 +736,6 @@ export class SurfaceView {
   // Build 16: ladybugs, earwigs, crickets and millipedes, live and dead.
   _critters(s, t, fdt) {
     const B = this.bugs, G = this.bugGeo, live = new Set();
-    B.begin();
     let bars = 0;
     const put = (geo, x, y, z, q, k, color, sy) => { tmpV.set(x, y, z); if (sy) B.pushAtScale(geo.uuid, geo, tmpV, q, k, k * sy, k, color); else B.pushAt(geo.uuid, geo, tmpV, q, k, color); };
     // yaw about up, then pitch (nose up +) about the body's side, then roll about its length.
@@ -780,7 +796,6 @@ export class SurfaceView {
       const geo = f.type === 'ladybug' ? G.lbStill : f.type === 'earwig' ? G.ewStill : G.cr.sit;
       put(geo, x, K.back * k * 0.9, z, orient(yaw, 0, Math.PI), k, '#ffffff');
     }
-    B.end();
   }
 
   // Millipede: rings along the head's trail, a leg wave rolling down them;
@@ -834,7 +849,6 @@ export class SurfaceView {
   // pocking the ground all round while it rains.
   _fx(s, t, fdt) {
     const F = this.fx, cq = this.camera.quaternion;
-    F.begin();
     for (const h of s.hits || []) {
       const u = (s.t - h.t) / 0.35; if (u < 0 || u > 1) continue;
       const c = h.k ? '#ff5236' : '#fff0b0';
@@ -862,7 +876,150 @@ export class SurfaceView {
     }
     this.drops = this.drops.filter((d) => t - d.t < 0.4);
     for (const d of this.drops) splash(d.x, d.z, (t - d.t) / 0.4, false);
-    F.end();
+  }
+
+  // Build 19: the bosses, their telegraphs, and the pieces of the events.
+  _bossInit() {
+    const mat = psx({ vertexColors: true });
+    this.bossMat = mat;
+    const hk = ['head', ...Array(HORN_SEGMENTS - 2).fill('body'), 'tail'], hg = {};
+    this.horn = hk.map((k) => { hg[k] = hg[k] || hornwormSegment(k); const m = new THREE.Mesh(hg[k], mat); m.visible = false; this.dyn.add(m); return m; });
+    this.hornPath = [];
+    this.beetleGeo = { walk: Array.from({ length: BEETLE_FRAMES }, (_, i) => beetleGeometry('walk', i)), stand: beetleGeometry('stand'), charge: Array.from({ length: BEETLE_FRAMES }, (_, i) => beetleGeometry('charge', i)), dazed: [beetleGeometry('dazed', 0), beetleGeometry('dazed', 1)] };
+    this.beetle = new THREE.Mesh(this.beetleGeo.stand, mat); this.beetle.rotation.order = 'YZX'; this.beetle.visible = false; this.dyn.add(this.beetle);
+    this.beetleAnim = { phase: 0, x: 0, y: 0, yaw: 0, moved: -9 };
+    this.antlionGeo = [antlionGeometry(false), antlionGeometry(true)];
+    this.antlion = new THREE.Mesh(this.antlionGeo[0], mat); this.antlion.rotation.order = 'YZX'; this.antlion.visible = false; this.dyn.add(this.antlion);
+    this.antlionAnim = { up: 0, yaw: 0 };
+    this.stalkGeo = stalkGeometry();
+    this.alateGeo = alateGeometry();
+    // Danger on the ground: filled red shapes that darken as the blow nears.
+    // Drawn over everything (pit slopes, grass): a warning must never hide.
+    const dmat = () => psxBasic({ color: '#ff3020', transparent: true, opacity: 0.3, depthWrite: false, depthTest: false });
+    this.decals = Array.from({ length: 8 }, () => {
+      const disk = new THREE.Mesh(new THREE.CircleGeometry(1, 28).rotateX(-Math.PI / 2), dmat());
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.92, 1, 28).rotateX(-Math.PI / 2), dmat());
+      const lane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2).translate(0.5, 0, 0), dmat());
+      for (const m of [disk, ring, lane]) { m.renderOrder = 6; m.visible = false; this.dyn.add(m); }
+      return { disk, ring, lane };
+    });
+    this.bossBars = [this._bar(), this._bar()];
+    this.dyn.add(...this.bossBars.map((b) => b.group));
+  }
+
+  _decal(i, k, t, color, done) {
+    const D = this.decals[i]; if (!D) return;
+    const p = Math.min(1, k.t / k.at), pulse = 0.5 + 0.5 * Math.sin(t * (8 + p * 18));
+    const op = done ? 0.6 * (1 - done) : 0.12 + 0.33 * p + 0.1 * pulse;
+    for (const m of [D.disk, D.ring, D.lane]) { m.material.color.set(done ? '#fff4d0' : color); m.material.opacity = op; }
+    if (k.kind === 'lane') {
+      D.lane.visible = true; D.lane.position.set(k.x, 0.9, k.y); D.lane.rotation.set(0, Math.atan2(-k.dy, k.dx), 0); D.lane.scale.set(k.len, 1, k.w);
+    } else {
+      const r = done ? k.r * (1 + done * 0.4) : k.r;
+      D.disk.visible = true; D.ring.visible = true;
+      D.disk.position.set(k.x, 0.9, k.y); D.ring.position.set(k.x, 1.0, k.y);
+      // The fill grows to the edge as the blow nears: when it touches the ring, it lands.
+      D.disk.scale.setScalar(done ? r : r * (0.25 + 0.75 * p)); D.ring.scale.setScalar(r);
+      D.ring.material.opacity = done ? op : 0.5 + 0.4 * pulse;
+      if (k.kind === 'grab') D.disk.rotation.y = t * 6;
+    }
+  }
+
+  _bosses(s, t, fdt) {
+    for (const D of this.decals) { D.disk.visible = D.ring.visible = D.lane.visible = false; }
+    for (const b of this.bossBars) b.group.visible = false;
+    const B = s.bosses || {}, F = this.fx;
+    let di = 0, bi = 0;
+    // A boss's first appearance shakes the view.
+    if (s.bossIntro && s.bossIntro.t !== this.introShook) { this.introShook = s.bossIntro.t; this.shake = Math.max(this.shake, 0.7); }
+    const tele = (b) => {
+      if (b.atk) this._decal(di++, b.atk, t, b.atk.kind === 'grab' ? '#ff7a20' : b.atk.kind === 'toss' ? '#e8c070' : '#ff3020');
+      const d = b.atkDone; if (d && d.x != null && s.t - d.t < 0.35 && (d.kind === 'ring' || d.kind === 'spit' || d.kind === 'grab' || d.kind === 'toss')) this._decal(di++, { kind: 'ring', x: d.x, y: d.y, r: d.kind === 'ring' ? 3.6 * T : d.kind === 'spit' ? 2.4 * T : 1.4 * T, t: 1, at: 1 }, t, '#fff', (s.t - d.t) / 0.35);
+      if (d && (d.kind === 'slam' || d.kind === 'ring' || d.kind === 'surface') && s.t - d.t < 0.05 && !d.shook) { d.shook = true; if (Math.hypot(b.x - this.target.x, b.y - this.target.z) < 30 * T) this.shake = Math.max(this.shake, d.kind === 'slam' ? 0.5 : 0.3); }
+    };
+    // Hornworm.
+    const hw = B.hornworm;
+    const showHw = hw && (!hw.dead || s.t - hw.deadT < 14);
+    this.horn.forEach((m) => (m.visible = !!showHw));
+    if (showHw) {
+      tele(hw);
+      const gap = 13, n = HORN_SEGMENTS, path = this.hornPath, R = 9.5;
+      if (!path.length || Math.hypot(path[0][0] - hw.x, path[0][1] - hw.y) > 80) { path.length = 0; for (let i = 0; i <= n + 2; i++) path.push([hw.x - (hw.dx || 1) * i * gap, hw.y - (hw.dy || 0) * i * gap]); }
+      else if (Math.hypot(path[0][0] - hw.x, path[0][1] - hw.y) > 1) { path.unshift([hw.x, hw.y]); this.hornPhase = (this.hornPhase || 0) + 0.06; this.hornMoved = t; }
+      const pts = [[hw.x, hw.y]]; let acc = 0, want = gap, prev = path[0];
+      for (let i = 1; i < path.length && pts.length < n; i++) { const cur = path[i], l = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]); while (pts.length < n && acc + l >= want) { const u = (want - acc) / l; pts.push([prev[0] + (cur[0] - prev[0]) * u, prev[1] + (cur[1] - prev[1]) * u]); want += gap; } acc += l; prev = cur; if (acc > gap * (n + 4)) { path.length = i + 1; break; } }
+      while (pts.length < n) { const p = pts[pts.length - 1]; pts.push([p[0] - gap, p[1]]); }
+      const crawl = t - (this.hornMoved || -9) < 0.4, dead = hw.dead ? Math.min(1, (s.t - hw.deadT) / 0.8) : 0, sink = hw.dead ? Math.max(0, (s.t - hw.deadT - 10) / 4) : 0;
+      // Rearing: the front rises as the thrash winds up.
+      const rear = hw.atk && hw.atk.kind === 'ring' ? Math.sin(Math.min(1, hw.atk.t / hw.atk.at) * Math.PI * 0.5) : 0;
+      const flash = !hw.dead && flashed(s, hw);
+      this.bossMat.color.set(flash ? HIT : '#ffffff');
+      this.horn.forEach((m, i) => {
+        const a = pts[Math.max(0, i - 1)], c = pts[Math.min(n - 1, i + 1)], yaw = Math.atan2(-(a[1] - c[1]), a[0] - c[0]);
+        const r = R * (i === 0 ? 0.9 : i > n - 4 ? 1 - (i - (n - 4)) * 0.07 : 1), wave = crawl ? Math.max(0, Math.sin((this.hornPhase || 0) * (hw.phase === 2 ? 9 : 6) + i * 0.7)) * 3 : 0;
+        const up = rear * Math.max(0, 5 - i) * 11 + wave;
+        m.position.set(pts[i][0], r * (1 - dead * 0.5) + up - sink * 10, pts[i][1]);
+        m.rotation.set(dead * (i % 2 ? 0.3 : -0.3), yaw || 0, i < 5 ? rear * 0.7 : 0);
+        m.scale.set(r * (1 + dead * 0.2), r * (1 - dead * 0.45), r * (1 + dead * 0.15));
+      });
+      if (!hw.dead && hw.hp < hw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], hw.x, hw.y, 40, hw.hp / hw.maxHp, '#b04ad0');
+    }
+    // Ground beetle.
+    const gb = B.beetle, BA = this.beetleAnim;
+    const showGb = gb && (!gb.dead || s.t - gb.deadT < 14);
+    this.beetle.visible = !!showGb;
+    if (showGb) {
+      tele(gb);
+      const d = Math.hypot(gb.x - BA.x, gb.y - BA.y);
+      if (d > 0.05 && d < 100) { BA.phase += d / (gb.charge ? 18 : 10); BA.moved = t; }
+      BA.x = gb.x; BA.y = gb.y;
+      const aim = Math.atan2(-(gb.dy || 0), gb.dx || 1); BA.yaw += wrapAngle(aim - BA.yaw) * Math.min(1, fdt * (gb.charge ? 20 : 6));
+      const fr = Math.floor(BA.phase * BEETLE_FRAMES) % BEETLE_FRAMES, k = 4.2;
+      let geo = this.beetleGeo.stand, roll = 0, pitch = 0, y = 0, shiver = 0;
+      if (gb.dead) { geo = this.beetleGeo.dazed[Math.floor(t * 3) % 2 && s.t - gb.deadT < 3 ? 1 : 0]; roll = Math.PI * Math.min(1, (s.t - gb.deadT) / 0.5); y = 5 * k * Math.min(1, (s.t - gb.deadT) / 0.5) - Math.max(0, (s.t - gb.deadT - 10) / 4) * 20; }
+      else if (gb.dazeT > 0) { geo = this.beetleGeo.dazed[Math.floor(t * 8) % 2]; roll = Math.sin(t * 5) * 0.25;
+        // Stars round its head while it's dazed.
+        for (let j = 0; j < 3; j++) { const a = t * 4 + j * 2.1; tmpV.set(gb.x + Math.cos(a) * 18, 38 + Math.sin(t * 6 + j) * 3, gb.y + Math.sin(a) * 18); F.pushAt('star', FOOD.star, tmpV, this.camera.quaternion, 9, '#ffe060'); } }
+      else if (gb.charge) { geo = this.beetleGeo.charge[fr]; pitch = -0.08; }
+      else if (gb.atk) { geo = this.beetleGeo.charge[0]; pitch = -0.12; shiver = Math.sin(t * 50) * 1.2; }
+      else geo = t - BA.moved < 0.2 ? this.beetleGeo.walk[fr] : this.beetleGeo.stand;
+      this.beetle.geometry = geo;
+      this.beetle.position.set(gb.x + shiver, y, gb.y);
+      this.beetle.rotation.set(roll, BA.yaw, pitch);
+      this.beetle.scale.setScalar(k);
+      if (!gb.dead && !flashed(s, hw || {})) this.bossMat.color.set(flashed(s, gb) ? HIT : '#ffffff');
+      if (!gb.dead && gb.hp < gb.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], gb.x, gb.y, 44, gb.hp / gb.maxHp, '#b04ad0');
+      // Dust kicked up as it paws the ground and charges.
+      if (gb.charge || gb.atk) for (let j = 0; j < 3; j++) { const a = t * 13 + j * 2; tmpV.set(gb.x - (gb.dx || 1) * 26 + Math.cos(a) * 8, 3 + (t * 20 + j * 3) % 8, gb.y - (gb.dy || 0) * 26 + Math.sin(a) * 8); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.4, '#a89070'); }
+    }
+    // The antlion queen.
+    const al = B.antlion, AA = this.antlionAnim;
+    const showAl = al && (!al.dead || s.t - al.deadT < 14);
+    this.antlion.visible = !!showAl;
+    if (showAl) {
+      tele(al);
+      AA.up += ((al.dead ? 1 : al.under || al.move ? 0 : 1) - AA.up) * Math.min(1, fdt * (al.under ? 4 : 10));
+      const tg = (al.atk && al.atk.x != null) ? al.atk : this.target ? { x: this.target.x, y: this.target.z } : null;
+      if (tg) { const aim = Math.atan2(-(tg.y - al.y), tg.x - al.x); AA.yaw += wrapAngle(aim - AA.yaw) * Math.min(1, fdt * 3); }
+      const k = 6, snap = s.t - (al.snapAt ?? -9) < 0.25 || (al.atkDone && al.atkDone.kind === 'grab' && s.t - al.atkDone.t < 0.3);
+      this.antlion.geometry = this.antlionGeo[snap || (al.atk && al.atk.kind !== 'grab') ? 0 : 1];
+      this.antlion.position.set(al.x, -k * 3.6 * (1 - AA.up) + 5 * AA.up + (al.dead ? -Math.max(0, (s.t - al.deadT - 10) / 4) * 20 : 0), al.y);
+      this.antlion.rotation.set(al.dead ? 1.2 : 0, AA.yaw, al.dead ? 0 : 0.15 + 0.3 * AA.up);
+      this.antlion.scale.setScalar(k);
+      if (!al.dead && !flashed(s, hw || {}) && !flashed(s, gb || {})) this.bossMat.color.set(flashed(s, al) ? HIT : '#ffffff');
+      // Sand: a swirl over her while she waits, a burst when she surfaces, a trail when she tunnels.
+      if (!al.dead && al.under && !al.move) for (let j = 0; j < 6; j++) { const a = t * 1.5 + j * 1.05, r = 14 + (j % 3) * 6; tmpV.set(al.x + Math.cos(a) * r, 1.5, al.y + Math.sin(a) * r); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.2, '#d8c090'); }
+      if (al.atkDone && al.atkDone.kind === 'surface' && s.t - al.atkDone.t < 0.8 || (!al.under && AA.up < 0.9)) for (let j = 0; j < 8; j++) { const a = j * 0.8 + t, u = (t * 2) % 1; tmpV.set(al.x + Math.cos(a) * u * 40, Math.sin(u * Math.PI) * 30, al.y + Math.sin(a) * u * 40); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 3, '#e0cc98'); }
+      if (al.move) { const w = s.world, p0 = w.pits[al.move.from], p1 = w.pits[al.move.to], u = Math.min(1, al.move.t / 2); for (let j = 0; j < 5; j++) { const v = Math.max(0, u - j * 0.05); tmpV.set((p0.x + (p1.x - p0.x) * v) * T, 2 + Math.sin(t * 20 + j) * 2, (p0.y + (p1.y - p0.y) * v) * T); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 3.5, '#c8a870'); } }
+      if (!al.dead && !al.under && al.hp < al.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], al.x, al.y, 46, al.hp / al.maxHp, '#b04ad0');
+    }
+    // Hornworm goo.
+    for (const g of s.goo || []) { const u = Math.min(1, (s.t - g.t) / 0.4), fade = Math.max(0, Math.min(1, (g.end - s.t) / 1.5)); tmpV.set(g.x, 0.8, g.y); F.pushAt('disk', this.diskGeo, tmpV, tmpQ2.identity(), g.r * u * (0.6 + 0.4 * fade), fade > 0.5 ? '#7ad040' : '#5a9a30'); }
+    // Cordyceps stalks, growing, swelling before they burst; spores when they do.
+    for (const st of s.stalks || []) { const g = Math.min(1, st.t / 12), sw = st.t > 9 ? 1 + Math.sin(t * 18) * 0.08 * (st.t - 9) : 1; tmpV.set(st.x, 0, st.y); tmpQ.setFromAxisAngle(UP, st.id); this.bugs.pushAtScale('stalk', this.stalkGeo, tmpV, tmpQ, 3.6 * sw, 3.6 * (0.25 + 0.75 * g) * sw, 3.6 * sw, flashed(s, st) ? HIT : '#ffffff'); }
+    for (const bu of s.bursts || []) { const u = (s.t - bu.t) / 1.6; if (u < 0 || u > 1) continue; for (let j = 0; j < 14; j++) { const a = j * 0.45 + bu.t, r = u * 3.5 * T * (0.6 + (j % 3) * 0.2); tmpV.set(bu.x + Math.cos(a) * r, 6 + u * 18 + (j % 4) * 3, bu.y + Math.sin(a) * r); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.6 * (1 - u * 0.5), '#e8e0a0'); } }
+    // Spore puffs drifting from stalks close to bursting.
+    for (const st of s.stalks || []) if (st.t > 6) for (let j = 0; j < 3; j++) { const u = ((t * 0.7 + j / 3) % 1); tmpV.set(st.x + Math.sin(j * 2 + t) * 6 * u, 20 + u * 16, st.y + Math.cos(j * 2 + t) * 6 * u); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 1.6, '#f0e8b0'); }
   }
 
   _updateRain(t) {

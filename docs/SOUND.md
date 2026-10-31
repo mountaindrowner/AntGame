@@ -99,6 +99,21 @@ Priority: **1** is the first batch (the core loop and the dangers), **2** the se
 
 | Sound | When | Sounds like | How | P |
 |---|---|---|---|---|
+| Boss appears | The first time you come near a boss (build 19) | A deep cinematic sting | A low thump, three falling sawtooth chords, a low swell | 1 |
+| Boss roars | It wakes, or the antlion queen surfaces | A growl | A sawtooth sweeping down with a fast wobble, over low noise; pitched per boss | 1 |
+| Telegraph | A boss starts an attack (the red shape appears) | A rising whoosh, as long as the warning | A triangle sweep 300→900 Hz with a band-passed noise rise | 1 |
+| Boss blow lands | Thrash, roll, charge stop, slam into a rock | A heavy slam | A deep thump and a low-passed burst | 1 |
+| Beetle charge | It charges | Galloping thuds | Ten quick low thumps and a rumble | 1 |
+| Dazed | The beetle is dazed | Cartoon birdies | Six high sine pips | 2 |
+| Goo spit | The hornworm's goo lands | A wet splat | A low-passed burst and a falling sine | 2 |
+| Sand grab | The antlion queen drags an ant down | A sand rush and a snap | A band-passed noise sweep, then two square clicks | 1 |
+| Sand toss | Her sand lands | A hiss of sand | Band-passed noise 3→1.2 kHz | 2 |
+| Boss killed | A boss dies | A fanfare | A big thump and a rising square arpeggio | 1 |
+| Event: a gift | Swarm day, a picnic | A bright little fanfare | Five rising triangle notes | 2 |
+| Event: a hardship | A heatwave | A shimmering, uneasy chord | Two slowly sliding triangles over high noise | 2 |
+| Event: lethal | A Cordyceps outbreak (a war party uses the raid drums) | Eerie, sinking | Four slow wavering sine notes over a low rumble | 1 |
+| Spores burst | A Cordyceps stalk bursts | A dusty pop | A band-passed noise puff and a soft thump | 1 |
+| Event over | Any event ends | A calm resolve | Three gentle rising sine notes | 2 |
 | Bite lands | A spark: one of your ants bites something (build 16) | A tiny dry tick | A 12 ms high-passed noise click and a short square blip; at most three at once | 2 |
 | Spider lunges | It springs out of its crouch | A hiss and a thud | Band-passed noise 2.5→1.2 kHz, and a low thump | 1 |
 | Spider eats | It stops over a kill | Slow crunching | Low-passed grain crunches every half second for 2 s | 2 |

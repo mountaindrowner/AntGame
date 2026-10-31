@@ -2,6 +2,66 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: bosses and events (build 19)
+
+`PLAYTEST-2.md` items 29 and 30. Mark: "make them proper bosses and events, really enthralling stuff."
+
+**Three bosses**, each in its own lair, built so you can read and dodge them:
+
+- **The shape of every fight:**
+  - The first time you come near a boss, a title card names it (name, epithet, how to beat it), the view shakes, a cinematic sting plays, and a boss bar appears at the top of the screen. The bar has a live line on what it's doing: "Rearing to thrash: get out of the ring!", "★ DAZED: BITE NOW! ★".
+  - Every attack shows first as red on the ground: a ring, a circle or a lane. The fill grows to the edge as the blow nears, and it lands when it touches. Step out and you're spared. A rising whoosh plays for exactly as long as the warning.
+  - Each boss turns at half health: the bar burns orange and its pattern changes.
+  - Music goes to full danger while a boss fight is on screen.
+  - Killed, a boss stays dead. It drops its meat and chitin and pays 🧬4, and the ant that bit last becomes a Legend with a title ("Shell-breaker"). A victory card names its trophy.
+  - Only then can you hold its region.
+  - A boss left alone goes back to sleep and heals.
+- **The Hornworm** ("Glutton of the Tomato Rows"):
+  - A fat green caterpillar 13 rings long, with white stripes and a red horn.
+  - It strips the plants in its region, so your aphids there wither while it lives.
+  - It rears up (its front rises) and thrashes a ring 3.6 tiles across: 4 damage and a shove.
+  - It spits goo at the ants further off: a circle that hurts and leaves a slowing puddle for 7 s.
+  - In its frenzy it's faster, attacks more often, and rolls down a lane, crushing what's in it.
+  - 700 health. Trophy, **hornworm silk**: builders build rooms twice as fast.
+- **The Ground Beetle** ("Armoured Hunter of the Rock Garden"):
+  - Glossy black with a blue sheen and crossed sickle jaws.
+  - Bites barely scratch it: workers 15%, you 35%, Venom ants 50%.
+  - It paws the ground (a lane appears), then charges down it, bowling ants over.
+  - If the charge hits a rock it's dazed for 4.5 s, otherwise 2.2 s. Stars circle its head, the bar flashes "DAZED", and it takes 2.5× damage.
+  - Dodge, then punish. You can bait it into rocks.
+  - Enraged, it charges twice. It snaps at ants close by.
+  - 520 health. Trophy, **its shell**: the new **Armory** room (🌾40 🪨20 🪲20). Every ant is 50% tougher, and foragers shrug off one foot or beak.
+- **The Antlion Queen** ("Terror of the Sandbox"):
+  - Under the deepest pit, only her jaws showing through swirling sand.
+  - Ants near the pit: the sand swirls orange under one, and if it's still there when the swirl closes, she drags it down.
+  - Ants further off get sand flung at them: slowed and shoved toward the pit.
+  - After every grab she surfaces for a few seconds, and only then can she be hurt. Eight ants at the pit's edge for two seconds draw her up for five ("Lure it with a rally mark", from the design).
+  - At half health she tunnels from pit to pit, with a dust trail between them.
+  - 480 health. Trophy, **her mandible**: fighters bite 15% harder, and the pits never drag your ants again.
+
+**The event director**, after RimWorld's storytellers.
+
+- **The rules:**
+  - The first event comes at 9–11 minutes, then one every 4–7 minutes after each ends.
+  - Lethal ones need a colony of at least 12 ants, or 30% of the queen's cap, and come after the 10-minute mark. Never two within 3 minutes.
+  - After 6 calm minutes, lethal events become twice as likely.
+- **What you see:** each is announced with a banner (gold for gifts, orange for hardships, red for lethal), its own sting, and a chip in the top bar (a countdown, or the outbreak's infected and stalk counts). It ends with a report.
+- **Swarm day** (gift): winged queens from every colony rain down near your ants for 40 s, 6 protein each, and the birds come early.
+- **A picnic** (gift): three treats land by the Picnic blanket, Lawn or Clover, and feet come every 16–28 s there for 100 s.
+- **Heatwave** (hardship, after 10 minutes): for 2 minutes water drains, puddles shrink, dew dries, and ants outside are 15% slower. It breaks with thunder and rain.
+- **War party** (lethal):
+  - A **named champion** (Gravel-Jaw, Cinder, Old Crack…) leads 6 or more soldiers on your nest.
+  - The champion is twice the size, red-ringed and labelled, with 45 health, bites three times as hard, and has its own boss bar.
+  - Kill it and the rest break and run; the ant that did most of the work becomes a Legend, "Champion-killer". +2 🧬.
+- **Cordyceps outbreak** (lethal, after 15 minutes with 15 ants; the first time it's twice as likely):
+  - Two foragers far from home are infected and go faintly grey. For 15 s they work on: nurses inside can cure them, but left inside they can spread it.
+  - Then they **turn**: grey-green, twitching, a stalk poking from the head. They abandon their work and climb to a high place beside a rock or stem, and clamp on.
+  - At 35 s they die and a **fungal stalk** grows from the body, swelling and puffing spores. 12 s later it **bursts**, infecting ants within 3.5 tiles (60% of workers, 35% of fighters).
+  - Fighters on patrol, your crew and you go after zombies and stalks.
+  - It ends when nothing is infected and no stalk stands. A report follows ("the fungus took 4 ants, and your nurses cured 2"), plus +2 🧬, and the colony gets a little more resistant each time (−20% infection).
+
+- **Tests:** 70 (new: lairs and the first-sight intro, the hornworm's ring that spares those who step out, the beetle's armour against a dazed beetle, its charge lane, the antlion queen drawn up by a crew, a boss kill's trophy, Genes, chitin, Legend and the Armory unlocked, the director's early gift, the outbreak's turning, stalks and spores, soldiers and nurses ending an outbreak, the war party's champion, a save mid-boss and mid-event). The browser test shows a Swarm day banner and walks up to the hornworm for its boss bar.
+
 ## Nov 1: sugar and chitin (build 18)
 
 PROGRESSION step 2 (`PLAYTEST-2.md` items 30 and 31): two new materials, and the tech that was waiting on them.

@@ -400,6 +400,21 @@ try {
     }
   }
   await sim(() => { const s = window.UNDERFOOT.app.s; s.rain.on = false; s.critters = []; });
+  // Build 19: an event banner, and a boss's bar when you walk up to it.
+  await sim(() => { const { app, SIM } = window.UNDERFOOT, s = app.s; SIM.startEvent(s, 'swarm'); });
+  await page.waitForTimeout(500);
+  const ban = await page.$eval('#banner', (e) => (e.classList.contains('hidden') ? '' : e.textContent)).catch(() => '');
+  console.log('event banner'.padEnd(22), '|', ban.slice(0, 60));
+  if (!/Swarm day/.test(ban)) errors.push('test: the Swarm day banner did not show');
+  await shot('event-banner');
+  const bossOk = await sim(() => { const { app, SIM } = window.UNDERFOOT, s = app.s, b = SIM.ensureBoss(s, 'hornworm'); if (!b) return 'no hornworm'; const a = s.player.ant; if (!a) return 'no ant'; s.player.inNest = false; a.state = 'player'; a.x = b.x + 8 * SIM.T; a.y = b.y; a.tx = Math.floor(a.x / SIM.T); a.ty = Math.floor(a.y / SIM.T); a.hp = 999; s.player.tx = null; return 'ok'; });
+  await page.waitForTimeout(1500);
+  const bar = await page.$eval('#bossbar', (e) => (e.classList.contains('hidden') ? '' : e.textContent)).catch(() => '');
+  console.log('boss bar'.padEnd(22), '|', bossOk, bar.slice(0, 60));
+  if (!/Hornworm/.test(bar)) errors.push('test: walking up to the hornworm showed no boss bar');
+  await shot('boss-hornworm');
+  await sim(() => { const { app } = window.UNDERFOOT, s = app.s; s.event = null; const a = s.player.ant; if (a) { a.x = (s.world.ex + 2.5) * 16; a.y = (s.world.ey + 2.5) * 16; a.tx = s.world.ex + 2; a.ty = s.world.ey + 2; } });
+  await page.click('#banner', { force: true, timeout: 2000 }).catch(() => {});
   // Build 17: the Jobs page. Put stone first for foragers, switch soldiers off food.
   await page.click('#jobsbtn', { force: true, timeout: 5000 });
   await page.waitForTimeout(400);

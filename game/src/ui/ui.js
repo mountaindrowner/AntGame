@@ -427,8 +427,53 @@ export function createUI(app) {
     if (SIM.eggLock(s, 'soldier') && c.protein >= 5) return 'You have protein. Dig a 6×3 pocket and build a Barracks.';
     return '';
   }
+  // Build 19: the event under way, as a chip in the top bar.
+  function eventChip(s, chip) {
+    const ev = s.event; if (!ev) return '';
+    const E = SIM.EVENTS[ev.key];
+    if (ev.key === 'cordyceps') return chip('🍄', `${ev.data.infected || 0}${ev.data.stalkN ? ` · 🌱${ev.data.stalkN}` : ''}`, `Outbreak: ${ev.data.infected || 0} infected ant${ev.data.infected === 1 ? '' : 's'}${ev.data.stalkN ? `, ${ev.data.stalkN} stalk${ev.data.stalkN === 1 ? '' : 's'} growing` : ''}. Kill zombies and stalks; nurses cure the newly infected inside.`, true);
+    const left = Math.max(0, Math.ceil(ev.end - ev.t));
+    return chip(E.icon, `${left}s`, `${E.name}: ${E.line}`, E.kind === 'lethal');
+  }
+  // Build 19: the boss bar (the boss in a fight nearest you, or a war party's
+  // champion), and the banner that announces bosses and events.
+  const BOSS_STATUS = {
+    hornworm: (b) => (b.roll ? 'ROLLING!' : b.atk && b.atk.kind === 'ring' ? 'Rearing to thrash: get out of the ring!' : b.atk && b.atk.kind === 'lane' ? 'About to roll: get out of the lane!' : b.atk ? 'Spitting goo: move!' : b.phase === 2 ? 'Frenzied' : 'Stripping the plants'),
+    beetle: (b) => (b.dazeT > 0 ? '★ DAZED: BITE NOW! ★' : b.charge ? 'CHARGING!' : b.atk ? 'Pawing the ground: get out of the lane!' : b.phase === 2 ? 'Enraged: it charges twice' : 'Armoured: bites barely scratch it'),
+    antlion: (b) => (b.move ? 'Tunnelling to another pit…' : !b.under ? '★ SURFACED: BITE NOW! ★' : b.atk && b.atk.kind === 'grab' ? 'The sand swirls: step off it!' : b.atk ? 'Flinging sand!' : b.lureT > 0 ? 'Your crew is drawing her up…' : 'Under the sand: bring 8 ants to the pit’s edge'),
+  };
+  let bannerSeen = 0, introSeen = 0, downSeen = 0, bannerTimer = null;
+  const bossbar = $('bossbar'), banner = $('banner');
+  banner.addEventListener('click', () => banner.classList.add('hidden'));
+  function showBanner(kind, icon, title, line, sub) {
+    banner.className = 'b-' + kind; banner.innerHTML = `<div class="bi">${icon}</div><div class="bt">${title}</div>${sub ? `<div class="bsub">${sub}</div>` : ''}<div class="bl">${line}</div>`;
+    void banner.offsetWidth; banner.classList.add('on');
+    clearTimeout(bannerTimer); bannerTimer = setTimeout(() => banner.classList.add('hidden'), kind === 'boss' ? 8000 : 6500);
+  }
+  function bossUi(s) {
+    const B = s.bosses || {}, pa = P().ant, fx = pa && !P().inNest ? pa.x : (s.world.ex + 0.5) * T, fy = pa && !P().inNest ? pa.y : (s.world.ey + 0.5) * T;
+    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : '🌀', D.name, D.tip, D.title); }
+    if (s.bossDown && s.bossDown.t !== downSeen) { downSeen = s.bossDown.t; const D = SIM.BOSSES[s.bossDown.key], Tr = SIM.TROPHY[D.trophy]; showBanner('win', '🏆', `${D.name} is dead!`, `${Tr.name}: ${Tr.fx}. +4 🧬 and its chitin.`, 'Victory'); }
+    if (s.banner && s.banner.t !== bannerSeen) { bannerSeen = s.banner.t; showBanner(s.banner.kind, s.banner.icon, s.banner.title, s.banner.line); }
+    let pick = null, pd = 34 * T;
+    for (const k in B) { const b = B[k]; if (b.dead || b.mode !== 'fight') continue; const d = Math.hypot(b.x - fx, b.y - fy); if (d < pd) { pd = d; pick = b; } }
+    const champ = s.event && s.event.key === 'warparty' ? s.ants.find((a) => a.champion && a.state !== 'dead') : null;
+    if (!pick && champ && Math.hypot(champ.x - fx, champ.y - fy) < 40 * T) {
+      bossbar.classList.remove('hidden', 'p2'); bossbar.querySelector('.bn').innerHTML = `<b>${champ.name}</b><i>Champion of the pavement ants</i>`;
+      bossbar.querySelector('.bf').style.width = Math.max(0, (champ.hp / (champ.maxHp || 45)) * 100) + '%'; bossbar.querySelector('.bp').style.display = 'none';
+      bossbar.querySelector('.bs').textContent = 'Kill the champion and the war party breaks'; return;
+    }
+    if (!pick) { bossbar.classList.add('hidden'); return; }
+    const D = SIM.BOSSES[pick.key], st = BOSS_STATUS[pick.key](pick);
+    bossbar.classList.remove('hidden'); bossbar.classList.toggle('p2', pick.phase === 2); bossbar.classList.toggle('open', /NOW/.test(st));
+    bossbar.querySelector('.bn').innerHTML = `<b>${D.name}</b><i>${D.title}</i>`;
+    bossbar.querySelector('.bf').style.width = Math.max(0, (pick.hp / pick.maxHp) * 100) + '%';
+    const bp = bossbar.querySelector('.bp'); bp.style.display = ''; bp.style.left = D.phase2 * 100 + '%';
+    bossbar.querySelector('.bs').textContent = st;
+  }
   function update() {
     const s = app.s, c = s.colony;
+    bossUi(s);
     const st = SIM.stats(s);
     const cap = SIM.queenCap(s.queen.level), nAnts = SIM.antCount(s);
     // One compact row of chips; each says what it is when touched or hovered.
@@ -445,6 +490,7 @@ export function createUI(app) {
       + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
       + (s.rain.on ? chip('🌧', '', 'Raining: trails wash out') : '')
       + (s.repairs.length ? chip('⚠', s.repairs.length, 'Cave-ins to repair', true) : '')
+      + eventChip(s, chip)
       + `<button class="more" data-tip="Colony details" aria-label="Colony details">⋯</button>`;
     if (el.stats.dataset.html !== statsHtml) { el.stats.dataset.html = statsHtml; el.stats.innerHTML = statsHtml; }
     app.statsLine = `🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} food/min · ${app.fps} fps`;
