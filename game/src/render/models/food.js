@@ -161,6 +161,15 @@ function bug() {
   return bake(parts);
 }
 
+// A beetle's cast-off shell (build 18): a ridged, glossy dark wing case with
+// a green-bronze sheen along the top, split down the middle.
+function shell() {
+  const g = new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.5, 0.75, 1.05);
+  const parts = [at(paint(g, (x, y, z) => (Math.abs(z) < 0.08 ? '#0c0c0a' : y > 0.55 ? '#4a6a3a' : Math.floor((x + 2) * 3) % 2 ? '#1c2418' : '#283422')), 0, 0.05, 0)];
+  parts.push(at(paint(new THREE.SphereGeometry(0.42, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.8, 1.3), '#141410'), 1.55, 0.05, 0));
+  return bake(parts);
+}
+
 // Jelly bean: a glossy bent bean with a pale shine.
 function jellybean(color, shine) {
   const g = new THREE.SphereGeometry(1, 10, 6);
@@ -232,6 +241,7 @@ export const FOOD = {
   acorn: acorn(),
   slug: slug(),
   bug: bug(),
+  shell: shell(),
   gummy: [gummy('#e0283c', '#ff9aa8'), gummy('#f2b81e', '#fff0a0'), gummy('#3cb84a', '#b8f8b0')],
   bead: bead(),
   blade: blade(),
@@ -251,6 +261,7 @@ export function itemLook(f, COLORS) {
     return { dew: true, r: Math.min(5, 2.6 + f.amt * 0.3), beads: Math.max(1, Math.min(4, Math.ceil(f.amt / 2))) };
   }
   if (f.kind === 'grit') return { geo: PROPS.pebble, key: 'pebble', color: COLORS.grit, r: 2.6, lift: 0.6 };
+  if (f.kind === 'chitin') return { geo: FOOD.shell, key: 'shell', color: '#ffffff', r: 3 + Math.min(f.amt, 15) * 0.15 };
   if (f.kind === 'protein' && f.type === 'hotdog') return { geo: FOOD.hotdog, key: 'hotdog', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.12) };
   if (f.kind === 'protein' && f.type === 'slug') return { geo: FOOD.slug, key: 'slug', color: '#ffffff', r: 6 };
   if (f.kind === 'protein' && f.type === 'bug') return { geo: FOOD.bug, key: 'bug', color: '#ffffff', r: Math.min(5.5, 2.5 + f.amt * 0.2) };
@@ -277,6 +288,7 @@ export function carryLook(kind, itype, COLORS) {
   if (kind === 'grit') return { geo: PROPS.pebble, key: 'cgrit', color: COLORS.grit, r: 1 };
   if (kind === 'dirt') return { geo: PROPS.pebble, key: 'cdirt', color: '#6a4628', r: 1.15 }; // a clod of dug dirt for the spoil heap
   if (kind === 'protein') return { geo: PROPS.meat, key: 'cmeat', color: COLORS.protein, r: 1 };
+  if (kind === 'chitin') return { geo: FOOD.shell, key: 'cshell', color: '#ffffff', r: 0.9 };
   if (itype === 'aphids') return { geo: PROPS.crumb, key: 'choney', color: '#e8c860', r: 0.9 }; // a drop of honeydew
   if (TREAT_COLOR[itype]) return { geo: PROPS.crumb, key: 'c' + itype, color: TREAT_COLOR[itype], r: 1 };
   const g = FOOD[itype] && !Array.isArray(FOOD[itype]) ? itype : 'crumb';

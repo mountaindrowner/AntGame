@@ -13,13 +13,14 @@ const v = new THREE.Vector3();
 function itemCard(f) {
   if (f.kind === 'water') return f.type === 'puddle' ? ['💧', 'Puddle', 'Water. It never dries up.'] : ['💧', 'Dew', 'Water, for a minute. Eggs need it.'];
   if (f.kind === 'grit') return ['🪨', 'Pebble', 'Stone, for rooms and upgrades.'];
+  if (f.kind === 'chitin') return ['🪲', 'Beetle shell', `${Math.round(f.amt)} chitin, for tough bodies and fighters' upgrades.`];
   if (f.kind === 'protein') {
     if (f.type === 'spider' || f.type === 'cat') return ['🥩', 'Meat', `${Math.round(f.amt)} protein. Haul it home.`];
     if (SIM.BUGS[f.type]) return ['🥩', 'Dead ' + SIM.BUGS[f.type].name, `${Math.round(f.amt)} protein. Haul it home.`];
     const F = FOODS[f.type];
     return ['🥩', cap(F ? F.name : 'Meat'), `Protein for soldiers. ${Math.round(f.amt)} left.`];
   }
-  if (f.type === 'aphids') return ['🌿', 'Aphids', 'Honeydew food. It keeps coming back.'];
+  if (f.type === 'aphids') return ['🌿', 'Aphids', 'Honeydew: food, and a little 🍯 sugar. It keeps coming back.'];
   const F = FOODS[f.type];
   if (F && F.crew) return ['🍬', cap(F.name), `A treat: ${Math.round(f.amt)} food. Needs a crew of ${F.crew}.`];
   return ['🌾', cap(F ? F.name : 'Food'), `Food: ${Math.round(f.amt)}. Pick it up and bring it home.`];

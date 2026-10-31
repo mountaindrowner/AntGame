@@ -437,6 +437,8 @@ export function createUI(app) {
       + chip('💧', `${Math.floor(c.water)}<i>/${c.waterCap}</i>`, `Water ${Math.floor(c.water)} of ${c.waterCap}. Each egg costs 1`, c.water < 2)
       + chip('🥩', Math.floor(c.protein), 'Protein: for soldiers and the queen')
       + chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen')
+      + (c.sugarTotal ? chip('🍯', Math.floor(c.sugar), 'Sugar: from honeydew and sweet treats. For the queen’s later levels, nurses and evolutions') : '')
+      + (c.chitinTotal ? chip('🪲', Math.floor(c.chitin), 'Chitin: from dead bugs, beetle shells and boss kills. For tough bodies and fighters') : '')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
       + (c.genesTotal ? chip('🧬', c.genes, 'Genes: tap to evolve').replace('<span class="chip', '<span data-genes="1" class="chip') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')

@@ -34,7 +34,8 @@ test('evolution nodes need their parent, their room and the Genes', () => {
   assert.equal(SIM.evoLock(s, 'formic'), 'needs Strong mandibles first');
   assert.match(SIM.evoLock(s, 'hatchery2'), /Hatchery/);
   assert.equal(SIM.evoLock(s, 'crews2'), 'needs Bigger crews first');
-  assert.equal(SIM.evoLock(s, 'bigcrop'), 'coming in a later build', 'needs sugar: shown, not sold');
+  assert.equal(SIM.evoLock(s, 'bigcrop'), 'needs Trail runners first', 'build 18: sugar nodes are real now');
+  assert.equal(SIM.evoLock(s, 'royal'), 'coming in a later build', 'wood: shown, not sold');
   const g = c.genes;
   assert.ok(SIM.buyEvo(s, 'mandibles'));
   assert.equal(c.genes, g - 2);

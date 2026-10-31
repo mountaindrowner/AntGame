@@ -28,6 +28,8 @@ export const EXPL = {
   rain: ['Rain', 'Trails wash away. Keep a Builder inside or the bottom tunnel caves in.'],
   cavein: ['Cave-in', 'A tunnel fell in. Builders inside repair it.'],
   protein: ['Protein', 'Red meat and dead bugs. It pays for Soldiers and feeds them.'],
+  sugar: ['🍯 Sugar', 'Honeydew from aphids and bits of sweet treats. It pays for the queen’s later levels, nurse training and evolutions. Aphid farming (Evolve → Symbiosis) triples it.'],
+  chitin: ['🪲 Chitin', 'From dead bugs, beetle shells and big kills. It pays for tough bodies (Tough cuticle) and fighters’ upgrades.'],
   grit: ['Stone', 'Builders fetch pebbles. Stone pays for rooms and queen upgrades.'],
   queen: ['', 'Tap a caste to lay an egg. A Hatchery lets her lay more at once.'],
   build: ['', 'Each room needs a dug pocket its size. You pay now; Builders finish it.'],
@@ -52,7 +54,7 @@ export const HELP_PAGES = [
 <div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, hauls dirt out, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders.</div>
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging. You can build one of each per queen level; extras cost more, and every room eats a little food to run.</div>
 <div class="h"><b>Jobs</b> The clipboard button. Each kind of ant does the first job on its list that needs doing (gather food, fetch water or stone, hunt, dig and build, tend eggs, guard the door), then helps with the next. Tap a job to put it first; ✕ turns it off.</div>
-<div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades.</div>
+<div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades. 🍯 Sugar: honeydew and sweet treats, for the queen's later levels and nurses. 🪲 Chitin: dead bugs, beetle shells and boss kills, for tough bodies and fighters.</div>
 <div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>`],
   ['Growth', `
 <div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs, big kills and goals. Spend them on the evolution tree.</div>

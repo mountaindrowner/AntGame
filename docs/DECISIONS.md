@@ -2,6 +2,37 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: sugar and chitin (build 18)
+
+PROGRESSION step 2 (`PLAYTEST-2.md` items 30 and 31): two new materials, and the tech that was waiting on them.
+
+- **🍯 Sugar**:
+  - Honeydew: every load of aphid honeydew brings 1. Aphid farming makes it 3, and a held garden doubles that.
+  - Sweet treats (jelly beans, gummy bears, cookies) pay 30% of their size in sugar as well as food, hauled by a crew or chewed off by Haulers.
+  - Held regions give half a 🍯 a minute each with Flower nectar.
+- **🪲 Chitin**:
+  - Carcasses: every load of a dead bug brings 1; the ladybug, earwig, millipede and spider 2.
+  - **Beetle shells**, a new item worth 8, turn up now and then on bark, compost, gravel, mulch, leaves and hedges.
+  - The spider leaves a shell worth 15 when it dies.
+  - A held Woodpile turns up more shells and doubles the chitin from its dead bugs; that is its new prize.
+  - Foragers on Hunt bring shells as well as meat.
+- Both show in the top bar once you have found any, with a first-find tip and a line in Help.
+- **What they buy now** (all were marked "later build"):
+  - **Queen** levels 5, 6 and 7 (100, 120 and 140 ants), with her level-5 traits: **Brood mother** (eggs 30% cheaper) or **Matriarch** (10% more health). Level 8 still needs 🪵 wood.
+  - **Forager** IV (carries 2 more, range 130) and Mastery: **Trail queen** (every ant on a trail 40% faster) or **Lone wolf** (forages anywhere).
+  - **Soldier** III (20% faster; picks **Alarm caller**, every idle fighter answers an alarm, or **Phalanx**, bites 50% harder with 3 or more together), IV (50% more health again) and Mastery (**Warlord**, fighters together bite 30% harder; **Guardian**, raiders hurt the queen half as much).
+  - **Venom** III (stings 30% harder; **Neurotoxin**, stings slow bosses; **Lethal dose**, small foes die in one sting).
+  - **Nurse** III (eggs 30% faster with nurses in; **Brood guard**, nurses guard the door from inside; **Attendant**, the queen lays 20% faster), IV (25% faster again) and Mastery (**Teacher**, every ant hatches Seasoned; **Caste-shaper**, fighter eggs at a worker's cost).
+  - **Evolutions:**
+    - Big crop: foragers carry 3 more.
+    - Social stomach: your ant never starves, and colony starvation kills half as often.
+    - Tough cuticle: every ant has 50% more health.
+    - Brood chambers: eggs 25% cheaper.
+    - Aphid farming.
+    - Flower nectar.
+- Still "later": the Major and Supermajor, Long-lived workers, the Honeypot, Polygyny, mealybugs, and everything wood pays for.
+- **Tests:** 59 (new: honeydew sugar and Aphid farming, chitin from carcasses and shells, shells on the right ground, sugar from a treat, sugar and chitin paying for upgrades, the queen and evolutions, the Woodpile prize).
+
 ## Oct 31: running the colony (build 17)
 
 The third build phase from `PLAYTEST-2.md` (items 27, 34 and 36), and the spider walking through a rock.

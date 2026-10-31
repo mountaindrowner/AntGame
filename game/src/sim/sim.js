@@ -52,13 +52,19 @@ const FOODS = {
   bug:      {name:'dead bug', amt:[15,15], protein:true},
   hotdog:   {name:'hot dog scrap', amt:[14,18], protein:true},
   // Treats are too big for one ant: the player lifts them with a crew.
-  jellybean:{name:'jelly bean', amt:[40,40], treat:true, crew:6},
-  cookie:   {name:'cookie', amt:[35,35], treat:true, crew:6},
-  gummy:    {name:'gummy bear', amt:[50,50], treat:true, crew:8},
+  jellybean:{name:'jelly bean', amt:[40,40], treat:true, crew:6, sweet:true},
+  cookie:   {name:'cookie', amt:[35,35], treat:true, crew:6, sweet:true},
+  gummy:    {name:'gummy bear', amt:[50,50], treat:true, crew:8, sweet:true},
   chip:     {name:'potato chip', amt:[30,30], treat:true, crew:4},
   acorn:    {name:'acorn', amt:[30,30], treat:true, crew:4},
   slug:     {name:'slug', amt:[20,26], protein:true},
+  // Build 18: a beetle's cast-off shell, all chitin.
+  shell:    {name:'beetle shell', amt:[8,8], chitin:true},
 };
+// Build 18: 🪲 chitin per load of each kind of carcass hauled home, and
+// 🍯 sugar from honeydew (aphids) and sweet treats.
+const CHITIN_OF = { bug: 1, spider: 2, ladybug: 2, earwig: 2, cricket: 1, millipede: 2, slug: 0 };
+const SHELL_GROUND = /bark|compost|gravel|hedge|leaf|mulch/;
 const heavy = f => !!(FOODS[f.type] && FOODS[f.type].crew);
 const SOIL = [ {name:'soft', work:6}, {name:'packed', work:12}, {name:'clay', work:20} ];
 const soilTier = y => y < SOIL_TOP[1] ? 0 : y < SOIL_TOP[2] ? 1 : 2;
@@ -163,7 +169,7 @@ function newColony(ex, ey, team){
 function growthState(){
   return { genes: 0, genesTotal: 0, up: {}, picks: {}, evo: {}, doctrine: {}, qtraits: {}, found: {}, scouted: {},
     hatched: 0, treats: 0, foodTotal: 0, storePeak: 0, repaired: 0, raidsBeaten: 0, fallen: [], named: 0,
-    held: {}, goals: { done: {}, sets: {} }, dug: 0 };
+    held: {}, goals: { done: {}, sets: {} }, dug: 0, sugar: 0, chitin: 0, sugarTotal: 0, chitinTotal: 0 };
 }
 function create(seed){
   const w = makeWorld(seed || 7);
@@ -261,7 +267,7 @@ function spawnFood(s, ai, treats){
   return spawnInArea(s, ai, FOODS[type] && FOODS[type].protein ? 'protein' : 'food', type);
 }
 // How far foragers roam on their own: a bigger colony reaches farther.
-const forageRange = s => FORAGE[Math.min(4, s.colony.forage || 0)].range;
+const forageRange = s => picked(s, 'forager', 'lonewolf') ? 400 : FORAGE[Math.min(4, s.colony.forage || 0)].range;
 // A forager's pace, with its training.
 const fSpeed = (s, a) => paceOf(s, a, CASTES[a.caste].speed * (!a.team && a.caste === 'forager' ? FORAGE[Math.min(4, s.colony.forage || 0)].speed : 1));
 const areaOf = (s, x, y) => s.world.area[idx(Math.max(0, Math.min(W-1, x)), Math.max(0, Math.min(H-1, y)))];
@@ -329,24 +335,31 @@ function wanted(s, a){
   if (c.store < c.cap) want.food = 1;
   if (!a.team && c.water < c.waterCap*0.6) want.water = 1.2;
   want.protein = 1.5;
+  if (!a.team) want.chitin = 0.7;
   // Enough stone for the next queen upgrade, never less than 30.
   if (!a.team && (a.caste==='builder' || c.store > c.cap*0.6) && c.grit < Math.max(30, (QUEEN_UP[s.queen.level] || {}).grit || 0)) want.grit = 0.8;
   // On a duty (build 17): that's what it looks for; anything else it wants
   // only if it's much nearer.
   const D = !a.team && a.duty && DUTIES[a.duty];
-  if (D && D.kind){ for (const k in want) want[k] *= 0.35; want[D.kind] = 1.5; }
+  if (D && D.kind){ for (const k in want) want[k] *= 0.35; want[D.kind] = 1.5; if (a.duty === 'hunt') want.chitin = 1.3; }
   return want;
 }
 function nearestItem(s, a, r, want){ let best=null, bd=r; for (const f of s.items){ if (f.amt<=0 || !want[f.kind] || (heavy(f) && !a.team && !chewsTreats(s, a)) || f.carried) continue; const d = Math.hypot(f.x-a.tx, f.y-a.ty)/want[f.kind]; if (d < bd){ bd = d; best = f; } } return best; }
 function deposit(s, a){
   const c = colonyOf(s, a);
   if (!a.team && a.carry > 0){ gainXp(s, a, 3); discover(s, a.itype || a.kind); }
-  if (a.kind === 'food'){ const put = Math.min(Math.max(0, c.cap - c.store), a.carry); c.store += put; c.delivered[0] += put; if (!a.team) c.foodTotal += put; }
+  if (a.kind === 'food'){ const put = Math.min(Math.max(0, c.cap - c.store), a.carry); c.store += put; c.delivered[0] += put; if (!a.team) c.foodTotal += put;
+    // Honeydew and bits of sweets are sugar too (build 18).
+    if (!a.team && a.carry && a.itype === 'aphids') addSugar(s, (has(s, 'aphids') ? 3 : 1)*(prizeFx(s, a.ireg) === 'aphids' ? 2 : 1));
+    else if (!a.team && a.carry && FOODS[a.itype] && FOODS[a.itype].sweet) addSugar(s, Math.ceil(a.carry*0.3)); }
   else if (a.kind === 'water') c.water = Math.min(c.waterCap, c.water + a.carry);
-  else if (a.kind === 'protein') c.protein += a.carry;
+  else if (a.kind === 'protein'){ c.protein += a.carry; if (!a.team && CHITIN_OF[a.itype]) addChitin(s, CHITIN_OF[a.itype]*(prizeFx(s, a.ireg) === 'chitin' ? 2 : 1)); }
+  else if (a.kind === 'chitin'){ if (!a.team) addChitin(s, a.carry); }
   else if (a.kind === 'grit') c.grit += a.carry;
   a.carry = 0;
 }
+function addSugar(s, n){ const c = s.colony; c.sugar += n; c.sugarTotal += n; if (!c.found.sugar){ c.found.sugar = true; s.events.push('sugar'); } }
+function addChitin(s, n){ const c = s.colony; c.chitin += n; c.chitinTotal += n; if (!c.found.chitin){ c.found.chitin = true; s.events.push('chitin'); } }
 function killAnt(s, a, cause){
   if (a.state === 'dead') return;
   // A Dodger slips the first foot, beak or acorn.
@@ -389,7 +402,8 @@ function rankUp(s, a, r){
 }
 // A boss's killing bite makes a Legend.
 function makeLegend(s, a, title){ nameAnt(s, a); a.legend = true; a.title = title; if (rankOf(a) === 4) { s.player.msg = `${a.name} ${title} is a Legend!`; } }
-function maxHp(s, a){ const C = CASTES[a.caste]; if (a.team) return C.hp; let h = C.hp; if (a.caste === 'soldier' && lvl(s, 'soldier') >= 1) h *= 1.3; if (a.caste === 'venom' && lvl(s, 'venom') >= 2) h *= 1.3; return h; }
+function maxHp(s, a){ const C = CASTES[a.caste]; if (a.team) return C.hp; let h = C.hp; if (a.caste === 'soldier' && lvl(s, 'soldier') >= 1) h *= 1.3; if (a.caste === 'soldier' && lvl(s, 'soldier') >= 4) h *= 1.5; if (a.caste === 'venom' && lvl(s, 'venom') >= 2) h *= 1.3;
+  if (has(s, 'cuticle')) h *= 1.5; if (qtrait(s, 'matriarch')) h *= 1.1; if (s.colony.trophies.shell && roomOf(s, 'armory')) h *= 1.5; return h; }
 // How hard an ant bites: its kind, rank, upgrades, evolution and promotions.
 function bite(s, a, vs){
   const C = CASTES[a.caste]; let f = C.fight; if (a.team) return f;
@@ -402,6 +416,11 @@ function bite(s, a, vs){
   if (promo(s, a, 'hunter') && (vs === 'spider' || vs === 'cat' || vs === 'bug')) f *= 1.5;
   if (C.fight >= 3 && setDone(s, 'hunter')) f *= 1.1;
   if (a.follow && picked(s, 'you', 'hero')) f *= 1.2;
+  // Build 18: the sugar and chitin levels.
+  if (a.caste === 'venom' && lvl(s, 'venom') >= 3) f *= 1.3;
+  if (C.fight >= 3 && (picked(s, 'soldier', 'phalanx') || picked(s, 'soldier', 'warlord'))){ let n = 0; for (const o of s.ants) if (o !== a && !o.team && CASTES[o.caste].fight >= 3 && outside(o) && Math.abs(o.tx - a.tx) <= 3 && Math.abs(o.ty - a.ty) <= 3 && ++n >= 2) break;
+    if (n >= 2 && picked(s, 'soldier', 'phalanx')) f *= 1.5; if (n >= 1 && picked(s, 'soldier', 'warlord')) f *= 1.3; }
+  if (s.colony.trophies.mandible) f *= 1.15;
   return f;
 }
 // Fighters reach two tiles with Formic spray.
@@ -412,12 +431,14 @@ function paceOf(s, a, base){
   let v = base; if (FAMILY[a.caste] === 'gather') v *= jobMul(a);
   const onTrail = s.trail[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))] >= 0.3;
   if (onTrail && has(s, 'trailrunners')) v *= 1.25;
+  if (onTrail && picked(s, 'forager', 'trailqueen')) v *= 1.4;
+  if (a.caste === 'soldier' && lvl(s, 'soldier') >= 3) v *= 1.2;
   if (onTrail && promo(s, a, 'trailwise')) v *= 1.2;
   if (!onTrail && a.caste === 'forager' && picked(s, 'forager', 'sprinter')) v *= 1.25;
   if (promo(s, a, 'skirmisher')) v *= 1.2;
   return v;
 }
-const carryCap = (s, a) => 5 + (promo(s, a, 'strongback') ? 1 : 0) + (!a.team && setDone(s, 'garden') ? 1 : 0);
+const carryCap = (s, a) => 5 + (promo(s, a, 'strongback') ? 1 : 0) + (!a.team && setDone(s, 'garden') ? 1 : 0) + (!a.team && has(s, 'bigcrop') ? 3 : 0) + (!a.team && a.caste === 'forager' && (s.colony.forage || 0) >= 4 ? 2 : 0);
 const sightOf = (s, a) => 7 + (!a.team && a.caste === 'forager' && picked(s, 'forager', 'pathfinder') ? 7 : 0) + (promo(s, a, 'keen') ? 4 : 0);
 const chewsTreats = (s, a) => !a.team && a.caste === 'forager' && picked(s, 'forager', 'hauler');
 const crewCap = s => has(s, 'crews2') ? 45 : has(s, 'crews') ? 30 : 20;
@@ -434,7 +455,10 @@ function workOf(s, a, kind){
 }
 const storeCap = s => { const n = roomCount(s, 'store'); return n ? Math.round((has(s, 'store3') ? 1000 : has(s, 'store2') ? 400 : 150)*(1 + 0.5*(n - 1))) : 20; };
 const hatchCapOf = s => { const n = roomCount(s, 'hatchery'); return 1 + (n ? 2*n + (has(s, 'hatchery2') ? 1 : 0) + (has(s, 'hatchery3') ? 1 : 0) : 0); };
-function eggCost(s, caste){ const cost = Object.assign({}, CASTES[caste].cost); if (picked(s, 'nurse', 'wetnurse') && cost.food) cost.food = Math.ceil(cost.food * 0.7); return cost; }
+function eggCost(s, caste){
+  const cost = Object.assign({}, CASTES[(caste === 'soldier' || caste === 'venom') && picked(s, 'nurse', 'shaper') ? 'forager' : caste].cost);
+  let k = 1; if (picked(s, 'nurse', 'wetnurse')) k *= 0.7; if (has(s, 'brood')) k *= 0.75; if (qtrait(s, 'broodmother')) k *= 0.7;
+  if (cost.food) cost.food = Math.ceil(cost.food * k); if (cost.protein && k < 1) cost.protein = Math.ceil(cost.protein * Math.max(k, 0.7)); return cost; }
 function roomCost(s, key, nth){
   // nth: which copy (0 the first); by default the next one you'd build.
   const n = nth != null ? nth : roomCount(s, key) + s.colony.buildQueue.filter(j => j.room === key).length, k = 1 + 0.5*n;
@@ -594,6 +618,8 @@ function tick(s, dt){
     if (s.areaT[i] >= 1){ s.areaT[i] -= 1; let n = 0; for (const f of s.items) if ((f.kind==='food'||f.kind==='protein') && f.amt > 0 && !f.max && w.area[idx(f.x,f.y)] === i) n++; if (n < A.max) spawnFood(s, i, s.t > 180); } }
   s.itemTimer += dt; if (s.itemTimer > 9){ s.itemTimer = 0;
     if (s.items.filter(f=>f.kind==='grit').length < 10) spawnInArea(s, Math.random() < 0.6 ? REGION.rock : REGION.woodpile, 'grit', 'pebble');
+    // Beetle shells (build 18): now and then in bark, compost, gravel and leaves; more in a held Woodpile.
+    if (Math.random() < 0.25 && s.items.filter(f => f.kind === 'chitin').length < 5){ const opts = []; for (let i = 0; i < AREAS.length; i++) if (s.active[i] && SHELL_GROUND.test(AREAS[i].ground || '')) opts.push(i, ...(prizeFx(s, i) === 'chitin' ? [i, i] : [])); if (opts.length) spawnInArea(s, opts[Math.floor(Math.random()*opts.length)], 'chitin', 'shell'); }
     // Held stony regions turn up extra pebbles; held gardens' aphids refill twice as fast.
     for (const i in s.colony.held) if (prizeFx(s, i) === 'stone' && s.items.filter(f => f.kind === 'grit' && w.area[idx(f.x,f.y)] === +i).length < 6) spawnInArea(s, +i, 'grit', 'pebble');
     for (const f of s.items) if (f.max) f.amt = Math.min(f.max, f.amt + (f.type === 'aphids' && prizeFx(s, w.area[idx(f.x,f.y)]) === 'aphids' ? 6 : 3)); }
@@ -630,7 +656,7 @@ function tick(s, dt){
     const reach = reachOf(s, a), en = enemiesNear(a, aggressive ? reach : 2);
     if (en.length){
       // Rival soldiers fight half again as hard on their own doorstep.
-      if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=reach && Math.abs(o.ty-a.ty)<=reach); if (o){ const dmg = bite(s, a)*dt*(a.team && Math.hypot(a.tx - w.rx, a.ty - w.ry) < 5 ? 1.5 : 1); o.hp -= dmg; o.hitT = s.t; spark(s, a, (a.x + o.x)/2, (a.y + o.y)/2, a.team ? 1 : 0); if (o.isPlayer) P.hit = s.t; gainXp(s, a, dmg/3); if (o.hp <= 0){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); } } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
+      if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=reach && Math.abs(o.ty-a.ty)<=reach); if (o){ const dmg = bite(s, a)*dt*(a.team && Math.hypot(a.tx - w.rx, a.ty - w.ry) < 5 ? 1.5 : 1); o.hp -= dmg; if (!a.team && a.caste === 'venom' && picked(s, 'venom', 'lethal')) o.hp = 0; o.hitT = s.t; spark(s, a, (a.x + o.x)/2, (a.y + o.y)/2, a.team ? 1 : 0); if (o.isPlayer) P.hit = s.t; gainXp(s, a, dmg/3); if (o.hp <= 0){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); } } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
       else if (en.some(o => CASTES[o.caste].fight >= 3 || o.follow)){ a.flee = 2.5; }
     }
     if (a.flee > 0 && a.state !== 'fight' && a.state !== 'follow' && a.state !== 'raid'){
@@ -662,10 +688,10 @@ function tick(s, dt){
     }
     if (a.state === 'raid'){
       const gx = (c.ex+0.5)*T, gy = (c.ey+0.5)*T;
-      if (Math.hypot(a.x-gx, a.y-gy) < 1.5*T){ const guarded = s.ants.some(o => !o.team && o.state!=='dead' && CASTES[o.caste].fight >= 3 && (o.state==='patrol'||o.state==='fight') && Math.hypot(o.tx-c.ex, o.ty-c.ey) < 4);
+      if (Math.hypot(a.x-gx, a.y-gy) < 1.5*T){ const guarded = s.ants.some(o => !o.team && o.state!=='dead' && CASTES[o.caste].fight >= 3 && (o.state==='patrol'||o.state==='fight') && Math.hypot(o.tx-c.ex, o.ty-c.ey) < 4) || (picked(s, 'nurse', 'broodguard') && s.ants.some(o => !o.team && o.caste === 'nurse' && (o.state === 'in' || o.state === 'build')));
         // Unguarded, raiders push into the nest and go for the queen.
         a.raidT = (a.raidT||0) + dt; raiseAlarm(s, c.ex, c.ey, 2);
-        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt*(qtrait(s, 'hardy') ? 0.4 : 1); if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
+        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt*(qtrait(s, 'hardy') ? 0.4 : 1)*(picked(s, 'soldier', 'guardian') ? 0.5 : 1); if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
         const take = guarded && picked(s, 'soldier', 'doorkeeper') ? 0 : Math.min(guarded ? 1 : 2, c.store); c.store -= take; c.stolen += take; a.carry = take; a.kind = 'food'; a.state = 'return'; a.raidT = 0; continue; }
       if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, gx, gy);
       continue;
@@ -690,7 +716,7 @@ function tick(s, dt){
       a.explore += dt; if (s.rain.on && !a.team && a.state === 'explore' && a.explore > 2){ a.state = 'return'; a.explore = 0; continue; }
       const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
-      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.state = 'return'; continue; }
+      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.ireg = w.area[idx(f.x,f.y)]; a.state = 'return'; continue; }
       // Its main work at home came up (orders to dig, eggs to tend): empty-handed, it heads back.
       if (!a.team && a.state === 'explore' && !a.carry && (a.caste === 'builder' || a.caste === 'nurse') && Math.floor(a.explore/2) > Math.floor((a.explore - dt)/2)){ const n = chooseDuty(s, a); if (n === 'build' || n === 'nurse'){ a.state = 'return'; a.duty = n; a.explore = 0; continue; } }
       // Nothing of its duty in sight for a while: help with the next one instead.
@@ -722,6 +748,7 @@ function tick(s, dt){
           if (playerNear(s, sp.x, sp.y, 30)) P.msg = 'The spider has eaten its fill. It goes back to its web to sleep it off.'; } } }
     for (const a of biters) spark(s, a, (a.x + sp.x)/2, (a.y + sp.y)/2, 0);
     if (s.spider.hp <= 0){ s.items.push({ x: Math.floor(s.spider.x/T), y: Math.floor(s.spider.y/T), kind:'protein', type:'spider', amt: 40 });
+      { const sx = Math.floor(s.spider.x/T) + 1, sy = Math.floor(s.spider.y/T); if (walk(s, sx, sy)) s.items.push({ x: sx, y: sy, kind: 'chitin', type: 'shell', amt: 15 }); }
       const ours = biters.filter(a => !a.team);
       if (ours.length){ for (const a of ours) gainXp(s, a, 50); makeLegend(s, ours[Math.floor(Math.random()*ours.length)], 'Spider-bane'); if (picked(s, 'venom', 'hunter')) trailHome(s, s.spider.x, s.spider.y); }
       const cost = (c.deaths.spider || 0) - (s.spider.cost0 || 0);
@@ -758,7 +785,7 @@ function tickColony(s, c, dt){
   if (!c.team) eat += roomUpkeep(s); // rooms cost food to run (build 17)
   const bite = eat/60*dt; c.eaten[0] += bite; c.store -= bite; if (!c.team && c.store > c.storePeak) c.storePeak = c.store;
   if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The colony is starving. Forage farther.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
-  if (c.starve > 20 && (c.starve - 20) % 5 < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); }
+  if (c.starve > 20 && (c.starve - 20) % (!c.team && has(s, 'stomach') ? 10 : 5) < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); }
   const overCap = !c.team && s.ants.filter(a => !a.team).length >= queenCap(s.queen.level);
   if (c.queenAlive && (c.team || s.queen.placed) && !overCap){
     while (c.eggQueue.length && c.eggs.length < c.hatchCap){ const caste = c.eggQueue.shift(); c.eggs.push({ caste, t: 0, need: CASTES[caste].hatch * c.hatchMul }); }
@@ -767,6 +794,9 @@ function tickColony(s, c, dt){
     if (!c.team){ const nurses = s.ants.filter(a => a.caste==='nurse' && a.team===0 && (a.state==='in'||a.state==='build')).slice(0, (lvl(s, 'nurse') >= 2 ? 6 : 3) + 3*Math.max(0, roomCount(s, 'nursery') - 1));
       for (const a of nurses) rate += 0.12*jobMul(a)*(promo(s, a, 'gentle') ? 1.3 : 1);
       if (nurses.length && lvl(s, 'nurse') >= 1) rate *= 1.15;
+      if (nurses.length && lvl(s, 'nurse') >= 3) rate *= 1.3;
+      if (lvl(s, 'nurse') >= 4) rate *= 1.25;
+      if (picked(s, 'nurse', 'attendant')) rate *= 1.2;
       if (qtrait(s, 'fertile')) rate *= 1.25;
       if (heldFx(s, 'warm')) rate *= 1.15;
       if (setDone(s, 'colony')) rate *= 1.1; }
@@ -782,8 +812,11 @@ function tickColony(s, c, dt){
     if (fighters.length){ c.protein -= fighters.length*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
       if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
       else c.pstarve = 0; }
+    // Flower nectar (build 18): each region held gives half a 🍯 a minute.
+    if (has(s, 'nectar')){ const n = Object.keys(c.held || {}).length; if (n){ c.nectarAcc = (c.nectarAcc || 0) + n*0.5/60*dt; if (c.nectarAcc >= 1){ c.nectarAcc -= 1; addSugar(s, 1); } } }
     // The queen heals slowly; if raiders kill her, the colony is lost.
     const q = s.queen;
+    if (q.placed && q.hp <= 0 && qtrait(s, 'eternal') && !c.eternalUsed){ c.eternalUsed = true; q.hp = 60; P.msg = 'The queen fell, but a daughter takes her place. The line goes on.'; }
     if (q.placed && !s.lost){ q.hp = Math.min(100, q.hp + 0.1*dt); if (q.hp >= 99) s.queenWarned = false;
       if (q.hp <= 0){ q.hp = 0; s.lost = true; c.queenAlive = false; s.events.push('lost'); P.msg = 'The queen is dead. The colony is lost.'; } }
     // The queen sitting idle with food to spare: say so (build 15).
@@ -817,7 +850,7 @@ function hatch(s, c, caste){
   const a = mkAnt(s, caste, 'in', c.ex, c.ey, c.team);
   if (!c.team){ c.hatched++; if (c.hatched % 10 === 0) gainGenes(s, 1, c.hatched + ' eggs hatched');
     // A head start: the Drill hall for fighters, Colony memory for everyone.
-    if (has(s, 'memory') || (has(s, 'drillhall') && CASTES[caste].fight >= 3)) a.xp = RANKS[1].xp;
+    if (has(s, 'memory') || picked(s, 'nurse', 'teacher') || (has(s, 'drillhall') && CASTES[caste].fight >= 3)) a.xp = RANKS[1].xp;
     for (const n of s.ants) if (n.caste === 'nurse' && !n.team && (n.state === 'in' || n.state === 'build')) gainXp(s, n, 1); const r = s.queen.room; a.nx = r.x0+1.5; a.ny = r.y0+1.5; a.ntx = r.x0+1; a.nty = r.y0+1; a.rest = 2;
     if (s.player.pending){ a.isPlayer = true; a.hp = Math.max(youHp(s), maxHp(s, a)); s.player.rebirth = null; a.state = 'nest'; s.player.ant = a; s.player.pending = false; s.player.hunger = 100; s.player.inNest = true; s.player.tx = null; s.player.ntx = null; s.player.msg = ''; } }
 }
@@ -938,7 +971,7 @@ function dutyNeed(s, a, d){
     case 'build': return a.caste === 'builder' && buildWork(s) ? 1 : 0;
     case 'nurse': return a.caste === 'nurse' && (c.eggs.length || c.eggQueue.length) ? 1 : 0;
     case 'guard': {
-      const al = doorAlarm(s); if (al > 0.2 && has(s, 'stridulation')) return 2;
+      const al = doorAlarm(s); if (al > 0.2 && (has(s, 'stridulation') || picked(s, 'soldier', 'alarm'))) return 2;
       if (al > 0.05) return 0.35 + Math.min(1, al);
       // Enough on guard already (half the fighters, at least two): free for other work.
       let out = 0, all = 0; for (const o of s.ants) if (o !== a && !o.team && CASTES[o.caste].fight >= 3 && !o.isPlayer){ all++; if (o.duty === 'guard' && (o.state === 'patrol' || o.state === 'fight' || o.goal === 'exit')) out++; }
@@ -1265,7 +1298,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 1.6;
   let fed = nearHome; if (!fed) for (const o of s.ants){ if (o !== a && !o.team && o.state === 'return' && o.carry && o.kind==='food' && Math.hypot(o.x-a.x, o.y-a.y) < 1.2*T){ fed = true; break; } }
   if (fed && P.hunger < 100) P.hunger = Math.min(100, P.hunger + 20*dt);
-  if (P.hunger <= 0){ killAnt(s, a, 'hunger'); return; }
+  if (P.hunger <= 0){ if (has(s, 'stomach')) P.hunger = 1; else { killAnt(s, a, 'hunger'); return; } }
   if (moving && (P.mark || a.carry)){ const i = idx(a.tx, a.ty); s.trail[i] = Math.min(5, s.trail[i] + 2.5*dt); s.hot.add(i); }
   if (a.carry && nearHome){ deposit(s, a); }
   if (P.big && nearHome) deliverBig(s);
@@ -1309,10 +1342,11 @@ function crewAt(s){ const a = s.player.ant; if (!a) return 0; let n = 1; for (co
 function dropBig(s){ const b = s.player.big; if (!b) return; b.carried = false; delete b.px; delete b.py; s.player.big = null; }
 function deliverBig(s){
   const P = s.player, b = P.big, c = s.colony; P.big = null; b.carried = false;
-  const put = Math.min(Math.max(0, c.cap - c.store), b.amt), lost = b.amt - put; c.store += put; c.delivered[0] += put; c.foodTotal += put; c.treats++; b.amt = 0;
+  const put = Math.min(Math.max(0, c.cap - c.store), b.amt), lost = b.amt - put; c.store += put; c.delivered[0] += put; c.foodTotal += put; c.treats++;
+  const sweet = FOODS[b.type].sweet ? Math.round(b.amt*0.3) : 0; if (sweet) addSugar(s, sweet); b.amt = 0;
   for (const o of s.ants) if (!o.team && (o.follow || o.isPlayer)) gainXp(s, o, 8);
   discover(s, b.type);
-  P.msg = lost >= 1 ? `${Math.round(put)} food stored, ${Math.round(lost)} wasted: the store was full.${c.cap < 150 ? ' A Food store holds 150.' : ''}` : `Your crew hauls in the ${FOODS[b.type].name}: +${Math.round(put)} food.`;
+  P.msg = lost >= 1 ? `${Math.round(put)} food stored, ${Math.round(lost)} wasted: the store was full.${c.cap < 150 ? ' A Food store holds 150.' : ''}` : `Your crew hauls in the ${FOODS[b.type].name}: +${Math.round(put)} food${sweet ? `, +${sweet} 🍯 sugar` : ''}.`;
   s.events.push('bighaul');
 }
 // Shortest walk over the tile grid (8 directions, no corner cutting, off the
@@ -1569,7 +1603,7 @@ function stepBugs(s, dt){
         if (a.team || !outside(a)) continue;
         const fighter = CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer, d = Math.hypot(a.x - b.x, a.y - b.y);
         if (fighter && d < R*reachOf(s, a)){
-          const dmg = bite(s, a, 'bug')*dt*(a.isPlayer ? 2*yb : 1)*arm; b.hp -= dmg; gainXp(s, a, dmg/3); b.hitT = s.t; stingSlow(s, a, b);
+          const dmg = bite(s, a, 'bug')*dt*(a.isPlayer ? 2*yb : 1)*arm; b.hp -= a.caste === 'venom' && picked(s, 'venom', 'lethal') ? b.hp : dmg; gainXp(s, a, dmg/3); b.hitT = s.t; stingSlow(s, a, b);
           spark(s, a, (a.x + b.x)/2, (a.y + b.y)/2, 0);
           if (b.kind === 'millipede'){ if (b.state !== 'curl'){ b.state = 'curl'; b.t = 0; if (playerNear(s, b.x, b.y, 14) && !s.seen.curl){ s.seen.curl = true; P.msg = 'The millipede curls into an armoured ball. Keep biting.'; } } b.curlT = 8; }
         } else if (d < 6*T && CASTES[a.caste].fight >= 3 && a.state === 'patrol'){ a.state = 'fight'; a.goal = 'bug'; a.bugId = b.id; }

@@ -4,10 +4,10 @@
 // `soon` needs a material, ant or system the yard doesn't have yet: it is
 // shown so the player can see what's coming, but can't be bought.
 
-// Materials the colony keeps (sim colony fields). Sugar, chitin and wood come
-// in later builds; costs that use them can't be paid yet.
+// Materials the colony keeps (sim colony fields). Sugar and chitin arrived in
+// build 18; wood comes later, and costs that use it can't be paid yet.
 export const RES = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨', genes: '🧬', sugar: '🍯', chitin: '🪲', wood: '🪵' };
-export const LATER = { sugar: '🍯 sugar', chitin: '🪲 chitin', wood: '🪵 wood' };
+export const LATER = { wood: '🪵 wood' };
 export const laterIn = (cost) => Object.keys(cost || {}).find((k) => LATER[k]);
 
 // ---------- veteran ranks ----------
@@ -106,9 +106,9 @@ export const EVO = [
   { key: 'exploders', branch: 'bodies', after: 'formic', name: 'Exploders', cost: { genes: 5, protein: 40 }, fx: 'The Exploder ant', soon: true },
   { key: 'stridulation', branch: 'bodies', after: 'mandibles', name: 'Stridulation', cost: { genes: 4 }, fx: 'Squeaks through the soil: every fighter answers an alarm', deed: ['Fight off 3 raids', (s) => (s.colony.raidsBeaten || 0) >= 3] },
   { key: 'trailrunners', branch: 'bodies', name: 'Trail runners', cost: { genes: 2, food: 30 }, fx: 'Ants on a scent trail are 25% faster', deed: ['Haul 5 treats home', (s) => (s.colony.treats || 0) >= 5] },
-  { key: 'bigcrop', branch: 'bodies', after: 'trailrunners', name: 'Big crop', cost: { genes: 3, sugar: 10 }, fx: 'Foragers carry 8, not 5', soon: true },
-  { key: 'stomach', branch: 'bodies', after: 'bigcrop', name: 'Social stomach', cost: { genes: 8, sugar: 50 }, fx: 'No ant far from home ever starves', soon: true, big: true },
-  { key: 'cuticle', branch: 'bodies', name: 'Tough cuticle', cost: { genes: 3, chitin: 10 }, fx: '50% more health', soon: true },
+  { key: 'bigcrop', branch: 'bodies', after: 'trailrunners', name: 'Big crop', cost: { genes: 3, sugar: 10 }, fx: 'Foragers carry 3 more' },
+  { key: 'stomach', branch: 'bodies', after: 'bigcrop', name: 'Social stomach', cost: { genes: 8, sugar: 50 }, fx: 'Your ant never starves, and hunger kills half as many', big: true },
+  { key: 'cuticle', branch: 'bodies', name: 'Tough cuticle', cost: { genes: 3, chitin: 10 }, fx: 'Every ant has 50% more health' },
   { key: 'majors', branch: 'bodies', after: 'cuticle', name: 'Majors', cost: { genes: 4, chitin: 20 }, fx: 'The Major ant', soon: true },
   { key: 'polymorphism', branch: 'bodies', after: 'majors', name: 'Polymorphism', cost: { genes: 9, chitin: 60 }, fx: 'The Supermajor ant', soon: true, big: true },
   { key: 'glands', branch: 'bodies', after: 'cuticle', name: 'Metapleural glands', cost: { genes: 5 }, fx: 'Mould and disease halved', soon: true },
@@ -132,7 +132,7 @@ export const EVO = [
   // Nest
   { key: 'hatchery2', branch: 'nest', name: 'Hatchery II', cost: { genes: 1, food: 30, grit: 10 }, fx: '4 eggs at once', need: 'hatchery', deed: ['Hatch 30 eggs', (s) => (s.colony.hatched || 0) >= 30] },
   { key: 'hatchery3', branch: 'nest', after: 'hatchery2', name: 'Hatchery III', cost: { genes: 1, food: 60, grit: 25 }, fx: '5 eggs at once', need: 'hatchery' },
-  { key: 'brood', branch: 'nest', after: 'hatchery3', name: 'Brood chambers', cost: { genes: 6, sugar: 30 }, fx: 'Eggs cost 25% less', soon: true },
+  { key: 'brood', branch: 'nest', after: 'hatchery3', name: 'Brood chambers', cost: { genes: 6, sugar: 30 }, fx: 'Eggs cost 25% less' },
   { key: 'store2', branch: 'nest', name: 'Store II', cost: { genes: 1, food: 100, grit: 20 }, fx: 'Holds 400 food', need: 'store', deed: ['Fill the store to 150', (s) => (s.colony.storePeak || 0) >= 150] },
   { key: 'store3', branch: 'nest', after: 'store2', name: 'Store III', cost: { genes: 1, food: 300, grit: 50 }, fx: 'Holds 1,000 food', need: 'store' },
   { key: 'honeypot', branch: 'nest', after: 'store3', name: 'Honeypot vault', cost: { genes: 3, sugar: 20 }, fx: 'Repletes: living jars', soon: true },
@@ -155,12 +155,12 @@ export const EVO = [
   { key: 'polygyny', branch: 'society', name: 'Polygyny', cost: { genes: 6, sugar: 40 }, fx: 'A second queen', soon: true },
   { key: 'honourguard', branch: 'society', after: 'polygyny', name: 'Honour guard', cost: { genes: 5 }, fx: 'Elites guard the queens', soon: true },
   // Symbiosis
-  { key: 'aphids', branch: 'symbiosis', name: 'Aphid farming', cost: { genes: 2 }, fx: 'Herders; 🍯 from aphids', soon: true },
+  { key: 'aphids', branch: 'symbiosis', name: 'Aphid farming', cost: { genes: 2, food: 20 }, fx: 'Honeydew gives three times the 🍯' },
   { key: 'mealybugs', branch: 'symbiosis', after: 'aphids', name: 'Mealybug ranching', cost: { genes: 4 }, fx: 'Ranchers: sugar underground', soon: true },
   { key: 'honeyeco', branch: 'symbiosis', after: 'mealybugs', name: 'Honey economy', cost: { genes: 8 }, fx: '🍯 pays wherever 🌾 does', soon: true, big: true },
   { key: 'fungus', branch: 'symbiosis', name: 'Fungus garden', cost: { genes: 4 }, fx: 'Leafcutters; leaves become food', soon: true },
   { key: 'beetles', branch: 'symbiosis', name: 'Beetle guests', cost: { genes: 4 }, fx: 'Rove beetles clean the nest', soon: true },
-  { key: 'nectar', branch: 'symbiosis', name: 'Flower nectar', cost: { genes: 3 }, fx: 'Flowers in held regions give 🍯', soon: true },
+  { key: 'nectar', branch: 'symbiosis', name: 'Flower nectar', cost: { genes: 3, sugar: 10 }, fx: 'Each region you hold gives 🍯 a minute' },
 ];
 export const EVO_BY = Object.fromEntries(EVO.map((n) => [n.key, n]));
 
@@ -188,13 +188,13 @@ export const GUARDIANS = {
   firemound: ['the fire ants', () => false],
 };
 // Each held region's prize, for good while you hold it. The sim reads `fx`.
-const GARDEN = { text: 'Aphids here refill twice as fast', fx: 'aphids' };
+const GARDEN = { text: 'Aphids here refill twice as fast and give twice the 🍯', fx: 'aphids' };
 const OAKS = { text: 'Acorns fall twice as often', fx: 'acorns' };
 export const PRIZES = {
   steps: { text: 'Feet come half as often', fx: 'calm' },
   patio: { text: 'Their nest becomes your outpost; no more raids', fx: 'none' },
   flowerbed: { text: 'Berries grow back twice as fast', fx: 'food2' },
-  woodpile: { text: 'Twice the pebbles turn up here', fx: 'stone' },
+  woodpile: { text: 'Beetle shells turn up here, and dead bugs give twice the 🪲', fx: 'chitin' },
   grill: { text: 'Scraps grow back twice as fast', fx: 'food2' },
   tomatoes: GARDEN, beans: GARDEN, peppers: GARDEN, herbs: GARDEN,
   spigot: { text: 'Water cap +40', fx: 'water' },
