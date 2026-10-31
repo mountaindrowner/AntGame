@@ -691,6 +691,8 @@ function tick(s, dt){
       const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
       if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.state = 'return'; continue; }
+      // Its main work at home came up (orders to dig, eggs to tend): empty-handed, it heads back.
+      if (!a.team && a.state === 'explore' && !a.carry && (a.caste === 'builder' || a.caste === 'nurse') && Math.floor(a.explore/2) > Math.floor((a.explore - dt)/2)){ const n = chooseDuty(s, a); if (n === 'build' || n === 'nurse'){ a.state = 'return'; a.duty = n; a.explore = 0; continue; } }
       // Nothing of its duty in sight for a while: help with the next one instead.
       if (!a.team && a.state === 'explore' && a.duty && Math.floor(a.explore/20) > Math.floor((a.explore - dt)/20)){ const n = chooseDuty(s, a, a.duty); if (n && DUTIES[n].out && (n !== 'hunt' || C.fight < 3)) a.duty = n; }
       if (a.explore > (a.state === 'patrol' ? 25 : 60)){ a.state = 'return'; a.explore = 0; continue; }
