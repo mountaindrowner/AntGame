@@ -90,7 +90,7 @@ let pocket = null; // { key, x0, y0, w, h }
 function roomPlan() {
   const keys = ORDER[strategy] || ORDER.sensible;
   // A room costing more food than the store can hold has to wait for a Food store.
-  const next = keys.find((k) => !SIM.roomOf(s, k) && !SIM.roomLock(s, k) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
+  const next = keys.find((k) => !SIM.roomOf(s, k) && !SIM.roomLock(s, k) && (!SIM.ROOMS[k].evo || established()) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
   if (!next) return;
   const R = SIM.ROOMS[next];
   // A fitting pocket already dug? Place it when affordable (Build → tap a green cell).
@@ -151,16 +151,18 @@ function eggs() {
   else if (b < Math.ceil(SIM.dugCount(s) / 40) + 1) want = 'builder';
   else if (SIM.roomOf(s, 'nursery') && nu < 1) want = 'nurse';
   else if (SIM.roomOf(s, 'barracks') && so < Math.min(f * (strategy === 'military' ? 0.8 : 0.6), 3 + Math.floor(s.t / 120)) && c.protein >= 2) want = c.trophies.spider && c.protein >= 3 ? 'venom' : 'soldier';
-  else want = EXTRA.find((k) => !SIM.eggLock(s, k) && caste(k) < (k === 'major' ? Math.floor(fighters() / 4) : 2)) || 'forager';
+  else want = (established() && f >= 15 && EXTRA.find((k) => !SIM.eggLock(s, k) && caste(k) < (k === 'major' ? Math.floor(fighters() / 4) : 2))) || 'forager';
   if (want && SIM.queueEgg(s, want)) note(`egg ${want}`);
 }
 
 // ---------- growth (build 12): evolution nodes and ant upgrades ----------
 // A rough order of what a player would want; each bought when affordable,
 // keeping some food back for eggs.
+// A colony that can afford luxuries: 30 ants and a store over a third full, or the Patio taken.
+const established = () => (SIM.antCount(s) >= 30 && c.store > c.cap * 0.35) || s.won;
 const LATE = ['infirmary', 'granary', 'aphids', 'fungus', 'mealybugs', 'midden', 'majors', 'honeypot'];
-const EVO_WANT = { sensible: ['waypoints', 'hatchery2', 'scent', 'trailrunners', 'insulation', 'division', 'store2', 'mandibles', 'crews', 'hatchery3', 'drillhall', 'formic', 'stridulation', 'crews2', 'store3', 'memory', ...LATE],
-  military: ['waypoints', 'mandibles', 'drillhall', 'division', 'formic', 'stridulation', 'hatchery2', 'trailrunners', 'scent', 'insulation', 'store2', 'crews', 'hatchery3', 'crews2', 'memory', ...LATE] };
+const EVO_WANT = { sensible: ['waypoints', 'hatchery2', 'scent', 'trailrunners', 'insulation', 'division', 'store2', 'mandibles', 'crews', 'hatchery3', 'drillhall', 'formic', 'stridulation', 'crews2', 'store3', 'memory'],
+  military: ['waypoints', 'mandibles', 'drillhall', 'division', 'formic', 'stridulation', 'hatchery2', 'trailrunners', 'scent', 'insulation', 'store2', 'crews', 'hatchery3', 'crews2', 'memory'] };
 const PICKS = { forager: ['trailblazer', 'pathfinder'], builder: ['shorer', 'engineer'], soldier: ['doorkeeper'], venom: ['paralytic'], nurse: ['wetnurse'] };
 function grow() {
   // Spend on growth only with food to spare: a full store, or no room for more ants.
@@ -172,9 +174,14 @@ function grow() {
   for (const k of order) {
     if (SIM.evoLock(s, k) || (process.env.SKIP || '').split(',').includes(k)) continue;
     if (k === 'waypoints' && s.queen.level < 1) continue; // stone goes to the queen first
-    if (!spare && (EVO_BY[k].cost.food || 0) > 0) continue; // food nodes wait for spare food
-    // Build 25.1: skip what can't be paid for yet instead of waiting on it (genes were piling up unspent).
-    if (SIM.buyEvo(s, k)) { note(`evolved ${k} (🧬${c.genes} left)`); mile('first evolution'); break; }
+    if (!spare && (EVO_BY[k].cost.food || 0) > 0) break; // food nodes wait for spare food
+    if (SIM.buyEvo(s, k)) { note(`evolved ${k} (🧬${c.genes} left)`); mile('first evolution'); }
+    break;
+  }
+  // Build 25.1: an established colony also spends on the late nodes, skipping what it can't pay for yet.
+  if (established()) for (const k of LATE) {
+    if (SIM.evoLock(s, k) || (!spare && (EVO_BY[k].cost.food || 0) > 0)) continue;
+    if (SIM.buyEvo(s, k)) { note(`evolved ${k} (🧬${c.genes} left)`); break; }
   }
   if (!spare) return;
   for (const k of ['builder', 'nurse', 'soldier', 'venom']) {
