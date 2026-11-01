@@ -85,12 +85,30 @@ export function toad() {
   return { group: g, body, tongue, throat };
 }
 
-// A falling acorn, 1 unit long, point down.
+// A falling acorn, 1 unit long, point down (layer 5): a glossy nut with
+// faint stripes, a highlight and a dark pointed tip, in a cap of overlapping
+// scales with a rolled lip, and a little bent stalk.
 export function fallingAcorn() {
   const mat = psx({ vertexColors: true });
-  const g = new THREE.Group();
-  g.add(new THREE.Mesh(paint(new THREE.SphereGeometry(0.36, 10, 8).scale(1, 1.35, 1).translate(0, 0.46, 0), (x, y) => (y < 0.25 ? '#8a5a2a' : '#a8743a')), mat));
-  g.add(new THREE.Mesh(paint(new THREE.SphereGeometry(0.4, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.8, 0), (x, y, z) => (Math.sin(x * 40) * Math.sin(z * 40) > 0 ? '#6a5236' : '#5a4430')), mat));
-  g.add(new THREE.Mesh(paint(new THREE.CylinderGeometry(0.04, 0.05, 0.22, 4).translate(0, 1.28, 0), '#4a3824'), mat));
+  const g = new THREE.Group(), parts = [];
+  const nut = new THREE.SphereGeometry(0.36, 12, 10).scale(1, 1.35, 1);
+  { const p = nut.attributes.position; for (let i = 0; i < p.count; i++) { const y = p.getY(i); if (y < 0) { const k = 1 - Math.pow(-y / 0.486, 2.2) * 0.45; p.setX(i, p.getX(i) * k); p.setZ(i, p.getZ(i) * k); } } }
+  nut.translate(0, 0.46, 0);
+  parts.push(paint(nut, (x, y, z) => {
+    if (y < 0.06) return '#3a2412';
+    if (x < -0.12 && z > 0.05 && y > 0.4 && y < 0.7) return '#e0b070';
+    return Math.floor((Math.atan2(z, x) + 4) * 12 / 6.283) % 3 === 0 ? '#8a5a2a' : y < 0.3 ? '#94622e' : '#a8743a';
+  }));
+  parts.push(paint(new THREE.SphereGeometry(0.4, 14, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.78, 0), '#5a4430'));
+  parts.push(paint(new THREE.TorusGeometry(0.39, 0.05, 4, 16).rotateX(Math.PI / 2).translate(0, 0.79, 0), '#7a6040'));
+  for (let row = 0; row < 3; row++) {
+    const n = 12 - row * 3, el = 0.25 + row * 0.42;
+    for (let k = 0; k < n; k++) {
+      const a = (k / n) * Math.PI * 2 + row * 0.4, cr = 0.4 * Math.cos(el), cy = 0.78 + 0.4 * Math.sin(el);
+      parts.push(paint(new THREE.SphereGeometry(0.075, 5, 3).scale(1.1, 0.55, 1).rotateZ(-el).rotateY(-a).translate(Math.cos(a) * cr, cy, Math.sin(a) * cr), (k + row) % 2 ? '#6a5236' : '#7e6444'));
+    }
+  }
+  parts.push(paint(new THREE.CylinderGeometry(0.035, 0.05, 0.2, 5).rotateZ(0.35).translate(-0.03, 1.27, 0), '#4a3824'));
+  g.add(new THREE.Mesh(bakeParts(parts), mat));
   return g;
 }

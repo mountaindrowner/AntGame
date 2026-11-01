@@ -2,6 +2,38 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: model pass, layer 5: the sneaker, the acorn, the robin, and props (build 20.9)
+
+Mark: "Let's do layer 5." Each of these was checked from the play camera at the moment it matters: the warning shadow, the impact and the landing.
+
+- **Shadows shaped like what casts them** (new `shadows.js`). Each shadow is soft at the edge (vertex alpha) instead of a hard dark disc.
+  - The sneaker's warning shadow is its sole: wide at the toe, a narrow waist, a round heel. It starts a little darker, so it reads while the shoe is still high.
+  - A flying robin's shadow is a bird with its wings spread. On the ground it is a soft pool.
+  - Everything else gets a soft disc.
+- **Dust where things land:**
+  - the sneaker stamping down
+  - the acorn hitting the ground
+  - the robin touching down
+
+  Each burst is clumps of soft, see-through puffs that roll outward and up and thin as they go, drawn in their own faint layer. As solid puffs at first, they looked like beads, so they were made see-through.
+- **The sneaker:**
+  - a navy stripe round the midsole
+  - tread lugs along the outsole edge
+  - silver eyelets down both sides of the laces
+  - a tied bow
+  - a round ankle patch on each side
+- **The falling acorn:**
+  - a glossy nut with faint stripes, a highlight and a dark pointed tip
+  - a cap of overlapping scales with a rolled lip
+  - a bent stalk
+- **Shared props** (`props.js`). They stay white so each use can tint them, but they now carry grey shading that survives any tint:
+  - seeds have a pale seam
+  - pebbles are rounder and speckled
+  - leaves have a midrib and veins
+  - crumbs are porous
+  - dewdrops have a glint
+  - the marker rings are smooth (28 segments instead of 10)
+
 ## Nov 1: potted plants growing out of their soil (build 20.8)
 
 Mark: "Potted plants looks bad still. Should have soil inside the terracotta pot, the plants sprouting from the soil inside."

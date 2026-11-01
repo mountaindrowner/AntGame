@@ -54,6 +54,15 @@ export function sneaker() {
     stripe.rotation.z = 0.12;
   }
   add(new THREE.BoxGeometry(14, 60, 40), '#f1ede4', 306, 150, 0);
+  // Layer 5: a navy stripe round the midsole, tread lugs along the outsole
+  // edge, silver eyelets down both sides of the laces, a bow at the top, and
+  // a round ankle patch on each side.
+  add(spring(slab(foot, 5, 1.0, 1.0, 24)), '#2a3a6a');
+  foot.getSpacedPoints(44).slice(0, 44).forEach((pt, i) => { const lug = add(new THREE.BoxGeometry(14, 9, 14), i % 2 ? '#3a322c' : '#1e1a16', pt.x * 1.01, 3, -pt.y * 1.01); lug.rotation.y = i; });
+  for (let i = 0; i < 5; i++) for (const sgn of [-1, 1]) { const e = add(new THREE.TorusGeometry(7, 2.6, 4, 8), '#d8dce0', -80 + i * 34, 104 + i * 15 + 3, sgn * 50); e.rotation.set(Math.PI / 2, 0, 0.42); }
+  for (const sgn of [-1, 1]) { const loop = add(new THREE.TorusGeometry(20, 4, 4, 10), '#f8f6f0', 92, 182, sgn * 18); loop.rotation.set(Math.PI / 2, 0, 0.3 * sgn); loop.scale.set(1.3, 1, 0.8); const end = add(new THREE.BoxGeometry(46, 6, 8), '#f8f6f0', 70, 172, sgn * 30); end.rotation.set(0, sgn * 0.7, -0.6); }
+  add(new THREE.SphereGeometry(10, 6, 4), '#f0eee8', 86, 184, 0);
+  for (const side of [-1, 1]) { const patch = add(new THREE.CircleGeometry(26, 14), '#f1ede4', 215, 110, side * 92); patch.rotation.y = side < 0 ? Math.PI : 0; const star = add(new THREE.CircleGeometry(12, 5), '#2a3a6a', 215, 110, side * 93); star.rotation.y = side < 0 ? Math.PI : 0; }
   // And the person in it: a white sock, then a jeans leg with a rolled cuff
   // and orange seam stitching, leaning back a little, up out of shot.
   add(new THREE.CylinderGeometry(64, 70, 44, 16), '#f4f0e8', 180, 196, 0);

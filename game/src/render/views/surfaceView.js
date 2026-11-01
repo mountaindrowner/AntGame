@@ -21,6 +21,7 @@ import { YardScenery, mowerMesh } from './yardScenery.js';
 import { sneaker } from '../models/sneaker.js';
 import { robin } from '../models/bird.js';
 import { toad, fallingAcorn } from '../models/toad.js';
+import { SHADOW_DISC, SHADOW_SOLE, SHADOW_BIRD } from '../models/shadows.js';
 
 const { W, H, T, CASTES, DROP, HUNT } = SIM;
 // The scent overlay covers a window this many tiles a side round the camera.
@@ -31,6 +32,9 @@ const TOAD = 48;
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
+const Q_ID = new THREE.Quaternion();
+const _c2 = new THREE.Color();
+const shade2 = (hexc, k) => '#' + _c2.set(hexc).multiplyScalar(k).getHexString();
 const tmpQ2 = new THREE.Quaternion();
 const ZAX = new THREE.Vector3(0, 0, 1);
 const XAX = new THREE.Vector3(1, 0, 0);
@@ -153,10 +157,12 @@ export class SurfaceView {
     this.bugBars = Array.from({ length: 6 }, () => this._bar());
     this.dyn.add(...this.bugBars.map((b) => b.group));
     this.fx = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
+    this.dustFx = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false })); // soft dust (layer 5)
     this.drops = [];
     this.diskGeo = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
     // A plain white speck for sand, dust and spores (tinted per instance).
     this.dotGeo = new THREE.IcosahedronGeometry(1, 0);
+    this.dustGeo = new THREE.IcosahedronGeometry(1, 1); { const c = new Float32Array(this.dustGeo.attributes.position.count * 3).fill(1); this.dustGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
     { const c = new Float32Array(this.dotGeo.attributes.position.count * 3).fill(1); this.dotGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
     { const c = new Float32Array(this.diskGeo.attributes.position.count * 3).fill(1); this.diskGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
     this._bossInit();
@@ -175,7 +181,8 @@ export class SurfaceView {
       g.visible = false; this.dyn.add(g); return g;
     });
     this.shadows = [0, 1, 2, 3, 4].map(() => {
-      const m = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), psxBasic({ color: '#0a0806', transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }));
+      // Layer 5: shaped like what casts them (a sole, a bird), soft at the edge.
+      const m = new THREE.Mesh(SHADOW_DISC, psxBasic({ color: '#0a0806', vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }));
       m.renderOrder = 2; m.visible = false; this.dyn.add(m); return m;
     });
     this.shake = 0;
@@ -491,13 +498,13 @@ export class SurfaceView {
     this.lastT = t;
     this._spider(s, t, fdt);
     this._caterpillar(s, t, fdt);
-    this.bugs.begin(); this.fx.begin();
+    this.bugs.begin(); this.fx.begin(); this.dustFx.begin();
     this._critters(s, t, fdt);
     this._fx(s, t, fdt);
     this._bosses(s, t, fdt);
     this._curios(s, t);
-    this.bugs.end(); this.fx.end();
     this._strikes(s, t, fdt);
+    this.bugs.end(); this.fx.end(); this.dustFx.end();
 
     // Weather and light.
     const raining = s.rain.on;
@@ -556,7 +563,20 @@ export class SurfaceView {
   _strikes(s, t, fdt) {
     const n = { foot: 0, acorn: 0, spray: 0, bird: 0, toad: 0 }, pool = { foot: this.shoes, acorn: this.acorns, spray: this.sprays, bird: this.robins, toad: this.toads };
     let shadow = 0;
-    const shade = (x, z, yaw, sx, sz, op) => { const sh = this.shadows[shadow++]; if (!sh) return; sh.visible = true; sh.position.set(x, 0.5, z); sh.rotation.set(0, -yaw, 0); sh.scale.set(sx, 1, sz); sh.material.opacity = op; };
+    const shade = (x, z, yaw, sx, sz, op, geo = SHADOW_DISC) => { const sh = this.shadows[shadow++]; if (!sh) return; sh.geometry = geo; sh.visible = true; sh.position.set(x, 0.5, z); sh.rotation.set(0, -yaw, 0); sh.scale.set(sx, 1, sz); sh.material.opacity = op; };
+    // A ring of dust kicked up where something lands: k runs 0 → 1.
+    const dust = (x, z, yaw, rx, rz, k, n, size, color) => {
+      if (k < 0 || k >= 1) return;
+      const c = Math.cos(yaw), sn = Math.sin(yaw);
+      // Clumps of soft, see-through puffs, overlapping, rolling outward and up, thinning as they go.
+      for (let i = 0; i < n; i++) for (let j = 0; j < 3; j++) {
+        const q = i * 3 + j, a = (i / n) * Math.PI * 2 + j * 0.18 + Math.sin(q * 1.7) * 0.2, out = 0.9 + k * (0.6 + (q % 4) * 0.12) + j * 0.1;
+        const lx = Math.cos(a) * rx * out, lz = Math.sin(a) * rz * out, sz = size * (0.7 + ((q * 7) % 5) * 0.12);
+        tmpV.set(x + lx * c - lz * sn, 2 + sz * 0.4 + k * size * (0.8 + j * 0.4), z + lx * sn + lz * c);
+        tmpQ2.setFromAxisAngle(UP, q);
+        this.dustFx.pushAtScale('dust', this.dustGeo, tmpV, tmpQ2, sz * (0.6 + k * 1.1) * (1 - k * k * 0.85), sz * (0.45 + k * 0.7) * (1 - k * k * 0.85), sz * (0.6 + k * 1.1) * (1 - k * k * 0.85), j ? shade2(color, 0.92) : color);
+      }
+    };
     for (const st of s.strikes || []) {
       const P = pool[st.kind];
       if (!P || n[st.kind] >= P.length) continue;
@@ -571,7 +591,8 @@ export class SurfaceView {
         it.visible = true; it.position.set(x, y, z); it.rotation.set(0, -st.yaw, 0);
         if (st.phase === 'hold' && !st.shook) { st.shook = true; if (Math.hypot(x - this.target.x, z - this.target.z) < 30 * T) this.shake = 0.35; }
         const near = 1 - Math.min(1, y / 1700);
-        shade(x, z, st.yaw, D.a * T * (0.7 + 0.35 * near), D.b * T * (0.7 + 0.35 * near), 0.12 + 0.45 * near);
+        shade(x, z, st.yaw, D.a * T * (0.7 + 0.35 * near), D.b * T * (0.7 + 0.35 * near), 0.22 + 0.45 * near, SHADOW_SOLE);
+        if (st.phase !== 'warn') dust(x, z, -st.yaw, D.a * T, D.b * T * 1.15, (st.t - D.warn) / 1.1, 14, 26, '#c4b090');
       } else if (st.kind === 'acorn') {
         // Falls from out of sight, spinning, and lands where the shadow was
         // (the sim then leaves an acorn there to eat).
@@ -579,7 +600,8 @@ export class SurfaceView {
         it.visible = st.phase === 'warn';
         it.position.set(x, y, z); it.rotation.set(0.4 * Math.sin(st.t * 9), st.t * 7, 0);
         if (st.phase === 'hold' && !st.shook) { st.shook = true; if (Math.hypot(x - this.target.x, z - this.target.z) < 20 * T) this.shake = 0.2; }
-        if (st.phase === 'warn') shade(x, z, 0, D.a * T * (0.5 + 0.5 * k), D.b * T * (0.5 + 0.5 * k), 0.1 + 0.4 * k);
+        if (st.phase === 'warn') shade(x, z, 0, D.a * T * (0.5 + 0.5 * k), D.b * T * (0.5 + 0.5 * k), 0.1 + 0.45 * k);
+        else dust(x, z, 0, D.a * T * 0.7, D.a * T * 0.7, (st.t - D.warn) / 0.7, 7, 13, '#c4b090');
       } else if (st.kind === 'spray') {
         // A cloud: a faint hiss of mist first, then thick, then it drifts off.
         const k = st.phase === 'warn' ? Math.min(1, st.t / D.warn) : 1, fade = st.phase === 'lift' ? 1 - (st.t - D.warn - D.hold) / D.lift : 1;
@@ -607,8 +629,11 @@ export class SurfaceView {
           it.body.scale.set(1, 1 + 0.02 * Math.sin(t * 2), 1); // breathing
           const puff = 1 + 0.45 * Math.max(0, Math.sin(t * 5)); it.throat.scale.set(1, puff, 0.6 + 0.4 * puff); // throat pulsing
         }
-        const near = 1 - Math.min(1, y / top);
-        shade(x + Math.cos(st.yaw) * (fly ? 20 : 10), z + Math.sin(st.yaw) * (fly ? 20 : 10), st.yaw, (fly ? 56 : 80) * (0.6 + 0.4 * near), (fly ? 40 : 60) * (0.6 + 0.4 * near), 0.15 + 0.3 * near);
+        const near = 1 - Math.min(1, y / top), aloft = fly && y > 6;
+        // In the air a robin's shadow is a bird with its wings out; on the ground, a soft pool under it.
+        if (aloft) shade(x, z, st.yaw, 70 * (0.6 + 0.4 * near), 95 * (0.6 + 0.4 * near), 0.15 + 0.35 * near, SHADOW_BIRD);
+        else shade(x + Math.cos(st.yaw) * (fly ? 20 : 10), z + Math.sin(st.yaw) * (fly ? 20 : 10), st.yaw, (fly ? 56 : 80), (fly ? 40 : 60), 0.4);
+        if (fly && st.phase === 'land') dust(x, z, 0, 58, 58, (st.t - B.land * 0.85) / 0.6, 7, 11, '#c4b090');
       }
     }
     for (const k in pool) for (let i = n[k]; i < pool[k].length; i++) { const it = pool[k][i]; (it.group || it).visible = false; }
