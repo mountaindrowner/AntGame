@@ -192,7 +192,7 @@ function create(seed){
     critters: [], bugGone: {}, hits: [], splashes: [], spiderCorpse: null, catCorpse: null,
     // Build 19: bosses, and the event director.
     bosses: {}, goo: [], stalks: [], bursts: [], event: null, banner: null, bossIntro: null,
-    director: { next: 540 + Math.random()*120, calm: 0, lastLethal: -999, had: {} },
+    director: { next: 600 + Math.random()*120, calm: 0, lastLethal: -999, lastHard: -999, had: {} },
   };
   s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
   // Every area starts with its own stock; home has the most, and it won't
@@ -1972,12 +1972,15 @@ function tickDirector(s, dt){
   D.calm += dt;
   if (s.t < D.next) return;
   const n = antCount(s), cap = queenCap(s.queen.level), strong = n >= Math.max(12, cap*0.3);
-  const lethalOk = strong && s.t - D.lastLethal > 180 && s.t > 600, k = D.calm > 360 ? 3 : 1.5;
+  // Build 19.1 (Mark: "events shouldn't happen too often… the more serious
+  // ones even less"): lethal ones not before 25 minutes and 20 minutes apart;
+  // hardships 12 minutes from the last hard or lethal one.
+  const lethalOk = strong && s.t - D.lastLethal > 1200 && s.t > 1500, k = D.calm > 900 ? 2 : 1;
   const opts = [['swarm', 3], ['picnic', 2.5]];
-  if (s.t > 600) opts.push(['heat', 2]);
+  if (s.t > 900 && s.t - Math.max(D.lastHard || -999, D.lastLethal) > 720) opts.push(['heat', 1.5]);
   const fighters = s.ants.filter(a => !a.team && CASTES[a.caste].fight >= 3).length;
   if (lethalOk && s.rival.queenAlive && (fighters >= 2 || s.t > 1200)) opts.push(['warparty', 2*k]);
-  if (lethalOk && s.t > 900 && n >= 15) opts.push(['cordyceps', (D.had.cordyceps ? 2 : 4)*k]);
+  if (lethalOk && s.t > 1800 && n >= 15) opts.push(['cordyceps', (D.had.cordyceps ? 1.5 : 3)*k]);
   let tot = 0; for (const o of opts) tot += o[1];
   let r = Math.random()*tot, key = opts[0][0]; for (const [kk, wt] of opts){ r -= wt; if (r <= 0){ key = kk; break; } }
   startEvent(s, key);
@@ -1985,7 +1988,7 @@ function tickDirector(s, dt){
 function startEvent(s, key){
   const E = EVENTS[key], D = s.director, w = s.world, P = s.player;
   const ev = s.event = { key, t: 0, end: E.dur, lost0: deathTotal(s.colony), data: {} };
-  D.had[key] = (D.had[key] || 0) + 1; if (E.kind === 'lethal') D.lastLethal = s.t;
+  D.had[key] = (D.had[key] || 0) + 1; if (E.kind === 'lethal') D.lastLethal = s.t; if (E.kind === 'hard') D.lastHard = s.t;
   s.banner = { key, t: s.t, icon: E.icon, title: E.name, line: E.line, kind: E.kind }; s.events.push('event');
   P.msg = `${E.icon} ${E.name}! ${E.line}`;
   if (key === 'picnic'){
@@ -2016,7 +2019,8 @@ function endEvent(s, msg){
   const lost = deathTotal(s.colony) - ev.lost0;
   s.report = { kind: 'event', key: ev.key, lost, t: s.t }; s.events.push('eventover');
   s.player.msg = msg || `${E.name} is over.${E.kind === 'lethal' ? ` You lost ${lost} ant${lost === 1 ? '' : 's'}.` : ''}`;
-  s.event = null; D.next = s.t + 240 + Math.random()*180; if (E.kind !== 'gift') D.calm = 0;
+  // The next one 8 to 10 minutes after this one ends.
+  s.event = null; D.next = s.t + 480 + Math.random()*120; if (E.kind !== 'gift') D.calm = 0;
 }
 function tickEvent(s, dt){
   const ev = s.event, w = s.world, c = s.colony; ev.t += dt;

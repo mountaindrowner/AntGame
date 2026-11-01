@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: events less often (build 19.1)
+
+Mark: "events shouldn't happen too often… maybe like 8 minutes to 10 minutes. And the more serious ones, even less frequently. My brother did a 45 minute to an hour run and had barely taken out the enemy colony and the spider."
+
+- **The first event** comes at 10–12 minutes. **The next one** comes 8–10 minutes after the last one ends (was 4–7).
+- **Lethal events** (the war party, the Cordyceps outbreak) come no earlier than 25 minutes, and at least 20 minutes apart (was 10 minutes, and 3 apart).
+  - The outbreak waits until 30 minutes.
+  - After 15 calm minutes they become twice as likely (was 6 minutes, and three times).
+- **Heatwaves** come after 15 minutes, and at least 12 minutes from the last hardship or lethal event.
+- So in a typical hour: about six events, mostly gifts, a heatwave or two, and one or two lethal ones in the second half.
+- **What his run says about pace:** about an hour to beat the rival and the spider means the three bosses (Hornworm, Ground Beetle, Antlion Queen) are the second hour's content, which is where the design (`PROGRESSION.md`) puts them. They stay as they are. Lethal events now land in that same stretch, rather than piling onto a colony still fighting its first war.
+- **Tests:** 71 (new: events 8–10 minutes apart; over a simulated hour, nothing lethal before 25 minutes, and lethal ones 20 minutes apart).
+
 ## Nov 1: bosses and events (build 19)
 
 `PLAYTEST-2.md` items 29 and 30. Mark: "make them proper bosses and events, really enthralling stuff."

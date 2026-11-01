@@ -112,9 +112,12 @@ test('Cordyceps: the infected turn, climb, die and sprout stalks that burst onto
 
 test('Cordyceps: soldiers kill zombies and nurses cure the newly infected inside; the outbreak ends', () => {
   const s = founded(), c = s.colony;
-  SIM.stress(s, 4); const sick = s.ants.slice(-2);
-  for (const a of sick) Object.assign(a, { state: 'in', nx: SIM.SHAFT + 0.5, ny: 0.5, ntx: SIM.SHAFT, nty: 0, goal: null, rest: 0 });
-  const nurse = s.ants.slice(-4, -2); for (const n of nurse) Object.assign(n, { caste: 'nurse', state: 'in', rest: 5 });
+  SIM.stress(s, 6); const sick = s.ants.slice(-2);
+  for (const a of sick) Object.assign(a, { state: 'in', nx: SIM.SHAFT + 0.5, ny: 0.5, ntx: SIM.SHAFT, nty: 0, goal: null, rest: 99 });
+  const nurse = s.ants.slice(-6, -2); for (const n of nurse) Object.assign(n, { caste: 'nurse', state: 'in', rest: 99 });
+  // Everyone else stays out of the nest, so the cure is what's tested.
+  for (const a of s.ants) if (!a.team && !a.isPlayer && !sick.includes(a) && !nurse.includes(a)) a.state = 'dead';
+  s.ants = s.ants.filter((a) => a.state !== 'dead');
   SIM.startEvent(s, 'cordyceps');
   for (const a of s.ants) if (a.infect != null && !sick.includes(a)) a.infect = null;
   for (const a of sick) a.infect = 0.01;
@@ -140,4 +143,19 @@ test('bosses and events survive a save', () => {
   const s2 = SIM.deserialize(SIM.serialize(s));
   assert.equal(s2.bosses.hornworm.hp, 300);
   assert.equal(s2.event.key, 'heat');
+});
+
+test('events come 8 to 10 minutes apart, and the lethal ones rarely and late', () => {
+  const s = founded(); SIM.stress(s, 30);
+  s.director.next = s.t; step(s, 0.1);
+  const first = s.event; assert.ok(first);
+  s.event.t = s.event.end; step(s, 0.1); // let it end
+  assert.equal(s.event && s.event.key === first.key ? 'same' : 'ok', 'ok');
+  const gap = s.director.next - s.t;
+  assert.ok(gap >= 470 && gap <= 610, `next in ${Math.round(gap)} s`);
+  // Over a simulated hour of draws, nothing lethal before 25 minutes, and lethal ones 20 minutes apart.
+  const s2 = founded(); SIM.stress(s2, 40); const D = s2.director; const lethal = [];
+  for (let t = 300; t < 3600; t += 30) { s2.t = t; if (s2.event) { s2.event = null; } D.next = t; step(s2, 0.05); if (s2.event && SIM.EVENTS[s2.event.key].kind === 'lethal') lethal.push(t); }
+  assert.ok(lethal.every((t) => t >= 1500), `lethal at ${lethal}`);
+  for (let i = 1; i < lethal.length; i++) assert.ok(lethal[i] - lethal[i - 1] >= 1200, `lethal at ${lethal}`);
 });
