@@ -282,6 +282,18 @@ function leafBall(R, greens, seed, detail = 2) {
   const rr = rng(Math.floor(seed * 9973) + 11);
   return paint(g.toNonIndexed(), (x, y) => { const q = rr(); return q < 0.06 ? greens[4] : q < 0.16 ? greens[0] : y > R * 0.35 ? (q < 0.6 ? greens[3] : greens[2]) : y > -R * 0.1 ? (q < 0.5 ? greens[2] : greens[1]) : greens[0]; }, seed);
 }
+// A leaf with a ruffled edge (lettuce, squash): its rim waves up and down.
+function ruffleLeaf(len, wid, c, edge, seed) {
+  const g = new THREE.SphereGeometry(1, 12, 5).scale(len / 2, Math.max(0.6, wid * 0.08), wid / 2).translate(len / 2, 0, 0), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), e = Math.abs(z) / (wid / 2); p.setY(i, p.getY(i) + Math.sin(x * 9 / len + z * 7 / wid + seed) * wid * 0.14 * e * e); }
+  return paint(g, (x, y, z) => (Math.abs(z) < wid * 0.08 ? lighten(c, 0.35) : Math.abs(z) > wid * 0.36 ? edge : c), seed);
+}
+// A grass or reed blade: a flat strip tapering to a point, arching over.
+function blade(h, w, c, tip, lean, seed) {
+  const g = new THREE.BoxGeometry(w, h, w * 0.15, 1, 6, 1).translate(0, h / 2, 0), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const u = p.getY(i) / h; p.setX(i, p.getX(i) * (1 - u * 0.92) + u * u * lean); }
+  return paint(g, (x, y) => (y > h * 0.72 ? tip : c), seed);
+}
 const flipTube = (g) => g.scale(-1, 1, 1); // an open tube turned inside out, so its inner face shows
 
 // A garden flower: a stem with ribbed leaves, green sepals, two rings of
@@ -597,41 +609,67 @@ function meshLandmark(l, w, ctx) {
         for (const [x, y, rr] of l.spots) decals.push(paint(at(new THREE.CircleGeometry(rr * T, 10).rotateX(-Math.PI / 2), x * T, 0, y * T), (px, py, pz) => (Math.hypot(px - x * T, pz - y * T) < rr * T * 0.6 ? '#2a2620' : '#4a463e')));
         break;
       case 'tomato': {
-        // A staked tomato plant: a thick stem, leaf sprays, red and green fruit.
-        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, rs = rng(Math.floor(l.seed * 1e6));
-        parts.push(paint(at(new THREE.CylinderGeometry(1.8 * S, 2.4 * S, h, 6).translate(0, h / 2, 0), x, 0, z), '#4a7a2e'));
-        parts.push(paint(at(new THREE.CylinderGeometry(1 * S, 1 * S, h * 1.08, 4).translate(0, h * 0.54, 0), x + 4 * S, 0, z + 2 * S), '#a8885a'));
-        for (let k = 0; k < 5; k++) {
-          const leaf = new THREE.SphereGeometry(1, 6, 3).scale(14 * S, 2 * S, 6 * S).translate(11 * S, 0, 0).rotateY(k * 1.3 + rs() * 0.6).rotateZ(0.25);
-          parts.push(paint(at(leaf, x, h * (0.25 + k * 0.16), z), k % 2 ? '#3e7a2a' : '#4a8a30', k));
+        // A staked tomato plant (layer 4c): a stem tied to a cane, side
+        // branches, sprays of leaflets drooping off them, yellow flowers, and
+        // trusses of tomatoes, ripe and green, each with its green star on top.
+        // Peppers (l.fruit) hang long instead.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, rs = rng(Math.floor(l.seed * 1e6)), sx = x + 6 * S, sz = z + 3 * S;
+        parts.push(rod([sx, 0, sz], [sx, h * 1.05, sz], 1.2 * S, 1 * S, '#b8986a', 5, 1));
+        parts.push(rod([x, 0, z], [x + 2 * S, h, z], 2.4 * S, 1.6 * S, (px, py) => (py < h * 0.2 ? '#5a7a32' : '#4a7a2e'), 6, 2));
+        for (let k = 0; k < 3; k++) parts.push(at(paint(new THREE.TorusGeometry(4.4 * S, 0.9 * S, 3, 8).rotateX(Math.PI / 2), '#e8dcb8'), x + 3 * S, h * (0.25 + k * 0.27), z + 1.5 * S));
+        const sprays = [];
+        for (let k = 0; k < 8; k++) {
+          const a = k * 2.4 + rs() * 0.6, y0 = h * (0.12 + k * 0.105), reach = (26 + rs() * 12) * S * (1 - k * 0.04), ex = x + Math.cos(a) * reach, ez = z + Math.sin(a) * reach, ey = y0 + (6 - k * 0.6) * S;
+          parts.push(rod([x, y0, z], [ex, ey, ez], 1.1 * S, 0.7 * S, '#4a7a2e', 4, k + 3));
+          sprays.push([ex, ey, ez, a]);
+          for (let j = 0; j < 5; j++) {
+            const f = (j + 1) / 5.5, lx = x + (ex - x) * f, lz = z + (ez - z) * f, ly = y0 + (ey - y0) * f - j * 0.6 * S, side = j % 2 ? 1 : -1;
+            parts.push(at(leafRib((j === 4 ? 13 : 10) * S, (j === 4 ? 7 : 5.5) * S, j % 2 ? '#3e7a2a' : '#4a8a30', k * 7 + j).rotateZ(-0.35).rotateY(-(a + side * (j === 4 ? 0 : 1.1))), lx, ly, lz));
+          }
         }
-        for (let k = 0; k < 4; k++) {
-          const a = rs() * Math.PI * 2, ripe = rs() < 0.7;
-          // Tomatoes are round and red; peppers hang long, yellow or green.
-          const fruit = l.fruit ? new THREE.SphereGeometry(5 * S, 8, 6).scale(1, 2, 1) : new THREE.SphereGeometry(7 * S, 8, 6).scale(1, 0.85, 1);
-          const colr = l.fruit === 'yellow' ? '#f0c020' : l.fruit === 'green' ? '#3e9a2a' : null;
-          parts.push(paint(at(fruit, x + Math.cos(a) * 9 * S, h * (0.3 + rs() * 0.45), z + Math.sin(a) * 9 * S), (px, py) => (colr || (ripe ? (py > 0 && rs() < 0.1 ? '#f0604a' : '#d8282a') : '#7ab040')), 90 + k));
+        for (let k = 0; k < 3; k++) {
+          const [ex, ey, ez] = sprays[1 + k * 2], tx = x + (ex - x) * 0.45, tz = z + (ez - z) * 0.45, ty = ey - 10 * S;
+          for (let j = 0; j < (l.fruit ? 2 : 4); j++) {
+            const b = j * 1.9 + k, fx = tx + Math.cos(b) * 5.5 * S, fz = tz + Math.sin(b) * 5.5 * S, fy = ty - j * 3 * S, rip = rs();
+            if (l.fruit) {
+              const colr = l.fruit === 'yellow' ? '#f0c020' : l.fruit === 'green' ? '#3e9a2a' : '#d8282a';
+              parts.push(at(paint(new THREE.SphereGeometry(5 * S, 8, 6).scale(1, 2.1, 1), (px, py, pz) => (px < -1 * S && pz > 0 ? lighten(colr, 0.3) : colr), 90 + j), fx, fy - 6 * S, fz));
+              parts.push(rod([fx, fy + 4 * S, fz], [fx, fy + 9 * S, fz], 1 * S, 0.8 * S, '#3e7a2a', 4));
+            } else {
+              const c = rip < 0.45 ? '#d8282a' : rip < 0.65 ? '#e8702a' : '#7ab040';
+              parts.push(at(paint(new THREE.SphereGeometry(6.5 * S, 10, 6).scale(1, 0.82, 1), (px, py, pz) => (py > 2 * S && px < 0 && pz > 0 ? lighten(c, 0.35) : c), 90 + j), fx, fy, fz));
+              parts.push(at(ruffle(3.4 * S, 0.8 * S, 5, 0.3, '#3e7a2a', j + 40), fx, fy + 5.2 * S, fz));
+            }
+          }
         }
+        for (let k = 0; k < 3; k++) { const [ex, ey, ez] = sprays[5 + (k % 3)]; parts.push(at(ruffle(3 * S, 0.8 * S, 5, 0.35, '#f0d02a', k + 60), x + (ex - x) * 0.3, ey - 3 * S, z + (ez - z) * 0.3)); }
         break;
       }
       case 'beanpole': {
-        // A bean pole wound with a vine: leaves spiralling up, a few pods.
+        // A runner-bean pole (layer 4c): a bamboo cane with nodes, the vine
+        // winding up it, three-leaflet leaves, long pods hanging, scarlet flowers.
         const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, rs = rng(Math.floor(l.seed * 1e6));
-        parts.push(paint(at(new THREE.CylinderGeometry(1.4 * S, 1.8 * S, h, 5).translate(0, h / 2, 0), x, 0, z), '#9a7a4e'));
-        for (let k = 0; k < 9; k++) {
-          const a = k * 1.9, y = h * (0.1 + k * 0.095);
-          parts.push(paint(at(new THREE.SphereGeometry(1, 6, 3).scale(8 * S, 1.5 * S, 6 * S).translate(7 * S, 0, 0).rotateY(a), x, y, z), k % 2 ? '#4a8a30' : '#5a9a3a', k));
-          if (rs() < 0.35) parts.push(paint(at(new THREE.CylinderGeometry(1.2 * S, 0.8 * S, 16 * S, 4).rotateZ(0.2), x + Math.cos(a) * 6 * S, y - 8 * S, z + Math.sin(a) * 6 * S), '#7ab83e', k + 20));
+        parts.push(paint(at(new THREE.CylinderGeometry(1.6 * S, 2 * S, h, 6, 8).translate(0, h / 2, 0), x, 0, z), (px, py) => (Math.abs(((py / (h / 8)) % 1) - 0.5) > 0.44 ? '#7a6038' : '#b8a068'), 1));
+        const turns = 5, steps = 40, pts = [];
+        for (let i = 0; i <= steps; i++) { const u = i / steps, a = u * turns * Math.PI * 2; pts.push([x + Math.cos(a) * 3 * S, u * h * 0.96, z + Math.sin(a) * 3 * S]); }
+        for (let i = 0; i < steps; i++) parts.push(rod(pts[i], pts[i + 1], 0.9 * S, 0.9 * S, '#4a8a2e', 3, i));
+        for (let k = 0; k < 11; k++) {
+          const a = k * 2.2 + rs(), y = h * (0.1 + k * 0.08), sx = x + Math.cos(a) * 3 * S, sz = z + Math.sin(a) * 3 * S, ex = x + Math.cos(a) * 22 * S, ez = z + Math.sin(a) * 22 * S;
+          parts.push(rod([sx, y, sz], [ex, y + 4 * S, ez], 0.7 * S, 0.6 * S, '#4a8a2e', 3, k));
+          for (const da of [-0.9, 0, 0.9]) parts.push(at(leafRib(16 * S, 11 * S, da ? '#4a8a30' : '#5a9a3a', k * 3 + da * 2).rotateZ(-0.25).rotateY(-(a + da)), ex, y + 4 * S, ez));
+          if (k % 2 === 0) for (let j = 0; j < 2; j++) parts.push(rod([ex - Math.cos(a) * 5 * S + j * 2 * S, y, ez - Math.sin(a) * 5 * S], [ex - Math.cos(a) * 4 * S + j * 3 * S, y - 22 * S, ez - Math.sin(a) * 4 * S], 1.5 * S, 1 * S, '#7ab83e', 4, k + j));
+          if (k % 3 === 1) for (let j = 0; j < 4; j++) parts.push(at(paint(new THREE.IcosahedronGeometry(2.2 * S, 0), j % 2 ? '#e0281e' : '#f04a30'), ex + Math.cos(a + 1.6) * (4 + j * 2) * S, y + (6 + j * 2) * S, ez + Math.sin(a + 1.6) * (4 + j * 2) * S));
         }
         break;
       }
       case 'lettuce': {
-        // A lettuce head: ruffled leaves in two rings round a pale heart.
+        // A lettuce head (layer 4c): three rings of ruffled leaves, pale ribs,
+        // frilled edges, folding up round a tight pale heart.
         const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, R = l.r * T;
-        parts.push(paint(at(new THREE.SphereGeometry(R * 0.55, 8, 6).scale(1, 0.8, 1), x, R * 0.4, z), '#c8e08a'));
-        for (let ring = 0; ring < 2; ring++) for (let k = 0; k < 7; k++) {
-          const a = k * 0.9 + ring * 0.45, leaf = new THREE.SphereGeometry(1, 6, 4).scale(R * 0.55, R * (0.5 - ring * 0.12), R * 0.3).translate(R * (0.45 + ring * 0.2), 0, 0).rotateZ(0.5 - ring * 0.3).rotateY(a);
-          parts.push(paint(at(leaf, x, R * 0.35, z), ring ? '#5aa03a' : '#86c050', k + ring * 9));
+        parts.push(at(paint(new THREE.SphereGeometry(R * 0.42, 10, 7).scale(1, 0.9, 1), (px, py) => (py > R * 0.25 ? '#e0f0a8' : '#c8e08a'), 3), x, R * 0.38, z));
+        for (let ring = 0; ring < 3; ring++) for (let k = 0; k < 7; k++) {
+          const a = k * 0.9 + ring * 0.45, len = R * (0.95 - ring * 0.18), wid = R * (0.72 - ring * 0.12);
+          parts.push(at(ruffleLeaf(len, wid, ['#5aa03a', '#78b84a', '#9ccc60'][ring], ['#3e7a28', '#5a9a34', '#b8dc78'][ring], k + ring * 9).rotateZ(0.25 + ring * 0.38).rotateY(-a), x, R * (0.12 + ring * 0.12), z));
         }
         break;
       }
@@ -834,9 +872,21 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'squash': {
+        // A squash plant (layer 4c): big lobed leaves on long stalks, a ribbed
+        // orange squash lying in the shade under them, a trumpet flower and a
+        // curling tendril.
         const x = l.x * T, z = l.y * T, R = l.r * T, rs = rng(Math.floor(l.seed * 1e6));
-        for (let k = 0; k < 5; k++) parts.push(paint(at(new THREE.SphereGeometry(1, 8, 4).scale(R * 0.75, 2 * S, R * 0.6).translate(R * 0.6, 0, 0).rotateZ(0.3).rotateY(k * 1.26 + rs()), x, 30 * S + k * 4 * S, z), k % 2 ? '#3a7a2a' : '#4a8a34', k));
-        parts.push(paint(at(new THREE.SphereGeometry(R * 0.38, 10, 7).scale(1.4, 0.9, 1), x + R * 0.3, R * 0.3, z - R * 0.2), (px, py) => (py > R * 0.45 ? '#f0a83a' : '#e08a2a'), 13));
+        for (let k = 0; k < 6; k++) {
+          const a = k * 1.05 + rs() * 0.4, d = R * (0.35 + (k % 2) * 0.2), lx = x + Math.cos(a) * d, lz = z + Math.sin(a) * d, ly = (26 + (k % 3) * 6) * S;
+          parts.push(rod([x, 2 * S, z], [lx, ly, lz], 1.6 * S, 1.2 * S, '#4a8a30', 4, k));
+          for (const da of [-0.55, 0, 0.55]) parts.push(at(ruffleLeaf(R * (da ? 0.62 : 0.78), R * 0.5, k % 2 ? '#3a7a2a' : '#4a8a34', '#2e6a22', k * 3 + da * 4).rotateZ(0.15).rotateY(-(a + da)), lx, ly, lz));
+        }
+        const sq = new THREE.SphereGeometry(R * 0.36, 16, 8).scale(1.45, 0.92, 1), sp = sq.attributes.position;
+        for (let i = 0; i < sp.count; i++) { const ax = sp.getX(i), az = sp.getZ(i), k2 = 1 - 0.07 * (1 - Math.cos(Math.atan2(az, ax * 0.7) * 8)) * 0.5; sp.setX(i, ax * k2); sp.setZ(i, az * k2); }
+        parts.push(at(paint(sq, (px, py, pz) => (Math.floor((Math.atan2(pz, px * 0.7) + Math.PI) / (Math.PI / 8)) % 2 ? '#f0a83a' : '#e08a2a'), 13), x + R * 0.32, R * 0.32, z - R * 0.2));
+        parts.push(rod([x + R * 0.82, R * 0.36, z - R * 0.2], [x + R * 0.95, R * 0.44, z - R * 0.15], 2.4 * S, 1.8 * S, '#7a8a3a', 5));
+        parts.push(at(paint(new THREE.ConeGeometry(6 * S, 12 * S, 6, 1, true).rotateX(Math.PI), '#f8c428'), x - R * 0.3, 40 * S, z + R * 0.3));
+        parts.push(at(paint(new THREE.TorusGeometry(5 * S, 0.6 * S, 3, 12, Math.PI * 1.6).rotateY(0.6), '#5a9a34'), x + R * 0.1, 18 * S, z + R * 0.55));
         break;
       }
       case 'stepstone': {
@@ -941,10 +991,22 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'thistle': {
-        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h;
-        parts.push(paint(at(new THREE.CylinderGeometry(1.2 * S, 1.6 * S, h, 4).translate(0, h / 2, 0), x, 0, z), '#5a7a3a'));
-        for (let k = 0; k < 3; k++) parts.push(paint(at(new THREE.ConeGeometry(4 * S, 22 * S, 3).rotateZ(1.2).rotateY(k * 2.1 + l.seed * 4), x, h * (0.3 + k * 0.2), z), '#4a6a32', k));
-        if (!l.weed) { parts.push(paint(at(new THREE.SphereGeometry(7 * S, 6, 4), x, h, z), '#4a6a2a')); parts.push(paint(at(new THREE.ConeGeometry(7 * S, 12 * S, 8), x, h + 9 * S, z), '#a85ac0')); }
+        // A thistle (layer 4c): a ridged stem, spiny leaves with pale veins
+        // reaching off it, and on top a prickly green bulb of bracts under a
+        // purple brush, with a smaller bud beside it. Weeds are a flat rosette.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, seed = l.seed * 10;
+        for (let k = 0; k < 5; k++) parts.push(at(toothLeaf(20 * S, 5.5 * S, k % 2 ? '#4a6a32' : '#56763a', k + seed).rotateZ(0.12).rotateY(k * 1.26 + seed), x, 0.8 + k * 0.2, z));
+        if (!l.weed) {
+          parts.push(rod([x, 0, z], [x + 2 * S, h, z], 1.8 * S, 1.2 * S, '#5a7a3a', 5, 1));
+          for (let k = 0; k < 4; k++) parts.push(at(toothLeaf(24 * S, 6.5 * S, '#4a6a32', k + seed + 5).rotateZ(0.55).rotateY(k * 1.9 + seed), x + 1 * S, h * (0.25 + k * 0.15), z));
+          const heads = [[x + 2 * S, h, z, 1], [x + 9 * S, h * 0.82, z + 4 * S, 0.6]];
+          for (const [hx, hy, hz, k2] of heads) {
+            if (k2 < 1) parts.push(rod([x + 1.5 * S, h * 0.7, z], [hx, hy, hz], 1 * S, 0.8 * S, '#5a7a3a', 4));
+            parts.push(at(paint(new THREE.IcosahedronGeometry(6.5 * S * k2, 1).scale(1, 0.9, 1), (px, py, pz) => (Math.sin(px * 3 + pz * 2) > 0.3 ? '#6a8a3a' : '#4a6a2a'), 7), hx, hy, hz));
+            for (let j = 0; j < 10; j++) { const a = (j / 10) * Math.PI * 2, e = (j % 2) * 0.5 - 0.2; parts.push(rod([hx + Math.cos(a) * 5 * S * k2, hy + e * 5 * S * k2, hz + Math.sin(a) * 5 * S * k2], [hx + Math.cos(a) * 9 * S * k2, hy + (e - 0.3) * 6 * S * k2, hz + Math.sin(a) * 9 * S * k2], 0.6 * S, 0.1 * S, '#c8d8a0', 3, j)); }
+            if (k2 === 1) for (let r2 = 0; r2 < 2; r2++) parts.push(at(ruffle((5.5 - r2 * 1.8) * S, (5 + r2 * 2) * S, 12, 0.45, (px, py) => (py > 1.5 * S ? '#c87ad8' : '#a050b8'), 8 + r2), hx, hy + (5 + r2 * 3) * S, hz));
+          }
+        }
         break;
       }
       case 'toadhole':
@@ -1033,9 +1095,19 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'reed': {
-        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h;
-        for (let k = 0; k < 3; k++) parts.push(paint(at(new THREE.CylinderGeometry(0.8 * S, 1.4 * S, h * (0.7 + k * 0.15), 3).translate(0, h * (0.35 + k * 0.07), 0).rotateZ((k - 1) * 0.12).rotateY(l.seed * 6 + k), x, 0, z), k % 2 ? '#5a7a3a' : '#6a8a42', k));
-        if (l.seed > 0.4) parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3 * S, 22 * S, 6), x, h * 0.9, z), '#6a4228'));
+        // A clump of reeds (layer 4c): flat blades arching out, paler at the
+        // tips; tall ones carry a cattail, a brown velvet head with its spike.
+        const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, h = l.h, seed = l.seed * 10;
+        for (let k = 0; k < 8; k++) {
+          const hh = h * (0.55 + ((k * 7 + seed) % 5) * 0.1), lean = (k % 2 ? 1 : -1) * h * (0.08 + (k % 3) * 0.05);
+          parts.push(at(blade(hh, 7 * S, k % 2 ? '#5a7a3a' : '#6a8a42', '#a8b870', lean, k).rotateY(k * 1.05 + seed), x + Math.cos(k * 2.1) * 2 * S, 0, z + Math.sin(k * 2.1) * 2 * S));
+        }
+        if (l.seed > 0.4) {
+          parts.push(rod([x, 0, z], [x + 2 * S, h, z], 1.2 * S, 1 * S, '#6a8a42', 4));
+          parts.push(at(paint(new THREE.CylinderGeometry(3.6 * S, 3.6 * S, 26 * S, 8), (px, py) => (py > 10 * S || py < -10 * S ? '#4a2e1a' : '#6a4228'), 9), x + 2 * S, h - 16 * S, z));
+          for (const yy of [-13, 13]) parts.push(at(paint(new THREE.SphereGeometry(3.6 * S, 8, 3, 0, Math.PI * 2, yy > 0 ? 0 : Math.PI / 2, Math.PI / 2).scale(1, 0.4, 1), '#4a2e1a'), x + 2 * S, h - 16 * S + yy * S, z));
+          parts.push(rod([x + 2 * S, h - 3 * S, z], [x + 2 * S, h + 14 * S, z], 0.8 * S, 0.3 * S, '#8a7a4a', 3));
+        }
         break;
       }
       case 'slime':

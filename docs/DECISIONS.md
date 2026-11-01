@@ -2,6 +2,38 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: model pass, layer 4c: the garden, the thistles and the reeds (build 21.2)
+
+Mark: "Cool, next."
+
+These are some of the most common things in the yard: 25 tomato plants, 12 bean poles, 30 thistles and 54 reed clumps. From the play camera they looked like bare sticks.
+
+**The plants** (`yardScenery.js`, with new shared shapes `ruffleLeaf` and `blade`):
+- **Tomatoes:**
+  - a stem tied to a cane in three places
+  - eight side branches, each with a spray of drooping leaflets
+  - yellow flowers
+  - three trusses of tomatoes, ripe, orange and green, each with its green star on top
+  - peppers hang long instead
+- **Bean poles:**
+  - a bamboo cane with nodes, the vine winding five times up it
+  - three-leaflet leaves
+  - pods hanging
+  - scarlet runner-bean flowers
+- **Lettuce:** three rings of ruffled leaves, pale ribs and frilled edges, folding up round a tight pale heart.
+- **Squash:**
+  - big lobed, ruffled leaves on long stalks
+  - a ribbed orange squash in their shade
+  - a trumpet flower
+  - a curling tendril
+- **Thistles:**
+  - a rosette of spiny leaves with pale veins
+  - a ridged stem with more spiny leaves
+  - a prickly green bulb of bracts under a two-tier purple brush, with a smaller bud beside it
+
+  Thistle weeds are just the rosette.
+- **Reeds:** clumps of eight flat blades arching out, paler at the tips. The tall ones carry a cattail: a brown velvet head with its spike.
+
 ## Nov 1: the opening film with the house in it (build 21.1)
 
 Mark: "what does the intro look like now? doesnt the house show up?"
