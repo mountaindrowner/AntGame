@@ -33,7 +33,7 @@ const WHAT = { forager: 'Gathers food and water.', builder: 'Digs, builds and ha
 function antCard(s, a) {
   if (a.champion) return ['⚔', a.name, `Champion of the pavement ants, leading a war party. ${Math.ceil(a.hp)} health. Kill it and the rest break.`];
   if (a.zombie) return ['🍄', 'Infected ant', 'The fungus has it: it climbs to spread spores. Kill it before a stalk bursts from it.'];
-  if (a.team) return ['🐜', 'Pavement ant', 'A rival. Their nest is in the Patio.'];
+  if (a.team) { const R = SIM.rspec(a); return ['🐜', R.name.replace(/s$/, ''), R.blurb]; }
   const C = CASTES[a.caste], R = RANKS[rankOf(a)], job = a.carry && a.state === 'return' ? 'carrying ' + (a.kind === 'food' ? 'food' : a.kind === 'water' ? 'water' : a.kind === 'grit' ? 'a pebble' : a.kind === 'protein' ? 'meat' : 'a load') + ' home' : JOB[a.state] || a.state;
   const next = RANKS[rankOf(a) + 1], xp = Math.floor(a.xp || 0);
   const icon = a.isPlayer ? '⭐' : rankOf(a) >= 4 ? '🏆' : rankOf(a) >= 3 ? '🎖' : '🐜';
@@ -81,7 +81,7 @@ export class Callout {
     }
     for (const st of s.strikes || []) if (st.kind === 'bird' || st.kind === 'toad') take(st.x * T, st.y * T, 3 * T, () => (st.kind === 'bird' ? ['🐦', 'Robin', 'Hunting ants. Five fighters chase it off.'] : ['🐸', 'Toad', 'Its tongue reaches five tiles. Keep away.']), 20);
     if (s.queen.placed) take((w.ex + 0.5) * T, (w.ey + 0.5) * T, 2 * T, () => ['🏠', 'Your nest', 'Bring food here.']);
-    take((w.rx + 0.5) * T, (w.ry + 0.5) * T, 2 * T, () => ['⚔', 'Rival nest', 'Hold it with eight fighters to win.']);
+    for (const r of s.rivals) if (!r.asleep && r.queenAlive) take((r.ex + 0.5) * T, (r.ey + 0.5) * T, 2 * T, () => ['⚔', r.team === 1 ? 'Rival nest' : SIM.RIVALS[r.team - 1].name + '’ nest', r.team === 1 ? 'Hold it with eight fighters to win.' : 'Hold it with eight fighters to kill their queen and take it.']);
     if (!best.card) return false;
     const [icon, name, line] = best.card();
     this.el.innerHTML = `<span class="ct-icon">${icon}</span><span class="ct-text"><b>${name}</b><span>${line}</span></span>`;

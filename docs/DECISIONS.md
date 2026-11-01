@@ -2,6 +2,37 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: rival colonies across the yard (build 25)
+
+Mark: "next." Then, as I built it: "obviously the rivals should show up at specific times... say after the patio colony is gone or after 30 min." I first had them arrive at 20, 30, 40 and 50 minutes. Mark: "thats too fast. Maybe new ants every 30 min after the patio is dead."
+
+**When they come.** No new colony comes while the Pavement ants hold the Patio. Once their queen is dead, one colony moves in every 30 minutes, easiest first:
+
+| When | Colony | Where | What they're like |
+|---|---|---|---|
+| From the start | **Pavement ants** | the Patio cracks | As before. They raid you. |
+| Patio + 30 min | **Odorous house ants** | under the trash cans | Many, tiny and weak (0.6 health, 0.7 bite, 0.85 size). They compete for food. Queen 600. |
+| Patio + 60 min | **Argentine ants** | the tomato rows | An invading supercolony: up to 80, small. **They raid you.** Queen 800. |
+| Patio + 90 min | **Carpenter ants** | the foot of the Oak | Few, huge and black (2.5× health, 1.8× bite, 1.5× size). They guard their trunk. Queen 1,500. |
+| Patio + 2 h | **Fire ants** | beside the big fire mound | Fierce: every one of them fights within 20 tiles of the mound, with a 1.8× bite. Queen 1,200. |
+
+**When one arrives:** an orange banner says who has moved in and where, and their nest appears with its red ring.
+
+**How you beat one:** as with the Pavement ants, hold their door with eight fighters until their queen dies.
+- Their nest becomes your outpost, and +3 🧬.
+- The Fire ants', Odorous ants' and Carpenter ants' regions can then be held. The Fire mound used to be "never".
+- Only the Pavement queen wins the yard.
+
+**How it works:**
+- The one rival became a list of colonies (`RIVALS` in the sim). Each has its own nest, a homing map made when it wakes, its own growth caps and soldier share, and its own colour on the ants.
+- Rival colonies fight each other too.
+- Bosses no longer wake for rival ants living near them. This came up because the Argentine nest shares the hornworm's Tomato Rows.
+- Saves keep every colony.
+
+**Checks:**
+- 94 tests, 6 of them new (`tests/rivals.test.js`).
+- The bots are unchanged by this build: in 45-minute runs, 3 of 4 reached 40 ants and 1 won. The new colonies only come after the Patio falls.
+
 ## Nov 1: every evolution does something (build 24)
 
 Mark: "Lets do the evolutions."

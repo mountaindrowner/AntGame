@@ -181,14 +181,18 @@ export function evoCost(s, n) {
 // trails near it never fade, and it lifts the fog round it.
 export const OUTPOST = { cost: { grit: 10 }, work: 30, spacing: 14, reach: 26, road: 2, keep: 6, see: 20, hp: 2 };
 // What must be beaten before a region can be held: its boss (build 19).
+const rivalAlive = (s, key) => (s.rivals || []).some((r) => r.key === key && r.queenAlive);
 export const GUARDIANS = {
   flowerbed: ['the spider', (s) => (s.colony.kills.spider || 0) >= 1],
   tomatoes: ['the hornworm', (s) => (s.colony.kills.hornworm || 0) >= 1],
   rockgarden: ['the ground beetle', (s) => (s.colony.kills.beetle || 0) >= 1],
   sandbox: ['the antlion queen', (s) => (s.colony.kills.antlion || 0) >= 1],
   patio: ['the pavement ants’ queen', (s) => !s.rival.queenAlive],
-  fireout: ['the fire ants', () => false],
-  firemound: ['the fire ants', () => false],
+  // Build 25: the rival colonies' regions are held once their queen is dead.
+  fireout: ['the fire ants’ queen', (s) => !rivalAlive(s, 'fire')],
+  firemound: ['the fire ants’ queen', (s) => !rivalAlive(s, 'fire')],
+  trash: ['the odorous house ants’ queen', (s) => !rivalAlive(s, 'odorous')],
+  oak: ['the carpenter ants’ queen', (s) => !rivalAlive(s, 'carpenter')],
 };
 // Each held region's prize, for good while you hold it. The sim reads `fx`.
 const GARDEN = { text: 'Aphids here refill twice as fast and give twice the 🍯', fx: 'aphids' };

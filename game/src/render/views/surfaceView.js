@@ -67,7 +67,7 @@ export function hudShift(app) {
 
 function casteColor(a) {
   const C = CASTES[a.caste];
-  if (a.team) return C.fight >= 3 ? COLORS.rivalSoldier : COLORS.rivalAnt;
+  if (a.team) { const R = SIM.rspec(a); return C.fight >= 3 ? R.soldier : R.color; } // build 25: each colony its colour
   if (a.caste === 'venom') return COLORS.venom;
   if (COLORS[a.caste] && CASTES[a.caste] && SIM.CASTE_ROOM[a.caste]) return COLORS[a.caste]; // build 23's kinds
   if (C.fight >= 3) return COLORS.soldier;
@@ -90,7 +90,7 @@ export function antColor(a) {
   return c;
 }
 // Veterans stand a little bigger; Elites and Legends wear a ring.
-export const rankScale = (a) => (a.team ? 1 : [1, 1, 1.05, 1.1, 1.15][rankOf(a)]);
+export const rankScale = (a) => (a.team ? SIM.rspec(a).size : [1, 1, 1.05, 1.1, 1.15][rankOf(a)]);
 export const rankRing = (a) => (a.team ? null : [null, null, null, '#d9c48a', '#ffd34d'][rankOf(a)]);
 
 const CAIRN_WORK = 30;
@@ -257,7 +257,8 @@ export class SurfaceView {
     // Nest mounds: a ring of dug-out soil around a dark hole.
     this.holes = [];
     const moundTex = rampTexture(31, PALETTE.dirt, { size: 16, repeat: [3, 1] });
-    for (const [hx, hy, rival] of [[w.ex, w.ey, false], [w.rx, w.ry, true]]) {
+    // (Build 25: one for each rival colony too, shown once it wakes.)
+    for (const [hx, hy, rival] of [[w.ex, w.ey, false], ...SIM.RIVALS.map((R, i) => [w.rnests[i + 1].x, w.rnests[i + 1].y, true])]) {
       // Open-topped ring of spoil, so an ant standing in the hole stays visible.
       const mound = new THREE.Mesh(new THREE.CylinderGeometry(11, 20, 4, 9, 1, true), psx({ map: moundTex, side: THREE.DoubleSide }));
       mound.position.set((hx + 0.5) * T, 2, (hy + 0.5) * T);
@@ -391,7 +392,7 @@ export class SurfaceView {
     this.heap.visible = pile > 0;
     if (pile > 0) { const r = Math.min(5.5, 0.9 + Math.sqrt(pile) * 0.32) * T; this.heap.scale.set(r, Math.min(r * 0.42, 6 + Math.sqrt(pile) * 2.2), r); }
     this._cairns(s, t);
-    this.holes[1].ring.visible = s.rival.queenAlive;
+    s.rivals.forEach((r, i) => { const H = this.holes[i + 1]; if (!H) return; H.mound.visible = H.hole.visible = !r.asleep; H.ring.visible = !r.asleep && r.queenAlive; });
     // Our entrance only exists once the queen has dug in and founded the nest.
     this.holes[0].mound.visible = this.holes[0].hole.visible = s.queen.placed;
 

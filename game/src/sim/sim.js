@@ -32,6 +32,21 @@ const CASTES = {
   replete:  {name:'Replete', cost:{food:4, water:1, sugar:4}, hatch:35, speed:30, eat:1, fight:1, hp:3, r:2.4},
   undertaker:{name:'Undertaker', cost:{food:3, water:1}, hatch:25, speed:50, eat:1, fight:1, hp:2, r:2.2},
 };
+// Rival colonies (build 25). The Pavement ants (team 1) are there from the
+// start; the others sleep until you first reach their region, then grow,
+// forage and fight. Only the Pavement and Argentine ants raid you. Hold a
+// colony's door with eight fighters to kill its queen.
+const RIVALS = [
+  { key: 'pavement', name: 'Pavement ants', region: 'patio', start: [6, 1], max: 60, soldiers: 0.5, hp: 1, bite: 1, size: 1, qhp: 1000, raids: true, color: '#a8463a', soldier: '#7a1f15', blurb: 'A rival. Their nest is in the Patio cracks.' },
+  { key: 'odorous', name: 'Odorous house ants', region: 'trash', arrive: (s) => afterPatio(s, 1), arrival: 'They’ve moved in under the trash cans: tiny, many, after your food.', start: [12, 0], max: 45, soldiers: 0.1, hp: 0.6, bite: 0.7, size: 0.85, qhp: 600, color: '#3e2c24', soldier: '#2e1e18', blurb: 'Tiny, many, and they smell of rotten coconut when crushed. They live under the trash cans and take any food they find.' },
+  { key: 'argentine', name: 'Argentine ants', region: 'tomatoes', arrive: (s) => afterPatio(s, 2), arrival: 'An invading supercolony has taken the tomato rows. They raid.', start: [10, 3], max: 80, soldiers: 0.35, hp: 0.7, bite: 0.8, size: 0.85, qhp: 800, raids: true, raidFrom: 900, color: '#9a6a44', soldier: '#7a4c2e', blurb: 'An invading supercolony from the vegetable garden. They raid anything, you included.' },
+  { key: 'carpenter', name: 'Carpenter ants', region: 'oak', arrive: (s) => afterPatio(s, 3), arrival: 'Huge black ants are chewing into the Oak. They guard their trunk.', start: [4, 3], max: 24, soldiers: 0.5, hp: 2.5, bite: 1.8, size: 1.5, qhp: 1500, color: '#161212', soldier: '#0c0a0a', blurb: 'Huge and black. They chew galleries in the Oak and guard their trunk.' },
+  { key: 'fire', name: 'Fire ants', region: 'firemound', arrive: (s) => afterPatio(s, 4), arrival: 'The fire ant mound is boiling over. Their sting burns.', start: [8, 4], max: 50, soldiers: 0.4, hp: 1, bite: 1.8, size: 1, qhp: 1200, fierce: true, color: '#c4441e', soldier: '#a02c14', blurb: 'Red, fierce, and their sting burns. The whole mound boils out at intruders.' },
+];
+// Mark: "new ants every 30 min after the patio is dead": none come while the
+// Pavement ants hold the Patio; then one colony every 30 minutes, the easiest first.
+const afterPatio = (s, n) => s.patioDeadAt != null && s.t >= s.patioDeadAt + 1800*n;
+const rspec = (a) => RIVALS[(a.team || 1) - 1] || RIVALS[0];
 // Kinds the evolution tree unlocks (build 24); fighters among them also need a Barracks.
 const CASTE_EVO = { major: 'majors', supermajor: 'polymorphism', exploder: 'exploders', replete: 'honeypot', undertaker: 'midden' };
 // The room each new kind of ant needs before the queen can lay it.
@@ -125,7 +140,17 @@ function makeWorld(seed){
   const y = makeYard(seed);
   const home = bfs(y.blocked, y.ex, y.ey);
   for (let i=0;i<W*H;i++) if (home[i] >= 9999) y.blocked[i]=1;
-  return Object.assign(y, { home, rhome: bfs(y.blocked, y.rx, y.ry) });
+  // Build 25: a nest site for each other rival, the open tile nearest its landmark (or its region's middle).
+  const rnests = { 1: { x: y.rx, y: y.ry } };
+  const LM = { trash: 'trashcan', tomatoes: 'tomato', oak: 'oak', firemound: 'firemound' };
+  RIVALS.forEach((R, i) => { if (!i) return; const b = areaBounds(REGION[R.region]); let cx = (b.x0 + b.x1) >> 1, cy = (b.y0 + b.y1) >> 1;
+    const lm = y.landmarks.find(l => l.kind === LM[R.region] && (l.x != null ? l.x >= b.x0 && l.x <= b.x1 && l.y >= b.y0 && l.y <= b.y1 : l.x0 >= b.x0 && l.x0 <= b.x1 && l.y0 >= b.y0 && l.y0 <= b.y1));
+    const big = R.region === 'firemound' ? y.landmarks.find(l => l.kind === 'firemound' && l.big) : null;
+    if (big){ cx = Math.round(big.x); cy = Math.round(big.y - big.r - 3); }
+    else if (lm){ cx = Math.round(lm.x != null ? lm.x : lm.x0 + (lm.w || 1)/2); cy = Math.round((lm.y != null ? lm.y : lm.y0 + (lm.h || 1)/2) + (lm.r || 0) + 2); }
+    let best = null; for (let r = 0; r < 30 && !best; r++) for (let dy = -r; dy <= r && !best; dy++) for (let dx = -r; dx <= r; dx++){ const x = cx + dx, yy = cy + dy; if (x < 3 || yy < 3 || x >= W - 3 || yy >= H - 3) continue; if (y.blocked[idx(x, yy)] || y.pit[idx(x, yy)] || home[idx(x, yy)] >= 9999) continue; best = { x, y: yy }; break; }
+    rnests[i + 1] = best || { x: cx, y: cy }; });
+  return Object.assign(y, { home, rhome: bfs(y.blocked, y.rx, y.ry), rnests });
 }
 function bfs(blocked, sx, sy){
   const d = new Float32Array(W*H).fill(9999); const q = [[sx,sy]]; d[idx(sx,sy)] = 0; let qi = 0;
@@ -204,6 +229,11 @@ function newColony(ex, ey, team){
 }
 // Growth (build 12, growth.js): 🧬 Genes, ant-type levels and picks, evolution
 // nodes, veteran doctrine, the queen's traits, and the tallies deeds read.
+// A rival colony not yet woken (build 25).
+function sleepingRival(w, team){ const R = RIVALS[team - 1], n = w.rnests[team], r = newColony(n.x, n.y, team); Object.assign(r, { key: R.key, asleep: true, store: 30, cap: 200, water: 999, waterCap: 999, hatchCap: 2, raidCd: 0, qhp: R.qhp }); return r; }
+function wakeRival(s, r, say){ const R = RIVALS[r.team - 1]; r.asleep = false;
+  if (say){ s.banner = { key: 'rival-' + R.key, t: s.t, icon: '🐜', title: R.name, line: R.arrival, kind: 'hard' }; s.events.push('event'); s.player.msg = R.name + ': ' + R.arrival; }
+  for (let i = 0; i < R.start[0]; i++) mkAnt(s, 'forager', 'in', r.ex, r.ey, r.team); for (let i = 0; i < R.start[1]; i++) mkAnt(s, 'soldier', 'in', r.ex, r.ey, r.team); }
 function growthState(){
   return { genes: 0, genesTotal: 0, up: {}, picks: {}, evo: {}, doctrine: {}, qtraits: {}, found: {}, scouted: {},
     hatched: 0, treats: 0, foodTotal: 0, storePeak: 0, repaired: 0, raidsBeaten: 0, fallen: [], named: 0,
@@ -218,7 +248,7 @@ function create(seed){
     seenMap: new Uint8Array((W/SEE.cell)*(H/SEE.cell)), seenT: 0,
     ants: [], nextId: 1, items: [],
     spider: null, spiderRespawn: 50, spiderAway: null, cat: null, catRespawn: 20,
-    colony: newColony(w.ex, w.ey, 0), rival: newColony(w.rx, w.ry, 1),
+    colony: newColony(w.ex, w.ey, 0), rival: newColony(w.rx, w.ry, 1), rivals: [],
     player: { ant: null, hunger: 100, tx: null, ty: null, holding: false, mark: false, pending: false, msg: '', inNest: true, ntx: null, nty: null },
     queen: { x: SHAFT, y: 0, energy: 30, placed: false, level: 0, room: null, hp: 100 },
     phase: 'dig', itemTimer: 0, dewTimer: 0, dew: false, won: false, lost: false,
@@ -230,7 +260,8 @@ function create(seed){
     bosses: {}, goo: [], stalks: [], bursts: [], event: null, banner: null, bossIntro: null,
     director: { next: 600 + Math.random()*120, calm: 0, lastLethal: -999, lastHard: -999, had: {} },
   };
-  s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0;
+  s.rival.store = 20; s.rival.cap = 120; s.rival.water = 999; s.rival.waterCap = 999; s.rival.hatchCap = 2; s.rival.raidCd = 0; s.rival.key = 'pavement';
+  s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => sleepingRival(w, i + 2))];
   // Every area starts with its own stock; home has the most, and it won't
   // last. The far regions lie dormant until you first walk into one.
   s.active = AREAS.map(A => !A.dormant);
@@ -277,7 +308,7 @@ function mkAnt(s, caste, state, tx, ty, team){
   const a = { id: s.nextId++, caste, state, team: team||0, tx, ty, x: (tx+0.5)*T, y: (ty+0.5)*T, dx: 0, dy: -1,
     carry: 0, kind: 'food', hp: C.hp, thr: { f: 0.25+rnd()*0.55, d: 0.25+rnd()*0.55 }, rest: rnd()*4, explore: 0, flee: 0, follow: false, isPlayer: false,
     nx: SHAFT, ny: 0, ntx: SHAFT, nty: 0, goal: null };
-  if (!a.team) a.hp = maxHp(s, a);
+  if (!a.team) a.hp = maxHp(s, a); else a.hp = C.hp*rspec(a).hp;
   s.ants.push(a); return a;
 }
 // An item somewhere open inside an area (0..8, see yard.js).
@@ -347,8 +378,10 @@ function spawnCat(s){
 const raiseAlarm = (s, x, y, v) => { const i = idx(x,y); s.alarm[i] = Math.max(s.alarm[i], v); s.hot.add(i); };
 const walk = (s,x,y) => x>=0 && y>=0 && x<W && y<H && !s.world.blocked[idx(x,y)];
 const itemAt = (s,x,y) => s.items.find(f => f.x===x && f.y===y && f.amt>0);
-const colonyOf = (s, a) => a.team ? s.rival : s.colony;
-const homeOf = (s, a) => a.team ? s.world.rhome : s.world.home;
+const colonyOf = (s, a) => a.team ? s.rivals[a.team - 1] : s.colony;
+const homeOf = (s, a) => a.team ? rivalHome(s, a.team) : s.world.home;
+// Each rival nest's distance field, made when the colony wakes.
+function rivalHome(s, team){ const w = s.world; if (team === 1) return w.rhome; if (!w.rhomes) w.rhomes = {}; if (!w.rhomes[team]){ const n = w.rnests[team]; w.rhomes[team] = bfs(w.blocked, n.x, n.y); } return w.rhomes[team]; }
 
 function stepTo(a, tx, ty, speed, dt){
   const gx = (tx+0.5)*T, gy = (ty+0.5)*T; let ddx = gx-a.x, ddy = gy-a.y; const d = Math.hypot(ddx,ddy);
@@ -483,7 +516,7 @@ function maxHp(s, a){ const C = CASTES[a.caste]; if (a.team) return C.hp; let h 
   if (has(s, 'cuticle')) h *= 1.5; if (qtrait(s, 'matriarch')) h *= 1.1; if (s.colony.trophies.shell && roomOf(s, 'armory')) h *= 1.5; return h; }
 // How hard an ant bites: its kind, rank, upgrades, evolution and promotions.
 function bite(s, a, vs){
-  const C = CASTES[a.caste]; let f = C.fight; if (a.champion) return f*2; if (a.team) return f*(has(s, 'propaganda') ? 0.75 : 1);
+  const C = CASTES[a.caste]; let f = C.fight; if (a.champion) return f*2; if (a.team) return f*rspec(a).bite*(has(s, 'propaganda') ? 0.75 : 1);
   f *= jobMul(a);
   if (has(s, 'mandibles') && C.fight >= 3) f *= 1.25;
   if (s.colony.lineage === 'trapjaw' && C.fight >= 3) f *= 1.4;
@@ -696,7 +729,9 @@ function tick(s, dt){
   const td = Math.pow(0.5, dt/(s.rain && s.rain.on ? 4 : has(s, 'scent') ? 180 : 90)), ad = Math.pow(0.5, dt/8); const tr = s.trail, al = s.alarm;
   // Only tiles with scent on them decay (s.hot); the yard is too big to sweep.
   const keep = s.keepMask; for (const i of s.hot){ if (keep[i] && !(s.rain && s.rain.on)){ if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; continue; } if (tr[i] > 0.001) tr[i] *= td; else tr[i] = 0; if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; if (!tr[i] && !al[i]) s.hot.delete(i); }
-  for (const col of [c, s.rival]) tickColony(s, col, dt);
+  for (const col of [c, ...s.rivals]) if (!col.asleep) tickColony(s, col, dt);
+  // A rival colony moves in at its time, or once you've done what brings it (build 25; see RIVALS).
+  for (const r of s.rivals) if (r.asleep && s.queen.placed && RIVALS[r.team - 1].arrive(s)) wakeRival(s, r, true);
   // dew
   s.dewTimer += dt; if (!s.dew && s.dewTimer > 110){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[REGION.rock, 6], [REGION.lawn, 4], [REGION.flowerbed, 4], [REGION.clover, 3], [REGION.dandelions, 3]]) for (let i=0;i<n;i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!P.msg) P.msg = 'Dew is out: water for a minute.'; }
   if (s.dew && s.dewTimer > 60){ s.dew = false; s.dewTimer = 0; s.items = s.items.filter(f => f.type !== 'dew'); }
@@ -731,7 +766,7 @@ function tick(s, dt){
   const buckets = new Map();
   for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const k = a.tx+','+a.ty; let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(a); }
   // Fighters near the spider, per team: guards only take it on as a crew.
-  const spiderCrew = [0, 0];
+  const spiderCrew = [0, 0, 0, 0, 0, 0];
   if (s.spider) for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; if ((CASTES[a.caste].fight >= 3 || a.follow) && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 4*T) spiderCrew[a.team]++; }
   const enemiesNear = (a, r) => { const out = []; for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){ const b = buckets.get((a.tx+dx)+','+(a.ty+dy)); if (b) for (const o of b) if (o.team !== a.team && o.state !== 'dead') out.push(o); } return out; };
   for (const a of s.ants){
@@ -743,7 +778,7 @@ function tick(s, dt){
     if (a.slowT > 0) a.slowT -= dt;
     if (a.state === 'zombie'){ stepZombie(s, a, dt); continue; }
     if (a.flee > 0) a.flee -= dt; else a.fleeFrom = null;
-    const aggressive = C.fight >= 3 || a.follow || a.state === 'raid';
+    const aggressive = C.fight >= 3 || a.follow || a.state === 'raid' || (a.team && rspec(a).fierce && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 20);
     // spider / enemies
     if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y) * (s.spider.rest > 0 ? 2.5 : 1); // waiting at its web, it's hard to see
       const brave = a.follow || a.state === 'raid' || (a.state === 'fight' && a.goal === 'spider') || spiderCrew[a.team] >= 5;
@@ -751,7 +786,7 @@ function tick(s, dt){
     const reach = reachOf(s, a), en = enemiesNear(a, aggressive ? reach : 2);
     if (en.length){
       // Rival soldiers fight half again as hard on their own doorstep.
-      if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=reach && Math.abs(o.ty-a.ty)<=reach); if (o){ const dmg = bite(s, a)*dt*(a.team && Math.hypot(a.tx - w.rx, a.ty - w.ry) < 5 ? 1.5 : 1); o.hp -= dmg; if (!a.team && a.caste === 'venom' && picked(s, 'venom', 'lethal') && !o.champion) o.hp = 0; if (o.champion && s.event && s.event.key === 'warparty'){ const B = s.event.data.biters || (s.event.data.biters = {}); B[a.id] = (B[a.id] || 0) + dmg; } o.hitT = s.t; spark(s, a, (a.x + o.x)/2, (a.y + o.y)/2, a.team ? 1 : 0); if (o.isPlayer) P.hit = s.t; gainXp(s, a, dmg/3); if (o.hp <= 0){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); } } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
+      if (aggressive){ const o = en.find(o => Math.abs(o.tx-a.tx)<=reach && Math.abs(o.ty-a.ty)<=reach); if (o){ const dmg = bite(s, a)*dt*(a.team && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 5 ? 1.5 : 1); o.hp -= dmg; if (!a.team && a.caste === 'venom' && picked(s, 'venom', 'lethal') && !o.champion) o.hp = 0; if (o.champion && s.event && s.event.key === 'warparty'){ const B = s.event.data.biters || (s.event.data.biters = {}); B[a.id] = (B[a.id] || 0) + dmg; } o.hitT = s.t; spark(s, a, (a.x + o.x)/2, (a.y + o.y)/2, a.team ? 1 : 0); if (o.isPlayer) P.hit = s.t; gainXp(s, a, dmg/3); if (o.hp <= 0){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); } } if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
       else if (en.some(o => CASTES[o.caste].fight >= 3 || o.follow)){ a.flee = 2.5; }
     }
     if (a.flee > 0 && a.state !== 'fight' && a.state !== 'follow' && a.state !== 'raid'){
@@ -863,20 +898,27 @@ function tick(s, dt){
     if (picked(s, 'venom', 'hunter')) trailHome(s, s.cat.x, s.cat.y);
     if (!c.kills.caterpillar) gainGenes(s, 1, 'your first hunt');
     c.kills.caterpillar = (c.kills.caterpillar||0)+1; if (!P.msg) P.msg = 'Caterpillar down! Haul the meat home.'; s.catCorpse = { x: s.cat.x, y: s.cat.y, t: s.t }; s.cat = null; s.catRespawn = 90; }
-  // siege on rival entrance
-  if (s.rival.queenAlive){
+  // A siege on any rival's entrance (build 25: every colony).
+  for (const r of s.rivals){
+    if (r.asleep) continue;
+    const R = RIVALS[r.team - 1];
+    if (!r.queenAlive){ if (!r.cleared){ for (const a of s.ants) if (a.team === r.team && Math.random() < dt/60) a.state = 'dead'; if (!s.ants.some(a => a.team === r.team && a.state !== 'dead')) r.cleared = true; } continue; }
     let ours = 0, theirs = 0, power = 0;
-    for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const d = Math.hypot(a.tx - w.rx, a.ty - w.ry);
-      if (!a.team && d <= 2 && (CASTES[a.caste].fight >= 3 || a.isPlayer)){ ours++; const b = bite(s, a); power += b; gainXp(s, a, b*0.5*dt/3); } if (a.team && d <= 3 && CASTES[a.caste].fight >= 3) theirs++; }
+    for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const d = Math.hypot(a.tx - r.ex, a.ty - r.ey);
+      if (!a.team && d <= 2 && (CASTES[a.caste].fight >= 3 || a.isPlayer)){ ours++; const b = bite(s, a); power += b; gainXp(s, a, b*0.5*dt/3); } if (a.team === r.team && d <= 3 && (CASTES[a.caste].fight >= 3 || R.fierce)) theirs++; }
     // Our fighters at their door raise the alarm: their soldiers pour out to defend.
-    if (ours) raiseAlarm(s, w.rx, w.ry, 1.5);
-    // Eight fighters holding the door with no defenders left wear the queen down (1,000 hp, she heals 3 a second).
-    const r = s.rival; if (r.qhp == null) r.qhp = 1000;
-    if (ours >= 8 && theirs === 0){ r.siege = 1; r.qhp -= power*0.5*dt; if (r.qhp <= 0){ r.qhp = 0; r.queenAlive = false; s.won = true; if (!s.outposts.some(o => o.region === REGION.patio)) addOutpost(s, w.rx, w.ry, true); gainGenes(s, 5, 'the rival queen is dead'); P.msg = 'The rival queen is dead. The yard is yours.'; } }
-    else { r.siege = 0; r.qhp = Math.min(1000, r.qhp + 3*dt); }
-  } else { for (const a of s.ants) if (a.team && Math.random() < dt/60) a.state = 'dead'; }
+    if (ours) raiseAlarm(s, r.ex, r.ey, 1.5);
+    // Eight fighters holding the door with no defenders left wear the queen down; she heals 3 a second.
+    if (r.qhp == null) r.qhp = R.qhp;
+    if (ours >= 8 && theirs === 0){ r.siege = 1; r.qhp -= power*0.5*dt; if (r.qhp <= 0){ r.qhp = 0; r.queenAlive = false;
+      const ai = areaOf(s, r.ex, r.ey); if (!s.outposts.some(o => o.region === ai)) addOutpost(s, r.ex, r.ey, true);
+      c.kills.queens = (c.kills.queens || 0) + 1;
+      if (r.team === 1){ s.won = true; s.patioDeadAt = s.t; gainGenes(s, 5, 'the rival queen is dead'); P.msg = 'The rival queen is dead. The yard is yours.'; }
+      else { gainGenes(s, 3, 'the ' + R.name.toLowerCase() + '’ queen is dead'); P.msg = `The ${R.name.toLowerCase()}’ queen is dead. Their nest is yours.`; s.events.push('held'); } } }
+    else { r.siege = 0; r.qhp = Math.min(R.qhp, r.qhp + 3*dt); }
+  }
   for (const a of s.ants){ if (a.team && a.state !== 'dead' && a.state !== 'in' && CASTES[a.caste].fight >= 3 && Math.hypot(a.tx - c.ex, a.ty - c.ey) < 3){ raiseAlarm(s, c.ex, c.ey, 1.2); break; } }
-  rivalBrain(s, dt);
+  for (const r of s.rivals) if (!r.asleep) rivalBrain(s, r, dt);
   s.ants = s.ants.filter(a => a.state !== 'dead');
 }
 
@@ -1267,24 +1309,26 @@ function playerDig(s, cx, cy){
 }
 function nearAlarm(s){ const w = s.world; let m = 0; for (let dy=-3;dy<=3;dy++) for (let dx=-3;dx<=3;dx++){ const x=w.ex+dx,y=w.ey+dy; if (x<0||y<0||x>=W||y>=H) continue; m = Math.max(m, s.alarm[idx(x,y)]); } return m; }
 
-function rivalBrain(s, dt){
-  const r = s.rival; if (!r.queenAlive) return;
+function rivalBrain(s, r, dt){
+  if (!r.queenAlive) return;
+  const RS = RIVALS[r.team - 1];
   r.raidT += dt; if (r.raidT < 10) return; r.raidT = 0;
-  if (s.raidLive && !s.ants.some(a => a.team && a.state === 'raid')){ s.raidLive = false; s.colony.raidsBeaten++;
+  if (s.raidLive && ((s.raidStart || {}).team || 1) === r.team && !s.ants.some(a => a.team === r.team && a.state === 'raid')){ s.raidLive = false; s.colony.raidsBeaten++;
     // The battle report (build 15): what the raid cost on both sides.
-    const R = s.raidStart || {}, lost = deathTotal(s.colony) - (R.lost || 0), killed = (s.rival.deaths.war || 0) - (R.killed || 0), took = Math.round(s.colony.stolen - (R.stolen || 0));
+    const R = s.raidStart || {}, lost = deathTotal(s.colony) - (R.lost || 0), killed = (r.deaths.war || 0) - (R.killed || 0), took = Math.round(s.colony.stolen - (R.stolen || 0));
     s.report = { kind: 'raid', lost, killed, took, t: s.t }; s.events.push('report');
     s.player.msg = `Raid over. You lost ${lost} ant${lost === 1 ? '' : 's'}, killed ${killed} raider${killed === 1 ? '' : 's'}${took > 0 ? `, and they carried off ${took} food` : ''}.`; }
-  const mine = s.ants.filter(a => a.team===1 && a.state!=='dead'); const foragers = mine.filter(a => a.caste==='forager').length, soldiers = mine.filter(a => a.caste==='soldier');
+  const mine = s.ants.filter(a => a.team===r.team && a.state!=='dead'); const foragers = mine.filter(a => a.caste==='forager').length, soldiers = mine.filter(a => a.caste==='soldier');
   // grow
-  if (r.store >= 10 && r.eggQueue.length < 2 && mine.length < Math.min(60, 12 + s.t/30)){ r.eggQueue.push(soldiers.length < foragers/2 ? 'soldier' : 'forager'); r.store -= 4; }
+  if (r.store >= 10 && r.eggQueue.length < 2 && mine.length < Math.min(RS.max, 12 + s.t/30)){ r.eggQueue.push(soldiers.length < foragers*RS.soldiers ? 'soldier' : 'forager'); r.store -= 4; }
+  if (!RS.raids) return;
   // raid when strong, not before 5 minutes, at most every 2 minutes
   r.raidCd = (r.raidCd || 0) - 10;
   const ourSoldiers = s.ants.filter(a => a.team===0 && CASTES[a.caste].fight >= 3).length;
   const idle = soldiers.filter(a => a.state==='in' || a.state==='patrol');
   // Raids start at six minutes and grow: 3 soldiers, then one more every 2.5 minutes.
   const size = Math.min(14, 3 + Math.floor(Math.max(0, s.t - 360)/150));
-  if (s.t > 360 && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.raidStart = { lost: deathTotal(s.colony), killed: s.rival.deaths.war || 0, stolen: s.colony.stolen }; s.player.msg = `Raid! ${size} rivals are coming.`; s.events.push('raid'); }
+  if (s.t > (RS.raidFrom || 360) && !s.raidLive && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen }; s.player.msg = `Raid! ${size} ${r.team === 1 ? 'rivals are' : RS.name.toLowerCase() + ' are'} coming.`; s.events.push('raid'); }
 }
 
 // The spider roams the whole yard: landmark to landmark, past our nest every
@@ -1954,7 +1998,7 @@ function tickBosses(s, dt){
     b.t += dt; if (b.slowT > 0) b.slowT -= dt;
     // The first time you come near: its name, and how to beat it.
     if (!b.intro && playerNear(s, b.x, b.y, 18)){ b.intro = true; s.bossIntro = { key, t: s.t }; s.events.push('boss'); P.msg = `${B.name}, ${B.title}. ${B.tip}`; }
-    const near = nearAnt(s, b, B.aggro*T);
+    const near = nearAnt(s, b, B.aggro*T, (o) => !o.team); // (build 25: rival colonies living near a boss don't wake it)
     if (b.mode === 'idle' && (near || s.t - (b.hitT ?? -9) < 1)){ b.mode = 'fight'; b.leaveT = 0; b.wakeAt = s.t; b.cost0 = deathTotal(c); s.events.push('bossawake'); }
     if (b.mode === 'fight'){
       if (!nearAnt(s, b, 30*T)){ b.leaveT += dt; if (b.leaveT > 8){ b.mode = 'idle'; b.atk = null; b.charge = null; b.roll = null; } } else b.leaveT = 0;
@@ -2150,7 +2194,7 @@ function startEvent(s, key){
     for (let i = 0; i < size; i++){ const a = mkAnt(s, 'soldier', 'in', w.rx, w.ry, 1); exitNest(s, a, 'raid'); }
     ev.data.champ = champ.id; ev.data.name = name;
     s.banner.title = `War party: ${name}`; s.banner.line = `The pavement ants march on your nest, led by their champion ${name}. Kill ${name} and the rest lose heart.`; P.msg = `⚔ ${s.banner.line}`;
-    s.raidLive = true; s.raidStart = { lost: deathTotal(s.colony), killed: s.rival.deaths.war || 0, stolen: s.colony.stolen };
+    s.raidLive = true; s.raidStart = { team: 1, lost: deathTotal(s.colony), killed: s.rival.deaths.war || 0, stolen: s.colony.stolen };
   }
   if (key === 'cordyceps'){
     // Two foragers out working, far from home, are the first taken.
@@ -2369,8 +2413,8 @@ function stats(s){
 }
 // ---------- save / load ----------
 function serialize(s){
-  return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
-    nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
+  return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
+    nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
@@ -2380,7 +2424,7 @@ function deserialize(json){
   const d = JSON.parse(json); if (d.v !== 10 && d.v !== 11) throw new Error('old save'); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.colony = fill(d.colony); s.rival = fill(d.rival); s.raidLive = !!d.raidLive; s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
+  s.t = d.t; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);
@@ -2393,7 +2437,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
