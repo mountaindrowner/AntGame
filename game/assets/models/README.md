@@ -72,6 +72,23 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Food | bead | `food-bead.glb` |
 | Food | blade | `food-blade.glb` |
 | Food | puddle | `food-puddle.glb` |
+| Nest | Egg | `nest-egg.glb` |
+| Nest | Larva | `nest-larva.glb` |
+| Nest | Cocoon | `nest-cocoon.glb` |
+| Nest | Cradle | `nest-cradle.glb` |
+| Nest | Replete | `nest-replete.glb` |
+| Nest | Seed heap | `nest-seed-heap.glb` |
+| Nest | Pool | `nest-pool.glb` |
+| Nest | Drop | `nest-drop.glb` |
+| Nest | Wing | `nest-wing.glb` |
+| Nest | Moss | `nest-moss.glb` |
+| Nest | Spear rack | `nest-spear-rack.glb` |
+| Nest | Husk | `nest-husk.glb` |
+| Nest | Sleeper | `nest-sleeper.glb` |
+| Nest | Banner | `nest-banner.glb` |
+| Nest | Bench | `nest-bench.glb` |
+| Nest | Twigs | `nest-twigs.glb` |
+| Nest | Shield | `nest-shield.glb` |
 | Visitors | Sneaker | `visitors-sneaker.glb` |
 | Visitors | Acorn | `visitors-acorn.glb` |
 | Props | crumb | `props-crumb.glb` |

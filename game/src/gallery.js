@@ -12,6 +12,7 @@ import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, antlionGeometry, stalkG
 import { CURIO_GEO } from './render/models/curios.js';
 import { FOOD } from './render/models/food.js';
 import { PROPS } from './render/models/props.js';
+import { NEST } from './render/models/nestProps.js';
 import { robin } from './render/models/bird.js';
 import { toad, fallingAcorn } from './render/models/toad.js';
 import { sneaker } from './render/models/sneaker.js';
@@ -30,7 +31,7 @@ function chain(kinds, make, gap, r) {
 const G = [];
 const add = (group, name, line, make) => G.push({ group, name, line, make });
 // Ants: each kind in its colours and its outfit (build 20.2), then the bare body plans.
-for (const [caste, plan, tint, line] of [['forager', 'worker', COLORS.ourAnt, 'Garden apron'], ['builder', 'worker', COLORS.builder, 'Work belt and hammer'], ['nurse', 'worker', COLORS.nurse, 'Nurse\u2019s cap'], ['soldier', 'soldier', COLORS.soldier, 'Army helmet'], ['venom', 'venom', COLORS.venom, 'Slender, viper-backed, fanged; skull bandana'], ['queen', 'queen', COLORS.queen, 'Crown']])
+for (const [caste, plan, tint, line] of [['forager', 'worker', COLORS.ourAnt, 'Garden apron'], ['builder', 'worker', COLORS.builder, 'Work belt and hammer'], ['nurse', 'worker', COLORS.nurse, 'Nurse\u2019s cap'], ['soldier', 'soldier', COLORS.soldier, 'Army helmet'], ['venom', 'venom', COLORS.venom, 'Slender, viper-backed, fanged; skull bandana'], ['queen', 'queen', COLORS.queen, 'Crown, wing stubs, a gaster swollen with eggs']])
   add('Ants', caste[0].toUpperCase() + caste.slice(1), line, () => { const gr = new THREE.Group(); gr.add(new THREE.Mesh(antGeometry(plan, 1), new THREE.MeshLambertMaterial({ vertexColors: true, color: tint }))); gr.add(new THREE.Mesh(outfitGeometry(caste), mat)); return gr; });
 for (const plan of ['worker', 'soldier', 'venom']) for (let f = 0; f < WALK_FRAMES; f++) add('Ants', `${plan} ${f ? 'walk ' + f : 'stand'}`, plan === 'worker' ? 'Forager, builder, nurse (one tint each)' : plan === 'soldier' ? 'Soldier' : 'Venom ant', one(antGeometry(plan, f)));
 // Creatures.
@@ -61,6 +62,9 @@ add('Events', 'Winged queen', 'Swarm day', one(alateGeometry()));
 for (const k in CURIO_GEO) add('Curios', k[0].toUpperCase() + k.slice(1), 'Lost in the yard; glints', one(CURIO_GEO[k]));
 // Food and finds.
 for (const k in FOOD) { if (k === 'star' || k === 'shine') continue; const v = FOOD[k]; (Array.isArray(v) ? v : [v]).forEach((g, i) => add('Food', k + (Array.isArray(v) ? ' ' + (i + 1) : ''), 'On the ground', one(g))); }
+// The nest up close (layer 3).
+const NEST_LINES = { egg: 'Glossy, the yolk showing', larva: 'Curled, the gut showing through', cocoon: 'Silk, the dark spot at its foot', cradle: 'Woven; straw or silk by room', replete: 'A honeypot ant, hanging in the store', seedHeap: 'Stored seed, grows with the stock', pool: 'The cistern', drop: 'Drips and dew', wing: 'The queen\u2019s shed wing, pinned up', moss: 'The queen\u2019s bed', spearRack: 'Barracks and armory', husk: 'Training dummy', sleeper: 'A soldier asleep', banner: 'Barracks banner', bench: 'Workshop bench', twigs: 'Workshop twigs', shield: 'Armory shields' };
+for (const k in NEST_LINES) add('Nest', k[0].toUpperCase() + k.slice(1).replace(/([A-Z])/g, ' $1').toLowerCase(), NEST_LINES[k], k === 'cradle' ? () => new THREE.Mesh(NEST[k], new THREE.MeshLambertMaterial({ vertexColors: true, color: '#c8a24e' })) : one(NEST[k]));
 // Visitors and props.
 add('Visitors', 'Sneaker', 'A foot coming down', () => sneaker());
 add('Visitors', 'Acorn', 'Falls from the Oak', () => fallingAcorn());

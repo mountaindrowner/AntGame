@@ -604,7 +604,8 @@ export class SurfaceView {
           // The tongue shoots out to the ant it was after, and back.
           it.tongue.visible = peck > 0;
           if (peck > 0) it.tongue.scale.set(Math.max(0.4, ((st.peckD || 1) * T) / TOAD - 1.05) * peck, 1, 1);
-          it.body.scale.set(1, 1 + 0.06 * Math.sin(t * 5), 1); // throat pulsing
+          it.body.scale.set(1, 1 + 0.02 * Math.sin(t * 2), 1); // breathing
+          const puff = 1 + 0.45 * Math.max(0, Math.sin(t * 5)); it.throat.scale.set(1, puff, 0.6 + 0.4 * puff); // throat pulsing
         }
         const near = 1 - Math.min(1, y / top);
         shade(x + Math.cos(st.yaw) * (fly ? 20 : 10), z + Math.sin(st.yaw) * (fly ? 20 : 10), st.yaw, (fly ? 56 : 80) * (0.6 + 0.4 * near), (fly ? 40 : 60) * (0.6 + 0.4 * near), 0.15 + 0.3 * near);

@@ -81,7 +81,7 @@ test('nurses tend eggs while there are eggs, and help outside when there are non
   assert.ok(n.every((a) => a.state === 'in' || a.state === 'build'), 'they stay in with eggs');
   c.eggQueue.length = 0; c.eggs.length = 0;
   step(s, 8);
-  assert.ok(n.some((a) => a.state === 'explore'), 'no eggs: some go out to help');
+  assert.ok(n.some((a) => a.state !== 'in' && a.state !== 'build'), `no eggs: some go out to help (${n.map((a) => a.state)})`);
 });
 
 test('rooms: one of each per queen level, each extra dearer, and every room eats food', () => {

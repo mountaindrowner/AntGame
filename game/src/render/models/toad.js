@@ -3,6 +3,7 @@
 // own mesh along +X from the mouth, scaled to reach.
 import * as THREE from 'three';
 import { psx } from '../ps1/materials.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const col = new THREE.Color();
 function paint(geo, fn) {
@@ -10,42 +11,78 @@ function paint(geo, fn) {
   const p = g.attributes.position, c = new Float32Array(p.count * 3);
   for (let i = 0; i < p.count; i += 3) {
     const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col.set(typeof fn === 'function' ? fn(x, y, z) : fn);
+    col.set(typeof fn === 'function' ? fn(x, y, z, i / 3) : fn);
     for (let k = 0; k < 3; k++) c.set([col.r, col.g, col.b], (i + k) * 3);
   }
   g.setAttribute('color', new THREE.BufferAttribute(c, 3));
   g.computeVertexNormals();
   return g;
 }
-// Warts: darker and lighter blotches on the back.
+function bakeParts(parts) { const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p))); g.computeVertexNormals(); return g; }
+// Model pass, layer 3: an American toad. A squat olive-brown body with
+// dark blotches, each ringing a cluster of warts; the kidney-shaped glands
+// behind the eyes; gold eyes with a black bar pupil under a bony brow; the
+// round eardrum; a pale speckled belly and a throat that swells; splayed
+// toes on all four feet. Built along +X (mouth forward), sitting on y = 0,
+// about 2 units long. The tongue is its own mesh along +X from the mouth.
+const hsh = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+const blotch = (x, z) => Math.sin(x * 7.3 + z * 2.1) * Math.cos(z * 6.1 - x * 1.7);
 const skin = (x, y, z) => {
-  const n = Math.sin(x * 9.1 + z * 4.3) * Math.cos(z * 8.7 - x * 3.1);
-  if (y < 0.12) return '#c8b07a';
-  return n > 0.55 ? '#4a3a22' : n < -0.6 ? '#9a8452' : '#76623a';
+  if (y < 0.16) return Math.sin(x * 23) * Math.sin(z * 19) > 0.7 ? '#a89a72' : '#d8caa0';
+  if (Math.abs(z) < 0.05 && y > 0.6 && x < 0.5) return '#c8b47a';
+  const n = blotch(x, z);
+  return n > 0.5 ? '#3a2c1a' : n > 0.36 ? '#54422a' : n < -0.55 ? '#a08e5a' : '#7a6840';
 };
+const geo = (g, fn) => paint(g, fn);
+const ball = (r, x, y, z, fn, s = [1, 1, 1], seg = [8, 6]) => geo(new THREE.SphereGeometry(r, seg[0], seg[1]).scale(...s).translate(x, y, z), fn);
 
 export function toad() {
   const mat = psx({ vertexColors: true });
   const g = new THREE.Group();
   const body = new THREE.Group();
   g.add(body);
-  body.add(new THREE.Mesh(paint(new THREE.SphereGeometry(1, 12, 8).scale(0.9, 0.5, 0.72).translate(0, 0.42, 0), skin), mat));
-  // Head: wide and flat, with the mouth line and two bulging eyes.
-  body.add(new THREE.Mesh(paint(new THREE.SphereGeometry(1, 10, 6).scale(0.48, 0.3, 0.58).translate(0.72, 0.5, 0), (x, y, z) => (y < 0.42 ? '#c8b07a' : skin(x, y, z))), mat));
-  for (const s of [-1, 1]) {
-    body.add(new THREE.Mesh(paint(new THREE.SphereGeometry(0.15, 8, 6).translate(0.8, 0.78, s * 0.3), '#d8a028'), mat));
-    body.add(new THREE.Mesh(paint(new THREE.SphereGeometry(0.08, 6, 4).translate(0.9, 0.8, s * 0.33), '#0a0a0a'), mat));
-    // Back legs folded at the hips, front legs propping it up.
-    body.add(new THREE.Mesh(paint(new THREE.SphereGeometry(1, 8, 5).scale(0.5, 0.22, 0.24).translate(-0.45, 0.2, s * 0.68), skin), mat));
-    body.add(new THREE.Mesh(paint(new THREE.BoxGeometry(0.42, 0.05, 0.22).translate(-0.1, 0.03, s * 0.86), '#a8925e'), mat));
-    body.add(new THREE.Mesh(paint(new THREE.CylinderGeometry(0.07, 0.08, 0.4, 5).rotateZ(0.35).translate(0.55, 0.2, s * 0.42), '#8a7446'), mat));
-    body.add(new THREE.Mesh(paint(new THREE.BoxGeometry(0.2, 0.04, 0.16).translate(0.66, 0.02, s * 0.45), '#a8925e'), mat));
+  const parts = [];
+  // Body: broad, flat-backed, a little hunched over the hips.
+  parts.push(ball(1, -0.05, 0.42, 0, skin, [0.92, 0.5, 0.74], [14, 9]));
+  // Head: wide and flat, the jaw line dark, the snout blunt.
+  parts.push(ball(1, 0.7, 0.5, 0, (x, y, z) => (y < 0.36 ? '#d8caa0' : y < 0.42 && x > 0.75 ? '#2e2414' : skin(x, y, z)), [0.5, 0.3, 0.6], [12, 7]));
+  // Warts: raised bumps across the back, darker in the blotches.
+  for (let i = 0; i < 44; i++) {
+    const a = hsh(i) * Math.PI * 2, rr = Math.sqrt(hsh(i + 50)) * 0.85, x = -0.05 + Math.cos(a) * rr * 0.85, z = Math.sin(a) * rr * 0.68;
+    const yy = 0.42 + 0.5 * Math.sqrt(Math.max(0, 1 - (Math.cos(a) * rr) ** 2 - (Math.sin(a) * rr) ** 2 * 0.9)) - 0.02;
+    if (yy < 0.55) continue;
+    const big = hsh(i + 9) > 0.6;
+    parts.push(ball(big ? 0.095 : 0.065, x, yy + 0.01, z, (px, py) => (py > yy + 0.03 ? (blotch(x, z) > 0.38 ? '#a86a32' : '#c8ae6a') : '#4a3a20'), [1, 0.75, 1], [6, 4]));
   }
-  const tongue = new THREE.Mesh(paint(new THREE.CylinderGeometry(0.05, 0.05, 1, 5).rotateZ(-Math.PI / 2).translate(0.5, 0, 0), '#e06a7a'), mat);
-  tongue.position.set(1.05, 0.38, 0);
+  for (const s of [-1, 1]) {
+    // Parotoid gland: the long poison bump behind each eye.
+    parts.push(ball(1, 0.3, 0.76, s * 0.36, (x, y) => (y > 0.84 ? '#8a7a4a' : '#6a5832'), [0.26, 0.09, 0.11], [8, 4]));
+    // Eardrum behind the eye, a bony brow ridge over it.
+    parts.push(geo(new THREE.CircleGeometry(0.075, 7).rotateY(s < 0 ? Math.PI : 0).translate(0.56, 0.62, s * 0.54), '#4a3c24'));
+    parts.push(ball(1, 0.78, 0.83, s * 0.3, '#5a4a2c', [0.17, 0.05, 0.08], [6, 3]));
+    // Eyes: gold, a black bar pupil, a white glint.
+    parts.push(ball(0.15, 0.82, 0.76, s * 0.31, (x, y, z) => (Math.abs(y - 0.77) < 0.05 && x > 0.83 ? '#0a0a0a' : y > 0.84 ? '#f0c040' : '#c88a1c'), [1, 1, 1], [10, 7]));
+    parts.push(ball(0.025, 0.92, 0.84, s * 0.36, '#ffffff', [1, 1, 1], [4, 3]));
+    // Nostril.
+    parts.push(ball(0.02, 1.16, 0.6, s * 0.08, '#1a140a', [1, 1, 1], [4, 3]));
+    // Back legs folded at the hips: thigh, shin, and a long webbed foot.
+    parts.push(ball(1, -0.5, 0.26, s * 0.62, skin, [0.46, 0.22, 0.24], [9, 5]));
+    parts.push(ball(1, -0.2, 0.12, s * 0.8, skin, [0.36, 0.11, 0.13], [7, 4]));
+    for (let t = 0; t < 4; t++) parts.push(geo(new THREE.BoxGeometry(0.34 - t * 0.04, 0.035, 0.05).translate(0.12 + (0.34 - t * 0.04) / 2, 0.02, 0).rotateY(s * (-0.5 + t * 0.32)).translate(-0.1, 0, s * 0.86), '#b8a474'));
+    // Front legs propping it up, toes splayed.
+    parts.push(geo(new THREE.CylinderGeometry(0.06, 0.085, 0.42, 6).rotateZ(0.3).rotateX(s * 0.2).translate(0.56, 0.2, s * 0.44), (x, y) => (y > 0.25 ? '#76663e' : '#9a8a58')));
+    for (let t = 0; t < 4; t++) parts.push(geo(new THREE.BoxGeometry(0.15, 0.03, 0.04).translate(0.075, 0.015, 0).rotateY(s * (-0.7 + t * 0.4)).translate(0.63, 0, s * 0.47), '#b8a474'));
+  }
+  body.add(new THREE.Mesh(bakeParts(parts), mat));
+  // The throat: its own mesh, so it can puff (pale, speckled).
+  const throat = new THREE.Mesh(geo(new THREE.SphereGeometry(1, 9, 6).scale(0.3, 0.14, 0.38).translate(0, 0, 0), (x, y, z, f) => (hsh(f) > 0.8 ? '#a89670' : '#ece0bc')), mat);
+  throat.position.set(0.82, 0.3, 0);
+  body.add(throat);
+  const tongue = new THREE.Mesh(paint(new THREE.CylinderGeometry(0.05, 0.05, 1, 5).rotateZ(-Math.PI / 2).translate(0.5, 0, 0), (x) => (x > 0.9 ? '#f08a9a' : '#e06a7a')), mat);
+  tongue.position.set(1.1, 0.4, 0);
   tongue.visible = false;
   body.add(tongue);
-  return { group: g, body, tongue };
+  return { group: g, body, tongue, throat };
 }
 
 // A falling acorn, 1 unit long, point down.

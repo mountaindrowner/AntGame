@@ -10,6 +10,7 @@ import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
 import { PROPS } from '../models/props.js';
+import { NEST } from '../models/nestProps.js';
 import { carryLook } from '../models/food.js';
 import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
 import { MotionTracker, idlePose } from '../motion.js';
@@ -94,7 +95,7 @@ export function tunnelGrid(s, x0, y0, step, nx, ny) {
   }
   return grid;
 }
-const PROP_KEY = new Map(Object.entries(PROPS).map(([k, g]) => [g, k]));
+const PROP_KEY = new Map([...Object.entries(PROPS), ...Object.entries(NEST).map(([k, g]) => ['n:' + k, g])].map(([k, g]) => [g, k]));
 
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
@@ -427,7 +428,7 @@ export class NestView {
       col.eggs.forEach((e, i) => {
         const ex = er.x0 * T + 6 + (i % 5) * 11, ey = er.y0 * T + (er.h || 3) * T - 4 - Math.floor(i / 5) * 7;
         const pulse = 1 + 0.04 * Math.sin(t * 3 + i);
-        this._put(PROPS.egg, [ex, -ey + 2.4, -DEPTH * 0.35], [3.6 * pulse, 3.2 * pulse, 3 * pulse], '#f3ead6');
+        this._put(NEST.egg, [ex, -ey + 2.6, -DEPTH * 0.35], [2 * pulse, 2 * pulse, 2 * pulse], '#ffffff', [0, 0, 0.25 * Math.sin(i * 2.3)]);
         this._fill(ex - 3.5, ey + 1, 7 * Math.min(1, e.t / e.need), 1.4, '#8fd36b', 0.7);
       });
     }

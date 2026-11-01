@@ -1579,7 +1579,7 @@ function placeBug(s, ai, k, hidden){
     else { x = b.x0 + 4 + Math.floor(Math.random()*(AREA - 8)); y = b.y0 + 4 + Math.floor(Math.random()*(AREA - 8)); }
     if (x < b.x0 + 2 || y < b.y0 + 2 || x > b.x1 - 2 || y > b.y1 - 2) continue;
     if (!bugTile(s, (x+0.5)*T, (y+0.5)*T) || Math.hypot(x - w.ex, y - w.ey) < (k === 'earwig' ? 30 : 14) || Math.hypot(x - w.rx, y - w.ry) < 8) continue;
-    if (s.critters.some(o => Math.hypot(o.x/T - x, o.y/T - y) < 12)) continue;
+    if (s.critters.some(o => Math.hypot(o.x/T - (x+0.5), o.y/T - (y+0.5)) < 12)) continue;
     if (hidden && pa && Math.hypot(pa.x/T - x, pa.y/T - y) < 18) continue;
     s.critters.push({ id: s.nextId++, kind: k, region: ai, hx: x, hy: y, x: (x+0.5)*T, y: (y+0.5)*T, dx: Math.cos(ang), dy: Math.sin(ang), hp: B.hp, maxHp: B.hp, state: hidden && k === 'ladybug' ? 'land' : 'walk', t: Math.random()*5, life: 0 });
     return true;

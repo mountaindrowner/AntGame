@@ -2,6 +2,36 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: model pass, layer 3: the nest up close, and the toad (build 20.4)
+
+Mark: "Go ahead with layer 3."
+
+- **The brood** (new `nestProps.js`, drawn in true colours):
+  - Eggs are glossy ovals, one end a little pointed, the yolk showing through, and a bit bigger than before.
+  - Larvae are fat curled grubs in seven segments, with an amber head, dark mouthparts, and the gut showing through the skin. They still wriggle.
+  - Pupae are silk cocoons, each with a dark spot at its foot.
+- **The queen:**
+  - Her gaster has five plates with pale skin showing between them, so it reads as swollen with eggs.
+  - She has stubs where she tore off her wings.
+  - She keeps her crown. Like the other outfits, these are true colours drawn over her tinted body.
+- **Room furniture:**
+  - Queen's chamber: a lumpy moss bed with tiny flowers, three new-laid eggs, and her shed wings pinned up as a pair, veined, each with its dark spot.
+  - Hatchery and nursery: woven cradles, straw in the hatchery and silk in the nursery.
+  - Food store: seed heaps that grow with the stock. Up to four honeypot ants hang from the ceiling, one for each quarter full, with amber gasters swollen with stored sugar.
+  - Cistern: water that is pale at the surface and deep blue below, and teardrop drips.
+  - Barracks: a twig rack of thorn spears, a beetle-husk training dummy with straw poking through a crack, a leaf banner, and two soldiers asleep with their helmets tipped over their eyes.
+  - Workshop: a stone bench with a part-cut leaf and a thorn chisel, and a twig bundle tied with grass.
+  - Armory: before this build it had no dressing and borrowed the workshop's wall. It now has a riveted chitin wall, three wing-case shields, a spear rack, and spare plates.
+- **The toad:**
+  - About 40 raised warts, darker blotches, a poison gland behind each eye, eardrums, and a bony brow.
+  - Gold eyes with a black bar pupil.
+  - Splayed toes, and a long webbed foot on each back leg.
+  - A pale speckled throat that puffs. It is its own mesh now; the whole body used to pulse.
+- **Gallery and export:** a new Nest tab in the model gallery, and 17 new `.glb` files, for 106 in all.
+- **Two fixes while testing:**
+  - Bug spacing measured from a tile's corner instead of its centre, so two bugs could start just under 12 tiles apart. This was a rare failure of the "never bunched" test.
+  - The nurse test only counted nurses that were exploring. Nurses that left for another job outdoors, such as hunting or gathering, made it fail now and then. It now counts any nurse outside the nest.
+
 ## Nov 1: a viper of a venom ant (build 20.3)
 
 Mark: "Maybe venom is more slender and viper-esque."

@@ -93,7 +93,7 @@ const PLANS = {
     head: [[3.3, 0.4, 0], [1.25, 1.15, 1.15]],
     hips: [1.6, 0.8, -0.1], hipY: -0.3, hipZ: 0.7,
     reach: [2.4, 0.2, -2.6], spread: [2.6, 3.0, 2.8],
-    legR: 0.3, mandible: 0.9, scars: true,
+    legR: 0.3, mandible: 0.9, scars: true, plates: 5,
   },
 };
 
@@ -117,7 +117,7 @@ function buildAnt(planName, frame) {
     const tip = V(ac[0] - ar[0] - 0.9, ac[1] - 0.15, 0);
     parts.push(strut(V(ac[0] - ar[0] + 0.3, ac[1], 0), tip, 0.32, 0.4));
   } else parts.push(shell(ac, ar, [10, 7], (x, y, z) => {
-    const u = (x - (ac[0] - ar[0])) / (2 * ar[0]), band = Math.abs(((u * 3) % 1) - 0.5) > 0.42;
+    const u = (x - (ac[0] - ar[0])) / (2 * ar[0]), band = Math.abs(((u * (P.plates || 3)) % 1) - 0.5) > 0.42;
     if (y < ac[1] - ar[1] * 0.35) return 0.55;
     if (y > ac[1] + ar[1] * 0.7 && Math.abs(z) < ar[2] * 0.38) return 1.5;
     return band ? 0.58 : 1.04;
@@ -273,6 +273,20 @@ function outfit(kind) {
     for (const s of [-1, 1]) parts.push(box(1.0, 0.08, 0.32, x - r[0] - 0.4, c[1] + 0.35, s * 0.25, '#181818', s * 0.35));
   }
   if (kind === 'crown') {
+    // Layer 3: her gaster swollen with eggs, the pale skin showing between
+    // its five plates, and the stubs where she tore off her wings.
+    const [ac, ar] = Q.abdomen;
+    for (let k = 1; k < 5; k++) {
+      const x = ac[0] - ar[0] + (2 * ar[0] * k) / 5, f = Math.sqrt(Math.max(0, 1 - ((x - ac[0]) / ar[0]) ** 2));
+      parts.push(band(x, ac[1], ar[1] * f + 0.04, ar[2] * f + 0.04, 0.3, '#d8c49c'));
+    }
+    const [tc, tr] = Q.thorax;
+    for (const s of [-1, 1]) for (const [dx, len] of [[0.5, 1.5], [-0.5, 1.0]]) {
+      const g = new THREE.BufferGeometry().setFromPoints([V(tc[0] + dx + 0.35, 0, 0), V(tc[0] + dx - 0.35, 0, 0), V(tc[0] + dx - len, 0, s * 0.35), V(tc[0] + dx + 0.35, 0, 0), V(tc[0] + dx - len, 0, s * 0.35), V(tc[0] + dx - 0.35, 0, 0)]);
+      g.translate(0, tc[1] + tr[1] * 0.95, s * tr[2] * 0.55);
+      g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(12), 2)); g.computeVertexNormals();
+      parts.push(paintC(g, '#e2d6bc'));
+    }
     const [c, r] = Q.head, y = c[1] + r[1] * 0.75, R = 1.15;
     parts.push(paintC(new THREE.CylinderGeometry(R, R * 0.9, 0.6, 10, 1, true).translate(c[0] - 0.1, y + 0.3, 0), '#ffcc2a'));
     for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; parts.push(paintC(new THREE.ConeGeometry(0.24, 0.7, 4).translate(c[0] - 0.1 + Math.cos(a) * R, y + 0.95, Math.sin(a) * R), '#ffd84a')); parts.push(ball(0.15, c[0] - 0.1 + Math.cos(a + 0.6) * R * 1.03, y + 0.3, Math.sin(a + 0.6) * R * 1.03, '#e01838')); }
