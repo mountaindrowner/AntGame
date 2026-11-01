@@ -155,10 +155,12 @@ export function buildHouse(L, S, T) {
     const wz = front - wallT * 0.55, cx2 = w.x, cy = w.sill + w.h / 2;
     const curtain = ['#c84a3a', '#e8d8b0', '#6a8ac0', '#7aa868', '#d8a0b8'][i % 5];
     glass.push(paint(new THREE.PlaneGeometry(w.w, w.h, 8, 6).translate(cx2, cy, wz), (x, y) => {
-      const u = (x - (cx2 - w.w / 2)) / w.w, v = (y - w.sill) / w.h;
-      if (u < 0.16 || u > 0.84) return v > 0.93 ? '#3a3a3a' : curtain;
-      if (u + v * 0.4 > 0.25 && u + v * 0.4 < 0.42 && v > 0.45) return '#d8e8f4';
-      return v > 0.6 ? '#7a98b0' : '#4a6478';
+      // By whole pane cell (8 × 6), so both triangles of a cell match: the
+      // curtains at the sides, a clean diagonal glint, sky above, room below.
+      const cu = Math.min(7, Math.floor(((x - (cx2 - w.w / 2)) / w.w) * 8)), cv = Math.min(5, Math.floor(((y - w.sill) / w.h) * 6));
+      if (cu === 0 || cu === 7) return curtain;
+      if (cv >= 2 && cu - (cv - 2) >= 1 && cu - (cv - 2) <= 1) return '#d8e8f4';
+      return cv >= 3 ? '#7a98b0' : '#4a6478';
     }));
     trim.push(box(4 * S, w.h, 3 * S, cx2, cy, wz + 2 * S, '#f2eee4'), box(w.w, 4 * S, 3 * S, cx2, cy, wz + 2 * S, '#f2eee4'));
     for (const sx of [-1, 1]) trim.push(box(12 * S, w.h + 24 * S, wallT + 4 * S, cx2 + sx * (w.w / 2 + 6 * S), cy, front - wallT / 2 + 2 * S, '#f2eee4'));

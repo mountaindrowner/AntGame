@@ -29,7 +29,10 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // Shots: camera position and look-at target, eased from the first pair to the second.
 const SHOTS = [
-  { t0: 0, t1: 11, from: [V(L.x, 30, L.z + 332), V(L.x, 230, L.z - 368)], to: [V(L.x + 22, 36, L.z + 292), V(L.x + 12, 300, L.z - 268)] },
+  // Build 21: the house now stands across the back of the yard, so the
+  // opening is a crane down: it starts on the dusk sky over the roof, the
+  // fleet high above it, and tilts down with them past the windows to the yard.
+  { t0: 0, t1: 11, from: [V(L.x, 30, L.z + 332), V(L.x, 2700, L.z - 1900)], to: [V(L.x + 22, 36, L.z + 292), V(L.x + 12, 560, L.z - 1500)] },
   { t0: 11, t1: 18, from: [V(L.x + 236, 90, L.z + 218), V(L.x - 64, 140, L.z - 72)], to: [V(L.x + 166, 55, L.z + 148), V(L.x, 16, L.z)] },
   { t0: 18, t1: 24, from: [V(L.x + 70, 22, L.z + 60), V(L.x, 10, L.z)], to: [V(L.x + 55, 18, L.z + 45), V(L.x, 9, L.z)] },
   { t0: 24, t1: 29, from: [V(HOLE.x, 38, HOLE.z + 250), V(HOLE.x, 8, HOLE.z + 20)], to: [V(HOLE.x, 30, HOLE.z + 200), V(HOLE.x, 7, HOLE.z + 20)] },
@@ -420,7 +423,9 @@ export class Cinematic {
         // In formation: a wobbly V swooping in out of the dusk toward the camera.
         const row = Math.ceil(i / 2), side = i % 2 ? 1 : -1;
         const u = Math.max(0, (t - 1.0) / 10.5);
-        g.position.set(L.x + 7 + side * row * 34 + Math.sin(t * 1.7 + i) * 6, lerp(520, 250, u) + Math.sin(t * 2.3 + i) * 10 + row * 6, lerp(L.z - 1268, L.z + 32, u) - row * 60);
+        // (Build 21: from high over the house's roof, then swooping down past its windows.)
+        const k = ease(u);
+        g.position.set(L.x + 7 + side * row * 34 + Math.sin(t * 1.7 + i) * 6, lerp(2900, 250, k) + Math.sin(t * 2.3 + i) * 10 + row * 6, lerp(L.z - 2300, L.z + 32, u) - row * 60);
         g.rotation.set(Math.sin(t * 3 + i) * 0.25, -Math.PI / 2, Math.sin(t * 2 + i * 2) * 0.12); // nose toward the camera
         g.scale.setScalar(3.6);
         return;

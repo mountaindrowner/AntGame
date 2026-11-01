@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: the opening film with the house in it (build 21.1)
+
+Mark: "what does the intro look like now? doesnt the house show up?"
+
+**The problem:** it did show up, too much. The film's first shot looks north from the nest across the yard, straight at the back of the house. The old beige box was low, so the dusk sky showed above it. The new house is a full storey and blocked the sky. "They came from the sky!" played against a wall, with the fleet crossing the siding.
+
+**The fix:**
+- **The opening is a crane down.** It starts on the dusk sky and its stars above the roofline, with the fleet high over the house. Then it tilts down with them as they swoop past the windows to the yard and the rock.
+- **The fleet** now comes in from high over the roof, behind the house, instead of from just in front of the wall.
+- Checked at both the desktop and the phone (portrait) framing.
+
+**Also fixed:** the window glass reflection came out as jagged white teeth, because the diagonal band was painted by triangle. It is now painted by whole pane cells, a clean stepped diagonal glint.
+
 ## Nov 1: the back of the house, outside (build 21)
 
 Mark: "To the house." Then: "We can build exterior for now and build interior later." And: "keep in mind that the house we build now needs to be a good accommodating shape for a later interior."
