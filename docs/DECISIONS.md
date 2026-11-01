@@ -2,6 +2,31 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: your ant starts slower (build 22.1)
+
+Mark: "The slower speed is meant generally for the ant, but especially for our ant, because I feel like he moves a little too fast [at the] beginning."
+
+**Your ant:** it starts 24% slower, 58 px a second where it was 76. The You levels now give more of that back:
+- Long legs: +25% (was 15%)
+- Swift: +25% (was 15%)
+- Sprinter: still +10%
+
+Fully upgraded it reaches about 92 px a second, a little under the old 106. So the early game is slower and the upgrades matter more.
+
+**The colony is not slowed yet. The bots say it can't be without more to make up for it.** Six seeds, 45 minutes each:
+
+| What changed | Wins | Reached 40 ants |
+|---|---|---|
+| Before | 3 | 5 |
+| Everyone outdoors 13% slower | 1 | 1 |
+| 13% slower, foragers carry 6 (was 5) | 1 | 0 (and one lost colony) |
+| 6% slower, carry 6 | 1 | 1 |
+| Only your ant slower (shipped) | 2 | 3 (within the bots' noise) |
+
+Slower ants don't just bring home less food; they get caught by the spider, the feet and the birds more often. Slowing the colony will need its own pass:
+- more food on the ground near home
+- or fewer threats early
+
 ## Nov 1: the underground (build 22)
 
 Mark: "We should start looking at improving the underground designs to the sides of the nest instead of plain basic brown." Also from this message: the HUD is good on PC, no keyboard shortcuts, the house's inside later. Next are rivals in the new regions, slower movement, and the last of the tech tree and rooms.

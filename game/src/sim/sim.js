@@ -6,7 +6,7 @@ const SIM = (() => {
 const W = AREA*BLOCK.cols, H = AREA*BLOCK.rows, T = 16; // surface tiles: the built yard (yard.js)
 // Everything on the surface is twice as big as it was (yard.js SCALE), so
 // ants and creatures walk faster to keep trips from dragging.
-const SURF = 1.15; // surface speed: everything outdoors (ants, you, the spider) moves at this pace (build 11.6: was 1.4)
+const SURF = 1.15; // surface speed: everything outdoors (ants, you, the spider) moves at this pace (build 11.6: was 1.4; build 22.1 tried 1.0 and 1.08, and colonies starved)
 // Nest cutaway cells. The soil comes in bands, top down: a deep layer of
 // soft topsoil, then packed soil and clay, equally deep.
 const SOIL_ROWS = [20, 14, 14];
@@ -448,6 +448,7 @@ function paceOf(s, a, base){
   if (s.event && s.event.key === 'heat') v *= 0.85;
   return v;
 }
+// Build 22.1: 6 (was 5), to make up for everyone walking 6% slower.
 const carryCap = (s, a) => 5 + (promo(s, a, 'strongback') ? 1 : 0) + (!a.team && setDone(s, 'garden') ? 1 : 0) + (!a.team && has(s, 'bigcrop') ? 3 : 0) + (!a.team && a.caste === 'forager' && (s.colony.forage || 0) >= 4 ? 2 : 0);
 const sightOf = (s, a) => 7 + (!a.team && a.caste === 'forager' && picked(s, 'forager', 'pathfinder') ? 7 : 0) + (promo(s, a, 'keen') ? 4 : 0);
 const chewsTreats = (s, a) => !a.team && a.caste === 'forager' && picked(s, 'forager', 'hauler');
@@ -479,7 +480,8 @@ function roomCost(s, key, nth){
 function upgradeLock(s, caste){ return caste === 'forager' || caste === 'builder' || caste === 'you' ? '' : eggLock(s, caste); }
 // Your ant (build 14): pace, health, bite and carry from the You levels.
 const youL = s => s.colony.up.you || 0;
-const youPace = s => 66*(1 + (youL(s) >= 1 ? 0.15 : 0) + (youL(s) >= 4 ? 0.15 : 0) + (picked(s, 'you', 'sprint') ? 0.1 : 0));
+// Build 22.1 (Mark: "he moves a little too fast at the beginning"): a slower start, won back by the You levels.
+const youPace = s => 50*(1 + (youL(s) >= 1 ? 0.25 : 0) + (youL(s) >= 4 ? 0.25 : 0) + (picked(s, 'you', 'sprint') ? 0.1 : 0));
 const youHp = s => youL(s) >= 2 ? 20 : 12;
 function upgradeCaste(s, caste, pick){
   const c = s.colony, L = UPGRADES[caste]; if (!L || upgradeLock(s, caste)) return false;
