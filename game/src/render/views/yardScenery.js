@@ -862,12 +862,15 @@ function meshLandmark(l, w, ctx) {
         // The Oak's trunk: buttress roots flaring at its foot, deep furrowed
         // bark in vertical ridges, moss low on its shady side and pale lichen,
         // up out of sight.
-        const x = l.x * T, z = l.y * T, R = l.r * T, h = 900 * S, rad = 28, seed = 3.1;
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 900 * S, rad = 36;
+        const rootA = w.landmarks.filter((o) => o.kind === 'root' && Math.hypot(o.x - l.x, o.y - l.y) < l.r * 1.1).map((o) => Math.atan2(o.y - l.y, o.x - l.x));
         const g2 = new THREE.CylinderGeometry(R * 0.82, R * 1.1, h, rad, 14).translate(0, h / 2, 0), p2 = g2.attributes.position;
         for (let i = 0; i < p2.count; i++) {
           const px = p2.getX(i), py = p2.getY(i), pz = p2.getZ(i), a = Math.atan2(pz, px), rr = Math.hypot(px, pz);
           if (rr < 1) continue;
-          const flare = 1 + 0.42 * Math.exp(-py / (70 * S)) * Math.max(0, Math.cos(a * 5 + seed)) ** 2, ridge = 1 + 0.035 * Math.sin(a * rad / 2 + Math.sin(py * 0.004) * 1.5);
+          // Buttresses: a ridge swelling out of the trunk toward each root it feeds, so trunk and root are one surface.
+          let lobe = 0; for (const ra of rootA) { const c = Math.cos(a - ra); if (c > 0) lobe = Math.max(lobe, c ** 16); }
+          const flare = 1 + Math.exp(-py / (90 * S)) * (0.05 + 0.28 * lobe), ridge = 1 + 0.035 * Math.sin(a * rad / 2 + Math.sin(py * 0.004) * 1.5);
           p2.setX(i, px * flare * ridge); p2.setZ(i, pz * flare * ridge);
         }
         parts.push(paint(at(g2, x, 0, z), (px, py, pz) => {
@@ -880,17 +883,27 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'root': {
-        // A surface root: thick where it leaves the trunk, tapering, rising
-        // and dipping as it snakes away, then diving back into the ground.
-        const len = l.len * T, r0 = 1.5 * S * T * 0.5, segs = 8;
-        const g2 = new THREE.CylinderGeometry(1, 1, len, 7, segs).rotateZ(Math.PI / 2).translate(len / 2, 0, 0), p2 = g2.attributes.position;
+        // A surface root, half sunk in the ground: a broad, flattened ridge
+        // that is widest where it leaves the trunk, where it rises up the
+        // trunk's buttress so the two are one surface; then it tapers,
+        // snakes and dips, and dives back into the ground at its tip.
+        const oak = w.landmarks.find((o) => o.kind === 'oak' && Math.hypot(o.x - l.x, o.y - l.y) < o.r * 1.1);
+        const len = l.len * T, W0 = (oak ? 4.2 : 2.6) * T, back = oak ? W0 * 1.4 : W0 * 0.3, L = len + back, segs = 14, radial = 10;
+        // Coloured like the trunk's bark while it is still a plain tube (so both
+        // triangles of a facet match): furrows along its length, dark beneath.
+        const g2 = paint(new THREE.CylinderGeometry(1, 1, L, radial, segs).rotateZ(Math.PI / 2).translate(L / 2 - back, 0, 0), (px, py, pz) => {
+          const seg = Math.floor((Math.atan2(py, pz) + Math.PI) / ((Math.PI * 2) / radial));
+          return py < -0.45 ? '#3a2c1c' : seg % 3 === 0 ? '#2e2418' : seg % 3 === 1 ? '#5a4632' : '#4a3a28';
+        }, 72), p2 = g2.attributes.position;
         for (let i = 0; i < p2.count; i++) {
-          const u = p2.getX(i) / len, k = r0 * (1.5 - 1.15 * u);
-          p2.setY(i, p2.getY(i) * k + Math.sin(u * 7 + l.a * 3) * r0 * 0.25 - Math.max(0, u - 0.75) * 4 * r0 * 0.9);
-          p2.setZ(i, p2.getZ(i) * k + Math.sin(u * 5 + l.a) * r0 * 0.6);
+          const px = p2.getX(i), u = Math.max(0, px / len), cy = p2.getY(i), cz = p2.getZ(i);
+          const tu = Math.min(1, u), wid = W0 * (1 - 0.82 * Math.pow(tu, 1.4)) * (px < 0 ? 1 + 0.25 * (-px / back) : 1), hgt = wid * 0.7;
+          const rise = oak ? Math.max(0, 1 - u / 0.18) ** 2 * W0 * 2.4 : 0, dive = Math.max(0, u - 0.8) * 5 * hgt;
+          p2.setY(i, cy * (hgt + rise * 0.6) + hgt * 0.25 + rise * 0.5 - dive + Math.sin(u * 6 + l.a * 3) * hgt * 0.2);
+          p2.setZ(i, cz * wid + Math.sin(u * 4.2 + l.a) * W0 * 0.35 * Math.min(1, u * 3));
         }
         g2.rotateY(-l.a);
-        parts.push(paint(at(g2, l.x * T, r0 * 0.45, l.y * T), (px, py) => (py > r0 * 1.1 ? '#6a5238' : py > r0 * 0.5 ? '#5a4630' : '#4e3c28'), 72));
+        parts.push(at(g2, l.x * T, 0, l.y * T));
         break;
       }
       case 'twig': parts.push(logGeo({ ...l, h: 1, twig: true })); break;
@@ -1055,7 +1068,7 @@ function claimAll(w) {
   const disc = (cx, cy, rr) => { for (let y = Math.floor(cy - rr - 1); y <= cy + rr + 1; y++) for (let x = Math.floor(cx - rr - 1); x <= cx + rr + 1; x++) if (x >= 0 && y >= 0 && x < W && y < H && Math.hypot(x + 0.5 - cx, y + 0.5 - cy) <= rr + 0.5) own[y * W + x] = 1; };
   for (const l of w.landmarks) {
     if (l.kind === 'frame') rect(l.x0, l.y0, l.x1 - l.x0 + 1, l.y1 - l.y0 + 1);
-    else if (l.kind === 'root') for (let t = 0; t <= l.len; t += 0.5) disc(l.x + Math.cos(l.a) * t, l.y + Math.sin(l.a) * t, 1.5);
+    else if (l.kind === 'root') for (let t = 0; t <= l.len; t += 0.5) disc(l.x + Math.cos(l.a) * t, l.y + Math.sin(l.a) * t, 1.5 + 1.45 * Math.max(1, Math.round(3.8 * (1 - 0.82 * Math.pow(t / l.len, 1.4)) - 0.3))); // all the tiles the sim blocks for it (build 20.11)
     else if (l.x0 != null && l.w != null) rect(l.x0, l.y0, l.w, l.h);
     else if (l.r != null && l.x != null) disc(l.x, l.y, l.r);
     else if (l.x != null) rect(l.x, l.y, 1, 1);

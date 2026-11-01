@@ -2,6 +2,26 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: thicker oak roots that grow out of the trunk (build 20.11)
+
+Mark: "Let's make the roots of the trunk of the tree a little bit thicker. They seem a little too slim. Let's try to make them seam into each other, you know, like an organic seaming."
+
+- **Roots that leave the trunk are broad and flattened.** They are about 8 tiles across at the trunk and taper slowly to a point, half sunk in the ground. They snake and dip, then dive back into the ground at the tip.
+- **The seam:** each root starts inside the trunk and rises up it.
+  - The trunk's foot has a buttress swelling toward each root it feeds, aimed at that root (the angles come from the yard layout). Before, the buttresses were at five fixed angles.
+  - So trunk and root are one surface.
+- **The roots are coloured like the trunk's bark:** furrows along their length and dark beneath. They are coloured while still a plain tube, so both triangles of a facet match.
+- **The separate roots in the Oak Roots area** are a little wider too.
+- **The yard layout (`yard.js`) blocks the same width.** Before, it blocked only one tile along each root. Without the change, ants walking beside a root would have been hidden under it.
+  - Trunk roots block up to four tiles each side at the trunk, and none at the tip.
+  - Oak Roots roots block two, then one.
+  - The scenery claims those tiles too, so no filler pebbles appear along them. A first try left the pebbles in.
+- **Two attempts didn't work:**
+  - A small widening barely showed.
+  - A very large buttress flare swallowed the roots' thick bases, so only their thin tips poked out.
+
+  The final version keeps the flare about the size of a root where it meets the trunk.
+
 ## Nov 1: model pass, layer 4b: the rest of the yard (build 20.10)
 
 Mark: "Next."
