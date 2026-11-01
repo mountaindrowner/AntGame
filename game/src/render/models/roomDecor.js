@@ -94,7 +94,8 @@ export function roomWallMaterial(key) {
   if (!wallCache.has(key)) {
     const draw = WALLS[key] || WALLS.workshop;
     const tex = canvasTexture(32, 32, (g) => draw(g, rng(key.length * 97 + 13)));
-    wallCache.set(key, psx({ map: tex }));
+    // Vertex colour and alpha (build 20.5): the panel darkens and fades at its edge.
+    wallCache.set(key, psx({ map: tex, vertexColors: true, transparent: true }));
   }
   return wallCache.get(key);
 }
@@ -214,14 +215,27 @@ const DRESS = {
 const tmpC1 = new THREE.Color(), tmpC2 = new THREE.Color();
 function mix(a, b, k) { return '#' + tmpC1.set(a).lerp(tmpC2.set(b), Math.max(0, Math.min(1, k))).getHexString(); }
 
+// Seams (build 20.5): roots break through the ceiling near the walls, so a
+// chamber reads as dug into the soil, not cut out of it.
+function seams(d, r) {
+  const { W, D, ceil } = d, h = (k) => { const x = Math.sin((r.x0 * 31 + r.y0 * 17 + k) * 127.1) * 43758.5; return x - Math.floor(x); };
+  if (!ceil) return;
+  for (const [i, u] of [[0, 0.16 + h(1) * 0.06], [1, 0.8 + h(2) * 0.06]]) {
+    const x = W * u, top = ceil(x) + 1.5, len = 7 + h(3 + i) * 5, lean = (h(5 + i) - 0.5) * 0.25;
+    d.put(PROPS.thorn, [x, top - len / 2, -D * 0.86], [1.3, len, 1.3], '#6e4a2a', [0, 0, Math.PI + lean]);
+    d.put(PROPS.thorn, [x + (i ? -1.2 : 1.2), top - len * 0.3, -D * 0.86], [0.7, len * 0.5, 0.7], '#7e5832', [0, 0, Math.PI + (i ? 0.5 : -0.5)]);
+  }
+}
+
 // Dress one room. put(geo, pos, scale, color, rot) receives WORLD coordinates.
 export function dressRoom(r, ctx) {
   const fn = DRESS[r.key];
-  if (!fn) return;
   const T = ctx.T, w = (r.w || 4) * T, h = (r.h || 3) * T;
   const x0 = r.x0 * T, floor = -(r.y0 + (r.h || 3)) * T;
-  fn({
-    W: w, H: h, D: ctx.DEPTH, t: ctx.t, col: ctx.col, mix,
+  const d = {
+    W: w, H: h, D: ctx.DEPTH, t: ctx.t, col: ctx.col, mix, tier: ctx.tier || 0, ceil: ctx.ceil,
     put: (geo, p, sc, color, rot) => ctx.put(geo, [x0 + p[0], floor + p[1], p[2]], sc, color, rot),
-  });
+  };
+  seams(d, r);
+  if (fn) fn(d);
 }

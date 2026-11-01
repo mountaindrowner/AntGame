@@ -54,28 +54,29 @@ function tunnelBoxes(s) {
   return boxes.flat();
 }
 
+// A finished room's chamber: a squarish oval filling its cells, the walls
+// and ceiling wobbling a little so it looks dug rather than machined; the
+// floor stays flat (rooms stand things on it). Signed distance in nest px,
+// y down, negative inside.
+export function roomField(rm) {
+  const cx = (rm.x0 + (rm.w || 4) / 2) * T, cy = (rm.y0 + (rm.h || 3) / 2) * T, hw = (rm.w || 4) * T / 2 + 1.5, hh = (rm.h || 3) * T / 2 + 1.5;
+  const seed = rm.x0 * 7.3 + rm.y0 * 3.1, m = Math.min(hw, hh), N = 3;
+  const f = (x, y) => {
+    const u = (x - cx) / hw, v = (y - cy) / hh, ang = Math.atan2(v, u);
+    const wob = v > 0.55 ? 0 : Math.sin(ang * 3 + seed) * 1.6 + Math.sin(ang * 5 + seed * 1.7) * 0.9;
+    return (Math.pow(Math.pow(Math.abs(u), N) + Math.pow(Math.abs(v), N), 1 / N) - 1) * m + wob;
+  };
+  f.box = [cx - hw, cy - hh, cx + hw, cy + hh];
+  return f;
+}
+const ROOM_BLEND = 20; // tunnels flare into a room's mouth instead of butting into it
+
 // Sample the tunnel field on a grid (x0, y0, step, nx × ny). Each box only
 // touches the samples near it, so cost scales with the dug area, not the nest.
 export function tunnelGrid(s, x0, y0, step, nx, ny) {
   const far = T * 2;
   const grid = new Float32Array(nx * ny).fill(far);
   const reach = ROUND + BLEND;
-  // Rooms: a squarish oval filling the room's cells, its wall wobbling a
-  // little, so chambers look dug rather than machined. Same footprint.
-  for (const rm of s.nest.rooms) {
-    const cx = (rm.x0 + (rm.w || 4) / 2) * T, cy = (rm.y0 + (rm.h || 3) / 2) * T, hw = (rm.w || 4) * T / 2 + 1.5, hh = (rm.h || 3) * T / 2 + 1.5;
-    const seed = rm.x0 * 7.3 + rm.y0 * 3.1, m = Math.min(hw, hh), N = 3;
-    const i0 = Math.max(0, Math.floor((cx - hw - reach - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((cx + hw + reach - x0) / step));
-    const j0 = Math.max(0, Math.floor((cy - hh - reach - y0) / step)), j1 = Math.min(ny - 1, Math.ceil((cy + hh + reach - y0) / step));
-    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
-      const u = (x0 + i * step - cx) / hw, v = (y0 + j * step - cy) / hh, ang = Math.atan2(v, u);
-      // The floor stays flat (rooms stand things on it); walls and ceiling wobble.
-      const wob = v > 0.55 ? 0 : Math.sin(ang * 3 + seed) * 1.6 + Math.sin(ang * 5 + seed * 1.7) * 0.9;
-      const d = (Math.pow(Math.pow(Math.abs(u), N) + Math.pow(Math.abs(v), N), 1 / N) - 1) * m + wob;
-      const k = j * nx + i, a = grid[k], h = Math.max(BLEND - Math.abs(a - d), 0) / BLEND;
-      grid[k] = Math.min(a, d) - h * h * BLEND * 0.25;
-    }
-  }
   for (const b of tunnelBoxes(s)) {
     const r = Math.min(ROUND, b[2], b[3]);
     const i0 = Math.max(0, Math.floor((b[0] - b[2] - reach - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((b[0] + b[2] + reach - x0) / step));
@@ -93,7 +94,73 @@ export function tunnelGrid(s, x0, y0, step, nx, ny) {
       }
     }
   }
+  // Rooms merge with one another as gently as tunnel cells do, so a soil
+  // wall between two rooms stays standing; then rooms and tunnels merge with
+  // a wider blend, so where a tunnel meets a chamber its walls sweep out
+  // into it like a mouth.
+  const rooms = new Float32Array(nx * ny).fill(far);
+  for (const rm of s.nest.rooms) {
+    const f = roomField(rm), [bx0, by0, bx1, by1] = f.box;
+    const i0 = Math.max(0, Math.floor((bx0 - reach - x0) / step)), i1 = Math.min(nx - 1, Math.ceil((bx1 + reach - x0) / step));
+    const j0 = Math.max(0, Math.floor((by0 - reach - y0) / step)), j1 = Math.min(ny - 1, Math.ceil((by1 + reach - y0) / step));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const d = f(x0 + i * step, y0 + j * step), k = j * nx + i, a = rooms[k], h = Math.max(BLEND - Math.abs(a - d), 0) / BLEND;
+      rooms[k] = Math.min(a, d) - h * h * BLEND * 0.25;
+    }
+  }
+  const R = ROOM_BLEND;
+  for (let k = 0; k < grid.length; k++) {
+    const a = grid[k], d = rooms[k], h = Math.max(R - Math.abs(a - d), 0) / R;
+    grid[k] = Math.min(a, d) - h * h * R * 0.25;
+  }
   return grid;
+}
+// The room's back wall as a fine grid clipped to its chamber (see
+// _rebuildPanels). Colour carries the shading, alpha the fade.
+const FEATHER = 10, PANEL_STEP = 2;
+export function roomPanel(r) {
+  const f = roomField(r), [bx0, by0, bx1, by1] = f.box.map((v, i) => v + (i < 2 ? -FEATHER : FEATHER)), x0 = r.x0 * T, z = -DEPTH + 0.3;
+  const nx = Math.ceil((bx1 - bx0) / PANEL_STEP) + 1, ny = Math.ceil((by1 - by0) / PANEL_STEP) + 1;
+  const d = new Float32Array(nx * ny), seed = r.x0 * 13 + r.y0 * 7;
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+    const x = bx0 + i * PANEL_STEP, y = by0 + j * PANEL_STEP;
+    // Ragged fade: a little value noise pushes the edge in and out.
+    d[j * nx + i] = f(x, y) + (hash(Math.floor(x / 4) * 31 + Math.floor(y / 4) * 57 + seed) - 0.5) * 3 + Math.sin(x * 0.21 + y * 0.13 + seed) * 1.2;
+  }
+  const pos = [], uv = [], col = [];
+  const vert = (i, j) => {
+    const x = bx0 + i * PANEL_STEP, y = by0 + j * PANEL_STEP, e = Math.max(0, Math.min(1, (FEATHER - d[j * nx + i]) / FEATHER));
+    pos.push(x, -y, z); uv.push((x - x0) / (2 * T), -y / (2 * T));
+    const sm = e * e * (3 - 2 * e), k = 0.7 + 0.3 * sm;
+    col.push(k, k * 0.96, k * 0.92, sm);
+  };
+  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+    const a = d[j * nx + i], b = d[j * nx + i + 1], c = d[(j + 1) * nx + i], e = d[(j + 1) * nx + i + 1];
+    if (Math.min(a, b, c, e) >= FEATHER) continue;
+    vert(i, j); vert(i, j + 1); vert(i + 1, j);
+    vert(i + 1, j); vert(i, j + 1); vert(i + 1, j + 1);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  g.computeVertexNormals();
+  return g;
+}
+// Height of the chamber's ceiling above its floor at room-local x, for
+// hanging things from it (roots). Cached per room.
+const ceilCache = new Map();
+function roomCeiling(r) {
+  const key = r.x0 + ',' + r.y0 + ',' + r.w + ',' + r.h;
+  if (!ceilCache.has(key)) {
+    const f = roomField(r), floor = (r.y0 + (r.h || 3)) * T, top = f.box[1], memo = new Map();
+    ceilCache.set(key, (lx) => {
+      const xi = Math.round(lx);
+      if (!memo.has(xi)) { let y = top; while (y < floor && f(r.x0 * T + xi, y) > 0) y += 0.5; memo.set(xi, floor - y); }
+      return memo.get(xi);
+    });
+  }
+  return ceilCache.get(key);
 }
 const PROP_KEY = new Map([...Object.entries(PROPS), ...Object.entries(NEST).map(([k, g]) => ['n:' + k, g])].map(([k, g]) => [g, k]));
 
@@ -306,22 +373,18 @@ export class NestView {
     this.props.push(PROP_KEY.get(geo), geo, tmpM, color);
   }
 
-  // Painted back wall per room, rebuilt when rooms change.
+  // Painted back wall per room, rebuilt when rooms change. It reaches past
+  // the chamber's outline into the soil, which hides it, so its edge is the
+  // chamber's own curved edge; only where a tunnel opens does it show its
+  // end, and there it darkens and fades into the bare soil wall with a
+  // ragged noise, so the room's wall runs out into the tunnel's.
   _rebuildPanels(rooms) {
     const sig = rooms.map((r) => [r.key, r.x0, r.y0, r.w, r.h].join(',')).join(';');
     if (sig === this.panelSig) return;
     this.panelSig = sig;
     this.panels.children.forEach((m) => m.geometry.dispose());
     this.panels.clear();
-    for (const r of rooms) {
-      const rw = r.w || 4, rh = r.h || 3;
-      const g = new THREE.PlaneGeometry(rw * T, rh * T);
-      // Two wall tiles per cell keeps the texel size steady across room sizes.
-      g.attributes.uv.array.forEach((v, i, arr) => { arr[i] = v * (i % 2 ? rh : rw) * 0.5; });
-      const m = new THREE.Mesh(g, roomWallMaterial(r.key));
-      m.position.set((r.x0 + rw / 2) * T, -(r.y0 + rh / 2) * T, -DEPTH + 0.3);
-      this.panels.add(m);
-    }
+    for (const r of rooms) this.panels.add(new THREE.Mesh(roomPanel(r), roomWallMaterial(r.key)));
   }
 
   update(app, t, aspect) {
@@ -344,7 +407,7 @@ export class NestView {
     const put = (geo, p, sc, color, rot) => this._put(geo, p, sc, color, rot);
     n.rooms.forEach((r, i) => {
       const rw = r.w || 4, rh = r.h || 3;
-      dressRoom(r, { T, DEPTH, t, col, put });
+      dressRoom(r, { T, DEPTH, t, col, put, tier: SIM.soilTier(r.y0 + rh - 1), ceil: roomCeiling(r) });
       if (i < this.roomLights.length) {
         const l = this.roomLights[i];
         l.intensity = 1.4 + 0.12 * Math.sin(t * 9 + i * 2);

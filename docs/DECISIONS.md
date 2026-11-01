@@ -2,6 +2,26 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: rooms that sit in the soil (build 20.5)
+
+Mark: "What about the transitioning of rooms and their surrounding backgrounds so it fits into the spacing better instead of just being a blocky jutting space with no natural seams?"
+
+Two things made rooms look cut out of the soil rather than dug into it:
+- Each room's painted back wall was a flat rectangle inside a rounded chamber, so its straight edges showed.
+- Corridors butted straight into rooms, with square steps where they met.
+
+The fixes:
+- **Walls that follow the chamber.**
+  - The back wall is now a fine grid built from the chamber's own outline (`roomField`, shared with the soil tracing).
+  - It reaches past the outline into the soil, which hides it, so where the chamber meets soil its edge is the chamber's own curved edge.
+  - Where a tunnel opens, the wall darkens a little and fades into the bare soil wall over about 10 px, with a ragged noise edge. Each room's wall runs out into the tunnel and into its neighbour without a line.
+- **Tunnel mouths that flare.** Rooms and tunnels now merge with a much wider blend (20 px instead of 8), so where a tunnel meets a chamber its walls sweep out like a mouth.
+  - Rooms still merge with one another at the old blend. Otherwise the one-tile soil wall between neighbouring rooms was eaten away; it now stands as a pillar that narrows toward the tunnel.
+- **Roots.** Every room has two roots, each with a rootlet, hanging from the real ceiling (`roomCeiling`) near its walls.
+- I also tried stones half buried in the wall, but they looked like floating chips and were dropped.
+
+This is a rendering change only. Rooms are the same cells to the sim, so ants walk where they did.
+
 ## Nov 1: model pass, layer 3: the nest up close, and the toad (build 20.4)
 
 Mark: "Go ahead with layer 3."
