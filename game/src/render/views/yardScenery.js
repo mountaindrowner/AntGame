@@ -272,6 +272,17 @@ function toothLeaf(len, wid, c, seed) {
   return paint(new THREE.ShapeGeometry(sh).rotateX(-Math.PI / 2), (x, y, z) => (Math.abs(z) < wid * 0.12 ? lighten(c, 0.25) : c), seed);
 }
 
+// A leafy mass (layer 4b): a lumpy ball of foliage, lighter where the sun
+// hits the top, flecked with pale new growth, dark in the gaps.
+function leafBall(R, greens, seed, detail = 2) {
+  let g = new THREE.IcosahedronGeometry(R, detail); g.deleteAttribute('normal'); g.deleteAttribute('uv'); g = mergeVertices(g);
+  const p = g.attributes.position, v = new THREE.Vector3();
+  for (let i = 0; i < p.count; i++) { v.fromBufferAttribute(p, i); const n = Math.sin(v.x * 0.09 + seed) * Math.sin(v.y * 0.11 + seed * 2) * Math.sin(v.z * 0.1 + seed * 3); v.multiplyScalar(1 + n * 0.16); if (v.y < -R * 0.5) v.y = -R * 0.5 + (v.y + R * 0.5) * 0.3; p.setXYZ(i, v.x, v.y, v.z); }
+  const rr = rng(Math.floor(seed * 9973) + 11);
+  return paint(g.toNonIndexed(), (x, y) => { const q = rr(); return q < 0.06 ? greens[4] : q < 0.16 ? greens[0] : y > R * 0.35 ? (q < 0.6 ? greens[3] : greens[2]) : y > -R * 0.1 ? (q < 0.5 ? greens[2] : greens[1]) : greens[0]; }, seed);
+}
+const flipTube = (g) => g.scale(-1, 1, 1); // an open tube turned inside out, so its inner face shows
+
 // A garden flower: a stem with ribbed leaves, green sepals, two rings of
 // petals (darker at the base, paler at the tips) cupped upward, and a domed
 // centre of seeds.
@@ -619,6 +630,9 @@ function meshLandmark(l, w, ctx) {
         // A bird feeder on a pole: a little house with a seed tray.
         const x = (l.x + 0.5) * T, z = (l.y + 0.5) * T, top = 200 * S;
         parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3.5 * S, top, 6).translate(0, top / 2, 0), x, 0, z), '#3a3a36'));
+        // Layer 4b: a squirrel baffle on the pole, and seed spilled round its foot.
+        parts.push(at(paint(new THREE.ConeGeometry(30 * S, 22 * S, 16, 1, true).rotateX(Math.PI), '#8a9098'), x, top * 0.55, z));
+        { const rs = rng(Math.floor(x * 7 + z)); for (let k = 0; k < 40; k++) { const a = rs() * 6.3, d = (6 + Math.sqrt(rs()) * 34) * S; decals.push(paint(at(new THREE.CircleGeometry((1 + rs()) * S, 5).rotateX(-Math.PI / 2), x + Math.cos(a) * d, 0, z + Math.sin(a) * d), ['#e8d8a0', '#3a3028', '#c8a868'][k % 3])); } }
         parts.push(paint(at(new THREE.BoxGeometry(44 * S, 4 * S, 44 * S), x, top, z), '#8a5e3a'));
         if (l.suet) {
           // A wire cage of suet: a pale block behind grey bars.
@@ -645,26 +659,36 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'pool': {
-        // A blue plastic kiddie pool with a white rim, half full.
-        const x = l.x * T, z = l.y * T, R = l.r * T, hgt = 50 * S;
+        // An inflatable kiddie pool: three striped rings, the inner wall pale,
+        // water with ripples and a glint, a rubber duck afloat.
+        const x = l.x * T, z = l.y * T, R = l.r * T, tube = 9 * S, hgt = tube * 5.6;
         claimDisc(l.x, l.y, l.r);
-        parts.push(paint(at(new THREE.CylinderGeometry(R, R * 0.97, hgt, 24, 1, true).translate(0, hgt / 2, 0), x, 0, z), (px, py) => (py > hgt - 6 * S ? '#f4f4f4' : '#3a8ae0')));
-        parts.push(paint(at(new THREE.TorusGeometry(R, 4 * S, 4, 24).rotateX(Math.PI / 2), x, hgt, z), '#f4f4f4'));
-        parts.push(paint(at(new THREE.CircleGeometry(R * 0.98, 24).rotateX(-Math.PI / 2), x, hgt * 0.55, z), (px, py, pz) => { const d = Math.hypot(px - x, pz - z) / R; return d > 0.9 ? '#7ac4f4' : Math.floor(d * 6) % 2 ? '#58b0ec' : '#4aa4e4'; }));
+        for (let k = 0; k < 3; k++) parts.push(at(paint(new THREE.TorusGeometry(R - tube, tube, 8, 36).rotateX(Math.PI / 2), (px, py, pz) => (Math.floor((Math.atan2(pz, px) + Math.PI) / (Math.PI / 9)) % 2 ? '#3a8ae0' : k === 1 ? '#f4f4f4' : '#5aa4ec'), 60 + k), x, tube * (1 + k * 1.8), z));
+        parts.push(at(paint(flipTube(new THREE.CylinderGeometry(R - tube * 1.8, R - tube * 1.8, hgt, 36, 1, true)), '#8ac8f4'), x, hgt / 2, z));
+        parts.push(at(paint(new THREE.CircleGeometry(R - tube * 1.7, 36).rotateX(-Math.PI / 2), (px, py, pz) => { const d = Math.hypot(px - x, pz - z) / R, a = Math.atan2(pz - z, px - x); return d > 0.82 ? '#8ad0f8' : d < 0.3 && a > 2 ? '#d8f4ff' : Math.floor(d * 7 + Math.sin(a * 3) * 0.4) % 2 ? '#58b0ec' : '#4aa4e4'; }), x, hgt * 0.6, z));
+        const dx = x + R * 0.35, dz = z - R * 0.2, dy = hgt * 0.6;
+        parts.push(at(paint(new THREE.SphereGeometry(10 * S, 10, 6).scale(1.3, 0.8, 1), '#ffd23a'), dx, dy + 4 * S, dz));
+        parts.push(at(paint(new THREE.SphereGeometry(6 * S, 8, 5), '#ffd23a'), dx + 9 * S, dy + 13 * S, dz));
+        parts.push(at(paint(new THREE.ConeGeometry(2.4 * S, 6 * S, 6).rotateZ(-Math.PI / 2), '#f08a2a'), dx + 16 * S, dy + 12 * S, dz));
+        for (const sz of [-1, 1]) parts.push(at(paint(new THREE.SphereGeometry(1.2 * S, 4, 3), '#1a1a1a'), dx + 12 * S, dy + 15 * S, dz + sz * 3.6 * S));
         break;
       }
       case 'swingset': {
-        // A swing set: an A-frame at each end, a top bar, two seats on chains.
-        const top = 300 * S, z = l.y * T, sp = l.spread * T;
-        for (const xx of [l.x0, l.x1]) for (const sgn of [-1, 1]) {
-          const len = Math.hypot(top, sp), leg = new THREE.CylinderGeometry(3 * S, 3 * S, len, 6).translate(0, len / 2, 0).rotateX(sgn * Math.atan2(sp, top));
-          parts.push(paint(at(leg, (xx + 0.5) * T, 0, z + sgn * sp), '#d8402a', xx));
+        // A swing set: an A-frame at each end on ground anchors, capped legs,
+        // a top bar, and two swings: chains of grey links and black rubber
+        // strap seats; the grass worn to dirt under each.
+        const top = 300 * S, z = l.y * T, sp = l.spread * T, x0 = (l.x0 + 0.5) * T, x1 = (l.x1 + 0.5) * T;
+        for (const xx of [x0, x1]) for (const sgn of [-1, 1]) {
+          parts.push(rod([xx, 0, z + sgn * sp], [xx, top, z], 4 * S, 3.6 * S, (px, py) => (py < 20 * S ? '#b02a1e' : '#d8402a'), 8, xx + sgn));
+          parts.push(at(paint(new THREE.BoxGeometry(14 * S, 4 * S, 14 * S), '#6a6a6a'), xx, 2 * S, z + sgn * sp));
         }
-        parts.push(paint(at(new THREE.CylinderGeometry(3.4 * S, 3.4 * S, (l.x1 - l.x0) * T, 6).rotateZ(Math.PI / 2), ((l.x0 + l.x1) / 2 + 0.5) * T, top, z), '#d8402a'));
+        parts.push(rod([x0 - 8 * S, top, z], [x1 + 8 * S, top, z], 4.4 * S, 4.4 * S, '#d8402a', 8, 3));
+        for (const xx of [x0 - 8 * S, x1 + 8 * S]) parts.push(at(paint(new THREE.SphereGeometry(5 * S, 8, 4), '#f0c02a'), xx, top, z));
         for (const f of [0.32, 0.68]) {
-          const sx = (l.x0 + (l.x1 - l.x0) * f + 0.5) * T, seat = 50 * S;
-          parts.push(paint(at(new THREE.BoxGeometry(34 * S, 3 * S, 14 * S), sx, seat, z), '#2a2a2a'));
-          for (const cs of [-1, 1]) parts.push(paint(at(new THREE.CylinderGeometry(0.8 * S, 0.8 * S, top - seat, 3).translate(0, (top - seat) / 2, 0), sx + cs * 15 * S, seat, z), '#9a9a9a'));
+          const sx = x0 + (x1 - x0) * f, seat = 50 * S;
+          decals.push(paint(at(new THREE.CircleGeometry(1, 16).scale(30 * S, 1, 1).rotateX(-Math.PI / 2).scale(1, 1, 22 * S), sx, 0, z), '#6a5232'));
+          parts.push(at(paint(new THREE.TorusGeometry(20 * S, 2 * S, 3, 10, Math.PI).rotateZ(Math.PI).scale(1, 0.35, 3.2), (px, py) => (py < -5 * S ? '#1a1a1a' : '#2e2e2e')), sx, seat + 7 * S, z));
+          for (const cs of [-1, 1]) parts.push(paint(at(new THREE.CylinderGeometry(1 * S, 1 * S, top - seat, 4, 24).translate(0, (top - seat) / 2, 0), sx + cs * 19 * S, seat, z), (px, py) => (Math.floor(py / (5 * S)) % 2 ? '#b8b8b8' : '#7a7a7a')));
         }
         break;
       }
@@ -687,12 +711,17 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'molehill': {
-        // A molehill: a heap of loose, crumbly dirt.
+        // A molehill: a heap of loose, crumbly dirt with clods tumbled down
+        // its sides and a few spilled round its foot.
         const x = l.x * T, z = l.y * T, R = l.r * T;
         claimDisc(l.x, l.y, l.r);
-        const g2 = new THREE.SphereGeometry(R, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.55, 1).toNonIndexed(), p2 = g2.attributes.position, rs = rng(Math.floor(l.x * 31 + l.y));
+        const g2 = new THREE.SphereGeometry(R, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.55, 1).toNonIndexed(), p2 = g2.attributes.position, rs = rng(Math.floor(l.x * 31 + l.y));
         for (let i = 0; i < p2.count; i++) { const f = 0.88 + rs() * 0.24; p2.setXYZ(i, p2.getX(i) * f, p2.getY(i) * f, p2.getZ(i) * f); }
         parts.push(paint(at(g2, x, 0, z), (px, py) => (py > R * 0.35 ? '#6a4a2e' : '#5a3e26'), 99));
+        for (let k = 0; k < 22; k++) {
+          const a = rs() * 6.3, d = Math.sqrt(rs()) * R * (k < 16 ? 0.95 : 1.35), yy = d < R ? Math.sqrt(1 - (d / R) ** 2) * R * 0.55 : 0, cr = (2 + rs() * 3.5) * S;
+          parts.push(at(paint(new THREE.IcosahedronGeometry(cr, 0).scale(1, 0.75, 1), ['#7a5636', '#5a3e26', '#4a3220', '#8a6440'][k % 4]), x + Math.cos(a) * d, yy + cr * 0.4, z + Math.sin(a) * d));
+        }
         break;
       }
       case 'web': {
@@ -751,13 +780,17 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'succulent': case 'herb': case 'bush': {
-        // Rosettes of fat leaves (succulents), or rounded leafy bushes.
+        // Rosettes of fat leaves (succulents); leafy herbs (basil, rosemary,
+        // sage, the sage in flower); bushes with red berries.
         const x = l.x * T, z = l.y * T, R = l.r * T, rs = rng(Math.floor(l.seed * 1e6));
         if (l.kind === 'succulent') {
-          for (let k = 0; k < 9; k++) { const a = k * 2.4; parts.push(paint(at(new THREE.ConeGeometry(R * 0.22, R * 0.9, 5).rotateZ(-1.0 + (k % 3) * 0.25).translate(R * 0.3, R * 0.25, 0).rotateY(a), x, 0, z), k % 2 ? '#6aa08a' : '#8ab89a', k)); }
+          for (let k = 0; k < 9; k++) { const a = k * 2.4; parts.push(paint(at(new THREE.ConeGeometry(R * 0.22, R * 0.9, 5).rotateZ(-1.0 + (k % 3) * 0.25).translate(R * 0.3, R * 0.25, 0).rotateY(a), x, 0, z), (px, py) => (py > R * 0.55 ? '#c86a7a' : k % 2 ? '#6aa08a' : '#8ab89a'), k)); }
         } else {
-          const tint = l.kind === 'bush' ? ['#2e5a24', '#3a6a2a'] : [['#4aa048', '#5ab858'], ['#2e6a2e', '#3a7a34'], ['#7a8a6a', '#8a9a78']][l.kind2 || 0];
-          for (let k = 0; k < 6; k++) { const a = rs() * Math.PI * 2, d = rs() * R * 0.5; parts.push(paint(at(new THREE.IcosahedronGeometry(R * (0.45 + rs() * 0.25), 0), x + Math.cos(a) * d, R * (0.4 + rs() * 0.5), z + Math.sin(a) * d), tint[k % 2], k)); }
+          const G = l.kind === 'bush' ? ['#1e3e18', '#2e5a24', '#3a6a2a', '#4a7a32', '#7aa848'] : [['#2e7a2e', '#3a9038', '#4aa048', '#5ab858', '#8ad070'], ['#1e4a22', '#2e6a2e', '#3a7a34', '#4a8a3c', '#6a9a5a'], ['#5a6a4a', '#6a7a5a', '#7a8a6a', '#8a9a78', '#a8b898']][l.kind2 || 0];
+          const blobs = [];
+          for (let k = 0; k < 6; k++) { const a = rs() * Math.PI * 2, d = rs() * R * 0.5, rr = R * (0.45 + rs() * 0.25), y = R * (0.4 + rs() * 0.5); blobs.push([x + Math.cos(a) * d, y, z + Math.sin(a) * d, rr]); parts.push(at(leafBall(rr, G, k + l.seed * 7, l.kind === 'bush' ? 2 : 1), x + Math.cos(a) * d, y, z + Math.sin(a) * d)); }
+          const dots = l.kind === 'bush' ? ['#c8282e', '#a81e24'] : l.kind2 === 2 ? ['#8a6ad0', '#a888e0'] : null;
+          if (dots) for (let k = 0; k < 14; k++) { const [bx, by, bz, br] = blobs[k % blobs.length], a = rs() * 6.3, e = rs() * 1.2 - 0.2; parts.push(at(paint(new THREE.IcosahedronGeometry(R * 0.05, 0), dots[k % 2]), bx + Math.cos(a) * br * Math.cos(e), by + br * Math.sin(e) * 0.85, bz + Math.sin(a) * br * Math.cos(e))); }
         }
         break;
       }
@@ -768,11 +801,14 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'hedge': {
-        // A hedge: a dense mass of dark leafy domes, as tall as a fence.
+        // A hedge: a dense mass of leafy domes, as tall as a fence, lit on
+        // top, flecked with new growth, with woody stems in the dark beneath.
         const rs = rng(Math.floor(l.seed * 1e6)), n = Math.max(3, Math.round((l.w * l.h) / (5 * S * S)));
+        const G = ['#1a3614', '#22461a', '#2e5a22', '#3a6a2a', '#6a9a3a'];
         for (let k = 0; k < n; k++) {
           const x = (l.x0 + rs() * l.w) * T, z = (l.y0 + rs() * l.h) * T, R = (3 + rs() * 2.5) * S * T, y = (60 + rs() * 90) * S;
-          parts.push(paint(at(new THREE.IcosahedronGeometry(R, 1).scale(1, 0.85, 1), x, y, z), (px, py) => (py > y + R * 0.4 ? '#3a6a2a' : py > y ? '#2e5a22' : '#22461a'), k + 40));
+          parts.push(at(leafBall(R, G, k * 1.37 + l.seed * 10, 1).scale(1, 0.85, 1), x, y, z));
+          if (k % 2 === 0) for (let j = 0; j < 2; j++) parts.push(rod([x + (j - 0.5) * R * 0.5, 0, z + (rs() - 0.5) * R * 0.5], [x + (j - 0.5) * R * 0.2, y * 0.7, z], 2.2 * S, 1.4 * S, '#3a2c1c', 4, k + j));
         }
         break;
       }
@@ -823,14 +859,38 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'oak': {
-        // The Oak's trunk: wide at the foot, ribbed bark, up out of sight.
-        const x = l.x * T, z = l.y * T, R = l.r * T, h = 900 * S;
-        parts.push(paint(at(new THREE.CylinderGeometry(R * 0.82, R * 1.15, h, 18, 6).translate(0, h / 2, 0), x, 0, z), (px, py, pz) => (Math.floor(Math.atan2(pz - z, px - x) * 5 + py / (40 * S)) % 2 ? '#5a4632' : '#4a3a28'), 71));
+        // The Oak's trunk: buttress roots flaring at its foot, deep furrowed
+        // bark in vertical ridges, moss low on its shady side and pale lichen,
+        // up out of sight.
+        const x = l.x * T, z = l.y * T, R = l.r * T, h = 900 * S, rad = 28, seed = 3.1;
+        const g2 = new THREE.CylinderGeometry(R * 0.82, R * 1.1, h, rad, 14).translate(0, h / 2, 0), p2 = g2.attributes.position;
+        for (let i = 0; i < p2.count; i++) {
+          const px = p2.getX(i), py = p2.getY(i), pz = p2.getZ(i), a = Math.atan2(pz, px), rr = Math.hypot(px, pz);
+          if (rr < 1) continue;
+          const flare = 1 + 0.42 * Math.exp(-py / (70 * S)) * Math.max(0, Math.cos(a * 5 + seed)) ** 2, ridge = 1 + 0.035 * Math.sin(a * rad / 2 + Math.sin(py * 0.004) * 1.5);
+          p2.setX(i, px * flare * ridge); p2.setZ(i, pz * flare * ridge);
+        }
+        parts.push(paint(at(g2, x, 0, z), (px, py, pz) => {
+          // Colour by whole facet (column, row), so both triangles of a facet match.
+          const a = Math.atan2(pz - z, px - x), col = Math.floor((a + Math.PI) / ((Math.PI * 2) / rad)), row = Math.floor(py / (h / 14));
+          if (py < 160 * S && Math.sin(a + 2.2) > 0.55 && (col + row) % 4 !== 0) return row === 0 ? '#4a6a2a' : '#5a7a32';
+          const sg = col + Math.floor(row / 3);
+          return sg % 3 === 0 ? '#2e2418' : sg % 3 === 1 ? '#5a4632' : '#4a3a28';
+        }, 71));
         break;
       }
       case 'root': {
-        const len = l.len * T, g2 = new THREE.CylinderGeometry(0.9 * S * T * 0.5, 1.5 * S * T * 0.5, len, 7).rotateZ(Math.PI / 2).translate(len / 2, 0, 0).rotateY(-l.a);
-        parts.push(paint(at(g2, l.x * T, 4 * S, l.y * T), (px, py) => (py > 6 * S ? '#6a5238' : '#4e3c28'), 72));
+        // A surface root: thick where it leaves the trunk, tapering, rising
+        // and dipping as it snakes away, then diving back into the ground.
+        const len = l.len * T, r0 = 1.5 * S * T * 0.5, segs = 8;
+        const g2 = new THREE.CylinderGeometry(1, 1, len, 7, segs).rotateZ(Math.PI / 2).translate(len / 2, 0, 0), p2 = g2.attributes.position;
+        for (let i = 0; i < p2.count; i++) {
+          const u = p2.getX(i) / len, k = r0 * (1.5 - 1.15 * u);
+          p2.setY(i, p2.getY(i) * k + Math.sin(u * 7 + l.a * 3) * r0 * 0.25 - Math.max(0, u - 0.75) * 4 * r0 * 0.9);
+          p2.setZ(i, p2.getZ(i) * k + Math.sin(u * 5 + l.a) * r0 * 0.6);
+        }
+        g2.rotateY(-l.a);
+        parts.push(paint(at(g2, l.x * T, r0 * 0.45, l.y * T), (px, py) => (py > r0 * 1.1 ? '#6a5238' : py > r0 * 0.5 ? '#5a4630' : '#4e3c28'), 72));
         break;
       }
       case 'twig': parts.push(logGeo({ ...l, h: 1, twig: true })); break;
@@ -838,7 +898,18 @@ function meshLandmark(l, w, ctx) {
         // The garden shed: plank walls, a door, a pitched roof of felt.
         const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, w2 = l.w * T, d2 = l.h * T, h = 240 * S;
         parts.push(paint(at(new THREE.BoxGeometry(w2, h, d2).translate(0, h / 2, 0), cx, 0, cz), (px) => (Math.floor(px / (10 * S)) % 2 ? '#8a6a46' : '#7a5c3c'), 73));
-        parts.push(paint(at(new THREE.BoxGeometry(46 * S, 150 * S, 4 * S).translate(0, 75 * S, 0), cx, 0, cz + d2 / 2 + 2 * S), '#5a4430'));
+        parts.push(paint(at(new THREE.BoxGeometry(46 * S, 150 * S, 4 * S).translate(0, 75 * S, 0), cx, 0, cz + d2 / 2 + 2 * S), (px, py) => (Math.abs(py - 75 * S) < 3 * S || Math.floor((px - cx) / (11 * S)) % 2 ? '#5a4430' : '#4e3a28')));
+        // Layer 4b: a frame round the door, hinges and a latch, a window with
+        // cross bars, white corner trim, a stone step.
+        for (const sx of [-1, 1]) parts.push(at(paint(new THREE.BoxGeometry(5 * S, 158 * S, 5 * S), '#e8e2d4'), cx + sx * 26 * S, 79 * S, cz + d2 / 2 + 2.5 * S));
+        parts.push(at(paint(new THREE.BoxGeometry(57 * S, 5 * S, 5 * S), '#e8e2d4'), cx, 156 * S, cz + d2 / 2 + 2.5 * S));
+        for (const hy of [30, 120]) parts.push(at(paint(new THREE.BoxGeometry(14 * S, 3 * S, 1.5 * S), '#2a2a2a'), cx - 16 * S, hy * S, cz + d2 / 2 + 4.6 * S));
+        parts.push(at(paint(new THREE.BoxGeometry(4 * S, 8 * S, 3 * S), '#c8a040'), cx + 17 * S, 78 * S, cz + d2 / 2 + 5 * S));
+        const wx = cx - w2 * 0.3;
+        parts.push(at(paint(new THREE.BoxGeometry(44 * S, 40 * S, 2 * S), (px, py, pz) => (Math.abs(px - wx) < 1.4 * S || Math.abs(py - 160 * S) < 1.4 * S ? '#e8e2d4' : (px - wx) < -8 * S && py > 166 * S ? '#c8dcea' : '#5a7a92')), wx, 160 * S, cz + d2 / 2 + 1.2 * S));
+        parts.push(at(paint(new THREE.BoxGeometry(50 * S, 4 * S, 4 * S), '#e8e2d4'), wx, 138 * S, cz + d2 / 2 + 3 * S));
+        for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) parts.push(at(paint(new THREE.BoxGeometry(6 * S, h, 6 * S), '#e8e2d4'), cx + sx * w2 / 2, h / 2, cz + sz * d2 / 2));
+        parts.push(at(paint(new THREE.BoxGeometry(64 * S, 8 * S, 22 * S), (px, py, pz) => (Math.sin(px * 0.05) * Math.sin(pz * 0.07) > 0.3 ? '#8a8478' : '#a09a8e')), cx, 4 * S, cz + d2 / 2 + 11 * S));
         // The roof: two slopes of overlapping shingle rows up to a ridge.
         const run = d2 * 0.6, rise = 80 * S, slope = Math.hypot(run, rise), tilt = Math.atan2(rise, run), rows = 9;
         for (const sd of [-1, 1]) for (let k = 0; k < rows; k++) {
@@ -865,12 +936,18 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'trampoline': {
-        // Legs and a padded ring on the ground; the mat itself is see-through
-        // so an ant under it is never hidden.
+        // Steel W legs on the ground, a top rail ringed with springs, blue
+        // padding over them; the mat itself is see-through so an ant under it
+        // is never hidden.
         const x = l.x * T, z = l.y * T, R = l.r * T, h = 160 * S;
-        for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3 * S, h, 6).translate(0, h / 2, 0), x + Math.cos(a) * R * 0.92, 0, z + Math.sin(a) * R * 0.92), '#2a2a2a', k)); }
-        parts.push(paint(at(new THREE.TorusGeometry(R, 9 * S, 5, 28).rotateX(Math.PI / 2), x, h, z), '#2a6ad8'));
-        const mat = new THREE.Mesh(new THREE.CircleGeometry(R * 0.9, 28).rotateX(-Math.PI / 2), TRAMP_MAT);
+        for (let k = 0; k < 3; k++) {
+          const a0 = (k / 3) * Math.PI * 2, a1 = a0 + 0.55, p0 = [x + Math.cos(a0) * R, 0, z + Math.sin(a0) * R], p1 = [x + Math.cos(a1) * R, 0, z + Math.sin(a1) * R];
+          parts.push(rod(p0, [p0[0], h, p0[2]], 3 * S, 3 * S, '#4a4a4e', 6, k), rod(p1, [p1[0], h, p1[2]], 3 * S, 3 * S, '#4a4a4e', 6, k + 3), rod([p0[0], 2 * S, p0[2]], [p1[0], 2 * S, p1[2]], 3 * S, 3 * S, '#3a3a3e', 6, k + 6));
+        }
+        parts.push(at(paint(new THREE.TorusGeometry(R, 2.6 * S, 4, 36).rotateX(Math.PI / 2), '#8a8a90'), x, h, z));
+        for (let k = 0; k < 40; k++) { const a = (k / 40) * Math.PI * 2; parts.push(rod([x + Math.cos(a) * R, h, z + Math.sin(a) * R], [x + Math.cos(a) * R * 0.86, h - 1 * S, z + Math.sin(a) * R * 0.86], 0.9 * S, 0.9 * S, '#c8c8d0', 4, k)); }
+        parts.push(at(paint(new THREE.TorusGeometry(R * 0.93, R * 0.075, 4, 36).rotateX(Math.PI / 2).scale(1, 0.4, 1), (px, py, pz) => (Math.floor((Math.atan2(pz, px) + Math.PI) / (Math.PI / 6)) % 2 ? '#2a6ad8' : '#2460c8'), 63), x, h + 2 * S, z));
+        const mat = new THREE.Mesh(new THREE.CircleGeometry(R * 0.86, 28).rotateX(-Math.PI / 2), TRAMP_MAT);
         mat.position.set(x, h - 2 * S, z); extra.push(mat);
         decals.push(paint(at(new THREE.CircleGeometry(R * 0.95, 24).rotateX(-Math.PI / 2), x, 0, z), '#2e4a20'));
         break;
@@ -894,9 +971,23 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'barrow': {
-        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T;
-        parts.push(paint(at(new THREE.BoxGeometry(l.w * T, 16 * S, l.h * T), cx, 22 * S, cz), '#2a7ac8'));
-        parts.push(paint(at(new THREE.CylinderGeometry(9 * S, 9 * S, 5 * S, 10).rotateX(Math.PI / 2), cx + l.w * T * 0.55, 9 * S, cz), '#1a1a1a'));
+        // A wheelbarrow: a steel tray (rolled lip, a little mud inside), the
+        // wheel at the front on its fork, two wooden handles with grips, and
+        // two legs at the back.
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, L = l.w * T, Wd = l.h * T, top = 42 * S, depth = 20 * S;
+        const tray = new THREE.CylinderGeometry(0.72, 0.5, 1, 4, 1, true).rotateY(Math.PI / 4).scale(L * 0.72 * 1.41, depth, Wd * 1.41);
+        parts.push(at(paint(tray.clone(), (px, py) => (py > depth * 0.3 ? '#2a7ac8' : '#2468b0')), cx, top - depth / 2, cz));
+        parts.push(at(paint(flipTube(tray.clone().scale(0.97, 1, 0.97)), '#1e5a9a'), cx, top - depth / 2, cz));
+        parts.push(at(paint(new THREE.BoxGeometry(L * 0.5, 1 * S, Wd * 0.7), (px, py, pz) => (Math.sin(px * 0.1 + pz * 0.07) > 0.4 ? '#4a3420' : '#1e5a9a')), cx, top - depth + 1 * S, cz));
+        parts.push(at(paint(new THREE.BoxGeometry(L * 1.04, 2.4 * S, 2.4 * S), '#3a8ad8'), cx, top, cz - Wd * 0.72), at(paint(new THREE.BoxGeometry(L * 1.04, 2.4 * S, 2.4 * S), '#3a8ad8'), cx, top, cz + Wd * 0.72));
+        const wx = cx + L * 0.62;
+        parts.push(at(paint(new THREE.TorusGeometry(9 * S, 3.4 * S, 6, 14), '#1a1a1a'), wx, 12.4 * S, cz), at(paint(new THREE.CylinderGeometry(4 * S, 4 * S, 4 * S, 8).rotateX(Math.PI / 2), '#c8c8c8'), wx, 12.4 * S, cz));
+        for (const sz of [-1, 1]) {
+          parts.push(rod([wx, 12.4 * S, cz + sz * 4 * S], [cx + L * 0.25, top - depth, cz + sz * Wd * 0.35], 1.4 * S, 1.4 * S, '#4a4a4a', 4));
+          parts.push(rod([cx + L * 0.4, top - depth * 0.9, cz + sz * Wd * 0.4], [cx - L * 0.85, top + 4 * S, cz + sz * Wd * 0.5], 2.2 * S, 2 * S, '#a07a4a', 6));
+          parts.push(at(paint(new THREE.CylinderGeometry(2.6 * S, 2.6 * S, 12 * S, 6).rotateZ(Math.PI / 2 - 0.08), '#2a2a2a'), cx - L * 0.8, top + 3.6 * S, cz + sz * Wd * 0.5));
+          parts.push(rod([cx - L * 0.35, top - depth * 0.9, cz + sz * Wd * 0.4], [cx - L * 0.38, 0, cz + sz * Wd * 0.45], 1.6 * S, 1.6 * S, '#4a4a4a', 4));
+        }
         break;
       }
       case 'frisbee': {

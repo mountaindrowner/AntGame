@@ -2,6 +2,44 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: model pass, layer 4b: the rest of the yard (build 20.10)
+
+Mark: "Next."
+
+Each of these was checked from the play camera. The changes are all in `yardScenery.js`.
+
+- **The Oak:**
+  - Buttress roots flare at its foot.
+  - The bark is in deep vertical furrows, coloured by whole facet.
+  - Moss grows low on the shady side.
+- **Its roots:** thick where they leave the trunk, then tapering. They rise and dip as they snake away, then dive back into the ground.
+- **Hedges and bushes** are built from a shared `leafBall`: a lumpy ball of foliage, lighter on top, flecked with pale new growth and dark in the gaps.
+  - Hedges show woody stems underneath.
+  - Bushes carry red berries, and flowering sage has purple flowers.
+- **The kiddie pool:**
+  - three inflatable rings with stripes
+  - a pale inner wall
+  - water with ripples and a glint
+  - a rubber duck
+- **The swing set:**
+  - thicker capped legs on ground anchors
+  - chains of grey links
+  - black strap seats
+  - the grass worn to dirt under each swing
+- **The trampoline:** steel W-shaped legs, a top rail ringed with 40 springs, and blue padding.
+- **The wheelbarrow** was a flat blue box. It now has:
+  - a sloped steel tray with mud in it
+  - a wheel on its fork
+  - wooden handles with grips
+  - two legs at the back
+- **The shed:**
+  - a door frame, hinges and a latch
+  - a window with cross bars
+  - white corner trim
+  - a stone step
+- **Molehills:** clods tumbled down the sides, and some spilled round the foot.
+- **The bird feeder:** a squirrel baffle on the pole, and seed spilled round its foot.
+
 ## Nov 1: model pass, layer 5: the sneaker, the acorn, the robin, and props (build 20.9)
 
 Mark: "Let's do layer 5." Each of these was checked from the play camera at the moment it matters: the warning shadow, the impact and the landing.
