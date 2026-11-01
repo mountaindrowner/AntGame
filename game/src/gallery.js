@@ -67,7 +67,8 @@ for (const k in PROPS) add('Props', k, 'Shared shapes', one(PROPS[k]));
 const R0 = new THREE.WebGLRenderer({ antialias: false, alpha: true, preserveDrawingBuffer: true }); R0.setPixelRatio(1); R0.setSize(220, 220, false);
 const grid = document.getElementById('grid'), tabs = document.getElementById('tabs');
 const groups = [...new Set(G.map((e) => e.group))];
-let shown = 'Bosses';
+const Q = new URLSearchParams(location.search), STILL = Q.has('still') ? +Q.get('still') || -0.7 : null;
+let shown = Q.get('g') || 'Bosses';
 const cards = [];
 function fit(obj) {
   const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
@@ -90,7 +91,7 @@ function render() {
 }
 tabs.addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; shown = b.dataset.g; render(); });
 render();
-(function spin(t) { for (const c of cards) { c.obj.rotation.y = t / 2400; R0.render(c.scene, c.cam); c.r.clearRect(0, 0, 220, 220); c.r.drawImage(R0.domElement, 0, 0); } requestAnimationFrame(spin); })(0);
+(function spin(t) { for (const c of cards) { c.obj.rotation.y = STILL != null ? STILL : t / 2400; R0.render(c.scene, c.cam); c.r.clearRect(0, 0, 220, 220); c.r.drawImage(R0.domElement, 0, 0); } requestAnimationFrame(spin); })(0);
 
 // Standalone assets: each model as a binary glTF, for scripts/export-models.mjs.
 window.MODELS = G.map((e) => ({ group: e.group, name: e.name }));

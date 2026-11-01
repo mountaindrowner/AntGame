@@ -2,6 +2,40 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: model pass, layers 1 and 2 (build 20.1)
+
+Mark: "do that in different layers. Do the full pass and then give me screenshots of the most major changes." The pass works from the model gallery, most-seen first. Before-and-after sheets go to Mark each layer.
+
+- **Layer 1, on screen most:**
+  - **The ants** (the most-seen model, and the queen's body too):
+    - a gaster in three plates banded darker at their edges, with a gloss stripe along the top
+    - a two-part thorax (domed front, lower back) and a waist node
+    - dark compound eyes
+    - antennae ending in a club
+    - mandibles that hook inward to a dark tip
+    - four-segment legs with dark knee joints
+    - The caste tints still apply on top.
+  - **The robin:**
+    - a teardrop body full in the chest, the brick-orange breast running to a white belly
+    - a pale throat patch
+    - layered wing feathers with pale edges
+    - a fanned five-feather tail
+    - toes
+- **Layer 2, food on the ground:**
+  - **Bread crumb:** a torn chunk with a golden crust and pale, pored crumb (was blocky boxes).
+  - **Sunflower seed:** plumper, with finer stripes and a pale tip.
+  - **Popcorn:** puffy white kernels round a golden core with a scrap of hull (was beige cubes).
+  - **Tomato:** half a tomato lying cut face up, with three jelly chambers full of seeds (was a flat red lump). A first try drew whole pie slices and looked like a peppermint, so the face is now split into rings and spokes.
+  - **Hot dog scrap:** a grill-marked sausage in a split bun with a mustard zigzag.
+  - **Potato chip:** rippled and curled, with toasted edges, blisters and salt flecks (was a flat card).
+  - **Dead bug:** on its back, with segment lines, curled two-part legs and antennae.
+- Also tried and taken back: a dotted white eye ring on the robin read as a scatter of specks at game scale, so it's back to a clean white eye.
+- The `.glb` files in `game/assets/models/` and the gallery are regenerated.
+- **Next layers, proposed:**
+  - **Layer 3:** the nest (the queen up close, eggs and larvae, room furniture) and the toad.
+  - **Layer 4:** the yard's landmarks (flowers, logs, pots, the grill, the sandbox).
+  - **Layer 5:** visitors (the sneaker, the acorn) and the props.
+
 ## Nov 1: the world's look and pull (build 20)
 
 `PLAYTEST-2.md` items 5, 6, 7, 32 and 33. Mark: "First hour felt good, just enough difficulty and learning curve."

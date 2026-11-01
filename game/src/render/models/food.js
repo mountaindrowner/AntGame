@@ -46,23 +46,26 @@ function lumpy(g, amt, seed) {
 
 // Bread crumb: golden crust outside, pale torn crumb on the broken faces.
 function breadCrumb() {
-  const g = lumpy(new THREE.BoxGeometry(1.7, 1.1, 1.4, 2, 1, 2), 0.28, 3);
+  // Build 21's model pass: a torn chunk of bread. A rounded golden-brown crust
+  // on two faces, the torn face pale, open crumb with dark pores.
+  const g = lumpy(new THREE.DodecahedronGeometry(1, 1).scale(1.05, 0.72, 0.85), 0.16, 3);
   g.computeVertexNormals();
   const n = g.attributes.normal;
   return bake([at(paint(g, (x, y, z, f) => {
-    const nx = n.getX(f * 3), nz = n.getZ(f * 3);
-    if (nx > 0.6 || nz < -0.6) return hash(f) < 0.3 ? '#e8d29c' : '#f4e4b8';
-    return hash(f) < 0.35 ? '#a8692a' : '#c98a3c';
-  }), 0, 0.55, 0)]);
+    const nx = n.getX(f * 3), ny = n.getY(f * 3);
+    if (nx < -0.35 || ny > 0.6) return hash(f) < 0.25 ? '#8a5020' : hash(f + 3) < 0.5 ? '#b0702c' : '#c4843a';
+    return hash(f) < 0.18 ? '#c8b080' : hash(f + 7) < 0.4 ? '#efe0b8' : '#f8ecca';
+  }), 0, 0.62, 0)]);
 }
 
 // Sunflower seed: a striped teardrop.
 function seed() {
-  const g = new THREE.SphereGeometry(1, 8, 5);
+  // A sunflower seed: a plump, pointed teardrop with black and cream stripes
+  // running its length, a pale tip.
+  const g = new THREE.SphereGeometry(1, 10, 7);
   const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) { const x = p.getX(i); const k = 1 - Math.max(0, x) * 0.45; p.setXYZ(i, x * 1.6, p.getY(i) * 0.5 * k, p.getZ(i) * 0.85 * k); }
-  // Stripes run the length of the seed: bands by angle around its long axis.
-  return bake([at(paint(g, (x, y, z) => { const a = Math.atan2(z, y) + Math.PI; return (a % (Math.PI / 3)) < 0.3 ? '#efe8d4' : '#2a2624'; }), 0, 0.5, 0)]);
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i); const k = 1 - Math.max(0, x) * 0.62; p.setXYZ(i, x * 1.7, p.getY(i) * 0.52 * k, p.getZ(i) * 0.88 * k); }
+  return bake([at(paint(g, (x, y, z) => { if (x > 1.35) return '#d8d0bc'; const a = Math.atan2(z, y) + Math.PI, s = (a / (Math.PI / 4)) % 1; return s < 0.18 ? '#f2ecd8' : s < 0.26 ? '#8a8478' : '#1e1c1a'; }), 0, 0.5, 0)]);
 }
 
 // Raspberry: a dome of red beads under a green cap.
@@ -82,12 +85,16 @@ function berry() {
 
 // Popcorn: puffy cream lumps around a little golden hull.
 function popcorn() {
+  // Popped kernels: puffy white wings bursting from a yellow-gold core,
+  // a scrap of brown hull.
   const parts = [];
-  for (let i = 0; i < 6; i++) {
-    const a = i * 1.7, r = i ? 0.55 : 0;
-    parts.push(at(paint(lumpy(new THREE.IcosahedronGeometry(1, 0), 0.25, i), hash(i) < 0.5 ? '#fbf3dc' : '#f2e6c4'), Math.cos(a) * r, 0.6 + (i % 3) * 0.25, Math.sin(a) * r, 0.5 + hash(i + 5) * 0.2));
+  for (let i = 0; i < 9; i++) {
+    const a = i * 2.39, el = (hash(i + 1) - 0.3) * 1.4, r = i ? 0.55 + hash(i) * 0.15 : 0;
+    const blobG = lumpy(new THREE.SphereGeometry(1, 7, 5).scale(1, 0.85, 0.9), 0.2, i + 3);
+    parts.push(at(paint(blobG, (x, y, z, f) => (hash(f + i) < 0.12 ? '#efe2b8' : y < -0.5 ? '#f0e4c4' : '#fffaf0')), Math.cos(a) * r, 0.75 + Math.sin(el) * 0.4, Math.sin(a) * r, 0.42 + hash(i + 5) * 0.16));
   }
-  parts.push(at(paint(new THREE.SphereGeometry(1, 5, 3), '#d9a440'), 0.2, 0.35, 0.1, 0.35, 0.25, 0.3));
+  parts.push(at(paint(new THREE.SphereGeometry(1, 6, 4), (x, y) => (y > 0.2 ? '#f2c040' : '#e0a028')), 0.15, 0.42, 0.05, 0.42, 0.3, 0.36));
+  parts.push(at(paint(new THREE.SphereGeometry(1, 5, 3, 0, Math.PI), '#8a5a28'), -0.1, 0.32, 0.25, 0.26, 0.12, 0.2));
   return bake(parts);
 }
 
@@ -104,9 +111,22 @@ function apple() {
 
 // A wedge of tomato: red skin, wet pink flesh, pale seeds.
 function tomato() {
-  const g = lumpy(new THREE.SphereGeometry(1, 9, 6, 0, Math.PI * 0.8), 0.1, 5);
-  const parts = [at(paint(g, (x, y, z, f) => (Math.hypot(x, y, z) < 0.92 ? (hash(f) < 0.25 ? '#f4e0a0' : '#f06058') : '#d0242a')).rotateX(-Math.PI / 2), 0, 0.15, 0, 1.2, 0.9, 1.2)];
-  return bake(parts);
+  // Build 21's model pass: half a tomato lying cut face up. Glossy red skin
+  // below; on top, pink flesh round three jelly chambers full of pale seeds,
+  // the walls between them and a pale core.
+  const skin = new THREE.SphereGeometry(1, 14, 7, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(1, 0.75, 1);
+  // A ring split into rings and spokes, so the chambers are rounded pockets, not pie slices.
+  const top = new THREE.RingGeometry(0.001, 1, 28, 7).rotateX(-Math.PI / 2);
+  const face = paint(top, (x, y, z, f) => {
+    const d = Math.hypot(x, z), a = Math.atan2(z, x);
+    if (d > 0.9) return '#c8302a';
+    if (d < 0.18) return '#f0c8b0';
+    // Three oval jelly chambers between the walls, seeds in them.
+    const ca = ((a + Math.PI) % (Math.PI * 2 / 3)) / (Math.PI * 2 / 3) - 0.5, inC = Math.abs(ca) < 0.32 && d > 0.3 && d < 0.72;
+    if (!inC) return '#e2483a';
+    return hash(f * 7 + 3) < 0.22 ? '#efe0a0' : '#ee8a5c';
+  });
+  return bake([at(paint(skin, (x, y) => (y > -0.25 ? '#e0402e' : '#c42a20')), 0, 0.75, 0, 1.1, 1, 1.1), at(face, 0, 0.76, 0, 1.1, 1, 1.1)]);
 }
 // Aphids clustered on a leaf: little green bodies, one dewy drop of honeydew.
 function aphids() {
@@ -120,17 +140,30 @@ function aphids() {
 }
 // A scrap of hot dog: a pink sausage stub in a torn bit of bun. Protein.
 function hotdog() {
-  const parts = [at(paint(new THREE.CylinderGeometry(0.42, 0.42, 1.8, 8).rotateZ(Math.PI / 2), (x) => (Math.abs(x) > 0.85 ? '#a83a2a' : '#c8503a')), 0, 0.55, 0)];
-  parts.push(at(paint(lumpy(new THREE.BoxGeometry(1.4, 0.5, 1.1, 2, 1, 2), 0.15, 4), (x, y) => (y > 0.1 ? '#d8a050' : '#f0dcb0')), -0.2, 0.25, 0.1));
-  parts.push(at(paint(new THREE.BoxGeometry(1.1, 0.06, 0.12), '#e8c020'), 0, 0.98, 0));
+  // A bitten hot-dog end: a split bun, pale inside and golden outside, round a
+  // browned sausage with grill marks, a zigzag of mustard on top.
+  const parts = [];
+  const sausage = new THREE.CylinderGeometry(0.4, 0.4, 1.9, 10).rotateZ(Math.PI / 2);
+  parts.push(at(paint(sausage, (x, y, z) => (Math.abs(x) > 0.9 ? '#8a2e1c' : (Math.floor((x + 2) * 3.5) % 3 === 0 && y > 0.2) ? '#5a1c10' : '#c0482e')), 0.1, 0.7, 0));
+  for (const s of [-1, 1]) {
+    const bun = lumpy(new THREE.SphereGeometry(1, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.05, 0.55, 0.42), 0.06, s + 9);
+    parts.push(at(paint(bun.rotateX(s * 1.25), (x, y, z) => (Math.abs(z) < 0.15 && y > 0 ? '#f4e6c4' : y > 0.25 ? '#c88a3a' : '#d8a050')), -0.05, 0.5, s * 0.32));
+  }
+  for (let k = 0; k < 6; k++) parts.push(at(paint(new THREE.BoxGeometry(0.28, 0.06, 0.09).rotateY(k % 2 ? 0.7 : -0.7), '#f0c418'), -0.6 + k * 0.24, 1.1, 0));
   return bake(parts);
 }
 // A potato chip: a thin, wavy golden disc. A treat for a crew of four.
 function chip() {
-  const g = new THREE.CircleGeometry(1.3, 12).rotateX(-Math.PI / 2);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i); p.setY(i, Math.sin(x * 2.2) * 0.22 + z * z * 0.12); }
-  return bake([at(paint(g, (x, y, z, f) => (hash(f) < 0.15 ? '#c8902a' : '#f0c850')), 0, 0.35, 0), at(paint(g.clone().translate(0, -0.05, 0).rotateX(Math.PI), '#e0b040'), 0, 0.3, 0)]);
+  // A ridged, curled potato chip: rippled gold, darker toasted edges and
+  // blisters, flecks of salt.
+  const g = new THREE.CircleGeometry(1.3, 20, 0, Math.PI * 2).rotateX(-Math.PI / 2);
+  const gg = new THREE.PlaneGeometry(2.6, 2.4, 14, 12).rotateX(-Math.PI / 2), p = gg.attributes.position;
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), rr = Math.hypot(x / 1.3, z / 1.2); const k = Math.min(1, 1 / Math.max(rr, 1e-3)); const ex = rr > 1 ? x * k : x, ez = rr > 1 ? z * k : z;
+    p.setXYZ(i, ex, Math.sin(ex * 6) * 0.06 + ex * ex * 0.16 - ez * ez * 0.12 + 0.1, ez); }
+  void g;
+  const top = paint(gg, (x, y, z, f) => { const rr = Math.hypot(x / 1.3, z / 1.2); if (hash(f) < 0.04) return '#ffffff'; if (rr > 0.88) return '#b07020'; if (hash(f + 5) < 0.1) return '#d89a30'; return Math.sin(x * 6) > 0 ? '#f6d060' : '#ecc04c'; });
+  const under = paint(gg.clone().translate(0, -0.05, 0).rotateX(Math.PI).translate(0, 0.0, 0), '#d8a840');
+  return bake([at(top, 0, 0.3, 0), at(under, 0, 0.3, 0)]);
 }
 
 // An acorn on its side: a glossy brown nut in a scaly cap. A treat for a crew of four.
@@ -154,12 +187,16 @@ function slug() {
 
 // A dead beetle on its back: a shiny shell, legs in the air. Protein.
 function bug() {
-  const parts = [at(paint(new THREE.SphereGeometry(1, 8, 5).scale(1.3, 0.55, 0.9), (x, y) => (y > 0.2 ? '#2a3a2a' : '#1a221a')), 0, 0.5, 0)];
-  parts.push(at(paint(new THREE.SphereGeometry(0.45, 6, 4), '#141814'), 1.3, 0.5, 0));
-  for (let i = 0; i < 3; i++) for (const sz of [-1, 1]) {
-    const leg = new THREE.CylinderGeometry(0.07, 0.07, 0.9, 3).rotateX(sz * 0.6).translate(-0.5 + i * 0.5, 1.1, sz * 0.35);
-    parts.push(paint(leg, '#141814'));
+  // A dead beetle on its back: dark underside with segment lines, a glossy
+  // green-bronze wing case showing at the edges, six legs curled up, antennae.
+  const parts = [];
+  parts.push(at(paint(new THREE.SphereGeometry(1, 12, 7).scale(1.25, 0.5, 0.85), (x, y, z) => (y < -0.1 ? (Math.abs(z) > 0.7 ? '#3a5a32' : '#2c3e2a') : Math.floor((x + 2) * 3) % 2 ? '#1e1c18' : '#2a2620')), 0, 0.5, 0));
+  parts.push(at(paint(new THREE.SphereGeometry(0.42, 8, 5).scale(1, 0.8, 1), '#1a1814'), 1.25, 0.48, 0));
+  for (let i = 0; i < 3; i++) for (const s of [-1, 1]) {
+    const hip = new THREE.Vector3(-0.45 + i * 0.45, 0.85, s * 0.35), knee = hip.clone().add(new THREE.Vector3(0.1, 0.55, s * 0.35)), toe = knee.clone().add(new THREE.Vector3(0.25 - i * 0.15, 0.2, -s * 0.3));
+    for (const [a, b, r] of [[hip, knee, 0.07], [knee, toe, 0.05]]) { const len = a.distanceTo(b), c = new THREE.CylinderGeometry(r * 0.7, r, len, 4).translate(0, len / 2, 0); c.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, b.clone().sub(a).normalize())); c.translate(a.x, a.y, a.z); parts.push(paint(c, '#141210')); }
   }
+  for (const s of [-1, 1]) { const a = new THREE.Vector3(1.55, 0.55, s * 0.2), b = new THREE.Vector3(2.3, 0.75, s * 0.55), len = a.distanceTo(b), c = new THREE.CylinderGeometry(0.025, 0.035, len, 3).translate(0, len / 2, 0); c.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, b.clone().sub(a).normalize())); c.translate(a.x, a.y, a.z); parts.push(paint(c, '#141210')); }
   return bake(parts);
 }
 
