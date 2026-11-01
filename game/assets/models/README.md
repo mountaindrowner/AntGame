@@ -14,6 +14,10 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Ants | Rancher | `ants-rancher.glb` |
 | Ants | Medic | `ants-medic.glb` |
 | Ants | Harvester | `ants-harvester.glb` |
+| Ants | Major | `ants-major.glb` |
+| Ants | Exploder | `ants-exploder.glb` |
+| Ants | Replete | `ants-replete.glb` |
+| Ants | Undertaker | `ants-undertaker.glb` |
 | Ants | worker stand | `ants-worker-stand.glb` |
 | Ants | worker walk 1 | `ants-worker-walk-1.glb` |
 | Ants | worker walk 2 | `ants-worker-walk-2.glb` |
