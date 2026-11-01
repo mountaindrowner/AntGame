@@ -172,9 +172,9 @@ function grow() {
   for (const k of order) {
     if (SIM.evoLock(s, k) || (process.env.SKIP || '').split(',').includes(k)) continue;
     if (k === 'waypoints' && s.queen.level < 1) continue; // stone goes to the queen first
-    if (!spare && (EVO_BY[k].cost.food || 0) > 0) break; // food nodes wait for spare food
-    if (SIM.buyEvo(s, k)) { note(`evolved ${k} (🧬${c.genes} left)`); mile('first evolution'); }
-    break;
+    if (!spare && (EVO_BY[k].cost.food || 0) > 0) continue; // food nodes wait for spare food
+    // Build 25.1: skip what can't be paid for yet instead of waiting on it (genes were piling up unspent).
+    if (SIM.buyEvo(s, k)) { note(`evolved ${k} (🧬${c.genes} left)`); mile('first evolution'); break; }
   }
   if (!spare) return;
   for (const k of ['builder', 'nurse', 'soldier', 'venom']) {
@@ -192,7 +192,7 @@ function missions() {
   const a = ant(); if (!a || P.inNest) return;
   const followers = mine().filter((o) => o.follow).length;
   if (mission === 'cat' && !s.cat) { SIM.release(s); mission = null; note('caterpillar hunt over'); return; }
-  if (mission === 'siege' && (!target || !target.queenAlive || followers < 4)) { SIM.release(s); mission = null; note('siege ended' + (s.won ? ' (won)' : '')); return; }
+  if (mission === 'siege' && (!target || !target.queenAlive || followers < 4)) { SIM.release(s); mission = null; note('siege on ' + target.key + (target.queenAlive ? ' called off' : ' won')); return; }
   if (mission === 'treat') {
     const t = treat;
     if (!t || t.amt <= 0) { SIM.release(s); mission = null; note('treat ' + (P.big ? 'lost' : 'done')); treat = null; return; }
