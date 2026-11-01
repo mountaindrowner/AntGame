@@ -9,7 +9,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test tests/*.test.js",
-    "test:e2e": "node scripts/e2e.mjs"
+    "test:e2e": "node scripts/e2e.mjs",
+    "gallery": "vite -c vite.gallery.config.js --open /gallery.html",
+    "models": "node scripts/export-models.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

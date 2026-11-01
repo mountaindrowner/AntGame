@@ -146,9 +146,20 @@ function* paintGround(w, F, b, out) {
       // Garden beds: dark, freshly turned soil in furrows.
       if ((k = at(F.soil, tx, ty)) > 0) p = mix(p, pick(RAMPS.soil, 0.45 + sp * 0.8 + Math.sin(ty * Math.PI / S) * 0.22), k);
       if (at(F.slab, tx, ty) > 0.5) {
-        const sx = Math.floor(ux / 6), sy = Math.floor(uy / 6), tint = (((sx * 7 + sy * 13) % 5) - 2) * 0.04;
-        p = pick(RAMPS.slab, 0.5 + sp * 0.6 + tint);
-        if (tx % (6 * S) < 0.25 || ty % (6 * S) < 0.25) p = [74, 70, 64];
+        // Build 20: real paving. Each slab its own shade, speckled aggregate,
+        // weathered stains, worn pale edges, some cracked, and moss and weeds
+        // in the dark grout between them.
+        const sx = Math.floor(ux / 6), sy = Math.floor(uy / 6), lx = ux - sx * 6, ly = uy - sy * 6;
+        const h = ((Math.sin(sx * 127.1 + sy * 311.7) * 43758.5453) % 1 + 1) % 1, h2 = ((Math.sin(sx * 269.5 + sy * 183.3) * 43758.5453) % 1 + 1) % 1;
+        const e = Math.min(lx, 6 - lx, ly, 6 - ly);
+        p = pick(RAMPS.slab, 0.5 + sp * 0.5 + (h - 0.5) * 0.5);
+        if (r() < 0.06) p = mix(p, r() < 0.5 ? [176, 170, 160] : [92, 88, 82], 0.6);
+        const stain = n2(ux * 0.45 + sx * 3.1, uy * 0.45 + sy * 1.7);
+        if (stain > 0.35) p = mix(p, [96, 92, 80], Math.min(0.45, (stain - 0.35) * 1.4));
+        if (e < 0.45) p = mix(p, [184, 178, 168], (0.45 - e) * 0.8);
+        if (h2 < 0.35) { const a = h2 * 18, c = Math.cos(a), s2 = Math.sin(a), along = (lx - 3) * -s2 + (ly - 3) * c, d0 = Math.abs((lx - 3) * c + (ly - 3) * s2 + Math.sin(along * 2.3 + h * 9) * 0.25);
+          if (d0 < 0.07 && Math.abs(along) < 2.6) p = [62, 58, 52]; }
+        if (e < 0.16) { const m = n2(ux * 1.3 + 7, uy * 1.3); p = m > 0.25 ? (r() < 0.3 ? [86, 120, 52] : [60, 92, 40]) : [70, 66, 60]; }
       }
       if (at(G.deck, tx, ty) > 0.5) {
         // Deck boards: weathered grey planks with dark gaps.
@@ -779,9 +790,9 @@ export class YardScenery {
     this.onLoaded = null; // (region index) once a region is fully built
     const W = w.W, H = w.H, gw = W * T, gh = H * T;
     this.mats = {
-      part: psx({ vertexColors: true }),
+      part: psx({ vertexColors: true }, { see: true }),
       decal: psx({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
-      rock: psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.08, 0.08] }) }),
+      rock: psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.08, 0.08] }) }, { see: true }),
       grass: psx({ map: grassTex(), alphaTest: 0.5, side: THREE.DoubleSide }),
     };
     // Lists the ground fields read, worked out once for the whole yard.

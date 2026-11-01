@@ -352,7 +352,7 @@ export function createUI(app) {
     const s = app.s, here = regionHere(), pickI = app.mapPick ?? here;
     const count = new Array(SIM.AREAS.length).fill(0);
     for (const a of s.ants) if (!a.team && (a.state !== 'in' && a.state !== 'build' && a.state !== 'nest' && a.state !== 'dead')) count[SIM.areaOf(s, a.tx, a.ty)]++;
-    let h = `<div class="row head"><strong>The yard</strong><button class="x" data-close="1">Close</button></div><div class="yard">`;
+    let h = `<div class="row head"><strong>The yard</strong><button class="x" data-close="1">Close</button></div><div class="note">✦ Curios found: ${Object.keys(s.colony.curios || {}).length} of ${(s.curios || []).length}. Each region hides one; it glints.</div><div class="yard">`;
     for (const z of YARD_MAP.zones) {
       const [c, r, w, hh] = z.at, pos = `grid-column:${c + 1}/span ${w};grid-row:${r + 1}/span ${hh}`;
       h += `<div class="z${z.house ? ' house' : ''}" style="${pos}" title="${z.name}">${z.name}</div>`;
@@ -360,14 +360,15 @@ export function createUI(app) {
     // Built regions sit on top of the planned zones they belong to.
     for (let i = 0; i < SIM.AREAS.length; i++) {
       const A = SIM.AREAS[i], [c, r] = A.at, pos = `grid-column:${c + 1};grid-row:${r + 1}`, seen = s.seen['area' + i] || i === SIM.REGION.rock;
-      const tag = i === SIM.REGION.patio && s.rival.queenAlive ? '⚔' : s.colony.held[i] ? '★' : s.outposts.some((o) => o.region === i) ? '⛳' : count[i] ? '🐜' + count[i] : '';
+      const cur = (s.colony.curios || {})[i];
+      const tag = (i === SIM.REGION.patio && s.rival.queenAlive ? '⚔' : s.colony.held[i] ? '★' : s.outposts.some((o) => o.region === i) ? '⛳' : count[i] ? '🐜' + count[i] : '') + (cur ? '✦' : '');
       h += `<button class="z${seen ? '' : ' unseen'}${i === here ? ' here' : ''}${i === pickI ? ' pick' : ''}" style="${pos};background:${GROUND[A.ground]}" data-region="${i}" aria-label="${A.name}">${A.short}${tag ? `<em>${tag}</em>` : ''}</button>`;
     }
     h += `</div>`;
     const A = SIM.AREAS[pickI], seen = s.seen['area' + pickI] || pickI === SIM.REGION.rock;
     const G = GUARDIANS[A.key], P2 = prizeOf(A.key), out = s.outposts.find((o) => o.region === pickI);
     const hold = s.colony.held[pickI] ? 'Held: yours while your outpost stands' : out ? (out.done ? (G ? `Outpost up; beat ${G[0]} to hold it` : 'Outpost up') : 'Outpost being raised') : P2 ? `Raise an outpost here${G ? ` and beat ${G[0]}` : ''} to hold it` : 'Home';
-    h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}${P2 ? ` · held: ${P2.text.replace(/^./, (ch) => ch.toLowerCase())}` : ''}</dd><dt>Hold</dt><dd>${hold}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}</dl></div>`;
+    h += `<div class="card"><strong>${A.name}</strong>${pickI === here ? ' · you are here' : ''}${seen ? '' : ' · not explored yet'}<div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}${P2 ? ` · held: ${P2.text.replace(/^./, (ch) => ch.toLowerCase())}` : ''}</dd><dt>Hold</dt><dd>${hold}</dd>${count[pickI] ? `<dt>Your ants</dt><dd>${count[pickI]} out here now</dd>` : ''}<dt>Curio</dt><dd>${(s.colony.curios || {})[pickI] ? `✦ found: ${SIM.CURIOS[(s.colony.curios || {})[pickI]].name}` : seen ? 'something glints here: find it' : 'unknown'}</dd></dl></div>`;
     h += `<div class="note">${SIM.AREAS.length} regions. Grey ones you haven't explored yet.</div>`;
     el.sheet.dataset.h = ''; el.sheet.innerHTML = h;
   }

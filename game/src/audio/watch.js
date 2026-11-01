@@ -144,7 +144,7 @@ export function soundWatch(app, views) {
       const d = b.atkDone; if (d && d !== was.atkDone) { const at = d.x != null ? { x: d.x, y: d.y } : pos; if (d.kind === 'spit') sfx.play('splat', at); else if (d.kind === 'grab') sfx.play('sandSnap', at); else if (d.kind === 'toss') sfx.play('sandHiss', at); else if (d.kind === 'surface') sfx.play('roar', pos, low); else sfx.play('slam', at); }
       seenBoss[k] = { mode: b.mode, atk: b.atk, charge: b.charge, dazeT: b.dazeT, atkDone: b.atkDone };
     }
-    for (const e of events) { if (e === 'spores') sfx.play('spores', s.bursts && s.bursts.length ? s.bursts[s.bursts.length - 1] : null); else if (e === 'eventover') sfx.play('eventOver'); }
+    for (const e of events) { if (e === 'spores') sfx.play('spores', s.bursts && s.bursts.length ? s.bursts[s.bursts.length - 1] : null); else if (e === 'eventover') sfx.play('eventOver'); else if (e === 'curio') sfx.play('curio'); }
     // Beds: rain, the mower, the spider's menace, fire ants underfoot.
     const ear = (x, y) => sfx.ear(x, y);
     sfx.loop('rain', s.rain.on ? (app.view === 'nest' ? 0.25 : 0.55) : 0);

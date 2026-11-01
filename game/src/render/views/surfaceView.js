@@ -5,12 +5,13 @@
 import * as THREE from 'three';
 import SIM from '../../sim/sim.js';
 import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
-import { psx, psxBasic } from '../ps1/materials.js';
+import { psx, psxBasic, setSeeHole } from '../ps1/materials.js';
 import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
+import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
 import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
@@ -179,8 +180,9 @@ export class SurfaceView {
     });
     this.shake = 0;
 
-    // Rain: a box of falling streaks that follows the camera target.
-    const n = 420, pos = new Float32Array(n * 6);
+    // Rain: a box of falling streaks that follows the camera target, as wide
+    // as the view reaches (build 20: zoomed out it used to be dry at the edges).
+    const n = 2400, pos = new Float32Array(n * 6);
     this.rainSeeds = new Float32Array(n * 3).map(() => Math.random());
     const rg = new THREE.BufferGeometry();
     rg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -490,6 +492,7 @@ export class SurfaceView {
     this._critters(s, t, fdt);
     this._fx(s, t, fdt);
     this._bosses(s, t, fdt);
+    this._curios(s, t);
     this.bugs.end(); this.fx.end();
     this._strikes(s, t, fdt);
 
@@ -524,6 +527,14 @@ export class SurfaceView {
     if (this.shake > 0) { this.shake = Math.max(0, this.shake - fdt); const k = this.shake * 14; this.camera.position.x += (Math.random() - 0.5) * k; this.camera.position.y += (Math.random() - 0.5) * k; }
     this.camera.far = dist * 3 + 400;
     this.camera.updateProjectionMatrix();
+    // Build 20: rocks and props between the camera and your ant dither away
+    // round it, so it never vanishes behind the big rock.
+    this.camera.updateMatrixWorld();
+    if (a && !app.titleOpen) {
+      tmpV.set(a.x, 4, a.y).applyMatrix4(this.camera.matrixWorldInverse); const depth = -tmpV.z - 6;
+      tmpV.set(a.x, 4, a.y).project(this.camera);
+      setSeeHole(tmpV.x, tmpV.y, 0.14 + 0.06 * app.zoomMul, depth);
+    } else setSeeHole(0, 0, 0, 0);
     this.scene.fog.near = dist * 1.1;
     this.scene.fog.far = dist * 2.4 + 200;
 
@@ -533,6 +544,7 @@ export class SurfaceView {
     // app.sceneryFocus ({ x, y, view, now }) builds round another spot (the film's).
     this.camera.updateMatrixWorld();
     const lf = app.sceneryFocus, view = lf ? lf.view : this._viewReach(dist), lx = lf ? lf.x : this.target.x, lz = lf ? lf.y : this.target.z;
+    this.reach = view; // how far the view reaches (tiles), for the rain (build 20)
     if (jump || (lf && lf.now)) { this.scenery.loadNow(lx, lz, view); if (lf) lf.now = false; }
     this.scenery.update(lx, lz, view);
   }
@@ -872,7 +884,8 @@ export class SurfaceView {
     };
     for (const sp of s.splashes || []) { const u = (s.t - sp.t) / 0.6; if (u >= 0 && u <= 1) splash(sp.x, sp.y, u, true); }
     if (s.rain.on) {
-      for (let n = Math.round(fdt * 70 + Math.random() * 0.5); n > 0; n--) this.drops.push({ x: this.target.x + (Math.random() - 0.5) * 420, z: this.target.z + (Math.random() - 0.5) * 300, t });
+      const span = Math.max(420, (this.reach || 16) * T * 2), k = Math.min(10, (span / 420) ** 2);
+      for (let n = Math.round(fdt * 70 * k + Math.random() * 0.5); n > 0; n--) this.drops.push({ x: this.target.x + (Math.random() - 0.5) * span, z: this.target.z + (Math.random() - 0.5) * span * 0.75, t });
     }
     this.drops = this.drops.filter((d) => t - d.t < 0.4);
     for (const d of this.drops) splash(d.x, d.z, (t - d.t) / 0.4, false);
@@ -1022,10 +1035,31 @@ export class SurfaceView {
     for (const st of s.stalks || []) if (st.t > 6) for (let j = 0; j < 3; j++) { const u = ((t * 0.7 + j / 3) % 1); tmpV.set(st.x + Math.sin(j * 2 + t) * 6 * u, 20 + u * 16, st.y + Math.cos(j * 2 + t) * 6 * u); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 1.6, '#f0e8b0'); }
   }
 
+  // Build 20: the curios. Lost human things lying about; the ones not yet
+  // found glint, high enough to catch the eye from across the yard.
+  _curios(s, t) {
+    const found = s.colony.curios || {}, tx = this.target.x, tz = this.target.z, reach = Math.max(40, (this.reach || 20) + 8) * T;
+    for (const q of s.curios || []) {
+      const x = (q.x + 0.5) * T, z = (q.y + 0.5) * T;
+      if (Math.abs(x - tx) > reach || Math.abs(z - tz) > reach) continue;
+      const k = CURIO_SIZE[q.kind], geo = CURIO_GEO[q.kind];
+      tmpV.set(x, 0, z); tmpQ.setFromAxisAngle(UP, q.yaw);
+      this.bugs.pushAt('curio' + q.kind, geo, tmpV, tmpQ, k, '#ffffff');
+      if (found[q.i]) continue;
+      const tw = 0.6 + 0.4 * Math.sin(t * 3 + q.i), sp = Math.max(0, Math.sin(t * 1.3 + q.i * 2.1));
+      tmpQ2.copy(this.camera.quaternion).multiply(tmpQ.setFromAxisAngle(ZAX, t * 0.7 + q.i));
+      tmpV.set(x, k * 2.2 + 6, z); this.fx.pushAt('star', FOOD.star, tmpV, tmpQ2, 16 * tw + 10 * sp, '#fff6c8');
+      tmpV.set(x, k * 2.2 + 26 + Math.sin(t * 2 + q.i) * 4, z); this.fx.pushAt('star', FOOD.star, tmpV, tmpQ2, 9 * sp, '#ffe890');
+    }
+  }
+
   _updateRain(t) {
     const pos = this.rain.geometry.attributes.position.array, sd = this.rainSeeds;
-    const span = 520, hgt = 260;
-    for (let i = 0; i < sd.length / 3; i++) {
+    const span = Math.max(520, (this.reach || 16) * T * 2.2), hgt = 260;
+    // The same density however far you see: more streaks for a bigger box.
+    const n = Math.min(sd.length / 3, Math.round(420 * (span / 520) ** 2));
+    this.rain.geometry.setDrawRange(0, n * 2);
+    for (let i = 0; i < n; i++) {
       const x = this.target.x + (sd[i * 3] - 0.5) * span;
       const z = this.target.z + (sd[i * 3 + 1] - 0.5) * span;
       const y = hgt - ((t * 340 + sd[i * 3 + 2] * hgt) % hgt);

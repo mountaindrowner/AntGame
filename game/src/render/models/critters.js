@@ -50,9 +50,16 @@ export function ladybugGeometry(frame, open = 0) {
     parts.push(blob([-0.5, 2.6, 0], [4.7, 2.5, 4.1], [18, 11], (x, y, z) => {
       if (y < 1.2) return LB.black;
       if (Math.abs(z) < 0.22 && y > 3.4) return LB.black; // the seam between the wing cases
-      if (onSpot(x, z)) return LB.black;
       return y > 4.4 && x > -2 ? LB.hi : LB.red;
     }));
+    // Round black spots sitting on the dome (build 20: painted faces made jagged triangles).
+    for (const [sx, sz, r] of LB_SPOTS) for (const side of sz ? [-1, 1] : [1]) {
+      const z = side * sz, u = 1 - ((sx + 0.5) / 4.7) ** 2 - (z / 4.1) ** 2; if (u <= 0) continue;
+      const y = 2.6 + 2.5 * Math.sqrt(u), nx = (sx + 0.5) / 4.7 ** 2, ny = (y - 2.6) / 2.5 ** 2, nz = z / 4.1 ** 2;
+      const g = new THREE.SphereGeometry(1, 8, 4).scale(r, 0.18, r);
+      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(V(0, 1, 0), V(nx, ny, nz).normalize())); g.translate(sx, y, z);
+      parts.push(paint(g, LB.black));
+    }
   } else {
     // Wing cases up and out, the dark abdomen under them, wings a blur.
     parts.push(blob([-0.8, 2.0, 0], [3.8, 1.4, 2.8], [8, 5], LB.black));

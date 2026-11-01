@@ -73,6 +73,7 @@ export class Callout {
     for (const b of s.critters || []) take(b.x, b.y, 2 * T, () => bugCard(b), 10);
     // Build 19: bosses, Cordyceps stalks.
     for (const k in s.bosses || {}) { const b = s.bosses[k]; if (b.dead) continue; const D = SIM.BOSSES[k]; take(b.x, b.y, 4 * T, () => ['👑', D.name, `${D.title}. ${Math.ceil(b.hp)} of ${b.maxHp} health. ${D.tip}`], 40); }
+    for (const q of s.curios || []) take((q.x + 0.5) * T, (q.y + 0.5) * T, 2.4 * T, () => { const f = (s.colony.curios || {})[q.i]; return ['✦', SIM.CURIOS[q.kind].name.replace(/^a /, '').replace(/^./, (ch) => ch.toUpperCase()), f ? 'Found. Its stash has been taken.' : 'Something people lost. Walk up to it: there may be a stash round it.']; }, 30);
     for (const st of s.stalks || []) take(st.x, st.y, 2 * T, () => ['🍄', 'Cordyceps stalk', `It bursts in ${Math.max(0, Math.ceil(12 - st.t))} s and infects ants nearby. Bite it to pieces!`], 20);
     for (const a of s.ants) {
       if (a.state === 'dead' || a.state === 'in' || a.state === 'nest' || a.state === 'build') continue;

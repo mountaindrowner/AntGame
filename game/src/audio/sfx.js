@@ -224,6 +224,8 @@ const SOUNDS = {
     return 4.5; } },
   drips: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 8; i++) s.puff(o, t + i * (0.2 + i * 0.08), 0.03, 1500 + Math.random() * 800, 0.18, 'bandpass'); return 4; } },
   snap: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.4, 2000, 0.15, 'bandpass', 600, 0.1); s.puff(o, t + 0.4, 0.05, 1200, 0.4, 'bandpass'); s.thump(o, t + 0.4, 150, 60, 0.12, 0.4); return 0.6; } },
+  // Build 20: a curio found.
+  curio: { cool: 1, always: true, fn: (s, o, t) => { [79, 84, 88, 91, 96].forEach((n, i) => s.blip(o, t + i * 0.06, N(n), 0.3, 0.12, 'sine')); s.blip(o, t + 0.35, N(103), 0.6, 0.06, 'sine'); return 1; } },
   // Build 19: bosses and events.
   bossIntro: { cool: 3, always: true, fn: (s, o, t) => { s.thump(o, t, 90, 30, 0.9, 0.9); for (const [k, n] of [[0, 45], [0, 52], [0.45, 44], [0.45, 51], [0.9, 41], [0.9, 48]]) s.chirp(o, t + k, N(n), N(n) * 0.98, 0.7, 0.16, 'sawtooth'); s.puff(o, t + 0.9, 1.2, 300, 0.25, 'lowpass', 90, 0.1); return 2.2; } },
   roar: { cool: 2, fn: (s, o, t, low = 1) => { const c = s.ctx, x = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain(); x.type = 'sawtooth'; x.frequency.setValueAtTime(110 * low, t); x.frequency.exponentialRampToValueAtTime(55 * low, t + 0.9); lfo.frequency.value = 23; lg.gain.value = 30 * low; lfo.connect(lg).connect(x.frequency); s._env(g, t, 0.05, 0.9, 0.22); x.connect(g).connect(o); x.start(t); lfo.start(t); x.stop(t + 1.1); lfo.stop(t + 1.1); s.puff(o, t, 0.8, 600, 0.3, 'lowpass', 150, 0.05); return 1.1; } },

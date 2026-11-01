@@ -211,6 +211,7 @@ function create(seed){
   s.spoilAt = spoilSpot(s); s.spoilPile = 0;
   s.outposts = []; outpostsChanged(s);
   for (let i=0;i<AREAS.length;i++) if (s.active[i]) populateBugs(s, i);
+  s.curios = placeCurios(s);
   return s;
 }
 // Where diggers dump the dirt: open ground about eight tiles from the
@@ -637,7 +638,7 @@ function tick(s, dt){
   for (const i in s.colony.held) if (prizeFx(s, i) === 'picnic'){ s.picnicT = (s.picnicT || 0) + dt; if (s.picnicT > 150 && !s.items.some(f => heavy(f) && w.area[idx(f.x,f.y)] === +i)){ s.picnicT = 0; const A = AREAS[i]; const it = spawnInArea(s, +i, 'food', A.treats ? A.treats[Math.floor(Math.random()*A.treats.length)] : 'cookie'); if (it && !P.msg) P.msg = `A ${FOODS[it.type].name} landed on the Picnic Blanket.`; } }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
   tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickOutposts(s, dt); tickGoals(s, dt);
-  s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player);
+  s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player); tickCurios(s, pa);
     // Walking into a dormant region wakes it: its food appears and starts to grow.
     const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); populateBugs(s, ai); }
     if (!c.scouted[ai] && ai !== REGION.rock){ c.scouted[ai] = true; gainGenes(s, 1, 'scouting ' + AREAS[ai].name.replace(/^The /, 'the ')); } } }
@@ -2120,6 +2121,57 @@ function stepZombie(s, a, dt){
   if (a.tx === a.zgoal[0] && a.ty === a.zgoal[1] && Math.hypot(a.x - (a.tx + 0.5)*T, a.y - (a.ty + 0.5)*T) < 2){ a.clamp = true; return; }
   if (stepTo(a, a.tx, a.ty, 24, dt)) chooseToward(s, a, (a.zgoal[0] + 0.5)*T, (a.zgoal[1] + 0.5)*T);
 }
+// ---------- curios (build 20) ----------
+// One lost thing in every region: a marble, a button, a coin… Huge to an
+// ant, and it glints from afar. Walk your ant up to it and the stash round
+// it spills out (what the ground there gives), with a 🧬 Gene, and every
+// fifth curio pays three more. Found curios show on the yard map.
+const CURIOS = {
+  marble: { name: 'a glass marble' }, button: { name: 'a red button' }, coin: { name: 'a copper coin' }, cap: { name: 'a bottle cap' },
+  brick: { name: 'a toy brick' }, clip: { name: 'a paper clip' }, bead: { name: 'a glass bead' }, die: { name: 'a lost die' },
+};
+const CURIO_KINDS = Object.keys(CURIOS);
+// What spills out, by the ground it lies on: [kind, type, amount] × n.
+function curioStash(ground){
+  if (/soil|picnic/.test(ground)) return [['food', 'aphids', 0], ['food', 'tomato', 20], ['food', 'jellybean', 0]];
+  if (/bark|compost|leaf|hedge|mulch/.test(ground)) return [['chitin', 'shell', 8], ['chitin', 'shell', 8], ['protein', 'bug', 15]];
+  if (/gravel|home/.test(ground)) return [['grit', 'pebble', 10], ['grit', 'pebble', 10], ['grit', 'pebble', 10]];
+  if (/slab|deck/.test(ground)) return [['food', 'crumb', 10], ['food', 'popcorn', 14], ['food', 'cookie', 0]];
+  if (/sand/.test(ground)) return [['food', 'gummy', 0], ['food', 'popcorn', 14]];
+  if (/mud|wet/.test(ground)) return [['water', 'dew', 8], ['water', 'dew', 8], ['food', 'seed', 20]];
+  return [['food', 'seed', 20], ['food', 'seed', 20], ['food', 'berry', 12]];
+}
+function placeCurios(s){
+  const w = s.world, out = [], cl = clearOf(s);
+  for (let i = 0; i < AREAS.length; i++){
+    const rnd = mulberry32((s.seed || 7)*7919 + i*104729), b = areaBounds(i);
+    for (let tries = 0; tries < 80; tries++){
+      const x = b.x0 + 8 + Math.floor(rnd()*(AREA - 16)), y = b.y0 + 8 + Math.floor(rnd()*(AREA - 16));
+      if (w.blocked[idx(x,y)] || w.pit[idx(x,y)] || (tries < 60 && cl[idx(x,y)] < 3) || Math.hypot(x - w.ex, y - w.ey) < 18 || Math.hypot(x - w.rx, y - w.ry) < 10) continue;
+      out.push({ i, x, y, kind: CURIO_KINDS[Math.floor(rnd()*CURIO_KINDS.length)], yaw: rnd()*Math.PI*2 }); break;
+    }
+  }
+  return out;
+}
+function tickCurios(s, pa){
+  const c = s.colony, found = c.curios || (c.curios = {});
+  for (const q of s.curios){
+    if (found[q.i] || Math.hypot(pa.x/T - (q.x + 0.5), pa.y/T - (q.y + 0.5)) > 2.6) continue;
+    found[q.i] = q.kind; const n = Object.keys(found).length, C = CURIOS[q.kind];
+    // The stash round it.
+    const st = curioStash(AREAS[q.i].ground || ''); let k = 0;
+    for (const [kind, type, amt] of st){
+      for (let tries = 0; tries < 12; tries++){ const a = k*2.1 + tries*0.7, r = 2 + (tries % 3), x = Math.round(q.x + Math.cos(a)*r), y = Math.round(q.y + Math.sin(a)*r);
+        if (!walk(s, x, y) || s.world.pit[idx(x,y)] || itemAt(s, x, y)) continue;
+        const F = FOODS[type]; s.items.push({ x, y, kind, type, amt: amt || (F ? F.amt[0] : 10) }); break; }
+      k++;
+    }
+    gainGenes(s, 1, 'finding ' + C.name);
+    if (n % 5 === 0) gainGenes(s, 3, n + ' curios found');
+    s.curioFound = { i: q.i, kind: q.kind, t: s.t, n }; s.events.push('curio');
+    s.player.msg = `You found ${C.name}! Something was stashed round it. (${n} of ${s.curios.length} curios${n % 5 === 0 ? ': +3 🧬 for every fifth' : ''})`;
+  }
+}
 function recruit(s, n){
   const a = s.player.ant; if (!a || s.player.inNest) return 0; const w = s.world; let got = 0;
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 3.5;
@@ -2192,7 +2244,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

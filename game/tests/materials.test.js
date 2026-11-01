@@ -76,3 +76,19 @@ test('a held Woodpile doubles the chitin from its dead bugs', () => {
   for (let i = 0; i < 4; i++) SIM.tick(s, 0.05);
   assert.equal(c.chitin, 2);
 });
+
+test('build 20: every region hides a curio; walking up to one pays its stash and a Gene', () => {
+  const s = founded(), c = s.colony;
+  assert.equal(s.curios.length, SIM.AREAS.length);
+  const w = s.world, q = s.curios.filter((q) => s.active[q.i]).sort((a, b) => Math.hypot(a.x - w.ex, a.y - w.ey) - Math.hypot(b.x - w.ex, b.y - w.ey))[0];
+  const a = s.player.ant; s.player.inNest = false; a.state = 'player'; a.x = (q.x + 0.5) * SIM.T; a.y = (q.y + 0.5) * SIM.T; a.tx = q.x; a.ty = q.y; s.player.tx = null;
+  const g = c.genes, n0 = s.items.length;
+  for (let i = 0; i < 12; i++) SIM.tick(s, 0.05);
+  assert.ok(c.curios[q.i], 'found');
+  assert.ok(c.genes >= g + 1);
+  assert.ok(s.items.length > n0, 'its stash spilled out');
+  assert.match(s.player.msg, /You found/);
+  // Found stays found across a save, and it doesn't pay twice.
+  const s2 = SIM.deserialize(SIM.serialize(s));
+  assert.ok(s2.colony.curios[q.i]);
+});

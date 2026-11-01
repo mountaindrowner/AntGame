@@ -2,6 +2,34 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: the world's look and pull (build 20)
+
+`PLAYTEST-2.md` items 5, 6, 7, 32 and 33. Mark: "First hour felt good, just enough difficulty and learning curve."
+
+- **The big rock no longer swallows your ant** (item 6). Walk north of the big rock and the camera, looking down from the south, had the rock between it and you: your ant vanished.
+  - Now any rock or landmark nearer the camera than your ant dithers away in a circle round it, a PS1-style screen-door hole, and the hole grows a little as you zoom in.
+  - It's a shader trick on the shared rock and landmark materials, so it works for every rock, log and pot in the yard, not just that one.
+- **Rain over the whole view** (item 7). The rain box was a fixed 520 px square round the middle of the screen, so zoomed out the edges were dry.
+  - It now covers as far as the view reaches, with more streaks for a bigger box so the density stays the same (up to 2,400).
+  - The drops pocking the ground spread the same way.
+- **The Patio has real paving** (item 5), and so do the Steps, the Grill and the Cooler:
+  - each slab its own shade, with speckled aggregate
+  - weathered stains
+  - worn pale edges
+  - about a third of them cracked
+  - dark grout between them with moss and weeds in it
+- **Curios: things worth exploring for** (item 32: "the yard feels small, yet he uncovered very little").
+  - Every one of the 70 regions hides one lost human thing: a glass marble, a red button, a copper coin, a bottle cap, a toy brick, a paper clip, a glass bead or a die. Each is several ant-lengths across and glints with a twinkling star you can see across the region.
+  - Walk your ant up to one and the stash round it spills out, by its ground: garden treats and honeydew, chitin on bark and compost, stone on gravel, crumbs and a cookie on paving, sweets in the sand, dew in the mud, seeds and berries elsewhere. It also pays a 🧬 Gene, and every fifth curio pays three more.
+  - Placed at the start, a fixed spot per region and seed, on clear ground away from rocks and both nests.
+  - The yard map counts them ("✦ Curios found: 3 of 70"), marks found regions with ✦, and each region's card says whether its curio is found or "something glints here: find it".
+  - A first-find tip, a Help line, a tap card and a sparkly chime.
+- **The asset pass** (item 33: "make them proper standalone assets instead of shapes drawn in code").
+  - **A model gallery:** every model in the game, 80 of them, grouped as the game uses them (ants, creatures, bosses, events, curios, food, visitors, props), each turning on its own stand. Run `npm run gallery`, or open the published page. It's for reviewing them one by one.
+  - **Standalone files:** each model is also written out as a binary glTF in `game/assets/models/` (80 `.glb` files with an index), by `npm run models`. They open in Blender or any 3D viewer, so they can be reworked by hand or replaced by commissioned models later.
+  - **First fix from the review:** the ladybug's spots were painted onto the dome's faces and came out as jagged black triangles. They're now round spots sitting on the shell.
+- **Tests:** 72 (new: every region has a curio, and walking up to one pays its stash and a Gene, kept across a save). The browser test passes.
+
 ## Nov 1: events less often (build 19.1)
 
 Mark: "events shouldn't happen too often… maybe like 8 minutes to 10 minutes. And the more serious ones, even less frequently. My brother did a 45 minute to an hour run and had barely taken out the enemy colony and the spider."

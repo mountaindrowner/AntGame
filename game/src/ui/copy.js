@@ -30,6 +30,7 @@ export const EXPL = {
   protein: ['Protein', 'Red meat and dead bugs. It pays for Soldiers and feeds them.'],
   sugar: ['🍯 Sugar', 'Honeydew from aphids and bits of sweet treats. It pays for the queen’s later levels, nurse training and evolutions. Aphid farming (Evolve → Symbiosis) triples it.'],
   chitin: ['🪲 Chitin', 'From dead bugs, beetle shells and big kills. It pays for tough bodies (Tough cuticle) and fighters’ upgrades.'],
+  curio: ['✦ Curios', 'Every region hides one lost thing (a marble, a coin, a button…) that glints. Walk up to it for the stash round it and a 🧬 Gene; every fifth pays three more. The yard map shows which you have found.'],
   grit: ['Stone', 'Builders fetch pebbles. Stone pays for rooms and queen upgrades.'],
   queen: ['', 'Tap a caste to lay an egg. A Hatchery lets her lay more at once.'],
   build: ['', 'Each room needs a dug pocket its size. You pay now; Builders finish it.'],
@@ -65,6 +66,7 @@ export const HELP_PAGES = [
   ['Dangers', `
 <div class="h"><b>Spider</b> Waits by its web in the Flowerbed. It crouches, then lunges. After a kill it stops to eat, and after three it goes back to its web to sleep. Thirty ants, or five Venom ants, can kill it.</div>
 <div class="h"><b>Bosses</b> Three great beasts guard their regions: the Hornworm in the Tomato Rows, the Ground Beetle in the Rock Garden, the Antlion Queen under the Sandbox. Red on the ground shows where a blow will land: get out of it. Each changes at half health. Killed, each stays dead and leaves a trophy that helps the colony for good, and only then can you hold its region.</div>
+<div class="h"><b>Curios</b> Every region hides one lost thing that glints: a marble, a coin, a button, a toy brick… Walk your ant up to it for the stash round it and a 🧬 Gene; every fifth curio pays three more. The yard map counts them.</div>
 <div class="h"><b>Events</b> Every 8 to 10 minutes something happens: a swarm of winged queens (free protein), a picnic (treats, and feet), a heatwave, a war party led by a champion, or a Cordyceps outbreak. In an outbreak, kill zombie ants and fungal stalks before they burst; nurses cure the newly infected inside.</div>
 <div class="h"><b>Small creatures</b> Ladybugs eat your aphids: bite them and they fly off. Earwigs pinch: bring fighters. Crickets hop away until they tire: 25 protein. Millipedes curl up armoured: 20 protein for a patient crew.</div>
 <div class="h"><b>Raids</b> Rival pavement ants grow bolder. Keep Soldiers at your door or they reach the queen.</div>
