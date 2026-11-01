@@ -162,6 +162,44 @@ function roomCeiling(r) {
   }
   return ceilCache.get(key);
 }
+// The cistern's water (build 20.5): a tank of water filling the back of
+// the chamber, shaped to its curved walls, with a clear front face the ants
+// walk past, a pale surface, and colour deepening toward the bottom. Rebuilt
+// when the level moves. h = depth of water above the room's floor.
+const WATER_FRONT = -DEPTH * 0.6, WATER_BACK = -DEPTH + 0.4;
+export function waterGeometry(r, h) {
+  const f = roomField(r), floor = (r.y0 + (r.h || 3)) * T, top = floor - h, [bx0, , bx1] = f.box, cx = (bx0 + bx1) / 2;
+  // Where the chamber's walls are at height y: bisect out from the middle.
+  const edge = (y, dir) => { let a = cx, b = cx + dir * (bx1 - bx0); for (let k = 0; k < 18; k++) { const m = (a + b) / 2; if (f(m, y) < 0) a = m; else b = m; } return a; };
+  const pos = [], col = [];
+  const deep = new THREE.Color('#123e6e'), shallow = new THREE.Color('#4c9ad0'), lip = new THREE.Color('#bfe6f8'), tc = new THREE.Color();
+  const C = (k, al) => { if (k > 1) tc.copy(lip); else tc.copy(deep).lerp(shallow, k); return [tc.r, tc.g, tc.b, al]; };
+  const push = (x, y, z, c) => { pos.push(x, -y, z); col.push(...c); };
+  const quad = (a, b, c, d) => { push(...a); push(...b); push(...c); push(...c); push(...b); push(...d); };
+  const rows = Math.max(2, Math.ceil(h / 2.5)), cols = 10;
+  for (let j = 0; j < rows; j++) {
+    const y0 = top + (h * j) / rows, y1 = top + (h * (j + 1)) / rows;
+    const l0 = edge(y0, -1), r0 = edge(y0, 1), l1 = edge(Math.min(y1, floor - 0.3), -1), r1 = edge(Math.min(y1, floor - 0.3), 1);
+    // Light near the surface, deep blue at the bottom; a bright meniscus line.
+    const k0 = j === 0 ? 2 : 1 - j / rows, k1 = 1 - (j + 1) / rows, a0 = j === 0 ? 0.9 : 0.5 + 0.38 * (j / rows), a1 = 0.5 + 0.38 * ((j + 1) / rows);
+    for (let i = 0; i < cols; i++) {
+      const u0 = i / cols, u1 = (i + 1) / cols;
+      quad([l0 + (r0 - l0) * u0, y0, WATER_FRONT, C(k0, a0)], [l1 + (r1 - l1) * u0, y1, WATER_FRONT, C(k1, a1)], [l0 + (r0 - l0) * u1, y0, WATER_FRONT, C(k0, a0)], [l1 + (r1 - l1) * u1, y1, WATER_FRONT, C(k1, a1)]);
+    }
+  }
+  // The surface, seen from a little above: pale and glassy, front to back.
+  const l = edge(top, -1), rr = edge(top, 1);
+  for (let i = 0; i < cols; i++) {
+    const x0 = l + ((rr - l) * i) / cols, x1 = l + ((rr - l) * (i + 1)) / cols, c = C(0.95, 0.8), cb = C(0.55, 0.7);
+    pos.push(x0, -top, WATER_BACK, x0, -top, WATER_FRONT, x1, -top, WATER_BACK, x1, -top, WATER_BACK, x0, -top, WATER_FRONT, x1, -top, WATER_FRONT);
+    col.push(...cb, ...c, ...cb, ...cb, ...c, ...c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+  g.computeVertexNormals();
+  return g;
+}
 const PROP_KEY = new Map([...Object.entries(PROPS), ...Object.entries(NEST).map(([k, g]) => ['n:' + k, g])].map(([k, g]) => [g, k]));
 
 const tmpV = new THREE.Vector3();
@@ -234,6 +272,8 @@ export class NestView {
     this.clearing = [];
     this.knownRooms = null;
     this.lastProg = new Map();
+    this.water = new Map(); // cistern room → { mesh, h }
+    this.waterMat = psxBasic({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
     this.panels = new THREE.Group();
     this.scene.add(this.panels);
     this.panelSig = '';
@@ -387,6 +427,21 @@ export class NestView {
     for (const r of rooms) this.panels.add(new THREE.Mesh(roomPanel(r), roomWallMaterial(r.key)));
   }
 
+  // Cistern water: one mesh per cistern, rebuilt when its level moves.
+  _water(rooms, col) {
+    const live = new Set();
+    for (const r of rooms) {
+      if (r.key !== 'cistern') continue;
+      const key = r.x0 + ',' + r.y0, H = (r.h || 3) * T;
+      const h = Math.round(Math.max(0.6, (H - 10) * Math.min(1, col.water / Math.max(1, col.waterCap))) * 2) / 2;
+      live.add(key);
+      let w = this.water.get(key);
+      if (!w) { w = { mesh: new THREE.Mesh(new THREE.BufferGeometry(), this.waterMat), h: -1 }; w.mesh.renderOrder = 2; this.dyn.add(w.mesh); this.water.set(key, w); }
+      if (w.h !== h) { w.mesh.geometry.dispose(); w.mesh.geometry = waterGeometry(r, h); w.h = h; }
+    }
+    for (const [key, w] of this.water) if (!live.has(key)) { this.dyn.remove(w.mesh); w.mesh.geometry.dispose(); this.water.delete(key); }
+  }
+
   update(app, t, aspect) {
     const s = app.s;
     if (s !== this.state) this.setState(s);
@@ -404,6 +459,7 @@ export class NestView {
     // Room back panels, dressing and lamps.
     this.roomLights.forEach((l) => (l.intensity = 0));
     this._rebuildPanels(n.rooms);
+    this._water(n.rooms, col);
     const put = (geo, p, sc, color, rot) => this._put(geo, p, sc, color, rot);
     n.rooms.forEach((r, i) => {
       const rw = r.w || 4, rh = r.h || 3;

@@ -150,20 +150,28 @@ const DRESS = {
     if (fill > 0.5) d.put(PROPS.gem, [W - 7, 4, -D * 0.6], [3, 4, 3], '#f0b84a', [0, d.t * 0.5, 0]);
   },
   cistern(d) {
+    // The water itself is its own mesh (nestView's waterGeometry): a tank
+    // filling the back of the chamber, shaped to its walls. Here: what is in
+    // and around it.
     const { W, H, D, col, t } = d;
     const lvl = Math.min(1, col.water / Math.max(1, col.waterCap));
     const h = Math.max(0.6, (H - 10) * lvl);
-    const ripple = 1 + 0.03 * Math.sin(t * 3);
-    d.put(NEST.pool, [W / 2, (h * ripple) / 2, -D * 0.55], [W - 4, h * ripple, D * 0.8], TRUE);
-    d.put(PROPS.leaf, [W / 2 + Math.sin(t * 0.7) * 6, h * ripple + 0.4, -D * 0.5], [6, 4, 6], '#5a9a3a', [0, t * 0.3, 0]);
-    // Pebble rim along the back.
-    for (let i = 0; i < 5; i++) d.put(PROPS.pebble, [6 + i * (W - 12) / 4, 2.4, -D + 2.5], [3, 2.4, 2.4], '#8a8a84', [0, i, 0]);
-    // Drips from roots in the ceiling, falling on a loop.
+    // A wet tide mark on the wall where the water stood highest.
+    d.put(PROPS.box, [W / 2, Math.min(H - 8, h + 1.2), -D + 0.6], [W * 0.62, 0.7, 0.2], '#2e3e46');
+    // A pebble bed on the bottom, seen through the water.
+    for (let i = 0; i < 6; i++) d.put(PROPS.pebble, [7 + i * (W - 14) / 5, 1.6, -D * (0.72 + (i % 2) * 0.12)], [3, 1.8, 2.4], i % 2 ? '#7a8a8c' : '#9a9a90', [0, i, 0]);
+    // A leaf floating on the surface.
+    d.put(PROPS.leaf, [W / 2 + Math.sin(t * 0.7) * 6, h + 0.3, -D * 0.78], [6, 4, 6], '#5a9a3a', [0, t * 0.3, 0]);
+    // Bubbles rising from the bed.
+    if (h > 4) for (let i = 0; i < 4; i++) { const k = (t * 0.35 + i * 0.27) % 1; d.put(PROPS.dew, [10 + i * (W - 20) / 3 + Math.sin(t * 3 + i) * 0.8, 1.5 + k * (h - 2), -D * 0.8], [0.6, 0.6, 0.6], '#d8f0ff'); }
+    // Glints sliding along the surface.
+    for (let i = 0; i < 3; i++) { const k = (t * 0.12 + i / 3) % 1; d.put(PROPS.box, [8 + k * (W - 16), h + 0.15, -D * (0.68 + i * 0.08)], [3 + i, 0.15, 0.6], '#f4fcff'); }
+    // Drips from roots in the ceiling, falling on a loop; a ring spreads where each lands.
     for (let i = 0; i < 2; i++) {
-      const x = W * (0.3 + i * 0.4);
-      d.put(PROPS.box, [x, H - 2, -D * 0.6], [0.6, 4, 0.6], '#6a4a30');
-      const fall = ((t * 0.9 + i * 0.5) % 1) * (H - 4 - h);
-      d.put(NEST.drop, [x, H - 4 - fall, -D * 0.6], [0.9, 1, 0.9], TRUE);
+      const x = W * (0.3 + i * 0.4), ph = (t * 0.9 + i * 0.5) % 1;
+      d.put(PROPS.box, [x, H - 2, -D * 0.8], [0.6, 4, 0.6], '#6a4a30');
+      if (ph < 0.75) d.put(NEST.drop, [x, H - 4 - (ph / 0.75) * (H - 4 - h), -D * 0.8], [0.9, 1, 0.9], TRUE);
+      else { const k = (ph - 0.75) / 0.25; d.put(PROPS.ring, [x, h + 0.2, -D * 0.8], [1 + k * 5, 1, 1 + k * 3], d.mix('#f4fcff', '#5aa0d8', k)); }
     }
   },
   nursery(d) {

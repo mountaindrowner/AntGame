@@ -2,6 +2,27 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: the cistern as a tank of water (build 20.6)
+
+Mark: "Cistern could have a more tank of water look to it, makes sense."
+
+The cistern's water used to be an opaque blue box. It stuck out past the curved chamber walls, and the ants walking through the room were hidden inside it.
+
+It is now its own mesh, `waterGeometry` in `nestView.js`:
+- **Shape.** It fills the back of the chamber, from about 0.6 of the room's depth to the wall, and is traced from the chamber's own outline, so it follows the curved walls.
+- **Translucent front face.** Ants walk past the front face; the wall shows through.
+- **Colour.** Shallow blue near the top deepening to dark blue at the bottom, with a bright lip at the surface and a pale surface seen from a little above.
+- **Material.** Unlit, so it keeps its colour.
+- **Level.** It is rebuilt whenever the level moves by half a pixel or more.
+
+Inside and around it:
+- a pebble bed seen through the water
+- bubbles rising
+- glints sliding along the surface
+- the floating leaf
+- a wet tide mark on the wall
+- ripple rings where the root drips land
+
 ## Nov 1: rooms that sit in the soil (build 20.5)
 
 Mark: "What about the transitioning of rooms and their surrounding backgrounds so it fits into the spacing better instead of just being a blocky jutting space with no natural seams?"
