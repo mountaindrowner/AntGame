@@ -2,6 +2,21 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: potted plants growing out of their soil (build 20.8)
+
+Mark: "Potted plants looks bad still. Should have soil inside the terracotta pot, the plants sprouting from the soil inside."
+
+**Why it looked wrong:** the pot's rim was a solid cylinder, so its top cap hid the soil, and the plant seemed to float over an orange lid.
+
+**The pot now:**
+- It is open: an outer wall, a flat lip on the rim, and an inner wall in shadow.
+- The soil sits a little below the rim, as a low dark mound with grit and white perlite.
+
+**The geranium:**
+- It grows from a crown in the soil.
+- Three tiers of round leaves with the zone ring sit on stalks from the crown. The low ones reach out over the rim.
+- Three red flower heads stand on tall stalks above them, each a round head of florets.
+
 ## Nov 1: model pass, layer 4: the yard's landmarks (build 20.7)
 
 Mark: "After that go to the next part."

@@ -472,25 +472,42 @@ function meshLandmark(l, w, ctx) {
         decals.push(paint(at(new THREE.CircleGeometry(l.r * T, 18).rotateX(-Math.PI / 2), l.x * T, 0, l.y * T), (x, y, z) => (Math.hypot(x - l.x * T, z - l.y * T) > l.r * T * 0.8 ? '#e4ded2' : '#f4f0e8')));
         break;
       case 'pot': {
-        // A terracotta pot on its saucer: a thick rolled rim, a body darker
-        // toward the foot, potting soil with grit, and a geranium: round
-        // leaves with the dark zone ring, and two red flower heads.
+        // A terracotta pot on its saucer, open at the top: a rolled rim with
+        // its inner wall in shadow, potting soil a little below the rim with
+        // grit and perlite in it, and a geranium growing out of the soil, a
+        // mound of round leaves with the dark zone ring on long stalks from
+        // the crown, and red flower heads held up above them.
         claimDisc(l.x, l.y, l.r);
-        const x = l.x * T, z = l.y * T, R = l.r * T, H = 64 * S;
-        parts.push(at(paint(new THREE.CylinderGeometry(R * 1.06, R * 0.96, 5 * S, 18), (px, py) => (py > 2 * S ? '#b8643c' : '#94502e'), 40), x, 2.5 * S, z));
-        parts.push(at(paint(new THREE.CylinderGeometry(R * 0.97, R * 0.78, H - 14 * S, 18, 3), (px, py) => (py < -(H - 14 * S) * 0.2 ? '#9a4e2c' : Math.abs(py - (H - 14 * S) * 0.18) < 1.5 * S ? '#a85a34' : '#b4623a'), 41), x, 5 * S + (H - 14 * S) / 2, z));
-        parts.push(at(paint(new THREE.CylinderGeometry(R * 1.1, R * 1.04, 12 * S, 18), (px, py, pz) => (py > 5 * S ? '#d8845a' : Math.atan2(pz, px) > 2.6 ? '#a0522e' : '#c8704a'), 42), x, H - 8 * S, z));
-        parts.push(at(paint(new THREE.CircleGeometry(R * 0.98, 18).rotateX(-Math.PI / 2), (px, py, pz) => (Math.sin(px * 0.7) * Math.sin(pz * 0.9) > 0.6 ? '#4a3420' : '#3a2618'), 43), x, H - 2.5 * S, z));
-        for (let k = 0; k < 7; k++) { const a = r() * 6.3, d = r() * R * 0.8; parts.push(at(paint(new THREE.IcosahedronGeometry((1.2 + r()) * S, 0), k % 3 ? '#e8e4dc' : '#8a8478'), x + Math.cos(a) * d, H - 2 * S, z + Math.sin(a) * d)); }
-        for (let k = 0; k < 9; k++) {
-          const a = (k / 9) * Math.PI * 2 + 0.3, d = R * (0.25 + (k % 3) * 0.18), ly = H + (14 + (k % 3) * 10) * S, lr = R * (0.22 + (k % 2) * 0.05);
-          parts.push(rod([x + Math.cos(a) * d * 0.3, H - 2 * S, z + Math.sin(a) * d * 0.3], [x + Math.cos(a) * d, ly, z + Math.sin(a) * d], 1.4 * S, 1 * S, '#4a7a2a', 4, k));
-          parts.push(at(paint(new THREE.SphereGeometry(1, 9, 3).scale(lr, 1.6 * S, lr).rotateZ(0.25).rotateY(-a), (px, py, pz) => { const q = Math.hypot(px, pz) / lr; return q > 0.42 && q < 0.62 ? '#5a4a1e' : q > 0.85 ? '#3a6a24' : '#4a8a2e'; }, k), x + Math.cos(a) * d, ly, z + Math.sin(a) * d));
-        }
-        for (let k = 0; k < 2; k++) {
-          const a = k * 3.3 + 1, fx = x + Math.cos(a) * R * 0.3, fz = z + Math.sin(a) * R * 0.3, fy = H + 62 * S;
-          parts.push(rod([x, H, z], [fx, fy, fz], 1.6 * S, 1.2 * S, '#4a7a2a', 4, k + 20));
-          for (let j = 0; j < 7; j++) { const b = j * 0.9, rr = j ? 5 * S : 0; parts.push(at(paint(new THREE.IcosahedronGeometry(3.6 * S, 0), j % 2 ? '#e0283a' : '#f04450', j), fx + Math.cos(b) * rr, fy + (j ? 0 : 3 * S), fz + Math.sin(b) * rr)); }
+        const x = l.x * T, z = l.y * T, R = l.r * T, H = 64 * S, Ri = R * 0.9, soilY = H - 9 * S, seedR = rng(Math.floor(l.x * 31 + l.y * 17));
+        const flip = (g) => { g.scale(-1, 1, 1); return g; }; // turn an open tube inside out, so its inner face shows
+        parts.push(at(paint(new THREE.CylinderGeometry(R * 1.06, R * 0.96, 5 * S, 20), (px, py) => (py > 2 * S ? '#b8643c' : '#94502e'), 40), x, 2.5 * S, z));
+        parts.push(at(paint(new THREE.CylinderGeometry(R * 0.97, R * 0.78, H - 14 * S, 20, 3, true), (px, py) => (py < -(H - 14 * S) * 0.2 ? '#9a4e2c' : Math.abs(py - (H - 14 * S) * 0.18) < 1.5 * S ? '#a85a34' : '#b4623a'), 41), x, 5 * S + (H - 14 * S) / 2, z));
+        parts.push(at(paint(new THREE.CylinderGeometry(R * 1.1, R * 1.04, 12 * S, 20, 1, true), (px, py, pz) => (Math.atan2(pz, px) > 2.6 ? '#a0522e' : py > 3 * S ? '#d07a50' : '#c8704a'), 42), x, H - 8 * S, z));
+        parts.push(at(paint(new THREE.RingGeometry(Ri, R * 1.1, 20, 1).rotateX(-Math.PI / 2), (px, py, pz) => (Math.hypot(px, pz) > R * 1.04 ? '#d8845a' : '#e0906a'), 43), x, H - 2 * S, z));
+        parts.push(at(paint(flip(new THREE.CylinderGeometry(Ri, Ri * 0.97, 9 * S, 20, 1, true)), (px, py) => (py > 2 * S ? '#a85a34' : '#7a3e22'), 44), x, H - 6.5 * S, z));
+        // Soil: a low mound, dark and crumbly, with grit and white perlite.
+        parts.push(at(paint(new THREE.SphereGeometry(Ri * 0.99, 20, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.06, 1), (px, py, pz) => { const n = Math.sin(px * 0.21 + pz * 0.07) * Math.sin(pz * 0.19 - px * 0.05); return n > 0.55 ? '#4a3420' : n < -0.6 ? '#24160c' : '#33220f'; }, 45), x, soilY, z));
+        for (let k = 0; k < 16; k++) { const a = seedR() * 6.3, d = Ri * (0.45 + seedR() * 0.48); parts.push(at(paint(new THREE.IcosahedronGeometry((0.9 + seedR() * 0.9) * S, 0), k % 3 ? '#ece8e0' : '#7a7468'), x + Math.cos(a) * d, soilY + 1.6 * S, z + Math.sin(a) * d)); }
+        // The crown where the stems come out of the soil.
+        parts.push(at(paint(new THREE.SphereGeometry(R * 0.14, 8, 4).scale(1, 0.5, 1), '#4a6a28'), x, soilY + 1 * S, z));
+        // Leaves: three tiers on stalks, the low ones reaching out over the rim.
+        const tiers = [[8, 0.62, 10, 0.24], [7, 0.4, 24, 0.22], [5, 0.18, 36, 0.2]];
+        tiers.forEach(([n, reach, up, size], ti) => {
+          for (let k = 0; k < n; k++) {
+            const a = (k / n) * Math.PI * 2 + ti * 0.7 + seedR() * 0.3, d = R * reach * (0.9 + seedR() * 0.2), lr = R * size * (0.85 + seedR() * 0.3), ly = soilY + (up + seedR() * 6) * S;
+            const lx = x + Math.cos(a) * d, lz = z + Math.sin(a) * d;
+            parts.push(rod([x + Math.cos(a) * R * 0.06, soilY + 1 * S, z + Math.sin(a) * R * 0.06], [lx, ly - 1 * S, lz], 1.5 * S, 1.1 * S, '#5a8a32', 4, k + ti * 10));
+            parts.push(at(paint(new THREE.SphereGeometry(1, 10, 3).scale(lr, 1.4 * S, lr).rotateZ(0.18 + ti * 0.1).rotateY(-a), (px, py, pz) => { const q = Math.hypot(px, pz) / lr; return q < 0.12 ? '#8ac04a' : q > 0.46 && q < 0.6 ? '#5e6a26' : q > 0.88 ? '#4a8a2c' : '#62a83a'; }, k + ti * 7), lx, ly, lz));
+          }
+        });
+        // Flower heads: a round umbel of florets on a tall stalk.
+        for (let k = 0; k < 3; k++) {
+          const a = k * 2.1 + seedR(), fx = x + Math.cos(a) * R * 0.22, fz = z + Math.sin(a) * R * 0.22, fy = soilY + (64 + k * 8) * S;
+          parts.push(rod([x, soilY + 1 * S, z], [fx, fy, fz], 1.7 * S, 1.3 * S, '#5a8a32', 4, k + 30));
+          for (let j = 0; j < 12; j++) {
+            const ph = j < 1 ? 0 : j < 6 ? 1 : 2, b = j * 1.3 + k, rr = [0, 5, 8.5][ph] * S, hy = [4.5, 3, 0][ph] * S;
+            parts.push(at(paint(new THREE.IcosahedronGeometry(3.4 * S, 0), j % 3 === 0 ? '#ff5a64' : j % 2 ? '#e0283a' : '#f04450', j), fx + Math.cos(b) * rr, fy + hy, fz + Math.sin(b) * rr));
+          }
         }
         break;
       }
