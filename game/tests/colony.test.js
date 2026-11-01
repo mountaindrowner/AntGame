@@ -22,10 +22,10 @@ function hatchN(s, caste, n) {
 
 test('each kind has its duties in order, and you can reorder or switch them off', () => {
   const s = founded();
-  assert.deepEqual(SIM.jobsOf(s, 'forager').map((j) => j[0]), ['food', 'water', 'stone', 'hunt']);
+  assert.deepEqual(SIM.jobsOf(s, 'forager').map((j) => j[0]), ['food', 'water', 'stone', 'wood', 'hunt']);
   assert.equal(SIM.jobsOf(s, 'soldier')[0][0], 'guard');
   SIM.setJobFirst(s, 'forager', 'stone');
-  assert.deepEqual(SIM.jobsOf(s, 'forager').map((j) => j[0]), ['stone', 'food', 'water', 'hunt']);
+  assert.deepEqual(SIM.jobsOf(s, 'forager').map((j) => j[0]), ['stone', 'food', 'water', 'wood', 'hunt']);
   SIM.toggleJob(s, 'forager', 'water');
   assert.equal(SIM.jobsOf(s, 'forager').find((j) => j[0] === 'water')[1], 0);
   // Kept across a save.

@@ -279,7 +279,7 @@ export function createUI(app) {
     return h;
   }
   // What each kind of ant is for, under its egg (build 15: "what is a nurse for?").
-  const EGG_WHAT = { forager: 'Gathers food and water on its own', builder: 'Digs, builds rooms, hauls dirt out, stops cave-ins', nurse: 'Tends the eggs: they hatch faster', soldier: 'Guards the door, fights raiders; eats protein', venom: 'An 8× sting: kills the spider' };
+  const EGG_WHAT = { forager: 'Gathers food and water on its own', builder: 'Digs, builds rooms, hauls dirt out, stops cave-ins', nurse: 'Tends the eggs: they hatch faster', soldier: 'Guards the door, fights raiders; eats protein', venom: 'An 8× sting: kills the spider', gardener: 'Cuts leaves for the fungus garden, which grows them into food', rancher: 'Stays in and herds root aphids: 🍯 without going out', medic: 'Heals the wounded and cures Cordyceps in the Infirmary', harvester: 'Big-headed: carries seed and crumbs in double loads' };
   function renderSheet() {
     const s = app.s, c = s.colony;
     if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map' || app.menu === 'colony') return;
@@ -288,6 +288,8 @@ export function createUI(app) {
       h += `<div class="row head"><strong>Queen · next egg</strong><button class="x" data-close="1">Close</button></div><div class="note">${EXPL.queen[1]}</div><div class="btns">`;
       for (const k of Object.keys(CASTES)) {
         const C = CASTES[k];
+        // A kind from a room not yet evolved stays hidden (build 23).
+        if (SIM.CASTE_ROOM[k] && !c.evo[ROOMS[SIM.CASTE_ROOM[k]].evo]) continue;
         const lock = SIM.eggLock(s, k);
         const ec = SIM.eggCost(s, k), dis = lock || !SIM.canPay(c, ec) || c.eggQueue.length >= 10;
         h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${EGG_WHAT[k] || ''}</i><i>${lock || costIcons(ec) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
@@ -331,6 +333,17 @@ export function createUI(app) {
         const overCap = (rc.food || 0) > c.cap;
         const status = lock ? (n && lock !== 'being built' ? 'built · ' + lock : lock) : overCap ? `needs more food cap (${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(rc) : n ? `ready: a ${['', 'second', 'third', 'fourth', 'fifth'][n] || 'another'} one` : 'ready to place';
         h += `<button data-place="${k}" ${lock || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}${n ? ` <span class="cnt">${n}/${SIM.roomCap(s)}</span>` : ''}</b><i>${costIcons(rc)} · ${n ? R.more : R.desc}</i><i>${status}</i></button>`;
+      }
+      // Room levels (build 23): each new room kind goes up to III, bought here.
+      const ups = ROOM_KEYS.filter((k) => ROOMS[k].lv && SIM.roomCount(s, k));
+      if (ups.length) {
+        h += `</div><div class="t" style="margin-top:10px">Room levels</div><div class="btns">`;
+        for (const k of ups) {
+          const R = ROOMS[k], n = SIM.roomLevel(s, k), lock = SIM.roomUpLock(s, k), U = R.lv[n - 1];
+          if (lock) { h += `<button disabled>${sicon(k)}<b>${R.name} · level ${['', 'I', 'II', 'III'][n]}</b><i>${R.lv.map((u) => u.fx).join(' · ')}</i><i>top level</i></button>`; continue; }
+          const pay = SIM.canPay(c, U.cost);
+          h += `<button data-roomup="${k}" ${pay ? '' : 'disabled'}>${sicon(k)}<b>${R.name} → level ${['', 'I', 'II', 'III'][n + 1]}</b><i>${costIcons(U.cost)} · ${U.fx}</i><i>${pay ? 'ready' : 'short on: ' + SIM.costText(U.cost)}</i></button>`;
+        }
       }
       h += `</div><div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
       h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
@@ -485,6 +498,8 @@ export function createUI(app) {
       + chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen')
       + (c.sugarTotal ? chip('🍯', Math.floor(c.sugar), 'Sugar: from honeydew and sweet treats. For the queen’s later levels, nurses and evolutions') : '')
       + (c.chitinTotal ? chip('🪲', Math.floor(c.chitin), 'Chitin: from dead bugs, beetle shells and boss kills. For tough bodies and fighters') : '')
+      + (c.found && c.found.wood ? chip('🪵', Math.floor(c.wood || 0), 'Wood: twigs and bark. For the queen’s last level and rooms’ level III') : '')
+      + (SIM.roomCount(s, 'fungus') ? chip('🍃', Math.floor(c.fungus || 0), 'Leaf in the fungus garden: it grows into food') : '')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
       + (c.genesTotal ? chip('🧬', c.genes, 'Genes: tap to evolve').replace('<span class="chip', '<span data-genes="1" class="chip') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
@@ -575,6 +590,7 @@ export function createUI(app) {
     if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
+    if (b.dataset.roomup) { SIM.upgradeRoom(s, b.dataset.roomup); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.forage) { SIM.upgradeForage(s); renderSheet(); return; }
     if (b.dataset.grow) { openEvo(b.dataset.grow); return; }

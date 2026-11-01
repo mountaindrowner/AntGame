@@ -20,7 +20,14 @@ const CASTES = {
   nurse:  {name:'Nurse', cost:{food:2, water:1}, hatch:20, speed:50, eat:1, fight:1, hp:2, r:2.2},
   soldier:{name:'Soldier', cost:{food:4, water:1, protein:2}, hatch:40, speed:55, eat:2, fight:3, hp:6, r:3.0},
   venom:  {name:'Venom ant', cost:{food:5, water:1, protein:3}, hatch:45, speed:58, eat:2, fight:8, hp:6, r:3.0},
+  // Build 23: each trained in its own room (see CASTE_ROOM, docs/ROOMS.md).
+  gardener: {name:'Gardener', cost:{food:3, water:1}, hatch:25, speed:56, eat:1, fight:1, hp:2, r:2.0},
+  rancher:  {name:'Rancher', cost:{food:3, water:1, sugar:2}, hatch:25, speed:45, eat:1, fight:1, hp:2, r:2.3},
+  medic:    {name:'Medic', cost:{food:3, water:2}, hatch:30, speed:56, eat:1, fight:1, hp:3, r:2.3},
+  harvester:{name:'Harvester', cost:{food:4, water:1}, hatch:30, speed:52, eat:1, fight:2, hp:3, r:2.6},
 };
+// The room each new kind of ant needs before the queen can lay it.
+const CASTE_ROOM = { gardener: 'fungus', rancher: 'dairy', medic: 'infirmary', harvester: 'granary' };
 const ROOMS = {
   queen:   {name:'Queen\u2019s chamber', cost:{}, work:0, w:4, h:3, desc:'Eggs, one at a time'},
   hatchery:{name:'Hatchery', cost:{food:10}, work:20, w:4, h:3, desc:'+2 eggs at a time', more:'+2 more eggs at a time'},
@@ -31,6 +38,16 @@ const ROOMS = {
   workshop:{name:'Workshop', cost:{food:25, grit:10}, work:25, w:5, h:4, desc:'Builders dig packed soil and build 2× faster', more:'Builders work another half again faster'},
   // Build 19: from the ground beetle's shell.
   armory:  {name:'Armory', cost:{food:40, grit:20, chitin:20}, work:30, w:5, h:3, desc:'Every ant 50% tougher; foragers shrug off a foot or beak', more:'Nothing more: one is enough'},
+  // Build 23: rooms from the evolution tree (evo), each training its own ant
+  // (caste), each with levels II and III bought from the Build list (lv).
+  fungus:   {name:'Fungus garden', cost:{food:30, water:15}, work:30, w:5, h:3, evo:'fungus', caste:'gardener', desc:'Gardeners cut leaves; the garden grows them into food', more:'Another garden: leaves grow food twice as fast',
+    lv:[{cost:{food:60, sugar:15}, fx:'Each leaf grows half again more food'}, {cost:{food:120, sugar:30, wood:15}, fx:'Twice the food from each leaf, grown twice as fast'}]},
+  dairy:    {name:'Aphid barn', cost:{food:30, sugar:10}, work:30, w:5, h:3, evo:'mealybugs', caste:'rancher', desc:'Ranchers keep root aphids: 🍯 without going out', more:'Room for 4 more ranchers',
+    lv:[{cost:{food:60, sugar:25}, fx:'Half again more 🍯, and 2 more ranchers'}, {cost:{food:100, sugar:40, wood:15}, fx:'Twice the 🍯, and the aphids give a little food too'}]},
+  infirmary:{name:'Infirmary', cost:{food:25, water:20}, work:25, w:4, h:3, evo:'infirmary', caste:'medic', desc:'Medics heal the wounded and cure Cordyceps', more:'Heals more at once',
+    lv:[{cost:{food:50, water:30}, fx:'Heals twice as fast, your ant too'}, {cost:{food:90, protein:20, wood:15}, fx:'Medics carry the fallen home: 1 in 4 ants killed near the nest is saved'}]},
+  granary:  {name:'Granary', cost:{food:20, grit:25}, work:25, w:5, h:3, evo:'granary', caste:'harvester', desc:'Harvesters carry seed in double loads; +100 food cap', more:'+100 food cap more',
+    lv:[{cost:{food:80, grit:40}, fx:'+150 food cap more'}, {cost:{food:150, grit:60, wood:20}, fx:'Harvesters chew seed into ant bread: worth half again'}]},
 };
 // Build 17: more than one of a room. Each kind allows one per queen level;
 // each copy costs half again more than the last, and every room eats food
@@ -38,7 +55,9 @@ const ROOMS = {
 const roomCount = (s, key) => s.nest.rooms.filter(r => r.key === key).length;
 const roomCap = s => s.queen.level + 1;
 function roomUpkeep(s){ let u = 0; const seen = {}; for (const r of s.nest.rooms){ if (r.key === 'queen') continue; u += seen[r.key] ? 1 : 0.5; seen[r.key] = true; } return u; }
-const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop','armory'];
+const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop','armory','fungus','dairy','infirmary','granary'];
+// A room kind's level (1 to 3, build 23).
+const roomLevel = (s, key) => (s.colony.roomLv || {})[key] || 1;
 // Food on the ground: amt is how much it holds (an ant carries 5). Treats are
 // rare drops from people: worth a crew and a trail.
 const FOODS = {
@@ -52,6 +71,9 @@ const FOODS = {
   aphids:   {name:'aphids', amt:[20,20]},
   // Protein you can find lying about.
   bug:      {name:'dead bug', amt:[15,15], protein:true},
+  // Build 23: leaf pieces for the fungus garden (only Gardeners cut them) and 🪵 wood.
+  leafbit:  {name:'leaf piece', amt:[12,12]},
+  twig:     {name:'twig', amt:[8,8]},
   hotdog:   {name:'hot dog scrap', amt:[14,18], protein:true},
   // Treats are too big for one ant: the player lifts them with a crew.
   jellybean:{name:'jelly bean', amt:[40,40], treat:true, crew:6, sweet:true},
@@ -67,6 +89,7 @@ const FOODS = {
 // 🍯 sugar from honeydew (aphids) and sweet treats.
 const CHITIN_OF = { bug: 1, spider: 2, ladybug: 2, earwig: 2, cricket: 1, millipede: 2, alate: 1, boss: 1, slug: 0 };
 const SHELL_GROUND = /bark|compost|gravel|hedge|leaf|mulch/;
+const WOOD_GROUND = /bark|mulch|leaf|hedge|oak|wild/, LEAF_GROUND = /lawn|grass|long|hedge|leaf|soil|clover|wild|oak|mulch/;
 const heavy = f => !!(FOODS[f.type] && FOODS[f.type].crew);
 const SOIL = [ {name:'soft', work:6}, {name:'packed', work:12}, {name:'clay', work:20} ];
 const soilTier = y => y < SOIL_TOP[1] ? 0 : y < SOIL_TOP[2] ? 1 : 2;
@@ -171,7 +194,7 @@ function newColony(ex, ey, team){
 function growthState(){
   return { genes: 0, genesTotal: 0, up: {}, picks: {}, evo: {}, doctrine: {}, qtraits: {}, found: {}, scouted: {},
     hatched: 0, treats: 0, foodTotal: 0, storePeak: 0, repaired: 0, raidsBeaten: 0, fallen: [], named: 0,
-    held: {}, goals: { done: {}, sets: {} }, dug: 0, sugar: 0, chitin: 0, sugarTotal: 0, chitinTotal: 0 };
+    held: {}, goals: { done: {}, sets: {} }, dug: 0, sugar: 0, chitin: 0, sugarTotal: 0, chitinTotal: 0, wood: 0, fungus: 0, roomLv: {} };
 }
 function create(seed){
   const w = makeWorld(seed || 7);
@@ -256,6 +279,19 @@ function spawnInArea(s, ai, kind, type, amt){
     const it = { x, y, kind, type, amt: amt != null ? amt : F ? F.amt[0] + (F.amt[1] > F.amt[0] ? Math.floor(w.rnd()*(F.amt[1]-F.amt[0]+1)) : 0) : type==='pebble' ? 10 : 5 };
     s.items.push(it);
     return it;
+  }
+  return null;
+}
+// An item within foragers' reach of home on open ground whose region's
+// ground passes ok(); ground matching `rich` is tried first (build 23).
+function spawnNear(s, kind, type, ok, rich){
+  const w = s.world, c = s.colony, r = forageRange(s)*0.9;
+  for (let tries = 0; tries < 80; tries++){
+    const ang = Math.random()*Math.PI*2, d = 6 + Math.sqrt(Math.random())*(r - 6), x = Math.round(c.ex + Math.cos(ang)*d), y = Math.round(c.ey + Math.sin(ang)*d);
+    if (x < 2 || y < 2 || x >= W - 2 || y >= H - 2 || w.blocked[idx(x,y)] || w.pit[idx(x,y)]) continue;
+    const g = AREAS[w.area[idx(x,y)]].ground || '';
+    if (!ok(g) || (rich && tries < 40 && !rich.test(g)) || s.items.some(f => f.x === x && f.y === y)) continue;
+    const it = { x, y, kind, type, amt: FOODS[type].amt[0] }; s.items.push(it); return it;
   }
   return null;
 }
@@ -357,6 +393,7 @@ function nearestItem(s, a, r, want){ let best=null, bd=r; for (const f of s.item
 function deposit(s, a){
   const c = colonyOf(s, a);
   if (!a.team && a.carry > 0){ gainXp(s, a, 3); discover(s, a.itype || a.kind); }
+  if (!a.team && a.kind === 'food' && a.caste === 'harvester' && GRAIN[a.itype] && roomLevel(s, 'granary') >= 3) a.carry = Math.round(a.carry*1.5); // ant bread
   if (a.kind === 'food'){ const put = Math.min(Math.max(0, c.cap - c.store), a.carry); c.store += put; c.delivered[0] += put; if (!a.team) c.foodTotal += put;
     // Honeydew and bits of sweets are sugar too (build 18).
     if (!a.team && a.carry && a.itype === 'aphids') addSugar(s, (has(s, 'aphids') ? 3 : 1)*(prizeFx(s, a.ireg) === 'aphids' ? 2 : 1));
@@ -365,6 +402,8 @@ function deposit(s, a){
   else if (a.kind === 'protein'){ c.protein += a.carry; if (!a.team && CHITIN_OF[a.itype]) addChitin(s, CHITIN_OF[a.itype]*(prizeFx(s, a.ireg) === 'chitin' ? 2 : 1)); }
   else if (a.kind === 'chitin'){ if (!a.team) addChitin(s, a.carry); }
   else if (a.kind === 'grit') c.grit += a.carry;
+  else if (a.kind === 'wood'){ if (!a.team){ c.wood = (c.wood || 0) + a.carry; if (!c.found.wood){ c.found.wood = true; s.events.push('wood'); } } }
+  else if (a.kind === 'leaf'){ if (!a.team) c.fungus = Math.min(fungusCap(s) || 60, (c.fungus || 0) + a.carry); }
   a.carry = 0;
 }
 function addSugar(s, n){ const c = s.colony; c.sugar += n; c.sugarTotal += n; if (!c.found.sugar){ c.found.sugar = true; s.events.push('sugar'); } }
@@ -375,6 +414,9 @@ function killAnt(s, a, cause){
   if (!a.dodged && (cause === 'foot' || cause === 'bird' || cause === 'acorn' || cause === 'toad') && (promo(s, a, 'dodger') || (!a.team && a.caste === 'forager' && roomOf(s, 'armory')))){ a.dodged = true; a.flee = 2; return; }
   // Survivor: once a life, a killing blow leaves your ant at 1 health.
   if (a.isPlayer && !a.survived && picked(s, 'you', 'survivor')){ a.survived = true; a.hp = 1; s.player.hit = s.t; s.player.msg = 'That should have killed you. Get home!'; return; }
+  // Infirmary III (build 23): medics carry the fallen home; 1 in 4 near the nest is saved.
+  if (!a.team && !a.isPlayer && cause !== 'starved' && cause !== 'hunger' && roomLevel(s, 'infirmary') >= 3 && roomOf(s, 'infirmary') && a.x != null && Math.hypot(a.x/T - s.colony.ex, a.y/T - s.colony.ey) < 24 && s.ants.some(o => !o.team && o.caste === 'medic' && o.state === 'in') && Math.random() < 0.25){
+    a.hp = 1; a.carry = 0; a.follow = false; a.infect = null; enterNest(s, a); s.colony.saved = (s.colony.saved || 0) + 1; if (s.colony.saved === 1) s.player.msg = 'Your medics carried a fallen ant home and saved it.'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
   if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
@@ -449,7 +491,8 @@ function paceOf(s, a, base){
   return v;
 }
 // Build 22.1: 6 (was 5), to make up for everyone walking 6% slower.
-const carryCap = (s, a) => 5 + (promo(s, a, 'strongback') ? 1 : 0) + (!a.team && setDone(s, 'garden') ? 1 : 0) + (!a.team && has(s, 'bigcrop') ? 3 : 0) + (!a.team && a.caste === 'forager' && (s.colony.forage || 0) >= 4 ? 2 : 0);
+const GRAIN = { seed: 1, crumb: 1, popcorn: 1 };
+const carryCap = (s, a, f) => (!a.team && a.caste === 'harvester' && f && GRAIN[f.type] ? 2 : 1)*5 + (promo(s, a, 'strongback') ? 1 : 0) + (!a.team && setDone(s, 'garden') ? 1 : 0) + (!a.team && has(s, 'bigcrop') ? 3 : 0) + (!a.team && a.caste === 'forager' && (s.colony.forage || 0) >= 4 ? 2 : 0);
 const sightOf = (s, a) => 7 + (!a.team && a.caste === 'forager' && picked(s, 'forager', 'pathfinder') ? 7 : 0) + (promo(s, a, 'keen') ? 4 : 0);
 const chewsTreats = (s, a) => !a.team && a.caste === 'forager' && picked(s, 'forager', 'hauler');
 const crewCap = s => has(s, 'crews2') ? 45 : has(s, 'crews') ? 30 : 20;
@@ -465,7 +508,7 @@ function workOf(s, a, kind){
   if (kind === 'r' && (picked(s, 'builder', 'engineer') || promo(s, a, 'fixer'))) m *= 2;
   return m;
 }
-const storeCap = s => { const n = roomCount(s, 'store'); return n ? Math.round((has(s, 'store3') ? 1000 : has(s, 'store2') ? 400 : 150)*(1 + 0.5*(n - 1))) : 20; };
+const storeCap = s => { const n = roomCount(s, 'store'), g = roomCount(s, 'granary'); return (n ? Math.round((has(s, 'store3') ? 1000 : has(s, 'store2') ? 400 : 150)*(1 + 0.5*(n - 1))) : 20) + g*(100 + (roomLevel(s, 'granary') >= 2 ? 150 : 0)); };
 const hatchCapOf = s => { const n = roomCount(s, 'hatchery'); return 1 + (n ? 2*n + (has(s, 'hatchery2') ? 1 : 0) + (has(s, 'hatchery3') ? 1 : 0) : 0); };
 function eggCost(s, caste){
   const cost = Object.assign({}, CASTES[(caste === 'soldier' || caste === 'venom') && picked(s, 'nurse', 'shaper') ? 'forager' : caste].cost);
@@ -631,6 +674,10 @@ function tick(s, dt){
     if (s.areaT[i] >= 1){ s.areaT[i] -= 1; let n = 0; for (const f of s.items) if ((f.kind==='food'||f.kind==='protein') && f.amt > 0 && !f.max && w.area[idx(f.x,f.y)] === i) n++; if (n < A.max) spawnFood(s, i, s.t > 180); } }
   s.itemTimer += dt; if (s.itemTimer > 9){ s.itemTimer = 0;
     if (s.items.filter(f=>f.kind==='grit').length < 10) spawnInArea(s, Math.random() < 0.6 ? REGION.rock : REGION.woodpile, 'grit', 'pebble');
+    // Build 23: twigs (🪵) on bark, mulch, leaves, hedges and round the Oak, once wood is wanted;
+    // leaf pieces on green ground once a fungus garden stands.
+    if (woodGoal(s) && s.items.filter(f => f.kind === 'wood').length < 8) spawnNear(s, 'wood', 'twig', () => true, WOOD_GROUND); // (blown onto the patio and lawn too)
+    if (roomOf(s, 'fungus') && s.items.filter(f => f.kind === 'leaf').length < 10) spawnNear(s, 'leaf', 'leafbit', () => true, LEAF_GROUND);
     // Beetle shells (build 18): now and then in bark, compost, gravel and leaves; more in a held Woodpile.
     if (Math.random() < 0.25 && s.items.filter(f => f.kind === 'chitin').length < 5){ const opts = []; for (let i = 0; i < AREAS.length; i++) if (s.active[i] && SHELL_GROUND.test(AREAS[i].ground || '')) opts.push(i, ...(prizeFx(s, i) === 'chitin' ? [i, i] : [])); if (opts.length) spawnInArea(s, opts[Math.floor(Math.random()*opts.length)], 'chitin', 'shell'); }
     // Held stony regions turn up extra pebbles; held gardens' aphids refill twice as fast.
@@ -734,7 +781,7 @@ function tick(s, dt){
       a.explore += dt; if (s.rain.on && !a.team && a.state === 'explore' && a.explore > 2){ a.state = 'return'; a.explore = 0; continue; }
       const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
-      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.ireg = w.area[idx(f.x,f.y)]; a.state = 'return'; continue; }
+      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a, f), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.ireg = w.area[idx(f.x,f.y)]; a.state = 'return'; continue; }
       // Its main work at home came up (orders to dig, eggs to tend): empty-handed, it heads back.
       if (!a.team && a.state === 'explore' && !a.carry && (a.caste === 'builder' || a.caste === 'nurse') && Math.floor(a.explore/2) > Math.floor((a.explore - dt)/2)){ const n = chooseDuty(s, a); if (n === 'build' || n === 'nurse'){ a.state = 'return'; a.duty = n; a.explore = 0; continue; } }
       // Nothing of its duty in sight for a while: help with the next one instead.
@@ -830,6 +877,18 @@ function tickColony(s, c, dt){
     if (fighters.length){ c.protein -= fighters.length*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
       if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
       else c.pstarve = 0; }
+    // Build 23: the rooms at work.
+    // Fungus garden: leaves the gardeners brought in grow into food.
+    const fg = roomCount(s, 'fungus');
+    if (fg && (c.fungus || 0) > 0){ const lv = roomLevel(s, 'fungus'), rate = fg*(lv >= 3 ? 0.2 : 0.1)*dt, use = Math.min(c.fungus, rate); c.fungus -= use; c.store = Math.min(c.cap, c.store + use*(lv >= 3 ? 3 : lv >= 2 ? 2.25 : 1.5)); }
+    // Aphid barn: each rancher at work makes half a 🍯 a minute.
+    const rh = workers(s, 'rancher', 'herd', 'dairy', 4);
+    if (rh){ const lv = roomLevel(s, 'dairy'); c.dairyAcc = (c.dairyAcc || 0) + rh*0.5/60*dt*(lv >= 3 ? 2 : lv >= 2 ? 1.5 : 1); if (c.dairyAcc >= 1){ c.dairyAcc -= 1; addSugar(s, 1); if (lv >= 3) c.store = Math.min(c.cap, c.store + 1); } }
+    // Infirmary: medics heal the wounded inside (your ant too, at level II) and cure Cordyceps.
+    const md = workers(s, 'medic', 'heal', 'infirmary', 3);
+    if (md){ const lv = roomLevel(s, 'infirmary'), hr = (lv >= 2 ? 2 : 1)*Math.min(3, md)*0.5*dt;
+      for (const a of s.ants) if (!a.team && (a.state === 'in' || a.state === 'build' || (a.isPlayer && lv >= 2 && P.inNest)) && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + hr);
+      for (const a of s.ants) if (!a.team && a.infect != null && a.infect < CORD.turn && a.state === 'in' && Math.random() < dt*0.25*md){ a.infect = null; if (!c.saidMedic){ c.saidMedic = true; P.msg = 'Your medics cured an ant of the fungus.'; } } }
     // Flower nectar (build 18): each region held gives half a 🍯 a minute.
     if (has(s, 'nectar')){ const n = Object.keys(c.held || {}).length; if (n){ c.nectarAcc = (c.nectarAcc || 0) + n*0.5/60*dt; if (c.nectarAcc >= 1){ c.nectarAcc -= 1; addSugar(s, 1); } } }
     // The queen heals slowly; if raiders kill her, the colony is lost.
@@ -884,7 +943,7 @@ function exitNest(s, a, state){
   else chooseExplore(s, a, state==='patrol' ? 9 : 0);
 }
 function roomTarget(s, a){
-  const key = a.caste==='soldier'||a.caste==='venom' ? 'barracks' : a.caste==='nurse' ? (roomOf(s,'nursery')?'nursery':'hatchery') : a.caste==='forager' ? 'store' : 'queen';
+  const key = CASTE_ROOM[a.caste] && roomOf(s, CASTE_ROOM[a.caste]) ? CASTE_ROOM[a.caste] : a.caste==='soldier'||a.caste==='venom' ? 'barracks' : a.caste==='nurse' ? (roomOf(s,'nursery')?'nursery':'hatchery') : a.caste==='forager' ? 'store' : 'queen';
   let r = roomOf(s, key) || s.queen.room; if (!r) return [SHAFT, 0];
   return [r.x0 + Math.floor(Math.random()*(r.w||4)), r.y0 + Math.floor(Math.random()*(r.h||3))];
 }
@@ -944,24 +1003,42 @@ const DUTIES = {
   build: { name: 'Dig and build', icon: '⛏' },
   nurse: { name: 'Tend eggs', icon: '🥚' },
   guard: { name: 'Guard the door', icon: '🛡' },
+  // Build 23.
+  wood:   { name: 'Fetch wood', icon: '🪵', out: true, kind: 'wood' },
+  leaves: { name: 'Cut leaves', icon: '🍃', out: true, kind: 'leaf' },
+  herd:   { name: 'Herd aphids', icon: '🐛' },
+  heal:   { name: 'Tend the wounded', icon: '🩹' },
 };
+// Duties done inside the nest (an ant on one stays in).
+const INSIDE = { build: 1, nurse: 1, herd: 1, heal: 1 };
 // Who can do what, main duty first.
 const JOBS0 = {
-  forager: ['food', 'water', 'stone', 'hunt'],
-  builder: ['build', 'stone', 'food', 'water'],
+  forager: ['food', 'water', 'stone', 'wood', 'hunt'],
+  builder: ['build', 'stone', 'wood', 'food', 'water'],
   nurse:   ['nurse', 'water', 'food'],
   soldier: ['guard', 'hunt', 'food'],
   venom:   ['hunt', 'guard', 'food'],
+  gardener: ['leaves', 'food', 'water'],
+  rancher:  ['herd', 'food'],
+  medic:    ['heal', 'food', 'water'],
+  harvester:['food', 'stone', 'wood', 'water'],
 };
 function jobsOf(s, caste){
   const c = s.colony; if (!c.jobs) c.jobs = {};
   if (!c.jobs[caste]) c.jobs[caste] = (JOBS0[caste] || []).map(d => [d, 1]);
+  for (const d of JOBS0[caste] || []) if (!c.jobs[caste].some(j => j[0] === d)) c.jobs[caste].push([d, 1]); // duties added since the save
   return c.jobs[caste];
 }
 // Make a duty this kind's main one (first), or switch it on or off.
 function setJobFirst(s, caste, duty){ const L = jobsOf(s, caste), i = L.findIndex(j => j[0] === duty); if (i < 0) return false; const [j] = L.splice(i, 1); j[1] = 1; L.unshift(j); return true; }
 function toggleJob(s, caste, duty){ const L = jobsOf(s, caste), j = L.find(j => j[0] === duty); if (!j) return false; j[1] = j[1] ? 0 : 1; return true; }
 const stoneGoal = s => Math.max(30, (QUEEN_UP[s.queen.level] || {}).grit || 0);
+// 🪵 wanted once something needs it: the queen's last levels, a room's level III.
+const woodGoal = s => (s.queen.level >= 2 || ROOM_KEYS.some(k => ROOMS[k].lv && roomCount(s, k) && roomLevel(s, k) >= 2)) ? 40 : 0;
+// Gardeners keep the fungus garden fed: up to 60 leaf a garden.
+const fungusCap = s => roomCount(s, 'fungus')*60;
+// Ants working a room from inside: up to `per` a room, more with its level II.
+function workers(s, caste, duty, room, per){ const cap = roomCount(s, room)*(per + (roomLevel(s, room) >= 2 ? 2 : 0)); let n = 0; for (const a of s.ants) if (!a.team && a.caste === caste && a.duty === duty && a.state === 'in') n++; return Math.min(n, cap); }
 function buildWork(s){ const n = s.nest, spoil = n.spoil || 0; return s.colony.buildQueue.length > 0 || s.repairs.length > 0 || spoil > 0 || n.fillOrders.length > 0 || (n.digOrders.length > 0 && spoil < SPOIL_MAX); }
 const doorAlarm = s => { const c = s.colony; return s.alarm[idx(c.ex, c.ey)] + nearAlarm(s); };
 // Prey for hunters: a small creature or the caterpillar within reach of home.
@@ -978,6 +1055,8 @@ function dutyNeed(s, a, d){
   if (d === 'food' && covered(s, a, d, c.cap - c.store)) return 0;
   if (d === 'water' && covered(s, a, d, c.waterCap - c.water)) return 0;
   if (d === 'stone' && covered(s, a, d, stoneGoal(s) - c.grit)) return 0;
+  if (d === 'wood' && covered(s, a, d, woodGoal(s) - (c.wood || 0))) return 0;
+  if (d === 'leaves' && covered(s, a, d, fungusCap(s) - (c.fungus || 0))) return 0;
   switch (d){
     case 'food': return c.store < c.cap - 1 ? 0.3 + Math.max(0, 1 - c.store/c.cap)*0.9 : 0;
     case 'water': return c.water < c.waterCap*0.9 ? 0.3 + (1 - c.water/c.waterCap)*0.9 : 0;
@@ -988,6 +1067,10 @@ function dutyNeed(s, a, d){
       // Hauling meat matters as much as protein is short (build 19).
       return s.items.some(f => (f.kind === 'protein' || f.kind === 'chitin') && f.amt > 0 && !heavy(f) && !f.carried && Math.hypot(f.x - c.ex, f.y - c.ey) < forageRange(s)) ? (c.protein < 30 ? 0.9 : c.protein < 100 ? 0.5 : 0.15) : 0;
     case 'build': return a.caste === 'builder' && buildWork(s) ? 1 : 0;
+    case 'wood': return (c.wood || 0) < woodGoal(s) ? 0.3 + (1 - (c.wood || 0)/woodGoal(s))*0.8 : 0;
+    case 'leaves': return a.caste === 'gardener' && fungusCap(s) && (c.fungus || 0) < fungusCap(s)*0.9 ? 0.4 + (1 - (c.fungus || 0)/fungusCap(s))*0.8 : 0;
+    case 'herd': return a.caste === 'rancher' && roomOf(s, 'dairy') ? 1 : 0;
+    case 'heal': return a.caste === 'medic' && roomOf(s, 'infirmary') ? 1 : 0;
     case 'nurse': return a.caste === 'nurse' && (c.eggs.length || c.eggQueue.length) ? 1 : 0;
     case 'guard': {
       const al = doorAlarm(s); if (al > 0.2 && (has(s, 'stridulation') || picked(s, 'soldier', 'alarm'))) return 2;
@@ -1004,7 +1087,7 @@ function dutyNeed(s, a, d){
 function chooseDuty(s, a, except){
   for (const [d, on] of jobsOf(s, a.caste)){
     if (!on || d === except) continue;
-    const n = dutyNeed(s, a, d), thr = d === 'build' || d === 'nurse' ? 0 : d === 'guard' || d === 'hunt' && CASTES[a.caste].fight >= 3 ? a.thr.d : a.thr.f;
+    const n = dutyNeed(s, a, d), thr = INSIDE[d] ? 0 : d === 'guard' || d === 'hunt' && CASTES[a.caste].fight >= 3 ? a.thr.d : a.thr.f;
     if (n > thr) return d;
   }
   return null;
@@ -2193,15 +2276,19 @@ function queueEgg(s, caste){
   if (c.eggQueue.length >= 10) return false;
   if (!payCost(c, eggCost(s, caste))) return false; c.eggQueue.push(caste); return true;
 }
-function eggLock(s, caste){ const c = s.colony; if (caste==='soldier' && roomSlotIndex(s,'barracks')<0) return 'needs Barracks'; if (caste==='nurse' && roomSlotIndex(s,'nursery')<0) return 'needs Nursery'; if (caste==='venom' && !c.trophies.spider) return 'needs spider fang'; return ''; }
+function eggLock(s, caste){ const c = s.colony; if (CASTE_ROOM[caste] && !roomOf(s, CASTE_ROOM[caste])) return 'needs ' + (has(s, ROOMS[CASTE_ROOM[caste]].evo) ? 'a ' : 'to evolve and build a ') + ROOMS[CASTE_ROOM[caste]].name; if (caste==='soldier' && roomSlotIndex(s,'barracks')<0) return 'needs Barracks'; if (caste==='nurse' && roomSlotIndex(s,'nursery')<0) return 'needs Nursery'; if (caste==='venom' && !c.trophies.spider) return 'needs spider fang'; return ''; }
 // Why another of this room can't be placed now, or ''.
 function roomLock(s, room){
   const n = roomCount(s, room), q = s.colony.buildQueue.filter(j => j.room === room).length;
   if (q) return 'being built';
   if (room === 'armory'){ if (!s.colony.trophies.shell) return 'needs the ground beetle’s shell'; if (n) return 'built'; }
+  if (ROOMS[room].evo && !has(s, ROOMS[room].evo)) return 'evolve ' + EVO_BY[ROOMS[room].evo].name + ' first';
   if (n >= roomCap(s)) return n ? `${n} of ${roomCap(s)}: upgrade the queen for another` : 'upgrade the queen';
   return '';
 }
+// Room levels (build 23): why this room kind can't go up a level now, or ''.
+function roomUpLock(s, key){ const R = ROOMS[key], n = roomLevel(s, key); if (!R.lv) return 'no levels'; if (!roomCount(s, key)) return 'build one first'; if (n > R.lv.length) return 'top level'; return ''; }
+function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; roomsChanged(s); s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone'); return true; }
 function queueRoom(s, room, cell){
   const c = s.colony, R = ROOMS[room]; if (!R || !s.queen.placed || !cell) return false;
   if (roomLock(s, room)) return false;
@@ -2246,7 +2333,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

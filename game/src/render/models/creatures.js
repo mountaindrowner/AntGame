@@ -291,11 +291,44 @@ function outfit(kind) {
     parts.push(paintC(new THREE.CylinderGeometry(R, R * 0.9, 0.6, 10, 1, true).translate(c[0] - 0.1, y + 0.3, 0), '#ffcc2a'));
     for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; parts.push(paintC(new THREE.ConeGeometry(0.24, 0.7, 4).translate(c[0] - 0.1 + Math.cos(a) * R, y + 0.95, Math.sin(a) * R), '#ffd84a')); parts.push(ball(0.15, c[0] - 0.1 + Math.cos(a + 0.6) * R * 1.03, y + 0.3, Math.sin(a + 0.6) * R * 1.03, '#e01838')); }
   }
+  // Build 23's kinds.
+  if (kind === 'straw') {
+    // Gardener: a wide straw sun hat, and a green leaf-pattern sash.
+    const [c, r] = W.head, y = c[1] + r[1] * 0.75;
+    parts.push(paintC(new THREE.CylinderGeometry(2.2, 2.2, 0.14, 14).translate(c[0] - 0.1, y + 0.1, 0), (px, py, pz) => (Math.floor(Math.hypot(px - c[0], pz) * 3) % 2 ? '#e8cc78' : '#d8b860')));
+    parts.push(paintC(new THREE.CylinderGeometry(0.9, 1.15, 0.8, 10).translate(c[0] - 0.1, y + 0.5, 0), '#e0c470'), paintC(new THREE.CylinderGeometry(1.17, 1.17, 0.2, 10).translate(c[0] - 0.1, y + 0.25, 0), '#4a8a2a'));
+    const [tc, tr] = W.thorax;
+    parts.push(band(tc[0] + tr[0] * 0.1, tc[1], tr[1] + 0.2, tr[2] + 0.22, 0.7, '#5aa034'));
+  }
+  if (kind === 'stetson') {
+    // Rancher: a brown cowboy hat with a dented crown, a red neckerchief.
+    const [c, r] = W.head, y = c[1] + r[1] * 0.8;
+    const brim = new THREE.CylinderGeometry(2, 2, 0.14, 14), bp = brim.attributes.position;
+    for (let i = 0; i < bp.count; i++) { const z = bp.getZ(i); bp.setY(i, bp.getY(i) + Math.max(0, Math.abs(z) - 1) * 0.5); }
+    parts.push(paintC(brim.translate(c[0] - 0.1, y + 0.05, 0), '#8a5a2e'));
+    parts.push(paintC(new THREE.CylinderGeometry(0.85, 1.05, 1.1, 10).translate(c[0] - 0.1, y + 0.6, 0), (px, py) => (py > y + 1 ? '#7a4e26' : '#8a5a2e')), paintC(new THREE.CylinderGeometry(1.07, 1.07, 0.18, 10).translate(c[0] - 0.1, y + 0.2, 0), '#3a2414'));
+    parts.push(band(c[0] - r[0] * 0.9, c[1] - 0.1, r[1] * 0.75, r[2] * 0.8, 0.5, '#d83a2a'));
+  }
+  if (kind === 'medic') {
+    // Medic: a white armband with a red cross on the thorax, and a satchel on the gaster.
+    const [tc, tr] = W.thorax;
+    parts.push(band(tc[0] + tr[0] * 0.2, tc[1], tr[1] + 0.15, tr[2] + 0.18, 0.9, '#f4f2ee'));
+    for (const sd of [-1, 1]) { parts.push(box(0.5, 0.16, 0.12, tc[0] + tr[0] * 0.2, tc[1] + 0.1, sd * (tr[2] + 0.22), '#e02020'), box(0.16, 0.5, 0.12, tc[0] + tr[0] * 0.2, tc[1] + 0.1, sd * (tr[2] + 0.22), '#e02020')); }
+    const [ac, ar] = W.abdomen;
+    parts.push(box(1.3, 0.9, 0.9, ac[0] + ar[0] * 0.3, ac[1] + ar[1] * 0.9, 0, '#f0ece2'), box(0.5, 0.14, 0.92, ac[0] + ar[0] * 0.3, ac[1] + ar[1] * 0.9 + 0.2, 0, '#e02020'), box(0.14, 0.5, 0.92, ac[0] + ar[0] * 0.3, ac[1] + ar[1] * 0.9 + 0.2, 0, '#e02020'));
+  }
+  if (kind === 'sack') {
+    // Harvester: a bulging burlap sack of seed on its back, tied at the neck.
+    const [ac, ar] = W.abdomen, x = ac[0] + ar[0] * 0.35, y = ac[1] + ar[1] + 0.6;
+    parts.push(paintC(new THREE.SphereGeometry(1.2, 8, 6).scale(1.2, 0.9, 1).translate(x, y, 0), (px, py, pz) => ((Math.floor(px * 4) + Math.floor(pz * 4)) % 2 ? '#b8965a' : '#a8864a')));
+    parts.push(paintC(new THREE.CylinderGeometry(0.3, 0.5, 0.5, 6).translate(x + 0.6, y + 0.9, 0), '#a8864a'), paintC(new THREE.TorusGeometry(0.34, 0.08, 3, 8).rotateX(Math.PI / 2).translate(x + 0.6, y + 0.8, 0), '#6a4a2a'));
+    for (let k = 0; k < 3; k++) parts.push(ball(0.22, x + 0.5 + k * 0.15, y + 1.2, (k - 1) * 0.2, '#e8c45a', [1.4, 0.7, 0.8]));
+  }
   const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
   g.computeVertexNormals();
   return g;
 }
-const OUTFIT_OF = { builder: 'belt', forager: 'apron', nurse: 'cap', soldier: 'helmet', venom: 'bandana', queen: 'crown' };
+const OUTFIT_OF = { builder: 'belt', forager: 'apron', nurse: 'cap', soldier: 'helmet', venom: 'bandana', queen: 'crown', gardener: 'straw', rancher: 'stetson', medic: 'medic', harvester: 'sack' };
 const outfits = new Map();
 // The outfit a caste wears (null for none), baked once.
 export function outfitGeometry(caste) {

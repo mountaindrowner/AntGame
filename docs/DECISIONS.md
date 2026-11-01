@@ -2,6 +2,47 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: rooms from the evolution tree, their own ants, room levels, and wood (build 23)
+
+Mark: "I'd like later more complicated rooms to become available with later evolutions. Maybe building or training other ants requires special rooms? With each room also having individual upgrades... Keep thinking into ant ecology."
+
+The whole room plan, from real ant ecology, is in `docs/ROOMS.md`. This build is its first wave.
+
+**A correction:** I had told Mark that 53 of 56 evolution nodes worked. That was wrong: 34 were still placeholders ("coming in a later build"). I had counted only the ones waiting on wood. This build makes four of them real, the four rooms below; 30 placeholders remain.
+
+**The rules every new room follows:**
+- **Evolution.** It comes from a node in the evolution tree. Until that node is evolved, the room shows in the Build list greyed, with "evolve … first".
+- **Its own ant.** The room trains an ant of its own: the queen can't lay one until the room stands, and the egg menu doesn't list it until the room is evolved.
+- **Room levels II and III,** bought from a new "Room levels" section in the Build list. Level III costs 🪵 wood.
+
+**The four rooms:**
+- **Fungus garden** (Symbiosis, after Aphid farming), based on leafcutters.
+  - Its **Gardeners**, in straw sun hats, go out cutting leaf pieces. They carry them home over their heads.
+  - The garden grows the leaf into food: 1.5 food a leaf. At level II it's 2.25; at level III it's 3, grown twice as fast.
+  - A 🍃 chip shows the leaf stock.
+- **Aphid barn** (Symbiosis, after Aphid farming; the node is now "Root aphid ranching"), based on *Lasius flavus*.
+  - Its **Ranchers**, in cowboy hats, stay in and herd root aphids: half a 🍯 a minute each, 4 to a barn.
+  - Level II: half again more, and 2 more ranchers.
+  - Level III: twice the 🍯, and a little food.
+- **Infirmary** (Nest, after Insulation), based on *Megaponera*.
+  - Its **Medics** wear a red-cross armband and satchel. They heal the wounded inside and cure Cordyceps before it turns.
+  - Level II: twice as fast, your ant too.
+  - Level III: the medics carry the fallen home. One in four ants killed within 24 tiles of the nest is saved; starving ants are not.
+- **Granary** (Nest, after Store II), based on harvester ants.
+  - It adds +100 food cap, and +150 more at level II.
+  - Its **Harvesters**, with sacks of seed on their backs, carry seed, crumbs and popcorn in double loads.
+  - Level III: they chew seed into ant bread, worth half again.
+
+**Wood:**
+- **Where it comes from:** 🪵 twigs fall within your foragers' reach, more on bark, mulch, leaves and hedges.
+- **When it turns up:** only once something needs it, which is the queen's level 3 or a room reaching level II.
+- **Who fetches it:** a new "Fetch wood" duty for foragers and builders. Duties added in a build are now appended to saved job lists.
+- **What it unlocks:** "coming in a later build" is gone from wood costs. The queen's last levels and the builder's last upgrade can now be bought. The wood-gated nodes (Workshop III, Royal chamber, Highways) stay placeholders until their features are built.
+
+**Checks:**
+- 79 tests, 7 of them new (`tests/rooms.test.js`).
+- The bots are unchanged by this build: 3 of 3 reached 40 ants and 1 won. They don't use the new rooms yet.
+
 ## Nov 1: your ant starts slower (build 22.1)
 
 Mark: "The slower speed is meant generally for the ant, but especially for our ant, because I feel like he moves a little too fast [at the] beginning."

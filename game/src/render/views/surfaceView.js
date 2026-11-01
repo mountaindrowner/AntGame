@@ -69,6 +69,7 @@ function casteColor(a) {
   const C = CASTES[a.caste];
   if (a.team) return C.fight >= 3 ? COLORS.rivalSoldier : COLORS.rivalAnt;
   if (a.caste === 'venom') return COLORS.venom;
+  if (COLORS[a.caste] && CASTES[a.caste] && SIM.CASTE_ROOM[a.caste]) return COLORS[a.caste]; // build 23's kinds
   if (C.fight >= 3) return COLORS.soldier;
   if (a.caste === 'builder') return COLORS.builder;
   if (a.caste === 'nurse') return COLORS.nurse;

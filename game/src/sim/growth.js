@@ -7,7 +7,8 @@
 // Materials the colony keeps (sim colony fields). Sugar and chitin arrived in
 // build 18; wood comes later, and costs that use it can't be paid yet.
 export const RES = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨', genes: '🧬', sugar: '🍯', chitin: '🪲', wood: '🪵' };
-export const LATER = { wood: '🪵 wood' };
+// Materials no build has yet (build 23: wood arrived; none left for now).
+export const LATER = {};
 export const laterIn = (cost) => Object.keys(cost || {}).find((k) => LATER[k]);
 
 // ---------- veteran ranks ----------
@@ -25,7 +26,7 @@ export const rankOf = (a) => { if (a.legend) return 4; const x = a.xp || 0; let 
 export const NAMES = ['Thorn', 'Burr', 'Pip', 'Flint', 'Moss', 'Sorrel', 'Bramble', 'Tansy', 'Rook', 'Clove', 'Wren', 'Sedge', 'Nettle', 'Fern', 'Pebble', 'Husk', 'Ash', 'Rue', 'Sage', 'Briar', 'Thistle', 'Juniper', 'Dock', 'Yarrow', 'Vetch', 'Teasel', 'Chert', 'Loam', 'Quill', 'Sloe'];
 
 // Each ant type's family sets which promotions its veterans can learn.
-export const FAMILY = { forager: 'gather', builder: 'dig', soldier: 'fight', venom: 'fight', nurse: 'nest' };
+export const FAMILY = { forager: 'gather', builder: 'dig', soldier: 'fight', venom: 'fight', nurse: 'nest', gardener: 'gather', harvester: 'gather', rancher: 'nest', medic: 'nest' };
 export const PROMOS = {
   gather: [['trailwise', 'Trailwise', '20% faster on a trail'], ['strongback', 'Strongback', 'Carries one more'], ['keen', 'Keen nose', 'Spots food further off'], ['dodger', 'Dodger', 'Dodges the first foot, beak or acorn']],
   dig: [['quick', 'Quick digger', 'Digs 25% faster'], ['steady', 'Steady', 'Counts double against cave-ins'], ['packer', 'Packer', 'Hauls two loads of spoil'], ['fixer', 'Fixer', 'Repairs cave-ins twice as fast']],
@@ -136,10 +137,10 @@ export const EVO = [
   { key: 'store2', branch: 'nest', name: 'Store II', cost: { genes: 1, food: 100, grit: 20 }, fx: 'Holds 400 food', need: 'store', deed: ['Fill the store to 150', (s) => (s.colony.storePeak || 0) >= 150] },
   { key: 'store3', branch: 'nest', after: 'store2', name: 'Store III', cost: { genes: 1, food: 300, grit: 50 }, fx: 'Holds 1,000 food', need: 'store' },
   { key: 'honeypot', branch: 'nest', after: 'store3', name: 'Honeypot vault', cost: { genes: 3, sugar: 20 }, fx: 'Repletes: living jars', soon: true },
-  { key: 'granary', branch: 'nest', after: 'store2', name: 'Granary', cost: { genes: 2, grit: 30 }, fx: 'Harvesters; seeds never rot', soon: true },
+  { key: 'granary', branch: 'nest', after: 'store2', name: 'Granary', cost: { genes: 3, grit: 30 }, fx: 'The Granary room, and Harvesters: seed in double loads' },
   { key: 'insulation', branch: 'nest', name: 'Insulation', cost: { genes: 2 }, fx: 'Cave-ins halved; rain caves in less', deed: ['Repair 5 cave-ins', (s) => (s.colony.repaired || 0) >= 5] },
   { key: 'chimneys', branch: 'nest', after: 'insulation', name: 'Thermal chimneys', cost: { genes: 6, grit: 60 }, fx: 'No floods; eggs hatch 15% faster', soon: true },
-  { key: 'infirmary', branch: 'nest', name: 'Infirmary', cost: { genes: 3 }, fx: 'Medics', soon: true },
+  { key: 'infirmary', branch: 'nest', after: 'insulation', name: 'Infirmary', cost: { genes: 4, sugar: 15 }, fx: 'The Infirmary room, and Medics: heal the wounded, cure Cordyceps' },
   { key: 'midden', branch: 'nest', name: 'Midden', cost: { genes: 2 }, fx: 'Undertakers', soon: true },
   { key: 'workshop3', branch: 'nest', name: 'Workshop III', cost: { genes: 6, wood: 30 }, fx: 'Architects', soon: true },
   { key: 'deephalls', branch: 'nest', after: 'workshop3', name: 'Deep halls', cost: { genes: 8, grit: 100 }, fx: 'A fifth soil band; Miners', soon: true, big: true },
@@ -156,9 +157,9 @@ export const EVO = [
   { key: 'honourguard', branch: 'society', after: 'polygyny', name: 'Honour guard', cost: { genes: 5 }, fx: 'Elites guard the queens', soon: true },
   // Symbiosis
   { key: 'aphids', branch: 'symbiosis', name: 'Aphid farming', cost: { genes: 2, food: 20 }, fx: 'Honeydew gives three times the 🍯' },
-  { key: 'mealybugs', branch: 'symbiosis', after: 'aphids', name: 'Mealybug ranching', cost: { genes: 4 }, fx: 'Ranchers: sugar underground', soon: true },
+  { key: 'mealybugs', branch: 'symbiosis', after: 'aphids', name: 'Root aphid ranching', cost: { genes: 4, sugar: 10 }, fx: 'The Aphid barn room, and Ranchers: 🍯 underground' },
   { key: 'honeyeco', branch: 'symbiosis', after: 'mealybugs', name: 'Honey economy', cost: { genes: 8 }, fx: '🍯 pays wherever 🌾 does', soon: true, big: true },
-  { key: 'fungus', branch: 'symbiosis', name: 'Fungus garden', cost: { genes: 4 }, fx: 'Leafcutters; leaves become food', soon: true },
+  { key: 'fungus', branch: 'symbiosis', after: 'aphids', name: 'Fungus garden', cost: { genes: 5, food: 40 }, fx: 'The Fungus garden room, and Gardeners: leaves become food' },
   { key: 'beetles', branch: 'symbiosis', name: 'Beetle guests', cost: { genes: 4 }, fx: 'Rove beetles clean the nest', soon: true },
   { key: 'nectar', branch: 'symbiosis', name: 'Flower nectar', cost: { genes: 3, sugar: 10 }, fx: 'Each region you hold gives 🍯 a minute' },
 ];

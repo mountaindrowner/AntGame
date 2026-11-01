@@ -41,6 +41,16 @@ export const ICONS = {
   nursery: svg('<path d="M4 12a8 8 0 0 0 16 0z"/><path d="M4 12h16M7 20l2-3M17 20l-2-3"/><ellipse cx="12" cy="9" rx="2.5" ry="3"/>'),
   barracks: svg('<path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/>'),
   workshop: svg('<path d="M14 6l4 4-8 8-4-4z"/><path d="M14 6l2-2 4 4-2 2M6 14l-3 3 4 4 3-3"/>'),
+  armory: svg('<path d="M6 4h12v6c0 5-3 8-6 10-3-2-6-5-6-10z"/><path d="M12 4v16M6 10h12"/>'),
+  // Build 23: the new rooms and their ants.
+  fungus: svg('<path d="M4 13a8 6 0 0 1 16 0z"/><path d="M10 13v6h4v-6"/><circle cx="9" cy="10" r=".9" fill="currentColor"/><circle cx="14" cy="9" r=".9" fill="currentColor"/>'),
+  dairy: svg('<path d="M12 3v6"/><ellipse cx="8" cy="12" rx="2.4" ry="2"/><ellipse cx="16" cy="12" rx="2.4" ry="2"/><ellipse cx="12" cy="16" rx="2.4" ry="2"/><path d="M12 20v1" stroke-width="2.4"/>'),
+  infirmary: svg('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8" stroke-width="2.4"/>'),
+  granary: svg('<path d="M5 10l7-6 7 6v10H5z"/><ellipse cx="9" cy="16" rx="1.4" ry="2"/><ellipse cx="12" cy="15" rx="1.4" ry="2"/><ellipse cx="15" cy="16" rx="1.4" ry="2"/>'),
+  gardener: svg('<path d="M5 14c2-8 12-10 15-9-1 3-3 13-11 13"/><path d="M5 20l7-8"/>'),
+  rancher: svg('<path d="M3 13c2-1 16-1 18 0"/><path d="M7 13c0-4 2-6 5-6s5 2 5 6"/><path d="M9 17h6"/>'),
+  medic: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8" stroke-width="2.4"/>'),
+  harvester: svg('<ellipse cx="12" cy="13" rx="4" ry="6"/><path d="M12 7v12"/><path d="M8 5l2 2M16 5l-2 2"/>'),
   train: svg('<path d="M4 18l5-5 4 3 7-8"/><path d="M15 8h5v5"/>'),
   // Main menu: play, new, options, the film, back.
   play: svg('<path d="M8 5v14l11-7z" fill="currentColor"/>'),

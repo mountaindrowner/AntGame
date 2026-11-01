@@ -29,7 +29,7 @@ function itemCard(f) {
 // An ant's card (build 15): its name if it has one, its rank, kind and what
 // it's doing. Mark's brother tried hovering over ants to find "Thorn".
 const JOB = { explore: 'foraging', return: 'heading home', patrol: 'on guard', fight: 'fighting', follow: 'following you', spoil: 'hauling dirt out', raid: 'raiding', player: 'you' };
-const WHAT = { forager: 'Gathers food and water.', builder: 'Digs, builds and hauls dirt out.', nurse: 'Tends eggs so they hatch faster.', soldier: 'Guards the door and fights. Eats protein.', venom: 'Kills big things.' };
+const WHAT = { forager: 'Gathers food and water.', builder: 'Digs, builds and hauls dirt out.', nurse: 'Tends eggs so they hatch faster.', soldier: 'Guards the door and fights. Eats protein.', venom: 'Kills big things.', gardener: 'Cuts leaves for the fungus garden.', rancher: 'Herds root aphids for honeydew.', medic: 'Heals the wounded.', harvester: 'Carries seed in double loads.' };
 function antCard(s, a) {
   if (a.champion) return ['⚔', a.name, `Champion of the pavement ants, leading a war party. ${Math.ceil(a.hp)} health. Kill it and the rest break.`];
   if (a.zombie) return ['🍄', 'Infected ant', 'The fungus has it: it climbs to spread spores. Kill it before a stalk bursts from it.'];

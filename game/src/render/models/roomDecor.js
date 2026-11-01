@@ -76,6 +76,32 @@ const WALLS = {
     g.fillStyle = '#8a9a8a';
     for (let y = 1; y < 32; y += 8) for (let x = 2; x < 32; x += 8) g.fillRect(x, y, 1, 1);
   },
+  // Build 23. Fungus garden: a pale spongy comb.
+  fungus(g, r) {
+    g.fillStyle = '#5a4a36'; g.fillRect(0, 0, 32, 32);
+    for (let i = 0; i < 40; i++) { const x = Math.floor(r() * 32), y = Math.floor(r() * 32); g.fillStyle = r() < 0.5 ? '#c8b894' : '#a8987a'; g.fillRect(x, y, 2, 2); g.fillStyle = '#3e3022'; g.fillRect(x + 1, y + 1, 1, 1); }
+  },
+  // Aphid barn: dark earth threaded with pale roots.
+  dairy(g, r) {
+    g.fillStyle = '#3e2c1c'; g.fillRect(0, 0, 32, 32);
+    g.fillStyle = '#8a6a44';
+    for (let i = 0; i < 6; i++) { let x = Math.floor(r() * 32); for (let y = 0; y < 32; y++) { g.fillRect(x % 32, y, 1, 1); if (r() < 0.3) x += r() < 0.5 ? 1 : 31; } }
+    g.fillStyle = '#7aa84a'; for (let i = 0; i < 14; i++) g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 1, 1);
+  },
+  // Infirmary: soft moss-lined walls.
+  infirmary(g, r) {
+    g.fillStyle = '#4e5a3a'; g.fillRect(0, 0, 32, 32);
+    for (let i = 0; i < 90; i++) { g.fillStyle = r() < 0.5 ? '#5e6e44' : '#42502e'; g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 2, 1); }
+    g.fillStyle = '#c8d4a0'; for (let i = 0; i < 8; i++) g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 1, 1);
+  },
+  // Granary: smoothed clay with seed niches.
+  granary(g, r) {
+    g.fillStyle = '#7a5434'; g.fillRect(0, 0, 32, 32);
+    for (const [x, y] of [[3, 4], [19, 4], [11, 20], [27, 20]]) {
+      g.fillStyle = '#4a321e'; g.fillRect(x, y, 8, 7);
+      g.fillStyle = '#e0bc5a'; for (let k = 0; k < 6; k++) g.fillRect(x + 1 + Math.floor(r() * 6), y + 3 + Math.floor(r() * 3), 2, 1);
+    }
+  },
   // Dressed stone blocks.
   workshop(g) {
     g.fillStyle = '#6a6256'; g.fillRect(0, 0, 32, 32);
@@ -210,6 +236,56 @@ const DRESS = {
     for (let i = 0; i < stones; i++) d.put(PROPS.pebble, [8 + (i % 4) * 4.5, 2 + Math.floor(i / 4) * 3.2, -D * 0.8], [2.4, 2, 2.2], '#9a948c', [0, i, 0]);
     // Sawdust heap.
     d.put(PROPS.cone, [W * 0.35, 1.5, -D * 0.6], [4, 3, 3], '#c8a868');
+  },
+  // Build 23.
+  fungus(d) {
+    const { W, H, D, col, t } = d, fill = Math.min(1, (col.fungus || 0) / 60);
+    // Combs of fungus on beds of cut leaf, swelling as the garden is fed; white knots of food on them.
+    for (let i = 0; i < 3; i++) {
+      const x = W * (0.22 + i * 0.28), k = 0.7 + fill * 0.5 + (i % 2) * 0.1;
+      for (let j = 0; j < 5; j++) d.put(PROPS.leaf, [x + (j - 2) * 3, 0.4, -D * (0.7 + (j % 2) * 0.08)], [5, 3, 5], j % 2 ? '#4a8a2a' : '#6aa83a', [0, j * 1.3, 0]);
+      d.put(PROPS.dome, [x, 0.5, -D * 0.8], [10 * k, 12 * k, 6 * k], '#e4d8bc');
+      d.put(PROPS.dome, [x - 4, 0.5, -D * 0.74], [6 * k, 8 * k, 4 * k], '#d8ccae');
+      d.put(PROPS.dome, [x + 4, 0.5, -D * 0.76], [5 * k, 6 * k, 4 * k], '#ece2c8');
+      for (let j = 0; j < 6; j++) d.put(PROPS.dew, [x + (j - 2.5) * 2.8, 10 * k + Math.sin(j * 2) * 2, -D * 0.72], [1.2, 1.2, 1.2], '#fffaf0');
+    }
+    // Leaf pieces waiting by the door.
+    for (let i = 0; i < Math.round(fill * 6); i++) d.put(PROPS.leaf, [5 + i * 2.2, 0.6 + (i % 2), -D * 0.55], [3, 2, 3], '#5aa034', [0, i, 0.3]);
+  },
+  dairy(d) {
+    const { W, H, D, t } = d;
+    // Roots hang from the ceiling, crusted with green root aphids, honeydew dripping into a cup.
+    for (let i = 0; i < 4; i++) {
+      const x = W * (0.15 + i * 0.23), len = 12 + (i % 2) * 6;
+      d.put(PROPS.thorn, [x, H - len / 2, -D * 0.8], [1.6, len, 1.6], '#8a6a44', [0, 0, Math.PI]);
+      for (let j = 0; j < 6; j++) d.put(PROPS.dew, [x + Math.sin(j * 2.3) * 1.4, H - 2 - j * (len / 7), -D * 0.76], [1.1, 0.9, 1.1], j % 2 ? '#7ab84a' : '#9acc5a');
+      const ph = (t * 0.6 + i * 0.3) % 1;
+      d.put(PROPS.dew, [x, H - len - ph * (H - len - 4), -D * 0.76], [0.7, 0.9, 0.7], '#f0c860');
+      d.put(PROPS.cone, [x, 1.2, -D * 0.76], [2.4, 2.4, 2.4], '#a8784a', [Math.PI, 0, 0]);
+    }
+    // A pool of honeydew in the middle.
+    d.put(PROPS.puddle, [W / 2, 0.3, -D * 0.6], [6, 1, 4], '#e8b840');
+  },
+  infirmary(d) {
+    const { W, H, D } = d;
+    // Leaf cots, a moss pile, a dish of dew, rolled bandages of silk and a medic's satchel.
+    for (let i = 0; i < 3; i++) d.put(PROPS.leaf, [8 + i * 13, 0.6, -D * 0.68], [6, 2, 4], '#6a9a3a', [0, 0.2 * i, 0]);
+    d.put(NEST.moss, [W - 8, 0, -D * 0.8], [6, 5, 4], TRUE);
+    d.put(PROPS.puddle, [W / 2, 0.4, -D * 0.5], [3.2, 1, 2.4], '#7ac0e8');
+    d.put(PROPS.cyl, [W / 2, 0.6, -D * 0.5], [3.6, 1.2, 2.8], '#c8c0b0');
+    for (let i = 0; i < 3; i++) d.put(PROPS.cyl, [6 + i * 3.2, 1.4, -D + 3], [1.4, 1.4, 1.4], '#f4f0e8', [Math.PI / 2, 0, 0]);
+    d.put(PROPS.box, [W - 6, H - 10, -D + 1.2], [4, 3, 1], '#f0ece2');
+    d.put(PROPS.box, [W - 6, H - 10, -D + 1.8], [2.4, 0.6, 0.2], '#e02020');
+    d.put(PROPS.box, [W - 6, H - 10, -D + 1.8], [0.6, 2.4, 0.2], '#e02020');
+  },
+  granary(d) {
+    const { W, H, D, col } = d, fill = Math.min(1, col.store / Math.max(1, col.cap));
+    // Heaps of seed, a millstone pebble with rounds of ant bread, seed in the wall niches.
+    for (let i = 0; i < 3; i++) d.put(NEST.seedHeap, [8 + i * (W - 16) / 2, 0, -D * 0.74], [6, 3 + 6 * fill, 5], TRUE, [0, i, 0]);
+    d.put(PROPS.cyl, [W * 0.5, 2.2, -D * 0.55], [4, 1.6, 4], '#9a948c');
+    d.put(PROPS.cyl, [W * 0.5, 3.6, -D * 0.55], [3, 1.2, 3], '#aaa49a');
+    for (let i = 0; i < 3; i++) d.put(PROPS.puddle, [W * 0.5 + 7 + i * 0.4, 0.4 + i * 0.5, -D * 0.5], [2.6, 3, 2.6], '#d8a858');
+    for (let i = 0; i < 8; i++) d.put(PROPS.seed, [6 + (i % 4) * (W - 12) / 3, H - 10 - Math.floor(i / 4) * 10, -D + 1.2], [2.4, 1.6, 1.4], '#d8b04a', [0, 0, 0.4]);
   },
   armory(d) {
     const { W, H, D } = d;

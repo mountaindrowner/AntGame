@@ -10,6 +10,10 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Ants | Soldier | `ants-soldier.glb` |
 | Ants | Venom | `ants-venom.glb` |
 | Ants | Queen | `ants-queen.glb` |
+| Ants | Gardener | `ants-gardener.glb` |
+| Ants | Rancher | `ants-rancher.glb` |
+| Ants | Medic | `ants-medic.glb` |
+| Ants | Harvester | `ants-harvester.glb` |
 | Ants | worker stand | `ants-worker-stand.glb` |
 | Ants | worker walk 1 | `ants-worker-walk-1.glb` |
 | Ants | worker walk 2 | `ants-worker-walk-2.glb` |
@@ -49,6 +53,8 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Curios | Clip | `curios-clip.glb` |
 | Curios | Bead | `curios-bead.glb` |
 | Curios | Die | `curios-die.glb` |
+| Food | leafbit | `food-leafbit.glb` |
+| Food | twig | `food-twig.glb` |
 | Food | crumb | `food-crumb.glb` |
 | Food | seed | `food-seed.glb` |
 | Food | berry | `food-berry.glb` |

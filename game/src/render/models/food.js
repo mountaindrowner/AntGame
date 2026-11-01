@@ -265,7 +265,22 @@ function puddle() {
   return bake([ring(1.0, 1.14, 0.02, '#3e3020'), ring(0.9, 1.0, 0.05, '#bfe4f6'), ring(0.68, 0.9, 0.06, '#6fb2e6'), ring(0.4, 0.68, 0.07, '#3f86d0'), ring(0, 0.4, 0.08, '#2a6ab8')]);
 }
 
+// Build 23: a cut leaf piece (a half-moon bitten from a leaf, ribbed), and a twig.
+function leafPiece() {
+  const sh = new THREE.Shape(); sh.moveTo(-1, 0); sh.absarc(0, 0, 1, Math.PI, 0, true); sh.quadraticCurveTo(0.4, 0.35, 0, 0.25); sh.quadraticCurveTo(-0.4, 0.35, -1, 0);
+  const g = new THREE.ShapeGeometry(sh, 6).rotateX(-Math.PI / 2).translate(0, 0.08, 0.3);
+  return bake([paint(g, (x, y, z) => (Math.abs(x) < 0.06 ? '#a8d870' : Math.abs(x + z * 0.3) < 0.05 || Math.abs(x - z * 0.3) < 0.05 ? '#8ac850' : '#5aa034')), paint(new THREE.ShapeGeometry(sh, 6).rotateX(Math.PI / 2).translate(0, 0.06, -0.3), '#4a8a2a')]);
+}
+function twig() {
+  const parts = [], len = 2.2;
+  parts.push(paint(new THREE.CylinderGeometry(0.14, 0.18, len, 6).rotateZ(Math.PI / 2).translate(0, 0.17, 0), (x, y) => (y > 0.25 ? '#9a7a4e' : '#6a4e2e')));
+  parts.push(paint(new THREE.CylinderGeometry(0.06, 0.09, 0.7, 5).rotateZ(Math.PI / 2 - 0.7).translate(0.4, 0.35, 0.05), '#7a5a36'));
+  for (const sx of [-1, 1]) parts.push(paint(new THREE.CircleGeometry(0.15, 6).rotateY(sx * Math.PI / 2).translate(sx * len / 2, 0.17, 0), '#c8a070'));
+  return bake(parts);
+}
 export const FOOD = {
+  leafbit: leafPiece(),
+  twig: twig(),
   crumb: breadCrumb(),
   seed: seed(),
   berry: berry(),
@@ -299,6 +314,8 @@ export function itemLook(f, COLORS) {
     if (f.type === 'puddle') return { geo: FOOD.puddle, key: 'puddle', color: '#ffffff', r: (10 + Math.min(f.amt, 40) * 0.45) * 2, water: true };
     return { dew: true, r: Math.min(5, 2.6 + f.amt * 0.3), beads: Math.max(1, Math.min(4, Math.ceil(f.amt / 2))) };
   }
+  if (f.kind === 'leaf') return { geo: FOOD.leafbit, key: 'leafbit', color: '#ffffff', r: 3.4 };
+  if (f.kind === 'wood') return { geo: FOOD.twig, key: 'twig', color: '#ffffff', r: 3.2 };
   if (f.kind === 'grit') return { geo: PROPS.pebble, key: 'pebble', color: COLORS.grit, r: 2.6, lift: 0.6 };
   if (f.kind === 'chitin') return { geo: FOOD.shell, key: 'shell', color: '#ffffff', r: 3 + Math.min(f.amt, 15) * 0.15 };
   if (f.kind === 'protein' && f.type === 'hotdog') return { geo: FOOD.hotdog, key: 'hotdog', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.12) };
@@ -329,6 +346,9 @@ export function carryLook(kind, itype, COLORS) {
   if (kind === 'dirt') return { geo: PROPS.pebble, key: 'cdirt', color: '#6a4628', r: 1.15 }; // a clod of dug dirt for the spoil heap
   if (kind === 'protein') return { geo: PROPS.meat, key: 'cmeat', color: COLORS.protein, r: 1 };
   if (kind === 'chitin') return { geo: FOOD.shell, key: 'cshell', color: '#ffffff', r: 0.9 };
+  // A gardener holds its leaf up over its head, like a sail (leafcutters do).
+  if (kind === 'leaf') return { geo: FOOD.leafbit, key: 'cleaf', color: '#ffffff', r: 1.5 };
+  if (kind === 'wood') return { geo: FOOD.twig, key: 'ctwig', color: '#ffffff', r: 0.9 };
   if (itype === 'aphids') return { geo: PROPS.crumb, key: 'choney', color: '#e8c860', r: 0.9 }; // a drop of honeydew
   if (TREAT_COLOR[itype]) return { geo: PROPS.crumb, key: 'c' + itype, color: TREAT_COLOR[itype], r: 1 };
   const g = FOOD[itype] && !Array.isArray(FOOD[itype]) ? itype : 'crumb';
