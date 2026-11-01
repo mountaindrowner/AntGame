@@ -8,7 +8,7 @@ import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
 import { psx, psxBasic, setSeeHole } from '../ps1/materials.js';
 import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
-import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
+import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
 import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
@@ -409,6 +409,9 @@ export class SurfaceView {
       if (a.knockT > 0) { const u = 1 - a.knockT / 0.3; tmpQ.multiply(tmpQ3.setFromAxisAngle(XAX, u * Math.PI * 2)); tmpV.y += Math.sin(u * Math.PI) * 6; }
       // Still ants stand and breathe instead of walking on the spot.
       this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
+      // Each kind of ours wears its outfit (build 20.2); rivals don't.
+      const fit = !a.team && !a.zombie && outfitGeometry(a.caste);
+      if (fit) this.crowd.pushAtScale('fit' + a.caste, fit, tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), '#ffffff');
       if (a.carry) {
         const c = carryLook(a.kind, a.itype, COLORS);
         tmpV.set(a.x + a.dx * 6.4 * k, FOOT * k * 0.7, a.y + a.dy * 6.4 * k);

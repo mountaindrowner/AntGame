@@ -8,7 +8,7 @@ import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { rampTexture, PALETTE } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
-import { antGeometry, planFor, FOOT, WALK_FRAMES } from '../models/creatures.js';
+import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
 import { PROPS } from '../models/props.js';
 import { carryLook } from '../models/food.js';
 import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
@@ -172,6 +172,8 @@ export class NestView {
     this.motion = new MotionTracker();
     this.queenMesh = new THREE.Mesh(antGeometry('queen', -1), psx({ vertexColors: true, color: COLORS.queen }));
     this.dyn.add(this.queenMesh);
+    // Her crown rides on her head (build 20.2).
+    this.queenMesh.add(new THREE.Mesh(outfitGeometry('queen'), psx({ vertexColors: true })));
     this.roomLights = [];
     for (let i = 0; i < 8; i++) {
       const l = new THREE.PointLight('#ffb870', 0, 140, 1.4);
@@ -252,6 +254,8 @@ export class NestView {
     }
     // Breathing: the body swells a little, mostly upward.
     this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * breathe), k * (1 + 0.04 * breathe), k * (1 + 0.025 * breathe), color);
+    const fit = !a.team && !a.zombie && outfitGeometry(a.caste);
+    if (fit) this.crowd.pushAtScale('fit' + a.caste, fit, tmpV, tmpQ, k * (1 + 0.012 * breathe), k * (1 + 0.04 * breathe), k * (1 + 0.025 * breathe), '#ffffff');
     if (a.carry) {
       const fx = climbing ? 0 : (a.dx < 0 ? -1 : 1), fy = climbing ? (a.dy > 0 ? -1 : 1) : 0;
       tmpV.x += fx * 6.4 * k;

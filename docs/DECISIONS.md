@@ -2,6 +2,23 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: an outfit for each kind of ant, and the dead spider's legs (build 20.2)
+
+Mark: "make the ant kinds more unique… worker ants have like a little work belt… the soldier ants have like an army helmet… foragers… some kind of apron… Also, the dead spider, the legs seem to be under the body when they should be above."
+
+- **Every kind of our ant wears something of its own**, in true colours on top of its caste tint, drawn with the body:
+  - **Builder:** a yellow hard hat, plus a leather tool belt round the gaster with a gold buckle, side pouches and a hammer. The hat was added so builders read from the top-down camera.
+  - **Forager:** a green garden apron round the thorax with crossed straps and a bow on the back, and a little woven basket on its back.
+  - **Nurse:** a white nurse's cap with a red cross.
+  - **Soldier:** an olive army helmet with a brim and chin straps.
+  - **Venom ant:** a black bandana with a white skull, its knot trailing.
+  - **The queen:** a gold crown with red jewels.
+  - Your ant wears its kind's outfit too.
+  - Rival ants and Cordyceps zombies wear none, so they stand apart.
+  - In the gallery, each kind is shown in its colours and outfit.
+  - The first versions were too small and dark to read at game size, so every piece was made bigger and brighter.
+- **The dead spider's legs:** turned on its back, its legs curled down into the body instead of up over it. The knees were bent the wrong way for a body drawn upside down. Now the legs tuck in over the belly with the knees high in the air.
+
 ## Nov 1: model pass, layers 1 and 2 (build 20.1)
 
 Mark: "do that in different layers. Do the full pass and then give me screenshots of the most major changes." The pass works from the model gallery, most-seen first. Before-and-after sheets go to Mark each layer.

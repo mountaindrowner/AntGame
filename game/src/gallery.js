@@ -4,7 +4,8 @@
 // each one out as a standalone .glb.
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import { antGeometry, WALK_FRAMES } from './render/models/creatures.js';
+import { antGeometry, WALK_FRAMES, outfitGeometry } from './render/models/creatures.js';
+import { COLORS } from './config.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT } from './render/models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, MILLI } from './render/models/critters.js';
 import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, antlionGeometry, stalkGeometry, alateGeometry } from './render/models/bosses.js';
@@ -28,7 +29,9 @@ function chain(kinds, make, gap, r) {
 }
 const G = [];
 const add = (group, name, line, make) => G.push({ group, name, line, make });
-// Ants.
+// Ants: each kind in its colours and its outfit (build 20.2), then the bare body plans.
+for (const [caste, plan, tint, line] of [['forager', 'worker', COLORS.ourAnt, 'Garden apron'], ['builder', 'worker', COLORS.builder, 'Work belt and hammer'], ['nurse', 'worker', COLORS.nurse, 'Nurse\u2019s cap'], ['soldier', 'soldier', COLORS.soldier, 'Army helmet'], ['venom', 'soldier', COLORS.venom, 'Skull bandana'], ['queen', 'queen', COLORS.queen, 'Crown']])
+  add('Ants', caste[0].toUpperCase() + caste.slice(1), line, () => { const gr = new THREE.Group(); gr.add(new THREE.Mesh(antGeometry(plan, 1), new THREE.MeshLambertMaterial({ vertexColors: true, color: tint }))); gr.add(new THREE.Mesh(outfitGeometry(caste), mat)); return gr; });
 for (const plan of ['worker', 'soldier']) for (let f = 0; f < WALK_FRAMES; f++) add('Ants', `${plan} ${f ? 'walk ' + f : 'stand'}`, plan === 'worker' ? 'Forager, builder, nurse (one tint each)' : 'Soldier and Venom ant', one(antGeometry(plan, f)));
 // Creatures.
 add('Creatures', 'Wolf spider: walking', 'The first boss', one(spiderGeometry(2), SPIDER_FOOT));

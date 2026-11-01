@@ -72,9 +72,13 @@ function leg(side, i, swing, lift, raise, pose) {
   const L = LEGS[i];
   const hip = V(L.hx, 1.5, side * 2.1);
   const a = (L.ang * Math.PI) / 180;
-  // pose 'crouch': feet wide and the body low; 'dead': legs curled in.
-  const reach = L.reach * (pose === 'crouch' ? 1.12 : pose === 'dead' ? 0.3 : 1);
-  const footY = pose === 'crouch' ? -(SPIDER_FOOT - SPIDER_CROUCH) : pose === 'dead' ? 2.5 : -SPIDER_FOOT;
+  // pose 'crouch': feet wide and the body low; 'dead': legs curled in over
+  // the belly. The dead body is drawn on its back, so "over the belly" is
+  // below it here: feet tucked in under the body, knees bent further down,
+  // which turned over puts the knees high in the air (build 20.2: Mark saw
+  // the legs folded into the body).
+  const reach = L.reach * (pose === 'crouch' ? 1.12 : pose === 'dead' ? 0.42 : 1);
+  const footY = pose === 'crouch' ? -(SPIDER_FOOT - SPIDER_CROUCH) : pose === 'dead' ? -6.5 : -SPIDER_FOOT;
   const foot = V(hip.x + Math.cos(a) * reach + swing, footY + lift + raise, side * (2.1 + Math.sin(a) * reach));
   if (raise) foot.x += 3;
   // Two-bone IK in the vertical plane through hip and foot; leg lengths are
@@ -86,6 +90,7 @@ function leg(side, i, swing, lift, raise, pose) {
   const sideAx = dir.clone().cross(UP).normalize();
   const upP = sideAx.clone().cross(dir).normalize();
   if (upP.y < 0) upP.negate();
+  if (pose === 'dead') { upP.negate(); upP.addScaledVector(V(0, 0, side), 0.6).normalize(); }
   const ang = Math.acos(Math.max(-1, Math.min(1, (L1 * L1 + d * d - L2 * L2) / (2 * L1 * d))));
   const knee = hip.clone().addScaledVector(dir, Math.cos(ang) * L1).addScaledVector(upP, Math.sin(ang) * L1);
   const ankle = knee.clone().lerp(foot, 0.55).addScaledVector(UP, 0.8);

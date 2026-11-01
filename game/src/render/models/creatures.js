@@ -165,3 +165,94 @@ export function antGeometry(plan, frame) {
 export function planFor(caste) {
   return caste === 'soldier' || caste === 'venom' ? 'soldier' : 'worker';
 }
+
+// ---------- outfits (build 20.2) ----------
+// Mark: "something that differentiates their styles or their kinds". Each
+// kind wears something of its own, in true colours (not the caste tint),
+// drawn with the same transform as the body:
+//   builder: a leather work belt round the gaster, buckle, pouches, a hammer
+//   forager: a green garden apron round the thorax, a bow on the back
+//   nurse: a white nurse's cap with a red cross
+//   soldier: an olive army helmet with a brim and chin strap
+//   venom: a black bandana with a white skull, its knot trailing
+//   queen: a gold crown with red jewels
+const col2 = new THREE.Color();
+function paintC(geo, fn) {
+  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, c = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i += 3) {
+    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
+    col2.set(typeof fn === 'function' ? fn(x, y, z) : fn); for (let k = 0; k < 3; k++) c.set([col2.r, col2.g, col2.b], (i + k) * 3);
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+// A band round a body part: a ring about the X axis, ry by rz across.
+const band = (x, y, ry, rz, w, color) => paintC(new THREE.CylinderGeometry(1, 1, w, 14, 1, true).rotateZ(Math.PI / 2).scale(1, ry, rz).translate(x, y, 0), color);
+const box = (w, h, d, x, y, z, color, ry = 0) => paintC(new THREE.BoxGeometry(w, h, d).rotateY(ry).translate(x, y, z), color);
+const ball = (r, x, y, z, color, s = [1, 1, 1]) => paintC(new THREE.SphereGeometry(r, 6, 4).scale(...s).translate(x, y, z), color);
+function outfit(kind) {
+  const W = PLANS.worker, S = PLANS.soldier, Q = PLANS.queen, parts = [];
+  if (kind === 'belt') {
+    const [c, r] = W.abdomen, x = c[0] + r[0] * 0.45, k = Math.sqrt(1 - 0.2), ry = r[1] * k + 0.12, rz = r[2] * k + 0.12;
+    parts.push(band(x, c[1], ry, rz, 0.9, '#b8742c'));
+    parts.push(box(0.8, 0.26, 0.95, x, c[1] + ry + 0.04, 0, '#ffd23a'));
+    parts.push(box(0.42, 0.16, 0.5, x, c[1] + ry + 0.15, 0, '#b8742c'));
+    for (const s of [-1, 1]) parts.push(box(0.95, 0.9, 0.42, x, c[1] + 0.15, s * (rz + 0.16), '#d89a4a'));
+    // A hammer hanging on the left.
+    parts.push(box(0.18, 1.5, 0.18, x - 0.5, c[1] - 0.1, rz + 0.5, '#a0703a'), box(0.8, 0.32, 0.32, x - 0.5, c[1] + 0.65, rz + 0.5, '#c8ced6'));
+    // And a yellow hard hat, so builders read from above.
+    const [hc, hr] = W.head, hy = hc[1] + hr[1] * 0.45;
+    parts.push(paintC(new THREE.SphereGeometry(1, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(hr[0] * 1.05, hr[1] * 0.95, hr[2] * 1.1).translate(hc[0] - 0.1, hy, 0), (px, py, pz) => (Math.abs(pz) < 0.18 && py > hy + 0.5 ? '#f0b020' : '#ffd23a')));
+    parts.push(paintC(new THREE.CylinderGeometry(hr[2] * 1.3, hr[2] * 1.3, 0.14, 12).scale(hr[0] / hr[2] * 1.05, 1, 1).translate(hc[0] + 0.15, hy, 0), '#f0b020'));
+  }
+  if (kind === 'apron') {
+    const [c, r] = W.thorax, x = c[0] + r[0] * 0.2;
+    parts.push(band(x, c[1] + 0.05, r[1] + 0.28, r[2] + 0.3, 1.9, '#62c84c'));
+    // A little woven basket on its back, for what it gathers.
+    const [ac, ar] = W.abdomen, bx = ac[0] + ar[0] * 0.55, by = ac[1] + ar[1] * 0.85;
+    parts.push(paintC(new THREE.CylinderGeometry(0.85, 0.65, 0.75, 8, 2, true).translate(bx, by + 0.3, 0), (px, py, pz) => ((Math.floor((Math.atan2(pz, px - bx) + 4) * 2.5) + Math.floor(py * 4)) % 2 ? '#c8a060' : '#a87a40')));
+    parts.push(paintC(new THREE.CylinderGeometry(0.66, 0.66, 0.06, 8).translate(bx, by - 0.04, 0), '#8a6030'));
+    parts.push(ball(0.35, bx, by + 0.55, 0, '#d84040'));
+    // Shoulder straps crossing on the back.
+    for (const s of [-1, 1]) parts.push(box(1.7, 0.14, 0.26, x + 0.1, c[1] + r[1] + 0.2, 0, '#e8e0c8', s * 0.5));
+    // The bib hanging below the chest, a pale pocket on it.
+    parts.push(paintC(new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(r[0] * 0.9, 0.9, r[2] + 0.18).translate(x + 0.2, c[1] - r[1] * 0.35, 0), (px, py) => (py < c[1] - r[1] - 0.25 && Math.abs(px - x - 0.4) < 0.45 ? '#e8e0c8' : '#4a8a3a')));
+    // A bow tied on the back.
+    for (const s of [-1, 1]) parts.push(ball(0.5, x - 0.9, c[1] + r[1] + 0.25, s * 0.55, '#fff4dc', [1, 0.45, 1.25]));
+    parts.push(ball(0.24, x - 0.9, c[1] + r[1] + 0.3, 0, '#f0e2c0'));
+  }
+  if (kind === 'cap') {
+    const [c, r] = W.head, y = c[1] + r[1] * 0.8;
+    parts.push(paintC(new THREE.CylinderGeometry(1.1, 1.45, 1.0, 8).scale(1.1, 1, 1).translate(c[0] - 0.1, y + 0.35, 0), '#ffffff'));
+    parts.push(box(0.3, 0.08, 1.0, c[0] - 0.1, y + 0.88, 0, '#e02020'), box(1.0, 0.08, 0.3, c[0] - 0.1, y + 0.88, 0, '#e02020'));
+  }
+  if (kind === 'helmet') {
+    const [c, r] = S.head, y = c[1] + r[1] * 0.35;
+    parts.push(paintC(new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(r[0] * 1.08, r[1] * 0.95, r[2] * 1.12).translate(c[0] - 0.15, y, 0), (px, py) => (py > y + r[1] * 0.8 ? '#5c6a34' : '#4e5a2c')));
+    parts.push(paintC(new THREE.CylinderGeometry(r[2] * 1.32, r[2] * 1.32, 0.16, 14).scale(r[0] / r[2], 1, 1).translate(c[0] - 0.15, y, 0), '#3e4822'));
+    for (const s of [-1, 1]) parts.push(box(0.18, r[1] * 0.9, 0.12, c[0] + 0.3, y - r[1] * 0.45, s * r[2] * 1.02, '#a8946a'));
+  }
+  if (kind === 'bandana') {
+    const [c, r] = S.head, x = c[0] - 0.1;
+    parts.push(band(x, c[1] + 0.25, r[1] * 0.98 + 0.1, r[2] * 0.98 + 0.1, 0.9, '#181818'));
+    parts.push(ball(0.55, x + 0.2, c[1] + r[1] + 0.32, 0, '#f6f6f0', [1, 0.55, 1]));
+    for (const s of [-1, 1]) parts.push(ball(0.15, x + 0.55, c[1] + r[1] + 0.48, s * 0.2, '#181818'));
+    for (const s of [-1, 1]) parts.push(box(1.0, 0.08, 0.32, x - r[0] - 0.4, c[1] + 0.35, s * 0.25, '#181818', s * 0.35));
+  }
+  if (kind === 'crown') {
+    const [c, r] = Q.head, y = c[1] + r[1] * 0.75, R = 1.15;
+    parts.push(paintC(new THREE.CylinderGeometry(R, R * 0.9, 0.6, 10, 1, true).translate(c[0] - 0.1, y + 0.3, 0), '#ffcc2a'));
+    for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; parts.push(paintC(new THREE.ConeGeometry(0.24, 0.7, 4).translate(c[0] - 0.1 + Math.cos(a) * R, y + 0.95, Math.sin(a) * R), '#ffd84a')); parts.push(ball(0.15, c[0] - 0.1 + Math.cos(a + 0.6) * R * 1.03, y + 0.3, Math.sin(a + 0.6) * R * 1.03, '#e01838')); }
+  }
+  const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
+  g.computeVertexNormals();
+  return g;
+}
+const OUTFIT_OF = { builder: 'belt', forager: 'apron', nurse: 'cap', soldier: 'helmet', venom: 'bandana', queen: 'crown' };
+const outfits = new Map();
+// The outfit a caste wears (null for none), baked once.
+export function outfitGeometry(caste) {
+  const k = OUTFIT_OF[caste]; if (!k) return null;
+  if (!outfits.has(k)) outfits.set(k, outfit(k));
+  return outfits.get(k);
+}

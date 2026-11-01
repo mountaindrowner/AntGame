@@ -4,6 +4,12 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 
 | Group | Model | File |
 |---|---|---|
+| Ants | Forager | `ants-forager.glb` |
+| Ants | Builder | `ants-builder.glb` |
+| Ants | Nurse | `ants-nurse.glb` |
+| Ants | Soldier | `ants-soldier.glb` |
+| Ants | Venom | `ants-venom.glb` |
+| Ants | Queen | `ants-queen.glb` |
 | Ants | worker stand | `ants-worker-stand.glb` |
 | Ants | worker walk 1 | `ants-worker-walk-1.glb` |
 | Ants | worker walk 2 | `ants-worker-walk-2.glb` |
