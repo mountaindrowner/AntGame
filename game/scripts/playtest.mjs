@@ -80,8 +80,9 @@ function playSurface() {
 
 // ---------- the nest: eggs, digs, rooms, upgrades ----------
 const ORDER = {
-  sensible: ['hatchery', 'store', 'barracks', 'cistern', 'workshop', 'nursery'],
-  military: ['store', 'barracks', 'hatchery', 'cistern', 'workshop', 'nursery'],
+  // Build 25.1: the evolved rooms come after the basics, as each unlocks.
+  sensible: ['hatchery', 'store', 'barracks', 'cistern', 'workshop', 'nursery', 'infirmary', 'granary', 'fungus', 'dairy', 'midden', 'honeypot'],
+  military: ['store', 'barracks', 'hatchery', 'cistern', 'workshop', 'nursery', 'infirmary', 'midden', 'granary', 'fungus', 'dairy', 'honeypot'],
   cheese: ['hatchery', 'store', 'cistern'],
   idle: ['hatchery', 'store'],
 };
@@ -89,7 +90,7 @@ let pocket = null; // { key, x0, y0, w, h }
 function roomPlan() {
   const keys = ORDER[strategy] || ORDER.sensible;
   // A room costing more food than the store can hold has to wait for a Food store.
-  const next = keys.find((k) => !SIM.roomOf(s, k) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
+  const next = keys.find((k) => !SIM.roomOf(s, k) && !SIM.roomLock(s, k) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
   if (!next) return;
   const R = SIM.ROOMS[next];
   // A fitting pocket already dug? Place it when affordable (Build → tap a green cell).
@@ -133,6 +134,8 @@ function choosePocket(key, R) {
   }
   return best;
 }
+// Build 25.1: two of each evolved room's ant once its room stands, and majors as a quarter of the army.
+const EXTRA = ['medic', 'harvester', 'gardener', 'rancher', 'undertaker', 'replete', 'major'];
 function eggs() {
   if (c.eggQueue.length >= 2) return;
   const n = SIM.antCount(s), cap = SIM.queenCap(s.queen.level);
@@ -148,15 +151,16 @@ function eggs() {
   else if (b < Math.ceil(SIM.dugCount(s) / 40) + 1) want = 'builder';
   else if (SIM.roomOf(s, 'nursery') && nu < 1) want = 'nurse';
   else if (SIM.roomOf(s, 'barracks') && so < Math.min(f * (strategy === 'military' ? 0.8 : 0.6), 3 + Math.floor(s.t / 120)) && c.protein >= 2) want = c.trophies.spider && c.protein >= 3 ? 'venom' : 'soldier';
-  else want = 'forager';
+  else want = EXTRA.find((k) => !SIM.eggLock(s, k) && caste(k) < (k === 'major' ? Math.floor(fighters() / 4) : 2)) || 'forager';
   if (want && SIM.queueEgg(s, want)) note(`egg ${want}`);
 }
 
 // ---------- growth (build 12): evolution nodes and ant upgrades ----------
 // A rough order of what a player would want; each bought when affordable,
 // keeping some food back for eggs.
-const EVO_WANT = { sensible: ['waypoints', 'hatchery2', 'scent', 'trailrunners', 'insulation', 'division', 'store2', 'mandibles', 'crews', 'hatchery3', 'drillhall', 'formic', 'stridulation', 'crews2', 'store3', 'memory'],
-  military: ['waypoints', 'mandibles', 'drillhall', 'division', 'formic', 'stridulation', 'hatchery2', 'trailrunners', 'scent', 'insulation', 'store2', 'crews', 'hatchery3', 'crews2', 'memory'] };
+const LATE = ['infirmary', 'granary', 'aphids', 'fungus', 'mealybugs', 'midden', 'majors', 'honeypot'];
+const EVO_WANT = { sensible: ['waypoints', 'hatchery2', 'scent', 'trailrunners', 'insulation', 'division', 'store2', 'mandibles', 'crews', 'hatchery3', 'drillhall', 'formic', 'stridulation', 'crews2', 'store3', 'memory', ...LATE],
+  military: ['waypoints', 'mandibles', 'drillhall', 'division', 'formic', 'stridulation', 'hatchery2', 'trailrunners', 'scent', 'insulation', 'store2', 'crews', 'hatchery3', 'crews2', 'memory', ...LATE] };
 const PICKS = { forager: ['trailblazer', 'pathfinder'], builder: ['shorer', 'engineer'], soldier: ['doorkeeper'], venom: ['paralytic'], nurse: ['wetnurse'] };
 function grow() {
   // Spend on growth only with food to spare: a full store, or no room for more ants.
@@ -178,16 +182,17 @@ function grow() {
     const pick = (PICKS[k] || [])[lvl - 1];
     if (SIM.upgradeCaste(s, k, pick)) note(`upgraded ${k} to ${lvl + 1}${pick ? ' (' + pick + ')' : ''}`);
   }
+  for (const k of ORDER[strategy] || ORDER.sensible) if (SIM.ROOMS[k].lv && !SIM.roomUpLock(s, k) && SIM.upgradeRoom(s, k)) note(`upgraded room ${k} to ${SIM.roomLevel(s, k)}`);
   if (s.queen.level >= 3) SIM.pickQueenTrait(s, 3, strategy === 'military' ? 'hardy' : 'fertile');
 }
 
 // ---------- expeditions: caterpillar hunt, spider, siege ----------
-let mission = null, treat = null;
+let mission = null, treat = null, target = null;
 function missions() {
   const a = ant(); if (!a || P.inNest) return;
   const followers = mine().filter((o) => o.follow).length;
   if (mission === 'cat' && !s.cat) { SIM.release(s); mission = null; note('caterpillar hunt over'); return; }
-  if (mission === 'siege' && (s.won || followers < 4)) { SIM.release(s); mission = null; note('siege ended' + (s.won ? ' (won)' : '')); return; }
+  if (mission === 'siege' && (!target || !target.queenAlive || followers < 4)) { SIM.release(s); mission = null; note('siege ended' + (s.won ? ' (won)' : '')); return; }
   if (mission === 'treat') {
     const t = treat;
     if (!t || t.amt <= 0) { SIM.release(s); mission = null; note('treat ' + (P.big ? 'lost' : 'done')); treat = null; return; }
@@ -197,7 +202,7 @@ function missions() {
     tapSurface((t.x + 0.5) * T, (t.y + 0.5) * T); return 'busy';
   }
   if (mission === 'cat') { tapSurface(s.cat.x, s.cat.y); return 'busy'; }
-  if (mission === 'siege') { tapSurface((w.rx + 0.5) * T, (w.ry + 0.5) * T); return 'busy'; }
+  if (mission === 'siege') { tapSurface((target.ex + 0.5) * T, (target.ey + 0.5) * T); return 'busy'; }
   const nearHome = dist(a.tx, a.ty, w.ex, w.ey) < 3;
   if (strategy === 'idle') return;
   // A treat worth hauling: gather a crew at the nest and go get it.
@@ -213,9 +218,12 @@ function missions() {
   }
   // Siege: cheese goes as soon as six will follow; others wait for an army.
   const ready = strategy === 'cheese' ? SIM.antCount(s) >= 8 : fighters() >= 10;
-  if (s.rival.queenAlive && ready && nearHome) {
-    const got = SIM.recruit(s, 20);
-    if (got >= 6) { mission = 'siege'; note(`siege with ${got} (${fighters()} fighters)`); return 'busy'; } SIM.release(s);
+  // Build 25.1: the next awake colony, in the order they arrive. Later ones want a bigger army.
+  const foe = s.rivals.find((r) => !r.asleep && r.queenAlive);
+  const big = foe && foe.team > 1 ? fighters() >= 10 + 4 * foe.team : true;
+  if (foe && ready && big && nearHome) {
+    const got = SIM.recruit(s, SIM.crewCap ? SIM.crewCap(s) : 20);
+    if (got >= 6) { mission = 'siege'; target = foe; note(`siege on ${foe.key} with ${got} (${fighters()} fighters)`); return 'busy'; } SIM.release(s);
   }
 }
 
@@ -257,6 +265,8 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
   if (c.kills.caterpillar) mile('caterpillar killed'); if (c.kills.spider) mile('spider killed');
   if (s.queen.level >= 1) mile('queen level 1'); if (s.queen.level >= 2) mile('queen level 2');
   if (s.won) mile('WON: rival queen dead');
+  for (const r of s.rivals) { if (!r.asleep) mile('rival ' + r.key + ' arrived'); if (!r.queenAlive) mile('rival ' + r.key + ' beaten'); }
+  for (const k of EXTRA) if (caste(k)) mile('first ' + k);
   if (s.lost) mile('LOST: queen killed by raiders');
   qmin = Math.min(qmin, s.queen.hp);
   if (s.queen.hp < 60) mile('queen below 60 hp');
@@ -268,7 +278,8 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
       note(`[min ${minute}] ants ${SIM.antCount(s)}/${SIM.queenCap(s.queen.level)} ${JSON.stringify(st.byCaste)} food ${Math.round(c.store)}/${c.cap} water ${Math.round(c.water)}/${c.waterCap} prot ${Math.round(c.protein)} grit ${c.grit} out ${s.outposts.filter((o) => o.done).length} held ${Object.keys(c.held).length} goals ${Object.keys(c.goals.done).length} 🧬${c.genes}/${c.genesTotal} evo ${Object.keys(c.evo).length} vets ${mine().filter((a) => (a.xp || 0) >= 50).length} named ${c.named} queen ${Math.round(s.queen.hp)} rooms ${s.nest.rooms.length - 1} dug ${SIM.dugCount(s)} rival ${st.rival} income ${st.income} upkeep ${st.upkeep} deaths ${JSON.stringify(c.deaths)}`);
     }
   }
-  if ((s.won || s.lost) && s.t > 60 * 3) break;
+  // CAMPAIGN=1 plays on past the Patio, into the later colonies.
+  if ((s.lost || (s.won && !process.env.CAMPAIGN)) && s.t > 60 * 3) break;
 }
 const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), queenMinHp: Math.round(qmin), lost: s.lost, won: s.won, miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /Raid!/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
 console.log(JSON.stringify(out, null, 1));

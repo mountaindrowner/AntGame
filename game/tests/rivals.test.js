@@ -49,6 +49,7 @@ test('carpenter ants are big and tough; odorous house ants small and weak', () =
   const carp = s.ants.find((a) => a.team === 4 && a.caste === 'forager'), odo = s.ants.find((a) => a.team === 2 && a.caste === 'forager');
   assert.ok(carp.hp > odo.hp * 3, `carpenter ${carp.hp} vs odorous ${odo.hp}`);
   assert.ok(SIM.rspec(carp).size > SIM.rspec(odo).size);
+  assert.ok(s.ants.filter((a) => a.team === 2).length > s.ants.filter((a) => a.team === 4).length * 3, 'odorous ants swarm');
 });
 
 test('eight fighters at a rival door kill its queen; its region can then be held', () => {

@@ -38,7 +38,7 @@ const CASTES = {
 // colony's door with eight fighters to kill its queen.
 const RIVALS = [
   { key: 'pavement', name: 'Pavement ants', region: 'patio', start: [6, 1], max: 60, soldiers: 0.5, hp: 1, bite: 1, size: 1, qhp: 1000, raids: true, color: '#a8463a', soldier: '#7a1f15', blurb: 'A rival. Their nest is in the Patio cracks.' },
-  { key: 'odorous', name: 'Odorous house ants', region: 'trash', arrive: (s) => afterPatio(s, 1), arrival: 'They’ve moved in under the trash cans: tiny, many, after your food.', start: [12, 0], max: 45, soldiers: 0.1, hp: 0.6, bite: 0.7, size: 0.85, qhp: 600, color: '#3e2c24', soldier: '#2e1e18', blurb: 'Tiny, many, and they smell of rotten coconut when crushed. They live under the trash cans and take any food they find.' },
+  { key: 'odorous', name: 'Odorous house ants', region: 'trash', arrive: (s) => afterPatio(s, 1), arrival: 'They’ve moved in under the trash cans: tiny, many, after your food.', start: [24, 0], max: 110, soldiers: 0.05, hp: 0.5, bite: 0.45, size: 0.8, qhp: 600, swarm: true, color: '#3e2c24', soldier: '#2e1e18', blurb: 'Tiny, swarming and spoiling for a fight: they pick on any ant they meet. They smell of rotten coconut when crushed.' },
   { key: 'argentine', name: 'Argentine ants', region: 'tomatoes', arrive: (s) => afterPatio(s, 2), arrival: 'An invading supercolony has taken the tomato rows. They raid.', start: [10, 3], max: 80, soldiers: 0.35, hp: 0.7, bite: 0.8, size: 0.85, qhp: 800, raids: true, raidFrom: 900, color: '#9a6a44', soldier: '#7a4c2e', blurb: 'An invading supercolony from the vegetable garden. They raid anything, you included.' },
   { key: 'carpenter', name: 'Carpenter ants', region: 'oak', arrive: (s) => afterPatio(s, 3), arrival: 'Huge black ants are chewing into the Oak. They guard their trunk.', start: [4, 3], max: 24, soldiers: 0.5, hp: 2.5, bite: 1.8, size: 1.5, qhp: 1500, color: '#161212', soldier: '#0c0a0a', blurb: 'Huge and black. They chew galleries in the Oak and guard their trunk.' },
   { key: 'fire', name: 'Fire ants', region: 'firemound', arrive: (s) => afterPatio(s, 4), arrival: 'The fire ant mound is boiling over. Their sting burns.', start: [8, 4], max: 50, soldiers: 0.4, hp: 1, bite: 1.8, size: 1, qhp: 1200, fierce: true, color: '#c4441e', soldier: '#a02c14', blurb: 'Red, fierce, and their sting burns. The whole mound boils out at intruders.' },
@@ -778,7 +778,7 @@ function tick(s, dt){
     if (a.slowT > 0) a.slowT -= dt;
     if (a.state === 'zombie'){ stepZombie(s, a, dt); continue; }
     if (a.flee > 0) a.flee -= dt; else a.fleeFrom = null;
-    const aggressive = C.fight >= 3 || a.follow || a.state === 'raid' || (a.team && rspec(a).fierce && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 20);
+    const aggressive = C.fight >= 3 || a.follow || a.state === 'raid' || (a.team && (rspec(a).swarm || (rspec(a).fierce && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 20)));
     // spider / enemies
     if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y) * (s.spider.rest > 0 ? 2.5 : 1); // waiting at its web, it's hard to see
       const brave = a.follow || a.state === 'raid' || (a.state === 'fight' && a.goal === 'spider') || spiderCrew[a.team] >= 5;
@@ -1320,7 +1320,7 @@ function rivalBrain(s, r, dt){
     s.player.msg = `Raid over. You lost ${lost} ant${lost === 1 ? '' : 's'}, killed ${killed} raider${killed === 1 ? '' : 's'}${took > 0 ? `, and they carried off ${took} food` : ''}.`; }
   const mine = s.ants.filter(a => a.team===r.team && a.state!=='dead'); const foragers = mine.filter(a => a.caste==='forager').length, soldiers = mine.filter(a => a.caste==='soldier');
   // grow
-  if (r.store >= 10 && r.eggQueue.length < 2 && mine.length < Math.min(RS.max, 12 + s.t/30)){ r.eggQueue.push(soldiers.length < foragers*RS.soldiers ? 'soldier' : 'forager'); r.store -= 4; }
+  if (r.store >= 10 && r.eggQueue.length < (RS.swarm ? 4 : 2) && mine.length < Math.min(RS.max, (RS.swarm ? 30 : 12) + s.t/30)){ r.eggQueue.push(soldiers.length < foragers*RS.soldiers ? 'soldier' : 'forager'); r.store -= 4; }
   if (!RS.raids) return;
   // raid when strong, not before 5 minutes, at most every 2 minutes
   r.raidCd = (r.raidCd || 0) - 10;

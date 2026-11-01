@@ -22,7 +22,7 @@ export const CAMERA = {
   phoneAspect: 390 / 844,
   surfacePitch: 0.95, // radians from horizontal
   nestCellsAcross: 13,
-  zoomMin: 0.45,
+  zoomMin: 0.5, // build 25.1 (Mark: "it does zoom out quite a bit"): one wheel notch less (was 0.45)
   zoomMax: 2.6,
 };
 
