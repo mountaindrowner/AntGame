@@ -527,14 +527,21 @@ export function makeYard(seed) {
   // The Oak: the trunk, roots spreading through the regions round it.
   for (const key of ['oakroots', 'oak', 'acorns', 'branches', 'oakeast', 'fallen']) here(key, 'oak', 8);
   at('oak'); disc(u(16), u(26), u(8)); mark('oak', { x: u(16), y: u(26), r: u(8) });
+  const oakA = [];
   for (let k = 0; k < 7; k++) {
-    const a = k * 0.9 + rnd() * 0.4, len = u(10 + rnd() * 8);
+    // Build 20.12 (Mark: "some roots but not tons, spread them around the tree"):
+    // seven, evenly round the trunk; those heading west are the long ones that
+    // run out across the Oak Roots.
+    const a = k * ((Math.PI * 2) / 7) + rnd() * 0.35, west = Math.cos(a) < -0.45, len = west ? u(24 + rnd() * 10) : u(10 + rnd() * 8); oakA.push(a);
     mark('root', { x: u(16) + Math.cos(a) * u(7), y: u(26) + Math.sin(a) * u(7), a, len, seed: rnd() });
     // Build 20.11: the roots are wide where they leave the trunk and taper out, so block that width (four tiles each side at the trunk, none at the tip).
     for (let d = 0; d < len; d += 1) { const x = Math.round(u(16) + Math.cos(a) * (u(7) + d)), y = Math.round(u(26) + Math.sin(a) * (u(7) + d)), hw = Math.round(3.8 * (1 - 0.82 * Math.pow(d / len, 1.4)) - 0.3); stamp(x - hw, y - hw, 2 * hw + 1, 2 * hw + 1); }
   }
-  at('oakroots');
-  for (let k = 0; k < 5; k++) { const a = Math.PI * (0.6 + rnd() * 0.8), x0 = u(36), y0 = u(30 + rnd() * 8), len = u(10 + rnd() * 14); mark('root', { x: x0, y: y0, a, len, seed: rnd() }); for (let d = 0; d < len; d += 1) { const hw = d < len * 0.55 ? 2 : d < len * 0.85 ? 1 : 0; stamp(Math.round(x0 + Math.cos(a) * d) - hw, Math.round(y0 + Math.sin(a) * d) - hw, 2 * hw + 1, 2 * hw + 1); } }
+  // The Oak Roots region used to have five more roots of its own, all from
+  // one spot and joined to nothing (a bundle of sticks). The long western
+  // roots above now cross it instead. Keep their twenty draws, so the rest of
+  // the yard's layout is unchanged.
+  for (let k = 0; k < 20; k++) rnd();
   at('branches'); some(6, 4, 4, 32, 32, (x, y) => { const w = u(3 + rnd() * 4); if (isBlocked(x + w, y)) return false; stamp(x, y, w, 1); mark('twig', { x0: x, y0: y, w, h: 1, seed: rnd() }); });
   at('fallen'); stamp(u(4), u(16), u(30), u(4)); mark('log', { x0: u(4), y0: u(16), w: u(30), h: u(4), rot: true });
   at('acorns'); scatterRocks(u(2), u(2), u(36), u(36), 2);

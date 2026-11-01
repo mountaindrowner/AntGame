@@ -2,6 +2,20 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: the Oak's roots spread round it, and no bundle of sticks (build 20.12)
+
+Mark asked about "that batch of roots or sticks" up and left of the trunk.
+
+**The cause:** it was the Oak Roots region's own five roots. All five started from one spot, 26 tiles out from the trunk's edge and joined to nothing, so they read as a dropped bundle of sticks.
+
+**The fix.** Mark: "some roots but not tons, spread them around the tree."
+- The bundle is gone.
+- The trunk has seven roots, evenly round it, about 51° apart.
+- Those heading west are the long ones, 50 to 70 tiles. They run out across the Oak Roots, so the region still has its "great roots heave out of the ground."
+- The removed roots' random draws are kept, so the rest of the yard's layout is unchanged.
+
+A first try instead attached the five as extra long roots from the trunk. That made twelve, crowded on the west side, and Mark asked for fewer.
+
 ## Nov 1: thicker oak roots that grow out of the trunk (build 20.11)
 
 Mark: "Let's make the roots of the trunk of the tree a little bit thicker. They seem a little too slim. Let's try to make them seam into each other, you know, like an organic seaming."
