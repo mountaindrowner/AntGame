@@ -2,6 +2,54 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: model pass, layer 4: the yard's landmarks (build 20.7)
+
+Mark: "After that go to the next part."
+
+At play zoom the camera sees tall landmarks (the can, the bins, the gnome, the birdbath) mostly from the base, so detail went where the eye lands. All of these are in `yardScenery.js`, in vertex colour as before.
+
+- **Flowers:**
+  - leaves with a pale midrib
+  - green sepals
+  - two rings of petals cupped upward, darker at the base and paler at the tip
+  - a domed seed centre
+- **Dandelions:** a rosette of toothed leaves flat on the ground, and a head of ragged florets in three tiers on green bracts.
+- **Logs:**
+  - bark in furrows with dark fissures
+  - a taper and a slight bow
+  - cut ends with rings and heartwood
+  - two branch stubs
+  - shelf fungus and moss on rotten logs
+- **Pots:** a saucer, a rolled rim, potting soil with grit, and a geranium with zoned leaves and two red flower heads.
+- **The grill:**
+  - Its legs now splay out from under the bowl. Before, they leaned out past it.
+  - Wheels and an axle.
+  - A triangle rack with the ash pan.
+  - Vents, a steel rim, a lid vent, and a wooden handle on brackets.
+- **The patio set:**
+  - slatted tops with gaps
+  - an apron under the table and its umbrella hole
+  - grey foot caps
+  - the chair has a slatted back and arms
+- **The sandbox:**
+  - Boards with grain along each side, joints with nail heads, and a seat board across each corner.
+  - A ribbed bucket with a rolled rim and sand heaped inside.
+  - A spade with a scoop, a collar and a T grip.
+- **The soda can:** steel rims top and bottom, a white band with a blue stripe, a ring-pull, and beads of condensation.
+- **Mushrooms:** a bulb at the foot, a skirt on the stem, gills, and a cap paler at the edge; red caps have raised white warts.
+- **Gnomes:** boots, a belt and buckle, arms, a nose and eyes, and a fuller beard.
+- **The birdbath:** a mossy plinth, a fluted pedestal with collars, a lip on the bowl, and a glint and a leaf on the water.
+- **Wheelie bins:** ribbed, with a bumper, wheels and axle at the back, and a hinge strip.
+- **The cooler:**
+  - a white band
+  - a recessed lid
+  - side handles
+  - a latch
+  - a drain plug
+  - rubber feet
+
+**One lesson:** colouring stripes by angle has to follow whole mesh segments. Otherwise the two triangles of a facet get different colours, and the bark, ribs and swoosh came out as a checkerboard.
+
 ## Nov 1: the cistern as a tank of water (build 20.6)
 
 Mark: "Cistern could have a more tank of water look to it, makes sense."
