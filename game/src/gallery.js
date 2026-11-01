@@ -30,9 +30,9 @@ function chain(kinds, make, gap, r) {
 const G = [];
 const add = (group, name, line, make) => G.push({ group, name, line, make });
 // Ants: each kind in its colours and its outfit (build 20.2), then the bare body plans.
-for (const [caste, plan, tint, line] of [['forager', 'worker', COLORS.ourAnt, 'Garden apron'], ['builder', 'worker', COLORS.builder, 'Work belt and hammer'], ['nurse', 'worker', COLORS.nurse, 'Nurse\u2019s cap'], ['soldier', 'soldier', COLORS.soldier, 'Army helmet'], ['venom', 'soldier', COLORS.venom, 'Skull bandana'], ['queen', 'queen', COLORS.queen, 'Crown']])
+for (const [caste, plan, tint, line] of [['forager', 'worker', COLORS.ourAnt, 'Garden apron'], ['builder', 'worker', COLORS.builder, 'Work belt and hammer'], ['nurse', 'worker', COLORS.nurse, 'Nurse\u2019s cap'], ['soldier', 'soldier', COLORS.soldier, 'Army helmet'], ['venom', 'venom', COLORS.venom, 'Slender, viper-backed, fanged; skull bandana'], ['queen', 'queen', COLORS.queen, 'Crown']])
   add('Ants', caste[0].toUpperCase() + caste.slice(1), line, () => { const gr = new THREE.Group(); gr.add(new THREE.Mesh(antGeometry(plan, 1), new THREE.MeshLambertMaterial({ vertexColors: true, color: tint }))); gr.add(new THREE.Mesh(outfitGeometry(caste), mat)); return gr; });
-for (const plan of ['worker', 'soldier']) for (let f = 0; f < WALK_FRAMES; f++) add('Ants', `${plan} ${f ? 'walk ' + f : 'stand'}`, plan === 'worker' ? 'Forager, builder, nurse (one tint each)' : 'Soldier and Venom ant', one(antGeometry(plan, f)));
+for (const plan of ['worker', 'soldier', 'venom']) for (let f = 0; f < WALK_FRAMES; f++) add('Ants', `${plan} ${f ? 'walk ' + f : 'stand'}`, plan === 'worker' ? 'Forager, builder, nurse (one tint each)' : plan === 'soldier' ? 'Soldier' : 'Venom ant', one(antGeometry(plan, f)));
 // Creatures.
 add('Creatures', 'Wolf spider: walking', 'The first boss', one(spiderGeometry(2), SPIDER_FOOT));
 add('Creatures', 'Wolf spider: crouched', 'The tell before it lunges', one(spiderGeometry(-4), SPIDER_FOOT - 2.4));

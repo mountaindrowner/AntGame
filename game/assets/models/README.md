@@ -16,6 +16,9 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Ants | soldier stand | `ants-soldier-stand.glb` |
 | Ants | soldier walk 1 | `ants-soldier-walk-1.glb` |
 | Ants | soldier walk 2 | `ants-soldier-walk-2.glb` |
+| Ants | venom stand | `ants-venom-stand.glb` |
+| Ants | venom walk 1 | `ants-venom-walk-1.glb` |
+| Ants | venom walk 2 | `ants-venom-walk-2.glb` |
 | Creatures | Wolf spider: walking | `creatures-wolf-spider-walking.glb` |
 | Creatures | Wolf spider: crouched | `creatures-wolf-spider-crouched.glb` |
 | Creatures | Wolf spider: rearing | `creatures-wolf-spider-rearing.glb` |

@@ -2,6 +2,20 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: a viper of a venom ant (build 20.3)
+
+Mark: "Maybe venom is more slender and viper-esque."
+
+- The venom ant has its own body now; it used to share the soldier's.
+  - Long and slim, with a tapering gaster carrying a chain of dark, pale-edged diamonds down its back, like an adder.
+  - A sting at the tip.
+  - A long thin waist.
+  - A flat, wedge-shaped head wider at the back, with a dark crown stripe.
+  - Pale curved fangs below fine mandibles.
+  - Long fine legs.
+  - It keeps its skull bandana.
+- Its stats are unchanged.
+
 ## Nov 1: an outfit for each kind of ant, and the dead spider's legs (build 20.2)
 
 Mark: "make the ant kinds more unique… worker ants have like a little work belt… the soldier ants have like an army helmet… foragers… some kind of apron… Also, the dead spider, the legs seem to be under the body when they should be above."

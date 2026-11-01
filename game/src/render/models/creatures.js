@@ -74,6 +74,18 @@ const PLANS = {
     reach: [2.7, 0.2, -2.9], spread: [2.8, 3.2, 3.0],
     legR: 0.36, mandible: 1.7,
   },
+  // Build 20.3 (Mark: "more slender and viper-esque"): a long, slim gaster
+  // with a diamond-backed pattern ending in a sting, a long thin waist, a
+  // flat, wedge-shaped head wider at the back, fangs, long fine legs.
+  venom: {
+    abdomen: [[-4.7, 0.5, 0], [3.5, 1.3, 1.3]],
+    petiole: [[-0.95, 0.1, 0], [0.8, 0.42, 0.42]],
+    thorax: [[0.65, 0.15, 0], [1.75, 0.78, 0.8]],
+    head: [[3.8, 0.35, 0], [1.75, 0.95, 1.3]],
+    hips: [1.5, 0.7, -0.2], hipY: -0.35, hipZ: 0.55,
+    reach: [3.0, 0.3, -3.2], spread: [3.0, 3.5, 3.3],
+    legR: 0.26, mandible: 1.3, viper: true,
+  },
   queen: {
     abdomen: [[-5.6, 0.6, 0], [4.4, 2.6, 2.8]],
     petiole: [[-1.2, 0.2, 0], [0.55, 0.65, 0.55]],
@@ -91,7 +103,20 @@ function buildAnt(planName, frame) {
   const [ac, ar] = P.abdomen, [tc, tr] = P.thorax, [hc, hr] = P.head, [pc, pr] = P.petiole;
   // Gaster: three plates banded darker at their edges, a gloss stripe along
   // the top, darker underneath.
-  parts.push(shell(ac, ar, [10, 7], (x, y, z) => {
+  if (P.viper) {
+    // A slim, tapering gaster with a chain of dark diamonds down its back,
+    // pale-edged, and a sting at the tip.
+    const g = new THREE.SphereGeometry(1, 12, 7); g.scale(ar[0], ar[1], ar[2]);
+    { const p = g.attributes.position; for (let k = 0; k < p.count; k++) { const x = p.getX(k), t = 1 - Math.max(0, -x / ar[0]) * 0.55; p.setY(k, p.getY(k) * t); p.setZ(k, p.getZ(k) * t); } }
+    g.translate(ac[0], ac[1], ac[2]);
+    parts.push(shadeFaces(g, (x, y, z) => {
+      if (y < ac[1] - ar[1] * 0.2) return 0.62;
+      const u = (x - (ac[0] - ar[0])) / (2 * ar[0]), d = Math.abs(((u * 4.5) % 1) - 0.5) * 2 + Math.abs(z) / (ar[2] * 0.55);
+      return d < 0.75 ? 0.3 : d < 1.0 ? 1.55 : 1.0;
+    }));
+    const tip = V(ac[0] - ar[0] - 0.9, ac[1] - 0.15, 0);
+    parts.push(strut(V(ac[0] - ar[0] + 0.3, ac[1], 0), tip, 0.32, 0.4));
+  } else parts.push(shell(ac, ar, [10, 7], (x, y, z) => {
     const u = (x - (ac[0] - ar[0])) / (2 * ar[0]), band = Math.abs(((u * 3) % 1) - 0.5) > 0.42;
     if (y < ac[1] - ar[1] * 0.35) return 0.55;
     if (y > ac[1] + ar[1] * 0.7 && Math.abs(z) < ar[2] * 0.38) return 1.5;
@@ -104,7 +129,13 @@ function buildAnt(planName, frame) {
   parts.push(shell([tc[0] + tr[0] * 0.35, tc[1] + tr[1] * 0.1, 0], [tr[0] * 0.7, tr[1], tr[2]], [8, 5], (x, y) => (y > tc[1] + tr[1] * 0.75 ? 1.25 : y < tc[1] - tr[1] * 0.4 ? 0.7 : 1)));
   parts.push(ellipsoid([tc[0] - tr[0] * 0.55, tc[1] - tr[1] * 0.05, 0], [tr[0] * 0.5, tr[1] * 0.78, tr[2] * 0.85], 0.88, [6, 4]));
   // Head: a gloss on the crown, compound eyes, the clypeus a little darker.
-  parts.push(shell(hc, hr, [9, 6], (x, y, z) => (y > hc[1] + hr[1] * 0.7 ? 1.3 : x > hc[0] + hr[0] * 0.75 ? 0.78 : y < hc[1] - hr[1] * 0.5 ? 0.75 : 1.05)));
+  // The venom ant's is a flat wedge, wider at the back, with a dark crown stripe.
+  if (P.viper) {
+    const g = new THREE.SphereGeometry(1, 10, 6); g.scale(hr[0], hr[1], hr[2]);
+    { const p = g.attributes.position; for (let k = 0; k < p.count; k++) { const x = p.getX(k), w = 1 + (-x / hr[0]) * 0.45; p.setZ(k, p.getZ(k) * w); p.setY(k, p.getY(k) * (1 - Math.max(0, x / hr[0]) * 0.3)); } }
+    g.translate(hc[0], hc[1], hc[2]);
+    parts.push(shadeFaces(g, (x, y, z) => (y > hc[1] + hr[1] * 0.55 && Math.abs(z) < hr[2] * 0.22 ? 0.35 : y > hc[1] + hr[1] * 0.6 ? 1.35 : y < hc[1] - hr[1] * 0.4 ? 0.7 : 1.05)));
+  } else parts.push(shell(hc, hr, [9, 6], (x, y, z) => (y > hc[1] + hr[1] * 0.7 ? 1.3 : x > hc[0] + hr[0] * 0.75 ? 0.78 : y < hc[1] - hr[1] * 0.5 ? 0.75 : 1.05)));
   for (let side = -1; side <= 1; side += 2) parts.push(ellipsoid([hc[0] + hr[0] * 0.25, hc[1] + hr[1] * 0.25, side * hr[2] * 0.86], [hr[0] * 0.28, hr[1] * 0.3, hr[2] * 0.18], 0.12, [5, 3]));
   const phase = (frame / WALK_FRAMES) * Math.PI * 2;
   for (let side = -1; side <= 1; side += 2) {
@@ -141,8 +172,10 @@ function buildAnt(planName, frame) {
     const a = V(hc[0] + hr[0] * 0.8, hc[1] - hr[1] * 0.4, side * hr[2] * 0.42);
     const b = V(hc[0] + hr[0] + 0.7 * m, hc[1] - hr[1] * 0.55, side * 0.55 * m);
     const c = V(hc[0] + hr[0] + 1.1 * m, hc[1] - hr[1] * 0.62, side * 0.08 * m);
-    parts.push(strut(a, b, 0.26 * m, 0.82));
-    parts.push(strut(b, c, 0.18 * m, 0.45));
+    parts.push(strut(a, b, (P.viper ? 0.18 : 0.26) * m, 0.82));
+    parts.push(strut(b, c, (P.viper ? 0.13 : 0.18) * m, 0.45));
+    // Fangs: two pale curved hooks down from the mouth.
+    if (P.viper) { const f0 = V(hc[0] + hr[0] * 0.85, hc[1] - hr[1] * 0.5, side * 0.35), f1 = V(f0.x + 0.45, f0.y - 0.7, side * 0.3), f2 = V(f0.x + 0.2, f0.y - 1.15, side * 0.22); parts.push(strut(f0, f1, 0.13, 1.6), strut(f1, f2, 0.09, 1.7)); }
   }
   if (P.scars) {
     for (let side = -1; side <= 1; side += 2) {
@@ -163,7 +196,7 @@ export function antGeometry(plan, frame) {
 }
 
 export function planFor(caste) {
-  return caste === 'soldier' || caste === 'venom' ? 'soldier' : 'worker';
+  return caste === 'venom' ? 'venom' : caste === 'soldier' ? 'soldier' : 'worker';
 }
 
 // ---------- outfits (build 20.2) ----------
@@ -233,7 +266,7 @@ function outfit(kind) {
     for (const s of [-1, 1]) parts.push(box(0.18, r[1] * 0.9, 0.12, c[0] + 0.3, y - r[1] * 0.45, s * r[2] * 1.02, '#a8946a'));
   }
   if (kind === 'bandana') {
-    const [c, r] = S.head, x = c[0] - 0.1;
+    const [c, r] = PLANS.venom.head, x = c[0] - 0.35;
     parts.push(band(x, c[1] + 0.25, r[1] * 0.98 + 0.1, r[2] * 0.98 + 0.1, 0.9, '#181818'));
     parts.push(ball(0.55, x + 0.2, c[1] + r[1] + 0.32, 0, '#f6f6f0', [1, 0.55, 1]));
     for (const s of [-1, 1]) parts.push(ball(0.15, x + 0.55, c[1] + r[1] + 0.48, s * 0.2, '#181818'));
