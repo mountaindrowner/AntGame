@@ -2,6 +2,30 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: the underground (build 22)
+
+Mark: "We should start looking at improving the underground designs to the sides of the nest instead of plain basic brown." Also from this message: the HUD is good on PC, no keyboard shortcuts, the house's inside later. Next are rivals in the new regions, slower movement, and the last of the tech tree and rooms.
+
+**Before:** the soil round the nest was one speckled brown in three flat bands. The ground beside the cutaway was a darker, plainer brown, so the nest read as a box set into a wall.
+
+**Each band has its own grain** (`models/underground.js`, `soilTexture`):
+- **Topsoil:** dark loam with rootlets, humus crumbs and pale grit.
+- **Packed earth:** faint layering and pebbles with a lit edge.
+- **Clay:** mottled orange, grey-blue where it stays wet, rusty specks.
+
+The ground beside and under the cutaway now uses the same grain at the same scale, mapped by world position, and barely darker. So the cutaway no longer shows a box edge.
+
+**Things in the ground** (`buryThings`):
+- roots from the yard above, tapering, wandering and forking
+- stones, mostly in the packed earth, with a seam of gravel along each band boundary
+- worm burrows, some with their worm
+- grubs curled in their pockets, and snail shells, in the loam
+- damp seeps in the clay
+- now and then a lost human thing: a bottle cap, button, coin, marble, paper clip or bead
+- beside the nest, an old clay drain pipe from the house running through the packed earth, and two mole tunnels
+
+Inside the cutaway itself, a buried thing shows only while the soil all round it is whole, so digging clears it away.
+
 ## Nov 1: model pass, layer 4c: the garden, the thistles and the reeds (build 21.2)
 
 Mark: "Cool, next."

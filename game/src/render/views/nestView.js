@@ -16,6 +16,10 @@ import { dressRoom, roomWallMaterial } from '../models/roomDecor.js';
 import { MotionTracker, idlePose } from '../motion.js';
 import { antColor, rankScale, hudShift } from './surfaceView.js';
 import { shapesFromField } from '../geometry/contour.js';
+import { soilTexture, buryThings, moleTunnel, bake as bakeBuried } from '../models/underground.js';
+
+// UVs from world X and Y, so a big box's face tiles the soil grain at the same scale as the cutaway.
+function worldUV(g) { const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) uv.setXY(i, p.getX(i), p.getY(i)); return g; }
 
 const { NW, NH, T, SHAFT, CASTES, ROOMS, SOIL_TOP } = SIM;
 export const DEPTH = 22;
@@ -232,10 +236,12 @@ export class NestView {
     this.scene.add(this.hemi, this.key);
 
     // Few, soft stones: a busy high-contrast fleck across the whole cutaway tires the eye.
-    this.soilMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(3 + i, ramp, { size: 32, stones: [2, 3, 1][i], stone: [shade(ramp[1], 1.25), shade(ramp[2], 1.35)], repeat: [1 / 48, 1 / 48] }) }));
+    // Build 22: each soil band has its own grain (models/underground.js).
+    this.soilMats = [0, 1, 2].map((i) => psx({ map: soilTexture(i) }));
     this.sideMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(13 + i, ramp.map((c) => shade(c, 0.5)), { size: 16, repeat: [1 / 24, 1 / 24] }) }));
     // Beyond the cutaway (build 14): the same soil bands carry on, a little darker, so zooming out shows ground, not a box's edge.
-    this.beyondMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(23 + i, ramp.map((c) => shade(c, 0.78)), { size: 32, stones: [2, 3, 1][i], stone: [shade(ramp[1], 0.95), shade(ramp[2], 1.05)], repeat: [1 / 48, 1 / 48] }) }));
+    // (Build 22: the same grain, barely darker, mapped by world position so it lines up with the cutaway's.)
+    this.beyondMats = [0, 1, 2].map((i) => psx({ map: soilTexture(i, 0.92) }));
     this.soil = new THREE.Group();
     this.scene.add(this.soil);
 
@@ -253,14 +259,24 @@ export class NestView {
     for (let i = 0; i < 3; i++) {
       const h = edges[i + 1] - edges[i];
       for (const sx of [-1, 1]) {
-        const slab = new THREE.Mesh(new THREE.BoxGeometry(W2, h, DEPTH + 10), this.beyondMats[i]);
-        slab.position.set(sx < 0 ? -W2 / 2 : NW * T + W2 / 2, -edges[i] - h / 2, -DEPTH / 2 - 5);
+        const slab = new THREE.Mesh(worldUV(new THREE.BoxGeometry(W2, h, DEPTH + 10).translate(sx < 0 ? -W2 / 2 : NW * T + W2 / 2, -edges[i] - h / 2, -DEPTH / 2 - 5)), this.beyondMats[i]);
         this.scene.add(slab);
       }
     }
-    const under = new THREE.Mesh(new THREE.BoxGeometry(NW * T, 1500, DEPTH + 10), this.beyondMats[2]);
-    under.position.set((NW * T) / 2, -NH * T - 750, -DEPTH / 2 - 5);
+    const under = new THREE.Mesh(worldUV(new THREE.BoxGeometry(NW * T + 6000, 1500, DEPTH + 10).translate((NW * T) / 2, -NH * T - 750, -DEPTH / 2 - 5)), this.beyondMats[2]);
     this.scene.add(under);
+    // Build 22: the things buried in the ground beside and below the cutaway
+    // (roots, stones, junk, burrows, an old drain pipe, a mole's tunnel). The
+    // cutaway's own are in _rebuildSoil, so digging clears them away.
+    const bands = [SOIL_TOP[1] * T, SOIL_TOP[2] * T], deep = NH * T + 420;
+    const beyond = [
+      ...buryThings({ x0: -1000, x1: -8, y0: 0, y1: deep, bands, seed: 101, extras: true }),
+      ...buryThings({ x0: NW * T + 8, x1: NW * T + 1000, y0: 0, y1: deep, bands, seed: 202 }),
+      ...buryThings({ x0: 0, x1: NW * T, y0: NH * T + 8, y1: deep, bands, seed: 303 }),
+    ].map((b) => b.geo);
+    beyond.push(...moleTunnel(NW * T + 150, bands[0] * 0.45, 30, 7), ...moleTunnel(-260, bands[0] * 0.7, 26, 8));
+    this.scene.add(new THREE.Mesh(bakeBuried(beyond), psx({ vertexColors: true })));
+    this.buried = buryThings({ x0: 0, x1: NW * T, y0: 0, y1: NH * T, bands, seed: 404 });
 
     this.dyn = new THREE.Group();
     this.scene.add(this.dyn);
@@ -333,6 +349,13 @@ export class NestView {
       g.translate(0, 0, -DEPTH);
       this.soil.add(new THREE.Mesh(g, [this.soilMats[tier], this.sideMats[tier]]));
     });
+    // Build 22: the cutaway's buried things, but only where the soil round
+    // them is still whole (a margin of solid soil), so digging clears them.
+    const solidAt = (x, y) => { const cx = Math.floor(x / T), cy = Math.floor(y / T); return cx < 0 || cx >= NW || cy >= NH || cy < 0 || !s.nest.cells[cy * NW + cx]; }; // (roots come down from the ground above)
+    const whole = (b) => { const m = 7; for (let y = b.y0 - m; y <= b.y1 + m; y += T / 2) for (let x = b.x0 - m; x <= b.x1 + m; x += T / 2) if (!solidAt(x, y)) return false; return solidAt(b.x1 + m, b.y1 + m); };
+    const keep = this.buried.filter(whole).map((b) => b.geo.clone());
+    const bg = bakeBuried(keep);
+    if (bg) this.soil.add(new THREE.Mesh(bg, this.buriedMat || (this.buriedMat = psx({ vertexColors: true }))));
   }
 
   setState(s) {
