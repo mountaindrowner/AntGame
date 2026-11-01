@@ -102,6 +102,17 @@ const WALLS = {
       g.fillStyle = '#e0bc5a'; for (let k = 0; k < 6; k++) g.fillRect(x + 1 + Math.floor(r() * 6), y + 3 + Math.floor(r() * 3), 2, 1);
     }
   },
+  // Build 24. Honeypot vault: warm amber-stained earth.
+  honeypot(g, r) {
+    g.fillStyle = '#5a3a1e'; g.fillRect(0, 0, 32, 32);
+    for (let i = 0; i < 60; i++) { g.fillStyle = r() < 0.5 ? '#6e4a24' : '#4e321a'; g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 2, 1); }
+    g.fillStyle = '#d89a3a'; for (let i = 0; i < 10; i++) { const x = Math.floor(r() * 32); g.fillRect(x, 0, 1, 2 + Math.floor(r() * 4)); }
+  },
+  // Midden: dark, crumbly refuse.
+  midden(g, r) {
+    g.fillStyle = '#2e241c'; g.fillRect(0, 0, 32, 32);
+    for (let i = 0; i < 90; i++) { g.fillStyle = r() < 0.4 ? '#3e3226' : r() < 0.7 ? '#241c14' : '#4a4236'; g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 1 + (r() < 0.3), 1); }
+  },
   // Dressed stone blocks.
   workshop(g) {
     g.fillStyle = '#6a6256'; g.fillRect(0, 0, 32, 32);
@@ -286,6 +297,24 @@ const DRESS = {
     d.put(PROPS.cyl, [W * 0.5, 3.6, -D * 0.55], [3, 1.2, 3], '#aaa49a');
     for (let i = 0; i < 3; i++) d.put(PROPS.puddle, [W * 0.5 + 7 + i * 0.4, 0.4 + i * 0.5, -D * 0.5], [2.6, 3, 2.6], '#d8a858');
     for (let i = 0; i < 8; i++) d.put(PROPS.seed, [6 + (i % 4) * (W - 12) / 3, H - 10 - Math.floor(i / 4) * 10, -D + 1.2], [2.4, 1.6, 1.4], '#d8b04a', [0, 0, 0.4]);
+  },
+  // Build 24.
+  honeypot(d) {
+    const { W, H, D, col, t } = d, fill = Math.min(1, col.store / Math.max(1, col.cap));
+    // Repletes hang in rows from the ceiling, their amber crops swelling with the stock.
+    for (let row = 0; row < 2; row++) for (let i = 0; i < 4; i++) {
+      const x = W * (0.16 + i * 0.22) + row * 4, k = 2.6 + fill * 1.6 + ((i + row) % 2) * 0.4;
+      d.put(NEST.replete, [x, H - row * 2, -D * (0.86 - row * 0.1)], [k, k, k], TRUE, [0, 0.4 + i, Math.sin(t * 0.8 + i * 2 + row) * 0.05]);
+    }
+    d.put(PROPS.puddle, [W / 2, 0.3, -D * 0.55], [5, 1, 3], '#e8b040');
+  },
+  midden(d) {
+    const { W, D } = d;
+    // Heaps of refuse: husks, dark crumbs, shells, a few pale mushrooms growing on it.
+    for (let i = 0; i < 3; i++) d.put(PROPS.cone, [W * (0.25 + i * 0.25), 3, -D * 0.74], [6, 6 + (i % 2) * 2, 4.5], i % 2 ? '#3a2c1e' : '#4a3a28');
+    for (let i = 0; i < 10; i++) d.put(PROPS.pebble, [5 + i * (W - 10) / 9, 1 + (i % 3), -D * (0.6 + (i % 2) * 0.12)], [1.4, 1, 1.2], ['#1e1610', '#5a4a3a', '#8a7a5a'][i % 3], [0, i, 0]);
+    for (let i = 0; i < 4; i++) d.put(PROPS.dome, [W * (0.2 + i * 0.2), 0.4, -D * 0.6], [1.6, 1.4, 1.6], '#e8e0cc');
+    d.put(PROPS.egg, [W * 0.7, 1.2, -D * 0.62], [2.4, 1.2, 1.4], '#2a1a12');
   },
   armory(d) {
     const { W, H, D } = d;

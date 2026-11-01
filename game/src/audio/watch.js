@@ -31,7 +31,7 @@ export function soundWatch(app, views) {
       spiderKills: c.kills.spider || 0, catKills: c.kills.caterpillar || 0, spiderBites: c.deaths.spider || 0,
       won: !!s.won, lost: !!s.lost, msg: P.msg,
       menu: app.menu, digs: s.nest.digOrders.length, fills: s.nest.fillOrders.length, repairs: s.repairs.length, dug: s.nest.ver,
-      full: SIM.antCount(s) >= SIM.queenCap(s.queen.level), store: c.store >= c.cap - 0.5, rain: s.rain.on,
+      full: SIM.antCount(s) >= SIM.queenCap(s.queen.level, s), store: c.store >= c.cap - 0.5, rain: s.rain.on,
       rivalWar: s.rival.deaths.war || 0, oursWar: c.deaths.rival || 0, antlion: c.deaths.antlion || 0,
       ax: a ? a.x : 0, ay: a ? a.y : 0, bugDead: s.bugDead,
     };

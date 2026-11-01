@@ -2,13 +2,76 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: every evolution does something (build 24)
+
+Mark: "Lets do the evolutions."
+
+All 30 nodes that still said "coming in a later build" now work. Where a node promised a big system that doesn't exist yet, it got a real effect in the same spirit, and its text says exactly what it does:
+- Night sense became Rain sense, because the game has no night.
+- Royal chamber became satellite nests at outposts, and Highways became faster trails, because there are no second nests.
+- Deep halls holds more ants instead of adding a soil band.
+
+`docs/ROOMS.md` keeps the bigger versions for later.
+
+**Bodies**
+- **Exploders:** the Exploder ant, banded red and yellow with a fuse. When it dies it bursts, hitting every rival within 2 tiles for 8, and the spider and the caterpillar too.
+- **Majors:** the Major ant: 14 health, bites 5, slow. It's laid from a Barracks.
+- **Polymorphism:** the Supermajor: 30 health, bites 10, slower still, and costs chitin. Also laid from a Barracks.
+- **Metapleural glands:** Cordyceps spreads half as much.
+- **Heat tolerance:** heat waves don't slow your ants, and they dry the cistern a third as fast.
+- **Long-lived workers:** ants eat 25% less.
+- **Lineage:** once evolved, the node's card offers three lines. You pick one, for good:
+  - **Acid:** fighters hurt bugs and bosses 50% more.
+  - **Trap-jaw:** fighters bite 40% harder.
+  - **Bullet:** fighters' bites slow their prey.
+
+**Senses**
+- **Lookout:** ants spot things 3 tiles further off.
+- **Sun compass:** foragers range 25% further.
+- **Danger scent:** foragers keep twice as wide of the spider.
+- **Rally scent:** you recruit from half again as far.
+- **Hive mind:** every ant answers the colony's needs twice as readily (duty thresholds halved).
+- **Propaganda scent:** rival ants bite 25% weaker.
+- **War columns:** recruit up to 60.
+- **Rain sense** (was Night sense): ants keep foraging in the rain.
+- **Vibration sense:** feet and acorns give over a second more warning.
+
+**Nest**
+- **Honeypot vault:** a new room, with **Repletes**, amber living jars hanging from its ceiling.
+  - Each replete adds 40 food cap, or 60 at level II.
+  - At level III they feed the colony in a famine, from a reserve they fill when food is plenty.
+- **Midden:** a new room, with **Undertakers** in hoods.
+  - While they work, Cordyceps spreads half as much.
+  - Level II: their compost feeds the fungus garden.
+  - Level III: Cordyceps hardly spreads, and cave-ins are a third rarer.
+- **Thermal chimneys:** rain never caves tunnels in, and eggs hatch 15% faster.
+- **Workshop III (Architects):** builders work 50% faster, and rooms cost 20% less.
+- **Deep halls:** the queen holds 20 more ants.
+- **Royal chamber:** satellite nests. Foragers drop their loads at a finished outpost when it's nearer than home.
+- **Highways:** ants on a trail are 30% faster.
+- **Shared stores:** each finished outpost adds 50 food cap.
+
+**Society**
+- **War camp:** rivals killed near their nest drop their food.
+- **Brood raiding:** 1 in 5 rivals killed near their nest comes home as brood and hatches as your forager.
+- **Polygyny:** a second queen: 2 more eggs at once, laid 30% faster.
+- **Honour guard:** raiders hurt the queen half as much.
+
+**Symbiosis**
+- **Honey economy:** 🍯 pays wherever 🌾 does, covering any food shortfall.
+- **Beetle guests:** cave-ins mend half again faster, and loose spoil is tidied away.
+
+**Checks:**
+- 88 tests, 9 of them new (`tests/evolutions.test.js`).
+- The bots are about the same: 2 of 3 reached 40 ants and 1 won. They buy few of these nodes.
+
 ## Nov 1: rooms from the evolution tree, their own ants, room levels, and wood (build 23)
 
 Mark: "I'd like later more complicated rooms to become available with later evolutions. Maybe building or training other ants requires special rooms? With each room also having individual upgrades... Keep thinking into ant ecology."
 
 The whole room plan, from real ant ecology, is in `docs/ROOMS.md`. This build is its first wave.
 
-**A correction:** I had told Mark that 53 of 56 evolution nodes worked. That was wrong: 34 were still placeholders ("coming in a later build"). I had counted only the ones waiting on wood. This build makes four of them real, the four rooms below; 30 placeholders remain.
+**A correction:** I had told Mark that 53 of 56 evolution nodes worked. That was wrong: 34 were still placeholders ("coming in a later build"). I had counted only the ones waiting on wood. This build makes four of them real, the four rooms below; build 24 does the other 30.
 
 **The rules every new room follows:**
 - **Evolution.** It comes from a node in the evolution tree. Until that node is evolved, the room shows in the Build list greyed, with "evolve … first".

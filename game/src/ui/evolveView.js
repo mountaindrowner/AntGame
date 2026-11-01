@@ -92,7 +92,10 @@ export class EvolveView {
     const lock = SIM.evoLock(s, n.key), cost = evoCost(s, n), pay = SIM.canPay(s.colony, cost), later = laterIn(cost);
     const deed = n.deed ? (n.deed[1](s) ? '<div class="deed done">Deed done: half the 🧬</div>' : `<div class="deed">Deed: ${n.deed[0]}, for half the 🧬</div>`) : '';
     const why = lock === 'owned' ? 'Evolved' : lock ? lock[0].toUpperCase() + lock.slice(1) : later ? `Needs ${LATER[later]}` : pay ? '' : 'Short on materials';
-    const html = `<b>${n.name}</b><p>${n.fx}</p><div class="cost">${costIcons(cost)}</div>${deed}<button class="evo-buy" data-buy="${n.key}" ${lock || !pay ? 'disabled' : ''}>${why || 'Evolve'}</button>`;
+    // Lineage (build 24): once evolved, pick one line for good.
+    const LINES = [['acid', 'Acid', 'Fighters hurt bugs and bosses 50% more'], ['trapjaw', 'Trap-jaw', 'Fighters bite 40% harder'], ['bullet', 'Bullet', 'Fighters’ bites slow their prey']];
+    const line = n.key === 'lineage' && lock === 'owned' ? (s.colony.lineage ? `<div class="deed done">Your line: ${LINES.find((l) => l[0] === s.colony.lineage)[1]}</div>` : `<div class="deed">Pick your line, for good:</div>` + LINES.map(([k, nm, d]) => `<button class="evo-buy" data-line="${k}"><b>${nm}</b> · ${d}</button>`).join('')) : '';
+    const html = `<b>${n.name}</b><p>${n.fx}</p><div class="cost">${costIcons(cost)}</div>${deed}${line}<button class="evo-buy" data-buy="${n.key}" ${lock || !pay ? 'disabled' : ''}>${why || 'Evolve'}</button>`;
     if (d.dataset.html !== html) { d.dataset.html = html; d.innerHTML = html; }
     d.classList.remove('hidden');
   }
@@ -102,6 +105,7 @@ export class EvolveView {
     const s = this.app.s;
     if (b.dataset.page) { this.go(+b.dataset.page); return; }
     if (b.dataset.node) { this.pick = this.pick === b.dataset.node ? null : b.dataset.node; sfx.play('tap'); this.render(); return; }
+    if (b.dataset.line) { if (SIM.pickLineage(s, b.dataset.line)) sfx.play('evolve'); this.render(); return; }
     if (b.dataset.buy) { if (SIM.buyEvo(s, b.dataset.buy)) { sfx.play('evolve'); this.el.classList.remove('burst'); void this.el.offsetWidth; this.el.classList.add('burst'); } this.render(); return; }
     if (b.dataset.upc) { const [k, pk] = b.dataset.upc.split(':'); if (SIM.upgradeCaste(s, k, pk || undefined)) sfx.play('evolve'); this.render(); return; }
     if (b.dataset.doc) { const [k, slot, pk] = b.dataset.doc.split(':'); SIM.setDoctrine(s, k, +slot, pk); this.render(); }

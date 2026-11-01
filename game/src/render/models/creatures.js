@@ -196,7 +196,7 @@ export function antGeometry(plan, frame) {
 }
 
 export function planFor(caste) {
-  return caste === 'venom' ? 'venom' : caste === 'soldier' ? 'soldier' : 'worker';
+  return caste === 'venom' ? 'venom' : caste === 'soldier' || caste === 'major' || caste === 'supermajor' ? 'soldier' : 'worker';
 }
 
 // ---------- outfits (build 20.2) ----------
@@ -324,11 +324,30 @@ function outfit(kind) {
     parts.push(paintC(new THREE.CylinderGeometry(0.3, 0.5, 0.5, 6).translate(x + 0.6, y + 0.9, 0), '#a8864a'), paintC(new THREE.TorusGeometry(0.34, 0.08, 3, 8).rotateX(Math.PI / 2).translate(x + 0.6, y + 0.8, 0), '#6a4a2a'));
     for (let k = 0; k < 3; k++) parts.push(ball(0.22, x + 0.5 + k * 0.15, y + 1.2, (k - 1) * 0.2, '#e8c45a', [1.4, 0.7, 0.8]));
   }
+  // Build 24's kinds.
+  if (kind === 'fuse') {
+    // Exploder: a gaster banded red and yellow like a warning, a fuse on its tail.
+    const [ac, ar] = W.abdomen;
+    for (let k = 0; k < 3; k++) { const x = ac[0] - ar[0] * 0.6 + k * ar[0] * 0.6, f = Math.sqrt(Math.max(0, 1 - ((x - ac[0]) / ar[0]) ** 2)); parts.push(band(x, ac[1], ar[1] * f + 0.08, ar[2] * f + 0.08, 0.5, k % 2 ? '#f0c020' : '#d8301e')); }
+    parts.push(paintC(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 4).rotateZ(0.9).translate(ac[0] - ar[0] - 0.3, ac[1] + 0.6, 0), '#e8e0c8'), ball(0.22, ac[0] - ar[0] - 0.75, ac[1] + 1.05, 0, '#ffb020'));
+  }
+  if (kind === 'honey') {
+    // Replete: its gaster swollen into an amber globe of stored food.
+    const [ac, ar] = W.abdomen;
+    parts.push(paintC(new THREE.SphereGeometry(1, 12, 8).scale(ar[0] * 1.15, ar[1] * 1.5, ar[2] * 1.5).translate(ac[0] - 0.3, ac[1] + 0.3, 0), (px, py, pz) => (py > ac[1] + ar[1] && pz > 0 ? '#ffe098' : Math.abs(((px - ac[0]) * 1.4 % 1)) < 0.12 ? '#7a4a1e' : '#e8a030')));
+  }
+  if (kind === 'hood') {
+    // Undertaker: a dark hood over the head and a grey shroud on the back.
+    const [c, r] = W.head;
+    parts.push(paintC(new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.6).scale(r[0] * 1.2, r[1] * 1.15, r[2] * 1.2).translate(c[0] - 0.3, c[1] + 0.1, 0), '#2e2e34'));
+    const [tc, tr] = W.thorax;
+    parts.push(paintC(new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(tr[0] * 1.5, tr[1] * 0.9, tr[2] * 1.3).translate(tc[0] - 0.4, tc[1] + tr[1] * 0.4, 0), '#5a5a62'));
+  }
   const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
   g.computeVertexNormals();
   return g;
 }
-const OUTFIT_OF = { builder: 'belt', forager: 'apron', nurse: 'cap', soldier: 'helmet', venom: 'bandana', queen: 'crown', gardener: 'straw', rancher: 'stetson', medic: 'medic', harvester: 'sack' };
+const OUTFIT_OF = { builder: 'belt', forager: 'apron', nurse: 'cap', soldier: 'helmet', venom: 'bandana', queen: 'crown', gardener: 'straw', rancher: 'stetson', medic: 'medic', harvester: 'sack', major: 'helmet', supermajor: 'helmet', exploder: 'fuse', replete: 'honey', undertaker: 'hood' };
 const outfits = new Map();
 // The outfit a caste wears (null for none), baked once.
 export function outfitGeometry(caste) {

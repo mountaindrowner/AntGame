@@ -279,7 +279,7 @@ export function createUI(app) {
     return h;
   }
   // What each kind of ant is for, under its egg (build 15: "what is a nurse for?").
-  const EGG_WHAT = { forager: 'Gathers food and water on its own', builder: 'Digs, builds rooms, hauls dirt out, stops cave-ins', nurse: 'Tends the eggs: they hatch faster', soldier: 'Guards the door, fights raiders; eats protein', venom: 'An 8× sting: kills the spider', gardener: 'Cuts leaves for the fungus garden, which grows them into food', rancher: 'Stays in and herds root aphids: 🍯 without going out', medic: 'Heals the wounded and cures Cordyceps in the Infirmary', harvester: 'Big-headed: carries seed and crumbs in double loads' };
+  const EGG_WHAT = { forager: 'Gathers food and water on its own', builder: 'Digs, builds rooms, hauls dirt out, stops cave-ins', nurse: 'Tends the eggs: they hatch faster', soldier: 'Guards the door, fights raiders; eats protein', venom: 'An 8× sting: kills the spider', gardener: 'Cuts leaves for the fungus garden, which grows them into food', rancher: 'Stays in and herds root aphids: 🍯 without going out', medic: 'Heals the wounded and cures Cordyceps in the Infirmary', harvester: 'Big-headed: carries seed and crumbs in double loads', major: 'Big, slow and tough: 14 health, bites 5', supermajor: 'A living tank: 30 health, bites 10', exploder: 'Bursts when it dies, hurting everything near', replete: 'Hangs in the Honeypot vault, a living jar of food', undertaker: 'Clears out the dead: Cordyceps spreads half as much' };
   function renderSheet() {
     const s = app.s, c = s.colony;
     if (app.menu === 'help' || app.menu === 'info' || app.menu === 'map' || app.menu === 'colony') return;
@@ -289,13 +289,13 @@ export function createUI(app) {
       for (const k of Object.keys(CASTES)) {
         const C = CASTES[k];
         // A kind from a room not yet evolved stays hidden (build 23).
-        if (SIM.CASTE_ROOM[k] && !c.evo[ROOMS[SIM.CASTE_ROOM[k]].evo]) continue;
+        if (SIM.CASTE_EVO[k] ? !c.evo[SIM.CASTE_EVO[k]] : SIM.CASTE_ROOM[k] && ROOMS[SIM.CASTE_ROOM[k]].evo && !c.evo[ROOMS[SIM.CASTE_ROOM[k]].evo]) continue;
         const lock = SIM.eggLock(s, k);
         const ec = SIM.eggCost(s, k), dis = lock || !SIM.canPay(c, ec) || c.eggQueue.length >= 10;
         h += `<button data-egg="${k}" ${dis ? 'disabled' : ''}>${sicon(k)}<b>${C.name}</b><i>${EGG_WHAT[k] || ''}</i><i>${lock || costIcons(ec) + ' · ⏱' + Math.round(C.hatch * c.hatchMul) + 's'}</i></button>`;
       }
       h += `</div>`;
-      const cap = SIM.queenCap(s.queen.level), up = SIM.QUEEN_UP[s.queen.level];
+      const cap = SIM.queenCap(s.queen.level, s), up = SIM.QUEEN_UP[s.queen.level];
       h += `<div class="note">Queen level ${s.queen.level + 1} · holds ${cap} ants (${SIM.antCount(s)} now)${SIM.antCount(s) >= cap ? ' · at the cap, eggs paused' : ''}</div>`;
       const later = up && laterIn(up);
       if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}>${sicon('queen')}<b>Upgrade queen to level ${s.queen.level + 2}</b><i>${costIcons(up)} · +20 ants${s.queen.level === 0 ? ' · unlocks clay digging' : ''}</i>${later ? `<i>needs ${LATER[later]}: coming in a later build</i>` : ''}</button></div>`;
@@ -489,7 +489,7 @@ export function createUI(app) {
     const s = app.s, c = s.colony;
     bossUi(s);
     const st = SIM.stats(s);
-    const cap = SIM.queenCap(s.queen.level), nAnts = SIM.antCount(s);
+    const cap = SIM.queenCap(s.queen.level, s), nAnts = SIM.antCount(s);
     // One compact row of chips; each says what it is when touched or hovered.
     const chip = (icon, val, tip, warn) => `<span class="chip${warn ? ' warn' : ''}" data-tip="${tip}">${icon}${val}</span>`;
     const statsHtml = chip('🌾', `${Math.floor(c.store)}<i>/${c.cap}</i>`, `Food ${Math.floor(c.store)} of ${c.cap}`, c.store < 3)

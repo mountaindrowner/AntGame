@@ -50,6 +50,13 @@ export const ICONS = {
   gardener: svg('<path d="M5 14c2-8 12-10 15-9-1 3-3 13-11 13"/><path d="M5 20l7-8"/>'),
   rancher: svg('<path d="M3 13c2-1 16-1 18 0"/><path d="M7 13c0-4 2-6 5-6s5 2 5 6"/><path d="M9 17h6"/>'),
   medic: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8" stroke-width="2.4"/>'),
+  honeypot: svg('<path d="M12 3v3"/><ellipse cx="12" cy="13" rx="6" ry="7"/><path d="M8 11c1-2 3-2 4-2" opacity=".6"/>'),
+  midden: svg('<path d="M3 20h18"/><path d="M5 20c1-6 4-9 7-9s6 3 7 9"/><circle cx="10" cy="15" r=".9" fill="currentColor"/><circle cx="14" cy="16" r=".9" fill="currentColor"/>'),
+  major: svg('<path d="M12 2l8 3.5v5.5c0 6-4 9-8 11-4-2-8-5-8-11V5.5z"/><path d="M12 7v10M8 11h8" stroke-width="2.4"/>'),
+  supermajor: svg('<path d="M12 2l8 3.5v5.5c0 6-4 9-8 11-4-2-8-5-8-11V5.5z"/><path d="M8 9l4 3 4-3M8 14l4 3 4-3"/>'),
+  exploder: svg('<circle cx="11" cy="14" r="6"/><path d="M15 9l3-3M18 6l2 0M18 6l0-2"/>'),
+  replete: svg('<circle cx="12" cy="14" r="6.5"/><circle cx="12" cy="5" r="2"/><path d="M12 7v1"/>'),
+  undertaker: svg('<path d="M6 21V10a6 6 0 0 1 12 0v11"/><path d="M10 13h4"/>'),
   harvester: svg('<ellipse cx="12" cy="13" rx="4" ry="6"/><path d="M12 7v12"/><path d="M8 5l2 2M16 5l-2 2"/>'),
   train: svg('<path d="M4 18l5-5 4 3 7-8"/><path d="M15 8h5v5"/>'),
   // Main menu: play, new, options, the film, back.
