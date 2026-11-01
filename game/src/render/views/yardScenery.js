@@ -10,6 +10,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 import { AREA, AREAS, SCALE as S, areaBounds } from '../../sim/yard.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
+import { houseLayout, buildHouse } from '../models/house.js';
 
 const T = 16;
 const col = new THREE.Color();
@@ -528,6 +529,14 @@ function meshLandmark(l, w, ctx) {
         for (let k = 0; k < 3; k++) {
           const d = l.h * (3 - k) / 3, hgt = (70 + k * 70) * S;
           parts.push(paint(at(new THREE.BoxGeometry(l.w * T, hgt, d * T), (l.x0 + l.w / 2) * T, hgt / 2, (l.y0 + d / 2) * T), (x, y, z) => (y > hgt - 5 * S ? (Math.floor(x / (12 * S)) % 2 ? '#b08a5a' : '#a27e50') : '#7a5a38'), 60 + k));
+          // Build 21: a rounded nosing on each tread.
+          parts.push(paint(at(new THREE.CylinderGeometry(3 * S, 3 * S, l.w * T, 6).rotateZ(Math.PI / 2), (l.x0 + l.w / 2) * T, hgt - 3 * S, (l.y0 + d) * T), '#c09a68'));
+        }
+        // Build 21: a white railing down each side: posts at each step, a sloping handrail.
+        for (const sx of [l.x0 + 0.6, l.x0 + l.w - 0.6]) {
+          const tops = [];
+          for (let k = 0; k < 3; k++) { const d = l.h * (3 - k) / 3, hgt = (70 + k * 70) * S, pz = (l.y0 + d - 1) * T; parts.push(rod([sx * T, hgt, pz], [sx * T, hgt + 110 * S, pz], 3.4 * S, 3.4 * S, '#f2eee4', 6)); tops.push([sx * T, hgt + 110 * S, pz]); }
+          parts.push(rod(tops[0], tops[2], 3 * S, 3 * S, '#f6f2e8', 6), rod(tops[2], [sx * T, 210 * S + 110 * S, (l.y0 + 0.5) * T], 3 * S, 3 * S, '#f6f2e8', 6));
         }
         break;
       }
@@ -1129,16 +1138,10 @@ export class YardScenery {
       this._file(l);
     }
 
-    // The house's brick wall along the top of the yard.
+    // The back of the house along the top of the yard (build 21): built from
+    // a layout the interior will share (models/house.js).
     const wall = pts('wall')[0];
-    if (wall) {
-      const ww = wall.w * T, brick = canvasTexture(32, 16, (c) => {
-        c.fillStyle = '#5a4a40'; c.fillRect(0, 0, 32, 16);
-        c.fillStyle = '#9a4632'; c.fillRect(1, 1, 14, 6); c.fillRect(17, 1, 14, 6);
-        c.fillStyle = '#8a3a2a'; c.fillRect(-7, 9, 14, 6); c.fillRect(9, 9, 14, 6); c.fillRect(25, 9, 14, 6);
-      }, { repeat: [ww / (64 * S), 6] });
-      this.group.add(new THREE.Mesh(new THREE.BoxGeometry(ww, 190 * S, T).translate(wall.x0 * T + ww / 2, 95 * S, T / 2), psx({ map: brick })));
-    }
+    if (wall) { this.house = buildHouse(houseLayout(wall, pts('steps')[0], S, T), S, T); this.group.add(this.house); }
     // A wooden fence round the rest: weathered boards on two rails.
     const boards = canvasTexture(32, 32, (c) => {
       for (let x = 0; x < 32; x += 8) { c.fillStyle = (x / 8) % 2 ? '#8a6e4a' : '#7e6444'; c.fillRect(x, 0, 7, 32); c.fillStyle = '#4a3a28'; c.fillRect(x + 7, 0, 1, 32); }
@@ -1161,7 +1164,6 @@ export class YardScenery {
     const under = new THREE.Mesh(new THREE.PlaneGeometry(gw + M * 2, gh + M * 2, 8, 8).rotateX(-Math.PI / 2).translate(gw / 2, 0, gh / 2), underMat(psx({ map: underTex })));
     under.renderOrder = -2;
     this.group.add(under);
-    if (wall) this.group.add(new THREE.Mesh(new THREE.BoxGeometry(wall.w * T, 420 * S, 300 * S).translate((wall.x0 + wall.w / 2) * T, 210 * S, -150 * S), psx({ color: '#b8ae9c' })));
   }
 
   _file(l) {

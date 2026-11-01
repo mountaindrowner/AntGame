@@ -2,6 +2,43 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 1: the back of the house, outside (build 21)
+
+Mark: "To the house." Then: "We can build exterior for now and build interior later." And: "keep in mind that the house we build now needs to be a good accommodating shape for a later interior."
+
+**Before:** the house was a strip of brick along the top of the yard with a plain beige box behind it.
+
+**Built for an interior later.** The house is now built from one layout (`houseLayout` in `models/house.js`), which the interior will share:
+- the footprint: the length of the yard's top edge, and 240 tiles deep
+- the floor, level with the top of the back steps
+- the wall thickness and the height to the eaves
+- where every door and window is, each tagged with the room behind it (kitchen, den, laundry, living, bath, bedroom)
+
+The walls are real walls of that thickness with real openings for the door and windows, so a door can open and rooms can be fitted inside. `buildHouse` returns named groups:
+- `shell`: the walls
+- `roof`: its own group, so an interior view can lift it off
+- `trim`: doors, windows, gutters and fittings
+- `glass`
+
+**The outside:**
+- **Walls:** a concrete foundation; a brick skirt with five small basement windows; a white trim board; cream clapboard siding to the eaves; white corner boards.
+- **The back door** at the top of the steps:
+  - a white frame
+  - a blue-grey door with raised panels and four panes of glass
+  - a brass knob and kick plate
+  - a black porch lantern with a warm glass
+- **Seven windows**, kitchen, den, laundry, living room, bathroom and bedrooms:
+  - frames, sills and muntins
+  - green louvred shutters (none on the bathroom)
+  - glass with a sky reflection
+  - curtains drawn back, a different colour in each room
+- **The roof:** a gable along the house, eaves overhanging, white fascia and soffit, a gutter, and three downspouts to concrete splash blocks.
+- **Fittings:** an electric meter, an outlet, and a hose bib. The dryer vent sits low in the brick with lint on the ground under it.
+- **Ivy** climbs both corners.
+- **The steps** now have a rounded nosing on each tread, and white railings with posts at each step.
+
+**What you see from the play camera:** it looks down into the yard, so the house shows only along the top of the screen. That means mostly its base: the foundation, brick, basement windows, splash blocks, ivy, the vent and the railings. The door, windows and siding show when you zoom right out.
+
 ## Nov 1: the Oak's roots spread round it, and no bundle of sticks (build 20.12)
 
 Mark asked about "that batch of roots or sticks" up and left of the trunk.
