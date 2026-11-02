@@ -82,7 +82,7 @@ This answers "what does the robin do?" Robins stay a hazard on the lawn, and the
 - **Zone eases:** no more robins anywhere on the lawn.
 - **Trophy, Robin's feather:** your foragers are never taken by birds anywhere.
 
-### Old Warty, the toad (zone 10)
+### Old Warty, the toad (zone 10). Built, build 31
 - **Lair:** the toad hole.
 - **Moves:**
   - **Tongue:** a long, thin lane shows, then the tongue grabs the first ant in it.

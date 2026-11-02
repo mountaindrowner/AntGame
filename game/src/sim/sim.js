@@ -462,6 +462,8 @@ function killAnt(s, a, cause){
   if (a.state === 'dead') return;
   // Build 30: with the Old Robin's feather, birds never take your ants.
   if (cause === 'bird' && !a.team && s.colony.trophies.feather){ a.hp = Math.max(a.hp, 1); a.flee = 2; return; }
+  // Build 31: with Old Warty's poison, toads, birds and spiders spit out half the ants they catch.
+  if ((cause === 'toad' || cause === 'bird' || cause === 'spider') && !a.team && s.colony.trophies.poison && Math.random() < 0.5){ a.hp = Math.max(a.hp, 1); a.flee = 2; a.state = a.state === 'away' ? 'return' : a.state; return; }
   // A Dodger slips the first foot, beak or acorn.
   if (!a.dodged && (cause === 'foot' || cause === 'bird' || cause === 'acorn' || cause === 'toad') && (promo(s, a, 'dodger') || (!a.team && a.caste === 'forager' && roomOf(s, 'armory')))){ a.dodged = true; a.flee = 2; return; }
   // Survivor: once a life, a killing blow leaves your ant at 1 health.
@@ -1751,7 +1753,8 @@ function tickStrikes(s, dt){
   for (const a of s.ants){ if (!outside(a)) continue; const r = w.area[idx(a.tx,a.ty)]; if (!out.has(r)) out.set(r, []); out.get(r).push(a); }
   // New visitors: each region's clock only runs while ants are about.
   for (let i=0;i<AREAS.length;i++){ const st = s.event && s.event.key === 'picnic' && s.event.data.region === i ? PICNIC_FEET : AREAS[i].strike; if (!st || !s.active[i] || s.strikes.some(k => k.region === i)) continue;
-    if (st.kind === 'bird' && s.colony.kills.robin && LAWN_ZONE.has(AREAS[i].key)) continue; // build 30: the Old Robin driven off, no robins over the lawn
+    if (st.kind === 'bird' && s.colony.kills.robin && LAWN_ZONE.has(AREAS[i].key)) continue;
+    if (st.kind === 'toad' && s.colony.kills.toad && WET_ZONE.has(AREAS[i].key)) continue; // build 31: Old Warty beaten // build 30: the Old Robin driven off, no robins over the lawn
     const here = out.get(i); if (!here) continue;
     s.strikeT[i] -= dt; if (s.strikeT[i] > 0) continue;
     s.strikeT[i] = (st.every[0] + Math.random()*(st.every[1] - st.every[0]))*(prizeFx(s, i) === 'calm' ? 2 : 1);
@@ -2269,7 +2272,11 @@ const BOSSES = {
   // Build 30: the Great Lawn's guardian (COMBAT.md). Robins hunt the whole lawn while it rules it.
   robin: { name: 'The Old Robin', title: 'Terror of the Great Lawn', region: 'bare', hp: 600, r: 2.0, aggro: 10, meat: 70, chitin: 0, trophy: 'feather', phase2: 0.5, slayer: 'Robin-chaser', flees: true,
     tip: 'It pecks where the red dot shows, beats its wings at a crowd and hops after the rest. Six ants on its feet pin it: no hopping, no flying off, and bites do double.', rage: 'The Old Robin takes to the air: watch its shadow, and get out of its swoop!' },
+  // Build 31: the Wet Edge's guardian.
+  toad: { name: 'Old Warty', title: 'King of the Wet Edge', region: 'toadhole', hp: 750, r: 2.4, aggro: 9, meat: 140, chitin: 0, trophy: 'poison', phase2: 0.5, slayer: 'Toad-sticker',
+    tip: 'Its tongue shoots down the thin red lane and swallows the first ant in it: bite the toad within 3 seconds and it spits the ant out alive. It only looks ahead: bites from behind do double. Its skin is poison, unless a medic is near.', rage: 'Old Warty puffs himself up and lashes twice!' },
 };
+const WET_ZONE = new Set(['toadhole', 'thistles', 'reeds', 'slugs', 'drain', 'mudflat', 'wetedge']);
 // The Great Lawn: the regions the Old Robin rules (no robins over them once it's driven off).
 const LAWN_ZONE = new Set(['lawn', 'clover', 'molehills', 'dandelions', 'pool', 'sprinkler', 'fairyring', 'gnome', 'frisbee', 'bone', 'cloverhill', 'truck', 'bare', 'longgrass', 'daisies', 'lawnedge']);
 const TROPHY = {
@@ -2277,6 +2284,7 @@ const TROPHY = {
   shell: { name: 'The beetle’s shell', fx: 'you can build an Armory: every ant 50% tougher, foragers shrug off a foot or beak' },
   mandible: { name: 'The antlion’s mandible', fx: 'fighters bite 15% harder, and the pits never drag your ants down' },
   feather: { name: 'The Old Robin’s feather', fx: 'birds never take your ants, and no robins hunt the Great Lawn' },
+  poison: { name: 'Old Warty’s poison', fx: 'your ants taste bitter: toads, birds and spiders spit out half the ants they catch, and no toads hunt the Wet Edge' },
 };
 // Where each boss lives, made when its region first wakes.
 function ensureBoss(s, key){
@@ -2301,6 +2309,7 @@ const bossArmour = (s, b, a) => {
   if (b.key === 'beetle'){ if (b.dazeT > 0) return 2.5; return a.caste === 'venom' ? 0.5 : a.isPlayer ? 0.35 : 0.15; }
   if (b.key === 'antlion') return b.under ? 0 : 1;
   if (b.key === 'robin') return b.air ? 0 : b.pinned ? 2 : 1;
+  if (b.key === 'toad'){ const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, behind = ((a.x - b.x)*b.dx + (a.y - b.y)*b.dy)/d < -0.3; return (behind ? 2 : 1)*(b.puffT > 0 ? 0.5 : 1); }
   return 1;
 };
 function tickBosses(s, dt){
@@ -2324,6 +2333,9 @@ function tickBosses(s, dt){
       const fighter = CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer, d = Math.hypot(a.x - b.x, a.y - b.y);
       if (fighter && !arm0 && d < reach*reachOf(s, a)){
         onIt++;
+        // Old Warty's skin is poison to bite, unless a medic is close by.
+        if (key === 'toad' && !s.ants.some(m => m.caste === 'medic' && !m.team && outside(m) && Math.hypot(m.x - a.x, m.y - a.y) < 5*T)) hurtAnt(s, a, 0.35*dt, 'toad');
+        if (a.state === 'dead') continue;
         const arm = bossArmour(s, b, a), dmg = bite(s, a, 'boss')*dt*(a.isPlayer ? 2*yb : 1)*arm;
         b.hp -= dmg; gainXp(s, a, dmg/3); b.hitT = s.t; (b.biters || (b.biters = {}))[a.id] = s.t;
         spark(s, a, a.x + (b.x - a.x)*0.6, a.y + (b.y - a.y)*0.6, arm < 0.5 ? 2 : 0);
@@ -2336,6 +2348,7 @@ function tickBosses(s, dt){
     if (key === 'hornworm') stepHornworm(s, b, B, dt);
     else if (key === 'beetle') stepBeetle(s, b, B, dt);
     else if (key === 'robin') stepRobin(s, b, B, dt);
+    else if (key === 'toad') stepToad(s, b, B, dt);
     else stepAntlion(s, b, B, dt);
   }
   // Goo the hornworm spat: it slows ants that walk through it.
@@ -2443,6 +2456,45 @@ function stepRobin(s, b, B, dt){
     return;
   }
   if (d > 3*T && !b.pinned) bossWalk(s, b, a.x, a.y, 10, dt);
+}
+// Old Warty (build 31). It turns slowly to face what it hunts. Tongue: a thin lane, then the first ant
+// in it is swallowed; bite the toad hard within 3 seconds and it spits the ant back out alive. Leap:
+// a ring where it will land. Phase 2: two tongues in a row, and it puffs up (bites half) now and then.
+function stepToad(s, b, B, dt){
+  if (b.dx == null){ b.dx = 1; b.dy = 0; }
+  const turn = (tx, ty) => { const want = Math.atan2(ty - b.y, tx - b.x), have = Math.atan2(b.dy, b.dx); let d = want - have; while (d > Math.PI) d -= Math.PI*2; while (d < -Math.PI) d += Math.PI*2; const a = have + Math.max(-1, Math.min(1, d))*Math.min(Math.abs(d), 1.6*dt); b.dx = Math.cos(a); b.dy = Math.sin(a); return Math.abs(d); };
+  if (b.puffT > 0) b.puffT -= dt;
+  // A swallowed ant: freed if the toad is bitten hard enough in time, else lost.
+  if (b.held){ const H = b.held, a = s.ants.find(o => o.id === H.id); H.t -= dt;
+    if (!a || a.state === 'dead'){ b.held = null; }
+    else if (b.maxHp - b.hp >= H.hp0 + 18 || b.hp <= 0){ a.state = H.state; a.x = b.x + b.dx*B.r*T; a.y = b.y + b.dy*B.r*T; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); shove(s, a, b.x, b.y, 2); b.held = null; b.spitAt = s.t; if (playerNear(s, b.x, b.y, 24)) s.player.msg = 'Old Warty gags and spits your ant out alive!'; }
+    else if (H.t <= 0){ b.held = null; a.state = H.state; killAnt(s, a, 'toad'); b.gulpAt = s.t; } }
+  if (b.mode === 'idle'){ if (!b.gx || b.t > 7){ b.t = 0; const a = Math.random()*Math.PI*2; b.gx = b.hx + Math.cos(a)*4*T; b.gy = b.hy + Math.sin(a)*4*T; } turn(b.gx, b.gy); bossWalk(s, b, b.gx, b.gy, 6, dt); return; }
+  const fast = b.phase === 2;
+  if (b.leap){ const L = b.leap; L.t += dt; const u = Math.min(1, L.t/0.5); b.x = L.x0 + (L.x1 - L.x0)*u; b.y = L.y0 + (L.y1 - L.y0)*u;
+    if (u >= 1){ b.leap = null; b.atkDone = { kind: 'ring', x: b.x, y: b.y, r: 2.6*T, t: s.t }; b.landAt = s.t;
+      for (const a of s.ants){ if (!outside(a) || a.team || Math.hypot(a.x - b.x, a.y - b.y) > 2.6*T) continue; hurtAnt(s, a, 5, 'toad'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, b.x, b.y, 2); }
+      b.cd = fast ? 1.4 : 2.2; }
+    return; }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return;
+    b.atk = null; b.atkDone = { kind: k.kind, x: k.x, y: k.y, r: k.r, t: s.t, len: k.len, dx: k.dx, dy: k.dy };
+    if (k.kind === 'lane'){ // the tongue: the first ant along the lane
+      b.lashAt = s.t; let best = null, bd = Infinity;
+      for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; const al = (a.x - k.x)*k.dx + (a.y - k.y)*k.dy; if (al < bd){ bd = al; best = a; } }
+      b.lashLen = best ? bd : k.len;
+      if (best){ if (best.isPlayer || b.held) hurtAnt(s, best, 6, 'toad'); else { b.held = { id: best.id, t: 3, state: best.state === 'away' ? 'return' : best.state, hp0: b.maxHp - b.hp }; best.state = 'away'; best.foeId = 0; if (playerNear(s, b.x, b.y, 24)) s.player.msg = 'Old Warty swallowed an ant! Bite it hard, now, and it spits it out!'; } }
+      if (fast && !k.second){ const tg = bossTarget(s, b, 12); if (tg){ const [a, d] = tg, dx = (a.x - b.x)/d, dy = (a.y - b.y)/d; b.atk = { kind: 'lane', x: b.x, y: b.y, dx, dy, len: Math.min(9*T, d + 2*T), w: 0.9*T, t: 0, at: 0.6, second: true }; return; } }
+      b.cd = fast ? 1.6 : 2.4; return; }
+    if (k.kind === 'ring'){ b.leap = { x0: b.x, y0: b.y, x1: k.x, y1: k.y, t: 0 }; return; }
+    return; }
+  b.cd -= dt; b.puffCd = (b.puffCd ?? 8) - dt;
+  if (fast && b.puffCd <= 0){ b.puffT = 5; b.puffCd = 12; b.puffAt = s.t; if (playerNear(s, b.x, b.y, 24)) s.player.msg = 'Old Warty puffs up: bites do half. Wait it out, or get behind him.'; }
+  const tg = bossTarget(s, b, 16); if (!tg) return;
+  const [a, d] = tg; const off = turn(a.x, a.y);
+  if (b.cd <= 0){
+    if (d > 6*T || (d > 3*T && Math.random() < 0.3)){ const k = Math.min(d, 7*T); b.atk = { kind: 'ring', x: b.x + (a.x - b.x)/d*k, y: b.y + (a.y - b.y)/d*k, r: 2.6*T, t: 0, at: fast ? 0.8 : 1.1 }; return; }
+    if (off < 0.5){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: Math.min(9*T, d + 2*T), w: 0.9*T, t: 0, at: fast ? 0.7 : 0.9 }; return; }
+  }
 }
 function stepBeetle(s, b, B, dt){
   if (b.dazeT > 0){ b.dazeT -= dt; return; }
@@ -2791,7 +2843,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

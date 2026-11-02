@@ -2,6 +2,37 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: Old Warty, guardian of the Wet Edge (build 31)
+
+Mark: "go". This is the second new guardian from `COMBAT.md`.
+
+**The fight:**
+- **Lair:** the Toad Hole. He rules the Wet Edge: the toad hole, thistles, reeds, slugs, drain, mud flats and wet edge. None of them can be held while he's there.
+- **He only looks ahead:** he turns slowly to face what he hunts. Bites from behind his head do double.
+- **Tongue:** a thin red lane, then the first ant in it is **swallowed**.
+  - The ant disappears and his throat bulges. The bar says "AN ANT IS IN ITS MOUTH: BITE IT, NOW!"
+  - Bite him for 18 or more within 3 seconds and he gags and spits it out alive. Otherwise it's lost.
+  - Your own ant isn't swallowed: the tongue just hurts you.
+- **Leap:** a ring where he'll land, then he arcs over and squashes what's under it.
+- **Poison skin:** every ant biting him slowly loses health, unless a medic is within 5 tiles.
+- **Phase 2 (half health):** two tongues in a row. Every 12 seconds he puffs up for 5 seconds, and bites do half.
+
+**What you get:**
+- **Old Warty's poison:** your ants taste bitter. Toads, birds and the spider spit out half the ants they catch.
+- **The Wet Edge eases:** no more toads there, and it can be held.
+- Plus 140 meat, 4 genes and a Legend ("Toad-sticker").
+
+**On screen:**
+- The strike toad's model at twice the size, olive.
+- His tongue shoots to whatever it caught. He leaps in an arc and swells when puffed.
+- His own banner (🐸) and bar lines.
+
+**Also fixed:** constant biting kept the Old Robin and Old Warty solid red from the hit flash. Being bitten is now a soft flicker on both.
+
+**Checks:**
+- 127 tests, 5 new (`tests/toad.test.js`): he rules the Wet Edge; bites from behind are double and puffed-up bites half; the tongue takes the first ant in its lane, and left alone it's lost; a crew biting hard gets it spat out alive; and beaten, he gives the trophy and no toads come to the Wet Edge.
+- A browser run showed the spit-out, the swallow, the puff and the bar lines, with no errors.
+
 ## Nov 2: the Old Robin, guardian of the Great Lawn (build 30)
 
 This is the first new guardian from `COMBAT.md`. It answers Mark's "I don't know what the robin does yet": ordinary robins stay a hazard, and the Old Robin is the one that rules the lawn and can be driven off.

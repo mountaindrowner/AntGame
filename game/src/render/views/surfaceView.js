@@ -1105,10 +1105,35 @@ export class SurfaceView {
         R.body.rotation.z = -0.75 * peck; R.head.rotation.z = -0.4 * peck;
         const flap = RA.y > 4 || rb.dead || (rb.beatAt != null && s.t - rb.beatAt < 0.6) || (rb.atk && rb.atk.what === 'beat');
         for (const w of R.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 28) * 0.9) : w.s * (rb.pinned ? 0.35 + 0.15 * Math.sin(t * 20) : 0.05);
-        const col = !rb.dead && flashed(s, rb) ? HIT : rb.pinned ? '#ffe2a0' : '#ffffff';
+        const col = !rb.dead && flashed(s, rb) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : rb.pinned ? '#ffe2a0' : '#ffffff';
         for (const m of this.oldRobinMats) m.color.set(col);
         if (RA.y > 6) { const near = 1 - Math.min(1, RA.y / 300); this.oldRobinShadow.visible = true; this.oldRobinShadow.position.set(rb.x, 0.8, rb.y); this.oldRobinShadow.scale.setScalar(70 * (0.7 + 0.3 * near)); this.oldRobinShadow.material.opacity = 0.15 + 0.3 * near; }
         if (!rb.dead && rb.hp < rb.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], rb.x, rb.y, 70 + RA.y, rb.hp / rb.maxHp, '#b04ad0');
+      }
+    }
+    // Old Warty (build 31): the strike toad's model, twice the size, darker. It turns to face, lashes its
+    // tongue down the lane, leaps in an arc, puffs up in its second phase; a swallowed ant bulges its throat.
+    const tw = B.toad, WK = 96;
+    if (tw && !this.warty) {
+      this.warty = toad(); this.warty.group.scale.setScalar(WK); this.dyn.add(this.warty.group);
+      this.wartyMats = []; this.warty.group.traverse((o) => { if (o.material && !this.wartyMats.includes(o.material)) this.wartyMats.push(o.material); });
+      this.wartyAnim = { yaw: 0 };
+    }
+    if (this.warty) {
+      const W2 = this.warty, WA = this.wartyAnim, show = tw && (!tw.dead || s.t - tw.deadT < 14);
+      W2.group.visible = !!show;
+      if (show) {
+        tele(tw);
+        const aim = Math.atan2(tw.dy || 0, tw.dx ?? 1); WA.yaw += wrapAngle(aim - WA.yaw) * Math.min(1, fdt * 8);
+        let y = 0; if (tw.leap) y = Math.sin(Math.PI * Math.min(1, tw.leap.t / 0.5)) * 70; if (tw.dead) y = -Math.max(0, (s.t - tw.deadT - 10) / 4) * 30;
+        W2.group.position.set(tw.x, y, tw.y); W2.group.rotation.set(tw.dead ? Math.PI : 0, -WA.yaw, 0);
+        const lash = tw.lashAt != null && s.t - tw.lashAt < 0.35 ? Math.sin(Math.PI * (s.t - tw.lashAt) / 0.35) : 0;
+        W2.tongue.visible = lash > 0; if (lash > 0) W2.tongue.scale.set(Math.max(0.4, (tw.lashLen || 2 * T) / WK - 1.05) * lash, 1, 1);
+        const puff = tw.puffT > 0 ? 1.28 : 1, gulp = tw.held ? 1.5 + 0.15 * Math.sin(t * 9) : 1 + 0.4 * Math.max(0, Math.sin(t * 5));
+        W2.body.scale.set(puff, puff * (1 + 0.02 * Math.sin(t * 2)), puff); W2.throat.scale.set(1, gulp, 0.6 + 0.4 * gulp);
+        const col = !tw.dead && flashed(s, tw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : tw.puffT > 0 ? '#e8d890' : '#b8c0a8'; // bitten all the time: a flicker, not solid red
+        for (const m of this.wartyMats) m.color.set(col);
+        if (!tw.dead && tw.hp < tw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], tw.x, tw.y, 70 + y, tw.hp / tw.maxHp, '#b04ad0');
       }
     }
     // Hornworm goo.
