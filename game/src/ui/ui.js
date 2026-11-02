@@ -26,7 +26,7 @@ export function createUI(app) {
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
-  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', raid: 'Raid', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', raid: 'Raid', hold: 'Hold', split: 'Split', follow: 'Follow', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
   const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
@@ -37,6 +37,10 @@ export function createUI(app) {
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
   // Build 28: the Raid button (by a rival door, with a crew) and the raid card (while one runs).
   el.raid = document.createElement('button'); el.raid.id = 'raidbtn'; el.raid.className = 'ico hidden'; el.outpost.after(el.raid); setIcon(el.raid, 'raid', 'Raid');
+  // Build 29: crew orders, next to Release.
+  const mk = (id, icon, tip) => { const b = document.createElement('button'); b.id = id; b.className = 'ico hidden'; setIcon(b, icon, tip); return b; };
+  el.hold = mk('holdbtn', 'hold', 'Hold'); el.split = mk('splitbtn', 'split', 'Split'); el.follow = mk('followbtn', 'follow', 'Follow');
+  el.release.after(el.hold, el.split, el.follow);
   el.raidCard = document.createElement('div'); el.raidCard.id = 'raidcard'; el.raidCard.className = 'hidden'; document.body.appendChild(el.raidCard);
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
   setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.menu, 'menu', 'Main menu: options, sound, new colony (Esc)'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.jobs, 'jobs', 'Jobs: what each kind of ant does first'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
@@ -590,6 +594,11 @@ export function createUI(app) {
     // Outpost: once Waypoints is evolved, while you're out in the yard.
     const showOut = SIM.has(s, 'waypoints') && P().ant && !P().inNest;
     el.outpost.classList.toggle('hidden', !showOut);
+    { const n = SIM.crewSize(s), held = SIM.heldCount(s), outside = P().ant && !P().inNest;
+      el.hold.classList.toggle('hidden', !(outside && n > 0)); el.split.classList.toggle('hidden', !(outside && n >= 2)); el.follow.classList.toggle('hidden', !(outside && held > 0));
+      if (outside && n > 0) setIcon(el.hold, 'hold', `Hold: your crew of ${n} stands guard here, ${SIM.HOLD_R} tiles round. Right-click the ground to send them there instead.`);
+      if (outside && n >= 2) setIcon(el.split, 'split', `Split: ${Math.ceil(n / 2)} hold here, ${Math.floor(n / 2)} stay with you`);
+      if (outside && held > 0) setIcon(el.follow, 'follow', `Follow: call your ${held} holding ant${held === 1 ? '' : 's'} back to you`, held); }
     const rt = SIM.raidTarget(s); el.raid.classList.toggle('hidden', !rt);
     if (rt) { const n = SIM.crewSize(s); setIcon(el.raid, 'raid', n >= SIM.RAID.minCrew ? `Raid the ${SIM.RIVALS[rt.team - 1].name} with your crew of ${n}` : `Raid: recruit a crew first (${n} of ${SIM.RAID.minCrew})`); el.raid.classList.toggle('dim', n < SIM.RAID.minCrew); }
     renderRaidCard();
@@ -664,6 +673,9 @@ export function createUI(app) {
   el.view.addEventListener('click', () => { app.view = app.view === 'nest' ? 'surface' : 'nest'; closeMenu(); });
   el.act.addEventListener('click', () => SIM.doAction(app.s));
   el.release.addEventListener('click', () => SIM.release(app.s));
+  el.hold.addEventListener('click', () => { const a = P().ant; if (a) SIM.crewHold(app.s, a.x, a.y); });
+  el.split.addEventListener('click', () => { const a = P().ant; if (a) SIM.crewHold(app.s, a.x, a.y, true); });
+  el.follow.addEventListener('click', () => SIM.crewFollow(app.s));
   el.raid.addEventListener('click', () => { if (app.menu === 'raid') closeMenu(); else openMenu('raid'); });
   el.raidCard.addEventListener('click', (e) => { if (e.target.closest('[data-pull]')) SIM.pullOut(app.s); });
   el.outpost.addEventListener('click', () => { const why = SIM.outpostLock(app.s); if (why) flash('Outpost: ' + why + '.', /^Outpost:/, 2600); else if (SIM.placeOutpost(app.s)) sfx.play('roomPlaced'); });

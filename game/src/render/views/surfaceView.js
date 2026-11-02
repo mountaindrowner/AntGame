@@ -294,6 +294,8 @@ export class SurfaceView {
     this.callRing = new THREE.Mesh(thin, psxBasic({ color: '#ffd34d', transparent: true, opacity: 0.55, depthWrite: false }));
     this.leashRing = new THREE.Mesh(thin, psxBasic({ color: '#9cc8ff', transparent: true, opacity: 0.3, depthWrite: false }));
     this.callRing.visible = this.leashRing.visible = false; g.add(this.callRing, this.leashRing);
+    // Build 29: where a crew holds, a faint green ring the size of the ground it guards.
+    this.holdRings = Array.from({ length: 4 }, () => { const m = new THREE.Mesh(thin, psxBasic({ color: '#a8f0a0', transparent: true, opacity: 0.4, depthWrite: false })); m.visible = false; g.add(m); return m; });
     const stone = psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.5, 0.5] }) });
     this.cairnParts = [[0, 4.2, 0, 9, 4.6, 8], [1.2, 10.4, 0.8, 6.6, 3.8, 6], [-0.6, 15.4, 0.2, 4.6, 3, 4.4], [0.4, 19.2, -0.4, 3, 2.2, 3]].map(([x, y, z, sx, sy, sz], i) => {
       const geo = new THREE.IcosahedronGeometry(1, 1); geo.scale(sx, sy, sz); geo.rotateY(i * 1.3); geo.translate(x, y, z); return { geo, mat: stone };
@@ -474,8 +476,11 @@ export class SurfaceView {
       if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
     const pa = P.ant;
-    const out = pa && !P.inNest, crew = out && s.ants.some((o) => o.follow);
+    const out = pa && !P.inNest, crew = out && s.ants.some((o) => o.follow && o.state === 'follow');
     this.callRing.visible = !!(out && app.recruiting); this.leashRing.visible = !!crew;
+    { const seen = new Map(); for (const a of s.ants) if (a.state === 'hold' && a.follow && a.holdCX != null){ const k = Math.round(a.holdCX) + ',' + Math.round(a.holdCY); if (!seen.has(k)) seen.set(k, [a.holdCX, a.holdCY]); }
+      let i = 0; for (const [x, y] of seen.values()){ const m = this.holdRings[i++]; if (!m) break; m.visible = true; m.position.set(x, 0.75, y); m.scale.setScalar(SIM.HOLD_R * T * (1 + 0.02 * Math.sin(t * 3 + i))); }
+      for (; i < this.holdRings.length; i++) this.holdRings[i].visible = false; }
     if (this.callRing.visible) { const r = (SIM.picked(s, 'you', 'rally') ? 10 : 7) * T; this.callRing.position.set(pa.x, 0.7, pa.y); this.callRing.scale.setScalar(r * (1 + 0.03 * Math.sin(t * 6))); }
     if (crew) { this.leashRing.position.set(pa.x, 0.65, pa.y); this.leashRing.scale.setScalar(16 * T); }
     if (pa && !P.inNest) {

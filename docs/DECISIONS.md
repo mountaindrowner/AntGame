@@ -2,6 +2,38 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: crew orders: hold, send, split, follow (build 29)
+
+Mark picked the new guardians and "crew orders beyond attack that (hold, formations, splitting)": "Lets do 2 and 3". Crew orders came first, because they're smaller. The guardians follow, one per build.
+
+**The orders** (buttons appear next to Release when they apply):
+- **Hold:** the crew plants itself where you stand, in a small ring, and guards 5 tiles round it.
+  - It chases anything that comes in (rival ants, the spider, bugs) but never past the ring's edge, then goes back to its spot.
+  - A faint green ring on the ground shows the guarded ground.
+  - It holds however far you walk away.
+- **Split:** half the crew holds where you stand and half keeps following you.
+- **Follow:** calls every holding ant back. They come from anywhere: the usual 16-tile leash doesn't apply until they reach you.
+- **Right-click:**
+  - on an enemy, with a crew, your crew attacks it (as hovering does, build 26);
+  - on the ground, the crew goes there and holds;
+  - with nobody following, the crew already holding moves there instead;
+  - right-click no longer walks your ant.
+
+**How it fits with the rest:**
+- Holding ants are still your crew: Release frees them, and they count as fighters against the spider and bugs.
+- They don't count toward a raid's crew or an attack order. Those take the ants following you.
+- Holding is kept in saves.
+
+**Formations** (tight against wide) are left out. Hold and split cover what they were for, and they'd need a design of their own.
+
+**Checks:**
+- 117 tests, 5 new (`tests/orders.test.js`): hold, and staying held when you walk 30 tiles off; a held crew killing an intruder and going back to its spot; split; follow from 25 tiles; and holding kept across a save.
+- Raid fixes found while testing:
+  - A brood raid now ends when every pupa is taken. It used to keep its raiders inside until round 60.
+  - Raiders carrying a prize stop fighting.
+  - A starving home colony no longer kills raiders who are inside a rival nest.
+- A browser run showed Split, then a right-click sending the rest, two green hold rings and the Follow button's count, with no errors.
+
 ## Nov 2: raids you lead (build 28)
 
 Mark: "I want raids to feel interesting and important. You raid other colonies." Then "okay next build", so I built step 2 of `COMBAT.md`.

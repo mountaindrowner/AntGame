@@ -217,6 +217,13 @@ Raids should be the big moments. Today you only "hold the door until the queen d
 
 **The raid report** comes at the end: raiders lost, guards killed, crits, what you brought home, and the colony's state after ("Their numbers: 34 → 21").
 
+## 5b. Crew orders (built, build 29)
+
+- **Hold:** your crew guards 5 tiles round a spot.
+- **Split:** half holds, half follows.
+- **Follow:** call a holding crew back from anywhere.
+- **Right-click:** on the ground, the crew goes there and holds; on an enemy, they attack it.
+
 ## 6. The Phase 1 end, redone
 
 **Phase 1 ends when all 13 zone guardians have fallen.** That is all 13 main sections of the map and their main bosses, conquered.

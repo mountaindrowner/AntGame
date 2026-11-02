@@ -83,6 +83,7 @@ export function attachPointer(canvas, app, ui, views) {
   }
 
   canvas.addEventListener('pointerdown', (e) => {
+    if (e.button === 2) return; // right-click is a crew order (contextmenu)
     canvas.setPointerCapture(e.pointerId);
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size === 2) {
@@ -147,6 +148,15 @@ export function attachPointer(canvas, app, ui, views) {
       }
     }
   };
+  // Build 29: right-click on the yard: at an enemy, your crew attacks it; on the ground, your crew goes
+  // there and holds (a crew already holding moves there if nobody is following you).
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    if (app.view !== 'surface' || !P().ant || P().inNest) return;
+    const w = surfacePoint(e); if (!w) return;
+    if (SIM.crewSize(app.s) && SIM.crewAttack(app.s, w.x, w.y)) return;
+    if (SIM.crewSize(app.s) || SIM.heldCount(app.s)) SIM.crewHold(app.s, w.x, w.y);
+  });
   canvas.addEventListener('pointerup', up);
   canvas.addEventListener('pointerleave', () => { if (hover) clearTimeout(hover.timer); hover = null; canvas.style.cursor = ''; });
   canvas.addEventListener('pointercancel', up);

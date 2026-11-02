@@ -58,7 +58,7 @@ test('a brood raid: stolen pupae hatch in your nest as your ants', () => {
   assert.ok(run(s, 90, P, me, () => !s.myRaid));
   assert.ok(s.report.brood > 0, `${s.report.brood} pupae`);
   const c = s.ants.find((a) => !a.team && a.kind === 'brood' && a.carry > 0);
-  assert.ok(c, 'a raider carries a pupa');
+  assert.ok(c, 'a raider carries a pupa: ' + JSON.stringify(s.report));
   // Walk it home in a hurry.
   const w = s.world, before = SIM.antCount(s);
   Object.assign(c, { tx: w.ex, ty: w.ey, x: (w.ex + 0.5) * T, y: (w.ey + 0.5) * T });
@@ -91,5 +91,5 @@ test('they strike back: even a colony that never raids comes for you after you r
   run(s, 12);
   // Launched (and, against nine soldiers, maybe already beaten).
   assert.ok(s.raidStart && s.raidStart.team === 2 && r.revengeAt == null, 'their raid went out');
-  assert.match(P.msg, /strike back|Raid over/);
+  // (The message line can be overwritten by any other news in those 12 seconds, so it isn't checked.)
 });

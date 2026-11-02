@@ -68,6 +68,10 @@ export const ICONS = {
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   jobs: svg('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10l1.5 1.5L13 8.5M8.5 16l1.5 1.5 3-3M15 11h1.5M15 17h1.5"/>'),
   // Outpost: a cairn of pebbles with a little flag.
+  // Build 29: crew orders. A flag planted (hold), two arrows parting (split), an arrow home (follow).
+  hold: svg('<path d="M7 21V4"/><path d="M7 4h11l-3 4 3 4H7"/><ellipse cx="7" cy="21" rx="4" ry="1.2"/>'),
+  split: svg('<path d="M12 21v-7"/><path d="M12 14L6 6M12 14l6-8"/><path d="M6 10V6h4M18 10V6h-4"/>'),
+  follow: svg('<circle cx="12" cy="7" r="3"/><path d="M5 20c1-4 4-6 7-6s6 2 7 6"/><path d="M3 12h4M17 12h4"/>'),
   // Build 28: crossed mandibles, for a raid.
   raid: svg('<path d="M5 20L14 11M19 20L10 11"/><path d="M14 11c0-4 2-7 6-8 0 4-2 7-6 8zM10 11c0-4-2-7-6-8 0 4 2 7 6 8z"/>'),
   outpost: svg('<ellipse cx="12" cy="19" rx="7" ry="2.4"/><ellipse cx="11" cy="14.6" rx="4.6" ry="2"/><ellipse cx="12" cy="10.8" rx="2.8" ry="1.6"/><path d="M13 9V3l5 2-5 2"/>'),

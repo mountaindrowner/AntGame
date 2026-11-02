@@ -788,7 +788,7 @@ function tick(s, dt){
     // spider / enemies
     if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y) * (s.spider.rest > 0 ? 2.5 : 1); // waiting at its web, it's hard to see
       const brave = a.follow || a.state === 'raid' || (a.state === 'fight' && a.goal === 'spider') || spiderCrew[a.team] >= 5;
-      if (sd < (has(s, 'danger') && !aggressive ? 7 : 3.5)*T){ if (aggressive && brave){ if (a.state !== 'follow' && a.state !== 'raid') a.state = 'fight'; a.goal = 'spider'; } else if (a.state !== 'fight'){ a.flee = 2; } } }
+      if (sd < (has(s, 'danger') && !aggressive ? 7 : 3.5)*T){ if (aggressive && brave){ if (a.state !== 'follow' && a.state !== 'raid' && a.state !== 'hold') a.state = 'fight'; a.goal = 'spider'; } else if (a.state !== 'fight'){ a.flee = 2; } } }
     const reach = reachOf(s, a), en = enemiesNear(a, aggressive ? reach : 2);
     if (a.burnT > 0){ a.burnT -= dt; a.hp -= dt/3; if (a.hp <= 0){ killAnt(s, a, 'fireants'); continue; } }
     if (!en.length) a.foeId = 0;
@@ -798,14 +798,14 @@ function tick(s, dt){
         let o = a.foeId && en.find(q => q.id === a.foeId && Math.abs(q.tx-a.tx)<=reach && Math.abs(q.ty-a.ty)<=reach);
         if (!o){ o = en.find(q => Math.abs(q.tx-a.tx)<=reach && Math.abs(q.ty-a.ty)<=reach); a.foeId = o ? o.id : 0; if (o && !(a.rollT > 0)) a.rollT = Math.random()*DUEL_ROUND; }
         if (o){ a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT += DUEL_ROUND; swing(s, a, o); } }
-        if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') a.state = 'fight'; a.goal = 'enemy'; }
+        if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') { a.state = 'fight'; a.goal = 'enemy'; } }
       else if (en.some(o => CASTES[o.caste].fight >= 3 || o.follow)){ a.flee = 2.5; }
     }
     // Build 27: mandibles locked, it can't move this round; pinned by three, it can't run.
     if (a.lockT > 0){ a.lockT -= dt; continue; }
     if (a.flee > 0 && pinnedNow(s, a)) a.flee = 0;
     if (a.team && rspec(a).key === 'argentine' && en.length) a.flee = 0;
-    if (a.flee > 0 && a.state !== 'fight' && a.state !== 'follow' && a.state !== 'raid'){
+    if (a.flee > 0 && a.state !== 'fight' && a.state !== 'follow' && a.state !== 'hold' && a.state !== 'raid'){
       const threat = a.fleeFrom || (s.spider && Math.hypot(a.x-s.spider.x, a.y-s.spider.y) < 4*T ? s.spider : (en[0] || s.spider || {x:a.x+1,y:a.y}));
       if (stepTo(a, a.tx, a.ty, C.speed+20, dt)) chooseToward(s, a, a.x + (a.x - threat.x), a.y + (a.y - threat.y));
       continue;
@@ -845,10 +845,23 @@ function tick(s, dt){
       if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, gx, gy);
       continue;
     }
+    if (a.state === 'hold'){ // build 29: guarding a spot
+      if (a.holdX == null){ a.state = 'follow'; continue; }
+      const hx = a.holdX, hy = a.holdY, ht = Math.floor(hx/T), hty = Math.floor(hy/T);
+      // Chase an enemy that comes within the guarded ring; never farther than the ring's edge.
+      let foe = null, fd = Infinity;
+      for (const o of enemiesNear(a, HOLD_R + 1)){ const d = Math.hypot(o.x - hx, o.y - hy); if (d <= HOLD_R*T && d < fd){ fd = d; foe = o; } }
+      if (!foe && s.spider && Math.hypot(s.spider.x - hx, s.spider.y - hy) < HOLD_R*T) foe = s.spider;
+      if (!foe) for (const b of s.critters || []){ if (b.state !== 'fly' && Math.hypot(b.x - hx, b.y - hy) < HOLD_R*T){ foe = b; break; } }
+      if (foe){ if (Math.hypot(a.x - foe.x, a.y - foe.y) > 0.6*T){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed + 20), dt)) chooseToward(s, a, foe.x, foe.y); } continue; }
+      if (Math.hypot(a.x - hx, a.y - hy) > 0.5*T){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed + 15), dt)) chooseToward(s, a, hx, hy); }
+      continue;
+    }
     if (a.state === 'follow'){
-      if (!P.ant || P.inNest){ a.follow = false; a.state = 'explore'; continue; }
+      if (!P.ant || P.inNest){ if (a.recall) continue; a.follow = false; a.state = 'explore'; continue; }
       const pd = Math.hypot(a.x - P.ant.x, a.y - P.ant.y), tg = attackTarget(s);
-      if (pd > (tg ? ATTACK_LEASH + 10 : 16)*T){ a.follow = false; a.state = 'explore'; continue; }
+      if (a.recall && pd < 3*T) a.recall = false;
+      if (pd > (a.recall ? 400 : tg ? ATTACK_LEASH + 10 : 16)*T){ a.follow = false; a.state = 'explore'; continue; }
       if (tg){ // build 26: charging what you pointed at
         if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }
         const td = Math.hypot(a.x - tg.x, a.y - tg.y);
@@ -947,7 +960,7 @@ function tickColony(s, c, dt){
   if (c.team > 1) eat *= 0.5;
   const bite = eat/60*dt; c.eaten[0] += bite; c.store -= bite; if (!c.team && c.store > c.storePeak) c.storePeak = c.store;
   if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The colony is starving. Forage farther.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
-  if (c.starve > 20 && (c.starve - 20) % (!c.team && has(s, 'stomach') ? 10 : 5) < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length && !(c.team > 1 && v.length <= RIVALS[c.team - 1].start[0] + RIVALS[c.team - 1].start[1])) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); } // build 25.1: a later colony never starves below the size it came with
+  if (c.starve > 20 && (c.starve - 20) % (!c.team && has(s, 'stomach') ? 10 : 5) < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.state !== 'away' && a.team === c.team); if (v.length && !(c.team > 1 && v.length <= RIVALS[c.team - 1].start[0] + RIVALS[c.team - 1].start[1])) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); } // build 25.1: a later colony never starves below the size it came with
   const overCap = !c.team && s.ants.filter(a => !a.team).length >= queenCap(s.queen.level, s);
   if (c.queenAlive && (c.team || s.queen.placed) && !overCap){
     while (c.eggQueue.length && c.eggs.length < c.hatchCap){ const caste = c.eggQueue.shift(); c.eggs.push({ caste, t: 0, need: CASTES[caste].hatch * c.hatchMul }); }
@@ -1605,6 +1618,28 @@ function crewAttack(s, x, y){
   P.attack = { kind: e.kind, ref: e.ref, name: e.name, t: s.t };
   P.msg = `Your crew charges ${e.name}!`; s.seen.attacked = true; s.events.push('attack'); return true;
 }
+// Build 29: crew orders (Mark picked "hold, formations, splitting"). Hold: the crew plants itself at a
+// spot and guards a few tiles round it, fighting whatever comes in. Split: half holds, half follows.
+// Follow: the held crew comes back to you from anywhere.
+const HOLD_R = 5; // tiles a held crew guards round its spot
+function crewHold(s, x, y, half){
+  const P = s.player; if (!P.ant || P.inNest) return 0;
+  let crew = s.ants.filter(o => o.follow && o.state === 'follow');
+  if (!crew.length && !half) crew = s.ants.filter(o => o.follow && o.state === 'hold'); // no one following: move the held crew
+  const pick = half ? crew.filter((o, i) => i % 2 === 0) : crew; if (!pick.length) return 0;
+  const tx = Math.floor(x/T), ty = Math.floor(y/T);
+  pick.forEach((o, i) => { const a = (i / pick.length)*Math.PI*2, rr = pick.length > 1 ? 0.9*T : 0; o.state = 'hold'; o.holdX = x + Math.cos(a)*rr; o.holdY = y + Math.sin(a)*rr; o.holdCX = x; o.holdCY = y; o.foeId = 0; o.goal = null; o.recall = false; });
+  if (P.attack && !crewSize(s) && P.attack.kind !== 'door') P.attack = null;
+  P.msg = half ? `${pick.length} of your crew hold here; the rest stay with you.` : `Your crew holds ${Math.hypot(x - P.ant.x, y - P.ant.y) > 2*T ? 'there' : 'here'}: they guard ${HOLD_R} tiles round it.`;
+  s.seen.held = true; return pick.length;
+}
+function crewFollow(s){
+  const P = s.player; if (!P.ant || P.inNest) return 0; let n = 0;
+  for (const o of s.ants) if (o.follow && o.state === 'hold'){ o.state = 'follow'; o.recall = true; o.foeId = 0; n++; }
+  if (n) P.msg = `${n} of your crew come back to you.`;
+  return n;
+}
+const heldCount = s => s.ants.filter(o => o.follow && o.state === 'hold').length;
 function tickAttack(s){
   const P = s.player, A = P.attack; if (!A) return;
   const o = attackTarget(s), a = P.ant;
@@ -1918,7 +1953,7 @@ function tickMyRaid(s, dt){
   for (const a of raiders) a.foeId = 0;
   const order = raiders.slice().sort(() => Math.random() - 0.5);
   let crits = 0, felled = 0, lost = 0, named = null; const free = [];
-  order.forEach((a, i) => { if (!def.length) { free.push(a); return; } a.foeId = def[i % def.length].id; });
+  order.forEach((a, i) => { if (!def.length || a.loot) { free.push(a); return; } a.foeId = def[i % def.length].id; });
   duelGangs(s);
   for (const a of order){
     if (!a.foeId){ continue; }
@@ -1953,7 +1988,7 @@ function tickMyRaid(s, dt){
   raidSay(M, line.trim());
   if (M.prize === 'queen' && r.queenAlive && r.qhp <= 0){ queenFalls(s, r); raidSay(M, 'The queen is dead!'); endRaid(s, 'won'); return; }
   if (M.prize === 'store' && (M.loot.food >= M.cap || r.store < 1)){ raidSay(M, 'Their store is stripped.'); endRaid(s, 'done'); return; }
-  if (M.prize === 'brood' && M.broodLeft <= 0 && !free.some(a => !a.loot)){ raidSay(M, 'No more brood to take.'); endRaid(s, 'done'); return; }
+  if (M.prize === 'brood' && M.broodLeft <= 0){ raidSay(M, 'All their brood is taken.'); endRaid(s, 'done'); return; }
   if (M.prize === 'brood' && raiders.every(a => a.state === 'dead' || a.loot)){ raidSay(M, 'Every raider has a pupa.'); endRaid(s, 'done'); return; }
   if (M.round >= RAID.maxRounds){ raidSay(M, 'Worn out, your raiders fall back.'); endRaid(s, 'out'); }
 }
@@ -2683,7 +2718,7 @@ function stats(s){
 function serialize(s){
   return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
-    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind })),
+    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
@@ -2706,7 +2741,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
