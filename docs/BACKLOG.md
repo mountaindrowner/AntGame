@@ -4,17 +4,19 @@ Mark's wish list after build 11 (Oct 28). Grouped by area, in his words where th
 
 Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
-## Still open (Nov 2, after build 25.1)
+## Still open (Nov 2, after build 28)
 
 **Waiting on Mark's word**
+- **The itch page's text and screenshots** date from Oct 30 (around build 18). They need refreshing for builds 19–28.
 - **The house's inside.** Mark: "later". The outside is built for it (`models/house.js`).
 - **The grand arc** (yard → house → neighbourhood → city → world → space). This needs a design document first.
-- **Combat, guardians, raids and the Phase 1 end:** planned in `COMBAT.md` (Nov 2), waiting on Mark's go.
+- **Combat plan (`COMBAT.md`):** crew attack (26), duels (27) and raids (28) are built. Still to build:
+  - the zone frame: 13 zones, a crest per zone on the map, "Zones taken", hazards easing when a guardian falls, and the Phase 1 end screen;
+  - the new guardians: the Old Robin, Old Warty the toad, the praying mantis, the black widow and the giant centipede, plus the yellowjackets if wanted.
+  - Not in the plan yet: crew orders beyond "attack that" (hold, formations, splitting).
 - **Sit-downs Mark asked for:**
-  - combat: one-on-one, crews, bosses
-  - what the robin is for
   - the War camp and the other rooms left
-  - the Phase 1 cap: when every main region and boss is beaten, the yard is done and Phase 2 (the house) opens
+  - The robin and the Phase 1 cap now have proposals in `COMBAT.md`: the robin becomes the Great Lawn's guardian, and Phase 1 ends when all 13 zone guardians fall.
 - **Phase 2 scaling** (Mark's "radioactive waste" in the house) and the great evolutions: later phases.
 
 **Gameplay**
