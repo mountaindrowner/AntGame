@@ -2,6 +2,18 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the centipede reshaped (build 36.1)
+
+Mark: "Centipede looks strange."
+
+It read as a few round beads strung out with gaps, each with one pair of legs. Now it's a long flat chain, like a real centipede:
+- **Plates:** two flat armour plates for each of its six segments, so 13 pieces with the head. They touch end to end, each with a bright band on its back edge.
+- **Legs:** two pairs per plate, angled back. Four frames send a **wave** of steps running down the body.
+- **Head:** a flatter head with longer antennae and curved venom claws.
+- **Coiling** winds the longer body into a tighter spiral.
+
+Nothing in the fight changed. A browser close-up checked the new look, walking and coiled.
+
 ## Nov 2: the giant centipede, guardian of the Rot (build 36)
 
 Mark: "Go". This is the last guardian on the `COMBAT.md` list, with a new model. Every zone in the plan now has its guardian. (The yellowjacket nest was always optional.)

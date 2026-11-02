@@ -217,29 +217,33 @@ export function widowGeometry(pose = 'hang') {
   return bake(parts);
 }
 
-// ---------- giant centipede (build 36) ----------
-// Pieces drawn along the path its head took: 'head' (long antennae, curved
-// venom claws), 'seg' (a flat armoured ring with one pair of legs, two frames
-// so the legs ripple), 'tail' (the last ring, long legs trailing back).
-const CP = { body: '#2e160c', dark: '#1a0c06', band: '#d06a20', leg: '#ffb440', claw: '#140804', head: '#d0401a' }; // dark-backed with bright legs, to read on leaf litter
+// ---------- giant centipede (build 36; reshaped 36.1) ----------
+// A long flat chain: 'head' (flat, long antennae, curved venom claws), 'seg'
+// (a flat overlapping armour plate with two pairs of legs angled back, four
+// frames so a wave of legs runs down the body), 'tail' (the last plate, long
+// legs trailing back). Drawn along the path its head took, plates touching.
+const CP = { body: '#2e160c', edge: '#5a2a12', band: '#d06a20', leg: '#ffb440', claw: '#140804', head: '#d0401a' };
+export const CENTI_FRAMES = 4;
 export function centipedeGeometry(part = 'seg', frame = 0) {
   const parts = [];
   if (part === 'head') {
-    parts.push(blob([0.2, 0.75, 0], [1.0, 0.5, 1.0], [10, 6], (x, y) => (y > 1.0 ? CP.head : CP.dark)));
+    parts.push(blob([0.3, 0.4, 0], [1.1, 0.32, 0.95], [10, 5], (x, y) => (y > 0.55 ? CP.head : CP.edge)));
     for (const side of [-1, 1]) {
-      const a0 = V(0.9, 0.95, side * 0.4), a1 = V(2.4, 1.6, side * 1.0), a2 = V(3.8, 1.5, side * 1.9);
-      parts.push(strut(a0, a1, 0.1, 0.07, CP.leg, 3), strut(a1, a2, 0.07, 0.04, CP.leg, 3));
-      const c0 = V(0.9, 0.5, side * 0.5), c1 = V(1.7, 0.45, side * 0.75), c2 = V(2.0, 0.4, side * 0.1);
-      parts.push(strut(c0, c1, 0.2, 0.15, CP.claw, 4), strut(c1, c2, 0.15, 0.04, CP.claw, 4));
+      const a0 = V(1.1, 0.55, side * 0.45), a1 = V(2.8, 0.9, side * 1.1), a2 = V(4.6, 0.8, side * 2.2);
+      parts.push(strut(a0, a1, 0.09, 0.06, CP.leg, 3), strut(a1, a2, 0.06, 0.03, CP.leg, 3));
+      const c0 = V(1.0, 0.3, side * 0.5), c1 = V(1.9, 0.28, side * 0.8), c2 = V(2.2, 0.25, side * 0.12);
+      parts.push(strut(c0, c1, 0.18, 0.13, CP.claw, 4), strut(c1, c2, 0.13, 0.04, CP.claw, 4));
     }
     return bake(parts);
   }
-  parts.push(blob([0, 0.7, 0], [1.05, 0.42, 1.15], [10, 6], (x, y) => (x < -0.6 ? CP.band : y > 0.95 ? CP.body : CP.dark)));
-  const swing = (frame ? 1 : -1) * 0.55;
-  for (const side of [-1, 1]) {
-    const s2 = part === 'tail' ? 1 : swing * side;
-    const hip = V(0, 0.55, side * 0.95), knee = V(0.2 + s2 * 0.5, 0.9, side * 1.8), foot = part === 'tail' ? V(-2.6, 0.3, side * 1.6) : V(0.3 + s2, 0, side * 2.6);
-    parts.push(strut(hip, knee, 0.13, 0.1, CP.leg, 3), strut(knee, foot, 0.1, 0.05, CP.leg, 3));
+  // The plate: flat and wide, a bright band along its back edge.
+  parts.push(blob([0, 0.38, 0], [1.25, 0.3, 1.05], [10, 5], (x, y, z) => (x < -0.75 ? CP.band : Math.abs(z) > 0.85 ? CP.edge : CP.body)));
+  for (const [k, ox] of [[0, 0.45], [1, -0.45]]) for (const side of [-1, 1]) {
+    // Each leg pair a quarter-wave behind the one before it.
+    const ph = ((frame + k * 2) % CENTI_FRAMES) / CENTI_FRAMES * Math.PI * 2, sw = part === 'tail' && k === 1 ? 0 : Math.sin(ph) * 0.6, lift = Math.max(0, Math.cos(ph)) * 0.35;
+    const hip = V(ox, 0.3, side * 0.85), knee = V(ox - 0.2 + sw * 0.4, 0.7 + lift, side * 1.75);
+    const foot = part === 'tail' && k === 1 ? V(-2.8, 0.2, side * 1.3) : V(ox - 0.7 + sw, 0, side * 2.5);
+    parts.push(strut(hip, knee, 0.1, 0.08, CP.leg, 3), strut(knee, foot, 0.08, 0.04, CP.leg, 3));
   }
   return bake(parts);
 }
