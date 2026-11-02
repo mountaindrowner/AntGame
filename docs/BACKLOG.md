@@ -12,8 +12,8 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 - **The grand arc** (yard → house → neighbourhood → city → world → space). This needs a design document first.
 - **Combat plan (`COMBAT.md`):** crew attack (26), duels (27) and raids (28) are built. Still to build:
   - the zone frame: 13 zones, a crest per zone on the map, "Zones taken", hazards easing when a guardian falls, and the Phase 1 end screen;
-  - the new guardians: the Old Robin, Old Warty the toad, the praying mantis, the black widow and the giant centipede, plus the yellowjackets if wanted.
-  - Not in the plan yet: crew orders beyond "attack that" (hold, formations, splitting).
+  - the new guardians: the Old Robin (built, build 30) and Old Warty (built, build 31); the praying mantis, the black widow and the giant centipede still to come, plus the yellowjackets if wanted.
+  - Crew orders: built (build 29). Formations were left out.
 - **Sit-downs Mark asked for:**
   - the War camp and the other rooms left
   - The robin and the Phase 1 cap now have proposals in `COMBAT.md`: the robin becomes the Great Lawn's guardian, and Phase 1 ends when all 13 zone guardians fall.
@@ -37,7 +37,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
 **Testing**
 - **Bots still don't save up for the evolved rooms:** they build them once established (build 25.1), but rarely get there. `CAMPAIGN=1` runs the long game.
-- **Flaky tests,** which pass when run alone: the robin test, and "a room only builds with a builder inside it" (about 1 run in 6).
+- **Flaky tests,** which pass when run alone: the robin test, "a room only builds with a builder inside it" (about 1 run in 6), and, rarely, the duel test "a fight on the ground" (it depends on the dice).
 
 **Later, by Mark's call**
 - **A phone pass in Phase 3 or 4** (Mark).
