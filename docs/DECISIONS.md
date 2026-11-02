@@ -2,6 +2,36 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the hunting wasp and the skink (build 38)
+
+Mark: "Go". These are the other two hunters, which completes the tier.
+
+**Hunting wasp** (the lawn, picnic, feeders, birdbath, pool, sprinkler, fairy ring and the lawn's toys): 45 health.
+- **In the air it can't be bitten.** It circles its home with a shadow below it.
+- When it picks an ant, a ring settles on it (1 s). Then it **dives**: the ant is **carried off** and lost, unless the wasp is stunned first.
+- A **Mandible Lock** on it, in the air or as it lifts away, makes it **drop the ant alive** and fall to the ground.
+- Then it **lands to rest** (5–7 s). On the ground it can be bitten, and it stings back.
+- It also lands now and then even with nothing to hunt. 20 protein.
+- The model: yellow and black, a striped pointed abdomen with a sting on a thin waist, a yellow face, big eyes, and glassy wings that blur in flight. Poses: flying and resting.
+
+**Skink**, a five-lined skink (the rock gardens, woodpile, fallen limb, gnomes, grill, oak roots): 150 health, the biggest hunter.
+- **Dash:** a lane, then it races down it, biting all it passes.
+- **Snap:** a small ring on an ant beside it.
+- **Tail drop:** hurt to half, it drops its **wriggling blue tail** (40 protein) and **runs for 6 s**. If it gets away it's gone, and comes back later with a new tail. To kill it outright, stun it (Mandible Lock) or burst it down before it runs.
+- 60 protein if you do.
+- The model: glossy black with five cream stripes, a wedge head, four sprawling legs, and the bright blue tail young skinks have. Without its tail it shows a stump, and the dropped tail wriggles on the ground for 12 s.
+
+**All four hunters, tuned on the bots:**
+- **No hunters in the first 10 minutes**, so the opening stays safe. They turn up in their regions after that.
+- **After a kill a hunter eats (8 s), then is sated for 90 s**, wandering without hunting. With 45 s, one jumping spider on a forager route still took 34 ants in a game.
+- **Results:** hunter kills per 45-minute game fell to 0–8 in all. Two of 4 bots reached 40 ants, within the usual swing (one run starved).
+- **Bug found and fixed:** at first no hunters appeared at all once the 10-minute delay was added. A region that woke before minute 10 never got its hunter. Hunters now come to awake regions whenever they're due.
+- Mandible Lock now holds any small creature in place, as it does a boss.
+
+**Checks:**
+- 156 tests, 2 new: the wasp can't be bitten in the air, then dives, carries an ant off and drops it when locked; the skink drops its tail (40) when hurt to half, runs, and gets away.
+- A browser run showed both models and their first-time tips, with no errors.
+
 ## Nov 2: hunters, the tier between bugs and bosses (build 37)
 
 Mark: "Can we have more like the wolf spider? Not full bosses or guardians but larger threats than ants but not full huge fights."

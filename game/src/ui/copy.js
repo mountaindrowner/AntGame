@@ -14,6 +14,8 @@ export const EXPL = {
   cricket: ['Cricket', '25 protein, if you can catch it. It hops away; chase it and after five hops it’s worn out.'],
   jumper: ['Jumping spider', 'A hunter. When it crouches, a lane shows: it leaps that way onto an ant. After a kill it stops to eat: that is the time to swarm it. Five ants on it and it backs off.'],
   assassin: ['Assassin bug', 'A hunter. It stalks slowly, then stabs an ant on its beak and drains it. Bite the bug hard and it lets go.'],
+  wasp: ['Hunting wasp', 'A hunter from the air: it can’t be bitten while it flies. When its shadow settles on an ant, move the ant. If it grabs one, a Mandible Lock makes it drop it. It lands to rest: kill it then.'],
+  skink: ['Skink', 'A lizard, the biggest hunter. It dashes down the lane it shows and snaps at what is near. Hurt to half, it drops its tail (40 protein) and runs: lock it before it gets away.'],
   millipede: ['Millipede', 'Harmless. Bitten, it curls into an armoured ball and takes a third of the damage. 20 protein for a patient crew.'],
   raid: ['Rival raid', 'Pavement ants from the Patio. Keep Soldiers at your door or they reach the queen.'],
   queenhit: ['Queen under attack', 'Raiders got in. Lay Soldiers to guard the door.'],

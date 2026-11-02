@@ -238,3 +238,60 @@ export function assassinGeometry(frame = -1, pose = 'walk') {
   sixLegs(parts, frame, BUG_WALK, 1.9, [[1.9, 0.7], [1.2, 0.8], [0.4, 0.8]], [[4.2, 2.6], [1.0, 3.4], [-2.6, 3.4]], 1.5, 0.16, AB.leg, AB.leg, 0.9);
   return bake(parts);
 }
+
+// ---------- hunting wasp (build 38: a hunter) ----------
+// Yellow and black: a striped pointed abdomen with a sting on a thin waist, a
+// black thorax with yellow marks, a yellow face, big eyes, two pairs of
+// glassy wings. pose: 'fly0' / 'fly1' (wings up / down, legs hanging), 'rest'.
+const WS = { yellow: '#f0c418', black: '#16120a', face: '#f4d040', eye: '#2a1a0a', wing: '#d8e4ec', leg: '#c89a18', sting: '#2a1a0a' };
+export function waspGeometry(pose = 'rest') {
+  const parts = [], fly = pose !== 'rest', up = pose === 'fly0';
+  const h = fly ? 3.0 : 2.4;
+  parts.push(blob([-2.6, h - 0.2, 0], [2.0, 1.0, 1.0], [10, 6], (x) => (Math.floor((x + 4.8) * 1.5) % 2 ? WS.yellow : WS.black)));
+  parts.push(strut(V(-4.5, h - 0.4, 0), V(-5.3, h - 0.7, 0), 0.18, 0.03, WS.sting, 3));
+  parts.push(strut(V(-0.7, h, 0), V(-0.1, h + 0.05, 0), 0.22, 0.22, WS.black, 4)); // the waist
+  parts.push(blob([0.9, h + 0.2, 0], [1.1, 0.85, 0.85], [8, 6], (x, y) => (y > h + 0.7 && Math.abs(x - 0.9) < 0.4 ? WS.yellow : WS.black)));
+  parts.push(blob([2.4, h + 0.3, 0], [0.65, 0.7, 0.75], [7, 5], (x) => (x > 2.6 ? WS.face : WS.black)));
+  for (const side of [-1, 1]) {
+    parts.push(blob([2.5, h + 0.55, side * 0.55], [0.35, 0.5, 0.3], [5, 4], WS.eye));
+    const a0 = V(2.9, h + 0.8, side * 0.25), a1 = V(3.9, h + 1.9, side * 0.7), a2 = V(4.7, h + 1.6, side * 1.0);
+    parts.push(strut(a0, a1, 0.07, 0.06, WS.black, 3), strut(a1, a2, 0.06, 0.04, WS.black, 3));
+    // Wings: thin flat ellipses from the thorax, raised or lowered.
+    for (const [len, off] of [[3.2, 0.4], [2.2, -0.4]]) {
+      const g = new THREE.SphereGeometry(1, 8, 3); g.scale(len, 0.05, 0.75);
+      g.translate(-len * 0.75, 0, 0); g.rotateY(side * (fly ? 1.2 : 0.25)); g.rotateX(side * (fly ? (up ? -0.7 : 0.35) : -0.15));
+      g.translate(0.8 + off, h + 0.9, side * 0.4); parts.push(paint(g, WS.wing));
+    }
+    // Legs: hanging when flying, standing when resting.
+    for (let i = 0; i < 3; i++) {
+      const hip = V(1.2 - i * 0.45, h - 0.4, side * 0.4), foot = fly ? V(0.2 - i * 1.0, h - 2.2, side * 0.9) : V(2.0 - i * 1.6, 0, side * 2.0);
+      parts.push(...leg(hip, foot, fly ? 0.2 : 0.8, 0.12, 0.05, WS.leg));
+    }
+  }
+  return bake(parts);
+}
+
+// ---------- five-lined skink (build 38: a hunter) ----------
+// A small lizard: glossy black with five cream stripes, a wedge head, four
+// sprawling legs, and (until it drops it) a long bright blue tail. frame: walk
+// frames (legs in trot), -1 still; tail: false once dropped.
+const SK = { black: '#1a1612', stripe: '#e8dcae', belly: '#5a4a38', blue: '#2a7ad8', blueHi: '#58a8f0', eye: '#d8a020', leg: '#2a2218' };
+export function skinkGeometry(frame = -1, tail = true) {
+  const parts = [], stripes = (x, y, z) => { if (y < 1.0) return SK.belly; const az = Math.abs(z); return az < 0.12 || (az > 0.55 && az < 0.7) || (az > 1.05 && az < 1.2) ? SK.stripe : SK.black; };
+  parts.push(blob([0, 1.4, 0], [4.2, 1.0, 1.5], [12, 6], stripes)); // body
+  parts.push(blob([4.6, 1.5, 0], [1.4, 0.8, 1.15], [8, 5], stripes)); // neck and shoulders
+  parts.push(blob([6.6, 1.5, 0], [1.6, 0.7, 1.0], [8, 5], (x, y, z) => (x > 7.6 && y < 1.4 ? SK.belly : stripes(x, y, z)))); // wedge head
+  for (const side of [-1, 1]) parts.push(blob([7.0, 1.85, side * 0.7], [0.22, 0.22, 0.22], [4, 3], SK.eye));
+  if (tail) { // a tapering chain, blue toward the tip
+    let prev = V(-4.0, 1.3, 0);
+    for (let k = 1; k <= 6; k++) { const p = V(-4.0 - k * 2.0, 1.0 - k * 0.12, Math.sin(k * 0.9 + (frame >= 0 ? frame : 0)) * 0.4); parts.push(strut(prev, p, 0.9 - (k - 1) * 0.14, 0.9 - k * 0.14, k > 2 ? (k % 2 ? SK.blue : SK.blueHi) : SK.black, 6)); prev = p; }
+  } else parts.push(blob([-4.4, 1.2, 0], [0.8, 0.6, 0.7], [6, 4], SK.belly)); // the stump
+  // Four sprawling legs, trotting.
+  const HIPS = [[3.2, 1.2], [-2.8, 1.2]], FEET = [[4.6, 3.2], [-1.8, 3.4]];
+  const ph = frame >= 0 ? (frame / BUG_WALK) * Math.PI * 2 : 0;
+  for (const side of [-1, 1]) for (let i = 0; i < 2; i++) {
+    const p = ph + ((i + (side > 0 ? 1 : 0)) % 2 ? Math.PI : 0), sw = frame >= 0 ? Math.sin(p) * 1.0 : 0;
+    parts.push(...leg(V(HIPS[i][0], 1.1, side * HIPS[i][1]), V(FEET[i][0] + sw, 0, side * FEET[i][1]), 0.6, 0.4, 0.18, SK.leg));
+  }
+  return bake(parts);
+}

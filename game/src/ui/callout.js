@@ -46,6 +46,8 @@ function bugCard(b) {
   const hurt = b.hp < b.maxHp ? ` ${Math.ceil(b.hp)} of ${b.maxHp} health.` : '';
   if (b.kind === 'ladybug') return ['🐞', 'Ladybug', (b.state === 'eat' ? 'Eating your aphids! ' : 'Eats aphids. ') + 'Bite it and it flies off.' + hurt];
   if (b.kind === 'earwig') return ['🪲', 'Earwig', 'Pinches ants that come close; foragers keep clear. Bring fighters. 15 protein.' + hurt];
+  if (b.kind === 'wasp') return ['🐝', 'Hunting wasp', (b.state === 'rest' ? 'Resting on the ground: bite it now! ' : 'In the air: out of reach. ') + 'It swoops on an ant and carries it off. 20 protein.' + hurt];
+  if (b.kind === 'skink') return ['🦎', 'Skink', 'A lizard: it dashes and snaps. Hurt to half it drops its tail and runs. 60 protein.' + hurt];
   if (b.kind === 'jumper') return ['🕷', 'Jumping spider', 'A hunter. When it crouches it leaps up to 5 tiles onto an ant: get out of its line. Five or more ants on it and it backs off. 25 protein.' + hurt];
   if (b.kind === 'assassin') return ['🪲', 'Assassin bug', 'A hunter. It stalks, then stabs an ant with its beak and drains it: bite the bug hard and it lets go. 30 protein, and chitin.' + hurt];
   if (b.kind === 'cricket') return ['🦗', 'Cricket', (b.state === 'tired' ? 'Worn out: catch it now! ' : 'Hops away from ants. Chase it till it tires. ') + '25 protein.' + hurt];

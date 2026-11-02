@@ -10,7 +10,7 @@ import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
-import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI, jumperGeometry, assassinGeometry } from '../models/critters.js';
+import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI, jumperGeometry, assassinGeometry, waspGeometry, skinkGeometry } from '../models/critters.js';
 import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
 import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry, widowGeometry, centipedeGeometry, CENTI_FRAMES } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
@@ -48,6 +48,8 @@ const BUG = {
   millipede: { k: 1.9, stride: 7, bar: 14, back: 2.6 },
   jumper: { k: 3.0, stride: 9, bar: 20, back: 3.9 },     // build 37: hunters
   assassin: { k: 2.7, stride: 11, bar: 20, back: 4.5 },
+  wasp: { k: 2.6, stride: 10, bar: 26, back: 4.4 },      // build 38
+  skink: { k: 2.4, stride: 16, bar: 16, back: 2.4 },
 };
 const HIT = '#ff7a6a';   // the flash on whatever a bite lands on
 // Under attack it flickers, so a long fight doesn't just turn it red.
@@ -157,6 +159,8 @@ export class SurfaceView {
       mpHead: millipedeSegment('head', 0), mp: walk((i) => millipedeSegment('body', i)), mpTail: walk((i) => millipedeSegment('tail', i)),
       js: walk((i) => jumperGeometry(i)), jsStill: jumperGeometry(-1), jsCrouch: jumperGeometry(-1, 'crouch'), jsLeap: jumperGeometry(-1, 'leap'),
       ab: walk((i) => assassinGeometry(i)), abStill: assassinGeometry(-1), abStab: assassinGeometry(-1, 'stab'),
+      wsFly: [waspGeometry('fly0'), waspGeometry('fly1')], wsRest: waspGeometry('rest'),
+      sk: walk((i) => skinkGeometry(i)), skStill: skinkGeometry(-1), skBob: walk((i) => skinkGeometry(i, false)), skBobStill: skinkGeometry(-1, false),
     };
     this.bugAnim = new Map();
     this.bugBars = Array.from({ length: 6 }, () => this._bar());
@@ -848,19 +852,37 @@ export class SurfaceView {
       } else if (b.kind === 'assassin') {
         const stab = b.held || (b.stabAt != null && s.t - b.stabAt < 0.3);
         put(stab ? G.abStab : b.atk ? G.abStill : walking ? G.ab[frame] : G.abStill, b.x, 0, b.y, orient(A.yaw, b.atk ? 0.12 : 0), k, color);
+      } else if (b.kind === 'wasp') {
+        // Build 38: in the air (wings a blur, a shadow below); it dives at its ring; resting, wings folded.
+        const air = b.state !== 'rest', diving = b.atk && b.atk.t > b.atk.at * 0.6;
+        let x = b.x, z = b.y, y = air ? 62 + Math.sin(t * 3 + b.id) * 6 : 0;
+        if (b.atk) { const u = Math.min(1, b.atk.t / b.atk.at); x = b.x + (b.atk.x - b.x) * u; z = b.y + (b.atk.y - b.y) * u; y = diving ? 62 * (1 - (b.atk.t / b.atk.at - 0.6) / 0.4) : 62; }
+        if (b.state === 'carry') y = 40;
+        put(air ? G.wsFly[Math.floor(t * 30) % 2] : G.wsRest, x, y, z, orient(A.yaw, air ? 0.12 : 0), k, color);
+        if (air) { tmpV.set(x, 0.7, z); this.fx.pushAt('disk', this.diskGeo, tmpV, tmpQ2.identity(), 9 * (1 - y / 140), '#1a1410'); }
+      } else if (b.kind === 'skink') {
+        const geo = b.tailless ? (walking ? G.skBob[frame] : G.skBobStill) : walking ? G.sk[frame] : G.skStill;
+        const lunge = s.t - (b.snapAt ?? -9) < 0.25 ? Math.sin(((s.t - b.snapAt) / 0.25) * Math.PI) * 8 : 0;
+        put(geo, b.x + (b.dx || 0) * lunge, 0, b.y + (b.dy || 0) * lunge, orient(A.yaw), k, color);
       } else this._millipede(s, b, A, t, fdt, put, orient, color, walking);
       if (b.atk && SIM.BUGS[b.kind].hunter) this._hunterAtk.push(b.atk); // drawn with the bosses' warnings
       if (b.hp < b.maxHp && bars < this.bugBars.length) this._placeBar(this.bugBars[bars++], b.x, b.y, K.bar + (b.kind === 'cricket' && b.state === 'hop' ? 30 : 0), b.hp / b.maxHp, '#f0b040');
     }
     for (const id of this.bugAnim.keys()) if (!live.has(id)) this.bugAnim.delete(id);
     for (let i = bars; i < this.bugBars.length; i++) this.bugBars[i].group.visible = false;
+    // Build 38: a dropped skink tail wriggles for a while, then lies still.
+    for (const f of s.items) if (f.type === 'skinktail' && f.amt > 0) {
+      const age = s.t - (f.t0 ?? -99), wig = age < 12 ? Math.sin(t * 14) * 0.5 * (1 - age / 12) : 0, x = (f.x + 0.5) * T, z = (f.y + 0.5) * T;
+      if (!this.skTailGeo) { const g = skinkGeometry(0, true); this.skTailGeo = g; }
+      tmpV.set(x + 16, 0, z); B.pushAt('sktail', this.skTailGeo, tmpV, orient(-(f.yaw || 0) + wig, 0, 0), 1.6 * Math.min(1, f.amt / 40 + 0.4), '#ffffff');
+    }
     // Dead ones lie on their backs, legs in the air, smaller as they're eaten away.
     for (const f of s.items) {
       if (f.kind !== 'protein' || !BUG[f.type] || f.amt <= 0) continue;
       const K = BUG[f.type], k = K.k * (0.55 + 0.45 * Math.min(1, f.amt / SIM.BUGS[f.type].meat)), x = (f.x + 0.5) * T, z = (f.y + 0.5) * T;
       const yaw = -(f.yaw || 0);
       if (f.type === 'millipede') { this._coil(x, z, yaw, k, put, orient, '#ffffff', 1, 0); continue; }
-      const geo = f.type === 'ladybug' ? G.lbStill : f.type === 'earwig' ? G.ewStill : f.type === 'jumper' ? G.jsStill : f.type === 'assassin' ? G.abStill : G.cr.sit;
+      const geo = f.type === 'ladybug' ? G.lbStill : f.type === 'earwig' ? G.ewStill : f.type === 'jumper' ? G.jsStill : f.type === 'assassin' ? G.abStill : f.type === 'wasp' ? G.wsRest : f.type === 'skink' ? G.skStill : G.cr.sit;
       put(geo, x, K.back * k * 0.9, z, orient(yaw, 0, Math.PI), k, '#ffffff');
     }
   }
