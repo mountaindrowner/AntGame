@@ -9,12 +9,20 @@ export const NEW_GAME_SEED = 7;
 // last good save under SAVE_KEY-prev), and the game says so, instead of quietly starting over on top of it.
 export let loadProblem = null;
 export function loadGame() {
+  // Build 41: a save this build couldn't read once (a newer build's, say) waits under -bad. Once a build can
+  // read it, it comes back, unless the save it was replaced by has played on further.
+  let bad = null;
+  try { const j = localStorage.getItem(SAVE_KEY + '-bad'); if (j) bad = SIM.deserialize(j); } catch (e) { bad = null; }
+  if (bad) {
+    let cur = null; try { const j = localStorage.getItem(SAVE_KEY); if (j) cur = SIM.deserialize(j); } catch (e) { cur = null; }
+    if (!cur || (bad.t || 0) > (cur.t || 0)) { try { localStorage.removeItem(SAVE_KEY + '-bad'); } catch (e) { /* blocked */ } return bad; }
+  }
   for (const key of [SAVE_KEY, ...LEGACY_SAVE_KEYS]) {
     let json = null;
     try { json = localStorage.getItem(key); } catch (e) { /* storage blocked */ }
     if (!json) continue;
     try { return SIM.deserialize(json); } catch (e) {
-      try { localStorage.setItem(SAVE_KEY + '-bad', json); } catch (e2) { /* full */ }
+      try { if (!localStorage.getItem(SAVE_KEY + '-bad')) localStorage.setItem(SAVE_KEY + '-bad', json); } catch (e2) { /* full */ } // the first unreadable save is kept, not a later one
       // The backup before it may still load.
       try { const prev = localStorage.getItem(SAVE_KEY + '-prev'); if (prev) { const s = SIM.deserialize(prev); loadProblem = { key, error: String(e && e.message || e), recovered: true }; return s; } } catch (e3) { /* that one too */ }
       loadProblem = { key, error: String(e && e.message || e), recovered: false };

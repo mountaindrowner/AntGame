@@ -502,8 +502,10 @@ export function createUI(app) {
     if (a.carry) return 'Carry it to the dark hole. Your trail lays itself.';
     if (s.t < 180 && c.store < 8) return 'Tap a crumb or seed to walk there, then Pick up. Hold to keep walking.';
     if (c.water < 3) return 'Water is low. Fetch dew or puddle water.';
-    if (!c.eggQueue.length && !c.eggs.length && c.store >= 4) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
     if (P().hunger < 35) return 'You are hungry. Go home, or stand by a forager carrying food.';
+    // Build 41: a low store says so (it used to say "lay an egg" at 4 food with 26 mouths to feed).
+    if (c.store < c.cap * 0.1 && s.ants.filter((x) => !x.team).length > 8) return 'Food is low. Lead a crew to a treat, or walk a Trail out to far food.';
+    if (!c.eggQueue.length && !c.eggs.length && c.store >= Math.max(4, c.cap * 0.15)) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
     if (s.ants.filter((x) => x.caste === 'builder').length === 0 && c.store >= 10) return 'Lay a Builder egg. Builders dig rooms.';
     if (SIM.eggLock(s, 'soldier') && c.protein < 5 && s.cat) return 'Soldiers need protein. Hunt the caterpillar with a crew.';
     if (SIM.eggLock(s, 'soldier') && c.protein >= 5) return 'You have protein. Dig a 6×3 pocket and build a Barracks.';

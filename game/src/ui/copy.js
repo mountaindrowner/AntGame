@@ -100,7 +100,7 @@ export const INTRO = [
   { text: 'She lays her first egg. It hatches as you.', done: s => !!s.player.ant },
   { text: 'Tap the cells above you to climb out.', done: s => !s.player.inNest },
   { text: 'Find a crumb, press Pick up, bring it to the hole.', done: s => s.colony.delivered.reduce((a,b)=>a+b,0) > 0 },
-  { text: 'Good. Fetch a few more: food is everything. Watch ❤ health and 🍖 hunger, top left.', done: s => (s.colony.foodTotal || 0) >= 15, skip: true },
+  { text: 'Good. Fill the store (🌾 top left): food is everything. Watch ❤ health and 🍖 hunger too.', done: s => (s.colony.foodTotal || 0) >= 15 || s.colony.store >= s.colony.cap, skip: true },
   { text: 'Tap Nest (top right), tap the queen, and lay a Builder.', done: s => s.ants.some(a => a.caste === 'builder' && !a.team) || s.colony.eggQueue.includes('builder') || s.colony.eggs.some(e => e.caste === 'builder'), skip: true },
   { text: 'In the nest, tap dirt beside a tunnel to dig. A Hatchery needs a 4×3 pocket.', done: s => s.nest.digOrders.length > 0 || (s.colony.dug || 0) >= 4, skip: true },
   { text: 'When the pocket is dug, press Build, pick Hatchery, and tap the green spot.', done: s => s.nest.rooms.some(r => r.key === 'hatchery') || s.colony.buildQueue.length > 0, skip: true },

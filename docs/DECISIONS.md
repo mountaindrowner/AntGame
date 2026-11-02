@@ -2,6 +2,49 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the second pass, and playing it (build 41)
+
+Mark: "Do another pass and check it all again. Play the game and see how it feels."
+
+**How it was checked:**
+- A second read-only review re-tested every build-40 fix headlessly. All of them work.
+- I played the opening in a real browser with clicks only: dig, Build nest, hatch, climb out, fetch food, lay eggs, dig, build.
+- I loaded a bot's 45-minute colony into the browser and played on: recruit, attack, abilities, the map, Evolve, Jobs, the nest, and reloading the page.
+- Bots: six 45-minute games before and after the changes, plus a 90-minute campaign, with save/load every 30–300 s.
+
+**How it feels:**
+- **The first minute is good.** You're out of the nest by about 45 s and the steps are clear.
+- **Then the store fills after two berries, and nothing says so.** The store holds 20. Every crumb after that vanished, while the tutorial asked for 15 delivered, so a new player walked food home for nothing.
+  - Now the tutorial step ends when the store is full.
+  - A full store tells you, and says how to spend it.
+- **The middle game lived on the edge of starving.** Food sat at 0–20 of 150 most of the time. When it hit 0, an ant died every 5 s: 14 of 15 died in about 90 s, and the colony never came back. Meanwhile 78–276 🥩 meat sat unused.
+  - Out of food, the colony now eats its meat first.
+  - Starving now kills one ant every 10 s, after 30 s (20 s with Big stomach), instead of every 5 s after 20 s.
+  - When the store is below 15%, foragers drop their duty and bring food.
+  - Gardeners keep cutting leaves first, since that becomes food anyway.
+  - **Result, same six seeds:** before, one colony fell to just you for 25 minutes and none passed 32 ants. After, none collapsed, four reached 38–60 ants, and one won.
+- **The hint line nagged the wrong way.** It said "Food in store, lay an egg" at 4 food with 26 ants to feed.
+  - Now a low store says "Food is low: lead a crew to a treat, or walk a Trail out."
+  - Your own hunger comes first.
+  - "Lay an egg" waits until the store is 15% full.
+
+**Bugs fixed (from the review):**
+- **Ants walking out when the game saved got stuck at the top of the shaft for good.** Where they were heading wasn't saved, and stuck ants piled up with every load. It's saved now, and older saves repair themselves.
+- **A guardian that died with an ant in its mouth or claws kept it 'away' forever.** This happened at the end of most toad and mantis fights. A dying guardian now lets go.
+- **A wasp carrying an ant froze in mid-air** if no other ant was within about 50 tiles. It now flies on.
+- **Cancelling a room queued in a pre-build-40 save refunded too much:** it was priced as the next copy. Fixed.
+- **Opening the game in an older build no longer buries a newer save.** The unreadable save stays under `-bad`, and later failures never overwrite it. Once a build can read it again, it comes back, unless the colony saved over it has played longer.
+- **Smaller ones:**
+  - What each ant is doing inside is saved now.
+  - "The rain caved in a tunnel" only shows when one did.
+  - Your own infected ants no longer give food at the Midden or heal from nectar.
+- **The flaky gardener test** was the test, not the game: a full garden rightly sends gardeners to other work.
+- **Tests:** 5 new ones in `tests/audit.test.js`.
+
+**Still open (in the backlog):**
+- The economy stays tight through the middle game, with food often under 20% of the cap. It's playable now, not comfortable.
+- A colony down to just you can only rebuild by your own foraging.
+
 ## Nov 2: the audit: rooms, evolutions, the nest, features, saving (build 40)
 
 Mark: "make sure every room has a purpose every evolution has depth every part of the nest can be well used that every function and feature in the game works and works well and that we can save the game and load it with updates."

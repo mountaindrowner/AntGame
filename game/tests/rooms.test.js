@@ -37,7 +37,8 @@ test('gardeners cut leaves and the fungus garden grows them into food', () => {
   for (let i = 0; i < 6; i++) SIM.tick(s, 0.05);
   c.fungus = 0; hatchN(s, 'gardener', 6);
   step(s, 120);
-  assert.ok(s.ants.filter((a) => a.caste === 'gardener').some((a) => a.duty === 'leaves'), 'gardeners on leaves');
+  // On leaves, unless the garden is already full (then they rightly turn to other work).
+  assert.ok(s.ants.filter((a) => a.caste === 'gardener').some((a) => a.duty === 'leaves') || c.fungus >= SIM.fungusCap(s) * 0.85, 'gardeners on leaves');
   assert.ok(c.fungus > 0, `leaves brought in (${c.fungus.toFixed(1)})`);
   // The garden turns leaf into food: with the gardeners gone, the stock goes down as the food goes up.
   s.ants = s.ants.filter((a) => a.caste !== 'gardener'); c.fungus = 30;

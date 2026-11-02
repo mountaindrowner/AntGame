@@ -76,3 +76,50 @@ test('a creature holding an ant still holds it after a load', () => {
   const s2 = SIM.deserialize(SIM.serialize(s));
   assert.equal(s2.ants.find((o) => o.id === a.id).state, 'away');
 });
+
+// ---- Build 41: the second pass.
+const outside = (s) => { const P = s.player; P.ntx = SIM.SHAFT; P.nty = 0; P.exiting = true; for (let i = 0; i < 600 && P.inNest; i++) SIM.tick(s, 0.05); return s; };
+
+test('an ant walking out when the game saves still walks out after a load (and older saves repair)', () => {
+  const s = founded(); step(s, 20);
+  SIM.stress(s, 1); const a = s.ants[s.ants.length - 1];
+  Object.assign(a, { state: 'in', rest: 0, nx: SIM.SHAFT + 0.5, ny: 3.5, ntx: SIM.SHAFT, nty: 0, goal: 'exit', exitTo: 'explore' });
+  const s2 = SIM.deserialize(SIM.serialize(s)), b = s2.ants.find((o) => o.id === a.id);
+  assert.equal(b.exitTo, 'explore');
+  b.exitTo = null; // as a build-40 save had it
+  step(s2, 60);
+  assert.ok(!(b.state === 'in' && b.goal === 'exit' && !b.exitTo), 'not stuck at the shaft');
+});
+
+test('a guardian that dies with an ant in its mouth lets it go', () => {
+  const s = outside(founded()); s.active[SIM.REGION.toadhole] = true; step(s, 0.2);
+  const b = s.bosses.toad, me = s.player.ant;
+  const a = { ...me, isPlayer: false, name: null, id: s.nextId++, caste: 'forager', state: 'away', team: 0, follow: false };
+  s.ants.push(a); b.mode = 'fight'; b.held = { id: a.id, t: 3, state: 'explore', hp0: 0 }; b.hp = -1;
+  step(s, 0.2);
+  assert.ok(b.dead); assert.notEqual(a.state, 'away');
+});
+
+test('a wasp carrying an ant off flies on with nobody near', () => {
+  const s = outside(founded()), c = s.colony, T = SIM.T, me = s.player.ant;
+  const tx = c.ex + 150 < SIM.W ? c.ex + 150 : c.ex - 150, ty = c.ey + 150 < SIM.H ? c.ey + 150 : c.ey - 100;
+  const a = { ...me, isPlayer: false, name: null, id: s.nextId++, caste: 'forager', state: 'explore', hp: 5, tx, ty, x: (tx + 0.5) * T, y: (ty + 0.5) * T, team: 0, follow: false, carry: 0 };
+  s.ants.push(a);
+  s.critters.push({ id: s.nextId++, kind: 'wasp', region: null, hx: tx + 5, hy: ty, x: a.x, y: a.y, dx: 1, dy: 0, hp: 45, maxHp: 45, state: 'fly', t: 0, life: 0, atk: { kind: 'ring', x: a.x, y: a.y, r: 1.1 * T, t: 0, at: 1.0 } });
+  step(s, 1.4); assert.equal(a.state, 'away', 'carried');
+  step(s, 30); assert.notEqual(a.state, 'away', 'not frozen in the air');
+});
+
+test('out of food, the colony eats its meat before anyone starves', () => {
+  const s = founded(), c = s.colony; step(s, 20); SIM.stress(s, 3); c.store = 0; c.protein = 40;
+  const n0 = s.ants.filter((a) => !a.team).length; step(s, 40);
+  assert.ok(c.protein < 40, 'meat eaten'); assert.equal(s.ants.filter((a) => !a.team).length, n0, 'nobody starved');
+  assert.ok(c.ateMeat, 'told');
+});
+
+test('cancelling a room queued in an older save gives back what it cost', () => {
+  const s = founded(), c = s.colony; rich(c); c.store = 5;
+  c.buildQueue.push({ room: 'hatchery', x0: 2, y0: 6, w: 4, h: 3, progress: 0 }); // no 'paid' (before build 40)
+  SIM.cancelBuilds(s);
+  assert.equal(c.store, 5 + SIM.ROOMS.hatchery.cost.food); // the first copy's price, not the second's
+});
