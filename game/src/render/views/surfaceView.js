@@ -465,7 +465,7 @@ export class SurfaceView {
       }
     }
     for (const a of s.ants) {
-      if (a.isPlayer || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'dead') continue;
+      if (a.isPlayer || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'dead' || a.state === 'away') continue;
       // A war party's champion: twice the size, ringed in red (build 19).
       if (a.champion) { ant(a, '#5a1a12', 2); tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('champ', PROPS.ring, tmpV, tmpQ.identity(), 13, '#ff4030'); continue; }
       ant(a, antColor(a), rankScale(a));

@@ -2,6 +2,40 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: raids you lead (build 28)
+
+Mark: "I want raids to feel interesting and important. You raid other colonies." Then "okay next build", so I built step 2 of `COMBAT.md`.
+
+**How a raid goes:**
+1. **Muster.** Take a crew to a rival nest. Within 8 tiles of its door a **Raid** button appears (crossed mandibles). Press it for the scouts' sheet:
+   - their numbers and guards, their store, their brood, and their queen's health;
+   - your crew, its fighters and its total Attack;
+   - a one-line read of the odds, from "Your crew is far stronger" to "They outnumber you".
+2. **Pick a prize:**
+   - **Their store:** carry off up to half their food.
+   - **Their brood:** steal pupae, which hatch in your nest as your workers, or as soldiers with the War camp evolution.
+   - **Their queen:** kill her. The colony falls, its nest becomes your outpost and its region can be held.
+   - It needs a crew of 3 or more.
+3. **Break the door.** The crew charges their door, under a red ring, and their guards pour out. Hold it with 6 of yours (or the whole crew, if smaller) and none of theirs for 5 seconds. The raid breaks if the crew is lost, you walk too far off, or 2 minutes pass.
+4. **Inside.** The crew vanishes into the hole, and the fight runs on the **raid card**, a round a second:
+   - Each raider duels a guard with the same dice as on the surface (ganging up counts). Guards strike back.
+   - Raiders with nobody in front of them go for the prize: they grab food, take a pupa each, or bite the queen. She rolls a die plus 4 to defend and bites one raider a round.
+   - The card shows raiders left, guards left, the prize so far (and the queen's health bar), and a line per round, such as "Round 5: Thorn rolls a 6, crit! 2 guards fall."
+   - **Pull out** at any round with what you've taken. After 60 rounds the raiders fall back on their own.
+5. **Get home.** Survivors come out at their door carrying the prize and head home. The rivals can chase them.
+6. **The report:** on the card and as a message. "Raid on the pavement ants: 10 raiders carry home 44 food. Lost 0, killed 1 (1 crit). Their numbers: 3 → 2."
+7. **They strike back.** Any colony you raid sends a raid at your nest 1½ to 3½ minutes later, even the ones that never raid on their own.
+
+**What changed underneath:**
+- **The old siege is gone.** Eight fighters standing at a door no longer wear a queen down; a queen raid does that now. Fighters at a rival door still raise their alarm, and a queen nobody is raiding heals 3 a second.
+- **Raiders inside a nest are off the yard:** not drawn, not hit, not counted. A save made mid-raid sends them home with whatever they carried.
+- **The bot:** its sieges walk the crew to the door and start a queen raid.
+
+**Checks:**
+- 112 tests, 6 new (`tests/raids.test.js`): a raid needs a crew and a door; the scout numbers; a store raid end to end; a brood raid whose pupa hatches at home; pulling out; and a colony that never raids striking back. The old siege test is now a queen raid.
+- A browser run showed the Raid button, the scouts' sheet, the breach and inside cards, and a queen raid won in 35 rounds (2 lost, 11 killed), with no errors.
+- 45-minute bots: the sensible and military bots both took the Patio by queen raid in some runs (2 of 6 runs won). The rest never gathered 10 fighters, as before.
+
 ## Nov 2: ant against ant is a duel of dice (build 27)
 
 Mark: "think one-on-one, when it's ants against ants, it should be something. Dice rolls against each other, or attacks against each other." He asked "What's next?", and I took step 1 of `COMBAT.md`.

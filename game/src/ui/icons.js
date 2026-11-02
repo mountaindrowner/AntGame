@@ -68,6 +68,8 @@ export const ICONS = {
   menu: svg('<path d="M4 7h16M4 12h16M4 17h16"/>'),
   jobs: svg('<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1M8.5 10l1.5 1.5L13 8.5M8.5 16l1.5 1.5 3-3M15 11h1.5M15 17h1.5"/>'),
   // Outpost: a cairn of pebbles with a little flag.
+  // Build 28: crossed mandibles, for a raid.
+  raid: svg('<path d="M5 20L14 11M19 20L10 11"/><path d="M14 11c0-4 2-7 6-8 0 4-2 7-6 8zM10 11c0-4-2-7-6-8 0 4 2 7 6 8z"/>'),
   outpost: svg('<ellipse cx="12" cy="19" rx="7" ry="2.4"/><ellipse cx="11" cy="14.6" rx="4.6" ry="2"/><ellipse cx="12" cy="10.8" rx="2.8" ry="1.6"/><path d="M13 9V3l5 2-5 2"/>'),
   // Evolve: a twist of DNA.
   evolve: svg('<path d="M7 3c0 6 10 6 10 12s-10 3-10 6M17 3c0 6-10 6-10 12s10 3 10 6"/><path d="M8.5 7h7M8.5 17h7"/>'),

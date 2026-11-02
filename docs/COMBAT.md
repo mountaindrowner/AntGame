@@ -231,7 +231,7 @@ Raids should be the big moments. Today you only "hold the door until the queen d
 ## 7. Build order (my recommendation)
 
 1. **Duels** (section 4). **Built, build 27.** Everything else stands on them. Rival fights, raids on you and your raids all use them.
-2. **Raids** (section 5): the Raid button, choosing a prize, the raid card, getting home, striking back.
+2. **Raids** (section 5). **Built, build 28.** The Raid button, choosing a prize, the raid card, getting home, striking back.
 3. **The guardian frame** (section 2):
    - zones, crests on the map, "Zones taken";
    - each zone's hazard easing when its guardian falls;

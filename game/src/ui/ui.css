@@ -440,3 +440,15 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 .label[data-kind^="pop-crit"][data-kind$="-r"] { color: #ff5a3a; }
 .label[data-kind^="pop-miss"] { color: #cfc6b4; font-size: 10px; font-weight: 700; }
 .label[data-kind^="pop-lock"] { font-size: 13px; }
+
+/* Build 28: the raid card. */
+#raidcard { position: fixed; left: 50%; top: calc(env(safe-area-inset-top, 0px) + 96px); transform: translateX(-50%); z-index: 15; width: min(340px, calc(100vw - 32px)); background: rgba(24, 14, 6, 0.9); border: 2px solid #8a2a1e; border-radius: 12px; padding: 8px 10px; color: #fff4dc; font: 600 12px/1.35 ui-rounded, system-ui, sans-serif; box-shadow: 0 3px 0 #1d1710; }
+#raidcard.hidden { display: none; }
+#raidcard .rh { font-weight: 900; color: #ffd34d; margin-bottom: 3px; }
+#raidcard .rl { color: #f1e8d6; }
+#raidcard .bar { height: 6px; background: #3a2a1a; border-radius: 3px; margin: 5px 0; overflow: hidden; }
+#raidcard .bar i { display: block; height: 100%; background: #ff7a3a; }
+#raidcard .bar.q i { background: #c4302a; }
+#raidcard .log { margin: 4px 0; font-weight: 500; color: #e8dcc4; font-size: 11px; }
+#raidcard .log div:last-child { color: #fff; font-weight: 700; }
+#raidcard button { display: inline-block; width: auto; height: auto; min-height: 0; min-width: 0; line-height: 1.2; box-shadow: none; margin-top: 4px; font: 800 11px ui-rounded, system-ui, sans-serif; background: #6d2a1e; color: #fff; border: 0; border-radius: 8px; padding: 4px 10px; cursor: pointer; }

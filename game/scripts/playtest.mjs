@@ -194,12 +194,12 @@ function grow() {
 }
 
 // ---------- expeditions: caterpillar hunt, spider, siege ----------
-let mission = null, treat = null, target = null;
+let mission = null, treat = null, target = null, raided = false;
 function missions() {
   const a = ant(); if (!a || P.inNest) return;
   const followers = mine().filter((o) => o.follow).length;
   if (mission === 'cat' && !s.cat) { SIM.release(s); mission = null; note('caterpillar hunt over'); return; }
-  if (mission === 'siege' && (!target || !target.queenAlive || followers < 4)) { SIM.release(s); mission = null; note('siege on ' + target.key + (target.queenAlive ? ' called off' : ' won')); return; }
+  if (mission === 'siege' && !s.myRaid && (!target || !target.queenAlive || followers < 4 || raided)) { SIM.release(s); mission = null; raided = false; note('siege on ' + target.key + (target.queenAlive ? ' called off' : ' won')); return; }
   if (mission === 'treat') {
     const t = treat;
     if (!t || t.amt <= 0) { SIM.release(s); mission = null; note('treat ' + (P.big ? 'lost' : 'done')); treat = null; return; }
@@ -210,6 +210,9 @@ function missions() {
   }
   // Build 26: point the crew at the caterpillar, and at defenders by a rival door.
   if (mission === 'cat') { if (!P.attack) SIM.crewAttack(s, s.cat.x, s.cat.y); tapSurface(s.cat.x, s.cat.y); return 'busy'; }
+  // Build 28: at their door, raid for the queen; while it runs, wait by the door.
+  if (mission === 'siege' && s.myRaid) { if (s.myRaid.phase === 'inside') raided = true; tapSurface((target.ex + 0.5) * T, (target.ey + 3.5) * T); return 'busy'; }
+  if (mission === 'siege' && target && SIM.raidTarget(s) === target && !SIM.raidLock(s, 'queen')) { if (SIM.startRaid(s, 'queen')) { note(`raid on ${target.key} (crew ${SIM.crewSize(s)})`); return 'busy'; } }
   if (mission === 'siege' && !P.attack && target) { const d = s.ants.find((o) => o.team === target.team && o.state !== 'dead' && o.state !== 'in' && dist(o.x, o.y, a.x, a.y) < 6 * T); if (d && SIM.crewAttack(s, d.x, d.y)) note('crew attack on a ' + target.key + ' ant'); }
   if (mission === 'siege') { tapSurface((target.ex + 0.5) * T, (target.ey + 0.5) * T); return 'busy'; }
   const nearHome = dist(a.tx, a.ty, w.ex, w.ey) < 3;
@@ -292,7 +295,7 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
 }
 const out = { strategy, seed: +seedArg, minutes: Math.round(s.t / 60), queenMinHp: Math.round(qmin), lost: s.lost, won: s.won, miles: miles.map((m) => `${mm(m.t)} ${m.k}`), playerDeaths, deaths: c.deaths, kills: c.kills, starve: c.starve, raids: msgs.filter((m) => /Raid!/.test(m)).length, caveins: msgs.filter((m) => /caved/.test(m)).length };
 console.log(JSON.stringify(out, null, 1));
-console.log(log.filter((l) => /\[min|placed|upgraded|trained|evolved|outpost|hunt|siege|died|treat|lifted/.test(l)).join('\n'));
+console.log(log.filter((l) => /\[min|placed|upgraded|trained|evolved|outpost|hunt|siege|raid|died|treat|lifted/.test(l)).join('\n'));
 const uniq = [...new Set(msgs.map((m) => m.slice(m.indexOf(' ') + 1)))];
 console.log('--- distinct messages:', uniq.length); console.log(uniq.slice(0, 40).join('\n'));
 if (process.env.WHY) { const g = {}; for (const d of whyLog) { const k = d.st + ' home~' + Math.min(20, Math.floor(d.home / 5) * 5) + (d.passing ? ' passing' : ''); g[k] = (g[k] || 0) + 1; } console.log(g); }

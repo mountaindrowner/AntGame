@@ -308,7 +308,7 @@ function frame(now) {
   } else if (app.view === 'surface' && !app.titleOpen) {
     // Names over your Elites and Legends (build 15), the twelve nearest the view's middle.
     const cam = views.surface.camera, tg = views.surface.target, out = [];
-    const named = s.ants.filter((a) => !a.team && a.name && a.state !== 'dead' && a.state !== 'in' && a.state !== 'build' && a.state !== 'nest')
+    const named = s.ants.filter((a) => !a.team && a.name && a.state !== 'dead' && a.state !== 'in' && a.state !== 'away' && a.state !== 'build' && a.state !== 'nest')
       .sort((a, b) => Math.hypot(a.x - tg.x, a.y - tg.z) - Math.hypot(b.x - tg.x, b.y - tg.z)).slice(0, 12);
     for (const a of named) {
       nameV.set(a.x, 9, a.y).project(cam);

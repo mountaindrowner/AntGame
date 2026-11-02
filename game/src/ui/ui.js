@@ -26,7 +26,7 @@ export function createUI(app) {
   // long press (see tips below), and doubles as its aria-label. A badge
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
-  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', raid: 'Raid', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
   const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
@@ -35,6 +35,9 @@ export function createUI(app) {
     if (b.dataset.tip !== tip) { b.dataset.tip = tip; b.setAttribute('aria-label', tip); }
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
+  // Build 28: the Raid button (by a rival door, with a crew) and the raid card (while one runs).
+  el.raid = document.createElement('button'); el.raid.id = 'raidbtn'; el.raid.className = 'ico hidden'; el.outpost.after(el.raid); setIcon(el.raid, 'raid', 'Raid');
+  el.raidCard = document.createElement('div'); el.raidCard.id = 'raidcard'; el.raidCard.className = 'hidden'; document.body.appendChild(el.raidCard);
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
   setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.menu, 'menu', 'Main menu: options, sound, new colony (Esc)'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.jobs, 'jobs', 'Jobs: what each kind of ant does first'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
   setIcon(el.act, 'pick', 'Pick up');
@@ -314,6 +317,8 @@ export function createUI(app) {
         for (const q of c.eggQueue) h += `<span class="egg q">${CASTES[q].name}</span>`;
         h += `</div><div class="note">${c.eggs.length}/${c.hatchCap} hatching · ${c.eggQueue.length} queued</div>`;
       } else h += `<div class="note">No eggs. The queen waits.</div>`;
+    } else if (app.menu === 'raid') {
+      h = renderRaid();
     } else if (app.menu === 'grow') {
       h = renderGrow();
     } else if (app.menu === 'reborn') {
@@ -364,7 +369,7 @@ export function createUI(app) {
   function renderMap() {
     const s = app.s, here = regionHere(), pickI = app.mapPick ?? here;
     const count = new Array(SIM.AREAS.length).fill(0);
-    for (const a of s.ants) if (!a.team && (a.state !== 'in' && a.state !== 'build' && a.state !== 'nest' && a.state !== 'dead')) count[SIM.areaOf(s, a.tx, a.ty)]++;
+    for (const a of s.ants) if (!a.team && (a.state !== 'in' && a.state !== 'away' && a.state !== 'build' && a.state !== 'nest' && a.state !== 'dead')) count[SIM.areaOf(s, a.tx, a.ty)]++;
     let h = `<div class="row head"><strong>The yard</strong><button class="x" data-close="1">Close</button></div><div class="note">✦ Curios found: ${Object.keys(s.colony.curios || {}).length} of ${(s.curios || []).length}. Each region hides one; it glints.</div><div class="yard">`;
     for (const z of YARD_MAP.zones) {
       const [c, r, w, hh] = z.at, pos = `grid-column:${c + 1}/span ${w};grid-row:${r + 1}/span ${hh}`;
@@ -390,6 +395,40 @@ export function createUI(app) {
 
   // Sheets redraw only when their content changes (build 14): the browser rewrites HTML
   // (disabled="", entities), so comparing innerHTML redrew them every tick and could eat a tap.
+  // Build 28: what your scouts see at a rival door, and the three prizes.
+  function renderRaid() {
+    const s = app.s, r = SIM.raidTarget(s);
+    let h = `<div class="row head"><strong>Raid</strong><button class="x" data-close="1">Close</button></div>`;
+    if (!r) return h + `<div class="note">${s.myRaid ? 'A raid is already on.' : 'Walk your crew to a rival nest\'s door.'}</div>`;
+    const sc = SIM.raidScout(s, r), odds = sc.attack + sc.crew - (sc.guards * 2.2);
+    const feel = sc.crew < SIM.RAID.minCrew ? 'You need a crew' : odds > 12 ? 'Your crew is far stronger' : odds > 3 ? 'Your crew has the edge' : odds > -4 ? 'An even fight' : 'They outnumber you';
+    h += `<div class="note"><b>The ${sc.name}</b> · 🐜 ${sc.total} (${sc.guards} guard${sc.guards === 1 ? '' : 's'}) · 🌾 ${sc.store} in store · 🥚 ${sc.brood} brood · 👑 queen ${sc.qhp} of ${sc.qmax}</div>`;
+    h += `<div class="note"><b>Your crew</b> · ${sc.crew} ant${sc.crew === 1 ? '' : 's'} (${sc.fighters} fighter${sc.fighters === 1 ? '' : 's'}), Attack +${sc.attack} in all. <b>${feel}.</b></div>`;
+    h += `<div class="note">Break the door first: ${SIM.RAID.door} of yours at it and none of theirs, for ${SIM.RAID.hold} seconds. Then your crew storms in and fights it out with dice, round by round. Pull out whenever you like. They will strike back.</div>`;
+    const P3 = [['store', 'Their store', `Carry off food, up to half of their ${sc.store}`], ['brood', 'Their brood', `Steal pupae: they hatch as your ${s.colony.evo.warcamp ? 'soldiers (War camp)' : 'workers'}`], ['queen', 'Their queen', 'Go for the kill. Hardest; the colony falls and its region can be held']];
+    h += `<div class="btns">` + P3.map(([k, n, d]) => { const lock = SIM.raidLock(s, k); return `<button data-raid="${k}" ${lock ? 'disabled' : ''}>${sicon('raid')}<b>${n}</b><i>${lock || d}</i></button>`; }).join('') + `</div>`;
+    return h;
+  }
+  function renderRaidCard() {
+    const s = app.s, M = s.myRaid, R = s.report, C = el.raidCard;
+    let h = '';
+    if (M) {
+      const name = SIM.RIVALS[M.team - 1].name;
+      if (M.phase === 'breach') {
+        h = `<div class="rh">⚔ Raid on the ${name} · break the door</div><div class="rl">At the door: <b>${M.ours || 0} of ${M.need || SIM.RAID.door}</b> · theirs in the way: <b>${M.theirs || 0}</b></div><div class="bar"><i style="width:${Math.min(100, (M.hold / SIM.RAID.hold) * 100)}%"></i></div><button data-pull="1">Call off</button>`;
+      } else {
+        const r = s.rivals[M.team - 1], prize = M.prize === 'store' ? `🌾 ${Math.round(M.loot.food)} of ${M.cap} food` : M.prize === 'brood' ? `🥚 ${M.loot.brood} pupa${M.loot.brood === 1 ? '' : 'e'} (${M.broodLeft} left)` : `👑 queen ${Math.max(0, Math.ceil(r.qhp))} of ${SIM.RIVALS[M.team - 1].qhp}`;
+        h = `<div class="rh">⚔ Inside the ${name}' nest · round ${M.round}</div><div class="rl">Raiders <b>${M.left ?? M.raiders.length}</b> · guards <b>${M.guards ?? '?'}</b> · ${prize}</div>`;
+        if (M.prize === 'queen') h += `<div class="bar q"><i style="width:${Math.max(0, Math.min(100, (r.qhp / SIM.RIVALS[M.team - 1].qhp) * 100))}%"></i></div>`;
+        h += `<div class="log">${M.log.slice(-4).map((l) => `<div>${l}</div>`).join('')}</div><button data-pull="1">Pull out</button>`;
+      }
+    } else if (R && R.kind === 'myraid' && s.t - R.t < 9) {
+      const got = R.food ? `🌾 ${R.food} food` : R.brood ? `🥚 ${R.brood} pupa${R.brood === 1 ? '' : 'e'}` : R.how === 'won' ? '👑 their queen' : 'nothing';
+      h = `<div class="rh">${R.how === 'won' ? '🏆 The nest is yours' : R.how === 'lost' ? '☠ The raid failed' : R.how === 'broken' || R.how === 'called off' ? '✋ Raid called off' : '⚔ Raid over'} · the ${R.name}</div><div class="rl">Brought out: <b>${got}</b> · lost ${R.lost} · killed ${R.killed}${R.crits ? ` · ${R.crits} crit${R.crits === 1 ? '' : 's'}` : ''}</div><div class="rl">Their numbers: ${R.before} → ${R.after}${R.how !== 'won' ? ' · they will strike back' : ''}</div>`;
+    }
+    C.classList.toggle('hidden', !h);
+    if (C.dataset.h !== h) { C.dataset.h = h; C.innerHTML = h; }
+  }
   function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.dataset.h = ''; el.sheet.classList.remove('hidden'); renderSheet(); }
   function closeMenu() { app.menu = null; app.menuCell = null; el.sheet.classList.add('hidden'); app.paused = false; }
   function openHelp(tab) {
@@ -551,6 +590,9 @@ export function createUI(app) {
     // Outpost: once Waypoints is evolved, while you're out in the yard.
     const showOut = SIM.has(s, 'waypoints') && P().ant && !P().inNest;
     el.outpost.classList.toggle('hidden', !showOut);
+    const rt = SIM.raidTarget(s); el.raid.classList.toggle('hidden', !rt);
+    if (rt) { const n = SIM.crewSize(s); setIcon(el.raid, 'raid', n >= SIM.RAID.minCrew ? `Raid the ${SIM.RIVALS[rt.team - 1].name} with your crew of ${n}` : `Raid: recruit a crew first (${n} of ${SIM.RAID.minCrew})`); el.raid.classList.toggle('dim', n < SIM.RAID.minCrew); }
+    renderRaidCard();
     if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', why ? 'Outpost: ' + why : 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('dim', !!why); }
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;
@@ -596,6 +638,7 @@ export function createUI(app) {
     if (b.dataset.stress) { closeMenu(); SIM.stress(s, 200); flash('+200 foragers spawned for a frame-rate test.', /^\+200/, 4000); return; }
     if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
+    if (b.dataset.raid) { if (SIM.startRaid(s, b.dataset.raid)) { closeMenu(); sfx.play('raid'); } else flash('Raid: ' + SIM.raidLock(s, b.dataset.raid) + '.', /^Raid:/, 2600); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.roomup) { SIM.upgradeRoom(s, b.dataset.roomup); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
@@ -621,6 +664,8 @@ export function createUI(app) {
   el.view.addEventListener('click', () => { app.view = app.view === 'nest' ? 'surface' : 'nest'; closeMenu(); });
   el.act.addEventListener('click', () => SIM.doAction(app.s));
   el.release.addEventListener('click', () => SIM.release(app.s));
+  el.raid.addEventListener('click', () => { if (app.menu === 'raid') closeMenu(); else openMenu('raid'); });
+  el.raidCard.addEventListener('click', (e) => { if (e.target.closest('[data-pull]')) SIM.pullOut(app.s); });
   el.outpost.addEventListener('click', () => { const why = SIM.outpostLock(app.s); if (why) flash('Outpost: ' + why + '.', /^Outpost:/, 2600); else if (SIM.placeOutpost(app.s)) sfx.play('roomPlaced'); });
   el.mark.addEventListener('click', () => { P().mark = !P().mark; if (P().mark) app.s.seen.marked = true; });
   el.enter.addEventListener('click', () => {
