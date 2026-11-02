@@ -9,6 +9,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 **Waiting on Mark's word**
 - **The house's inside.** Mark: "later". The outside is built for it (`models/house.js`).
 - **The grand arc** (yard → house → neighbourhood → city → world → space). This needs a design document first.
+- **Combat, guardians, raids and the Phase 1 end:** planned in `COMBAT.md` (Nov 2), waiting on Mark's go.
 - **Sit-downs Mark asked for:**
   - combat: one-on-one, crews, bosses
   - what the robin is for
