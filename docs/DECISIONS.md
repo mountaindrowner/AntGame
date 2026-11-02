@@ -2,6 +2,37 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the black widow, guardian of the Side Yard (build 35)
+
+Mark: "Go". This is the fourth new guardian, with a new model.
+
+**The fight:**
+- **Lair:** her web in the corner by the shed's east wall. She rules the Side Yard (three regions) and the Shed.
+- **The web:** silk 4½ tiles round. Any of your ants that walks in is **stuck for 3 seconds**, and then free for 5. That includes your own ant, which can't move while stuck. A white ring marks stuck ants.
+- **Up in her web she's hard to reach:** bites do a third.
+- **Weakness: the four anchors.** White knots at the web's edge, each with 30 health.
+  - Your fighters, your crew and you bite through them. They can be targeted by hover, right-click or a hold order.
+  - "An anchor snaps! 3 left."
+  - When all four are cut, the web falls and **she drops to the floor for 12 seconds**: bites do double. The bar says "ON THE FLOOR: SWARM HER!"
+  - Then she climbs back and spins a new web.
+- **Bite:** a red dot on an ant (stuck ones first), then a deadly bite.
+- **Phase 2 (half health):** every 13 seconds she drops on a thread (a ring shows where) and spins a fresh web there. Anchors you already cut stay cut.
+- **Mandible Lock** works on her anywhere.
+
+**What you get:**
+- **The widow's silk:** a web at your door. Raiders stick in it for 3 seconds, once each.
+- **The Side Yard eases:** no more bug spray in the Shed and Side Yard, and they can be held.
+- Plus 60 meat, 20 chitin, 4 genes and a Legend ("Web-cutter").
+
+**The model** (`widowGeometry`): glossy black, a big round abdomen with the red hourglass on top (so it reads from above), a small head with fangs, and eight long jointed legs. Poses: hanging, and biting with the front legs raised.
+
+**The web:** silver lines from the middle to each anchor, three rings between, and loose threads where an anchor has been cut.
+
+**Checks:**
+- 145 tests, 6 new (`tests/widow.test.js`): she rules the Side Yard; the web holds ants; she's hard to hurt up high, and cutting all four anchors drops her (bites double) until she climbs back; her bite is shown first and kills; anchors can be targeted; and beaten, she gives the silk.
+- Anchors are kept on open ground ants can reach, pulled in from a wall if need be.
+- A browser run showed the web, her, the anchors and stuck ants, with no errors.
+
 ## Nov 2: the praying mantis, guardian of the Hedge Row (build 34)
 
 This is the third new guardian from `COMBAT.md`, and the first with a new model.

@@ -105,7 +105,7 @@ This answers "what does the robin do?" Robins stay a hazard on the lawn, and the
 - **Zone eases:** the hedge is safe again, and twice as fast to walk through.
 - **Trophy, mantis claw:** each of your fighters' first bite in a fight always lands, for double.
 
-### The black widow (zone 12)
+### The black widow (zone 12). Built, build 35
 - **Lair:** her web in the shed corner.
 - **Moves:**
   - **Web:** sticky tiles around her, where ants get stuck for 3 seconds.

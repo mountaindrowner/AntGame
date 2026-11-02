@@ -187,3 +187,32 @@ export function mantisGeometry(pose = 'stand') {
   for (const side of [-1, 1]) for (let i = 0; i < 2; i++) parts.push(...leg(V(HIPS[i][0], 3.0, side * HIPS[i][1]), V(FEET[i][0], 0, side * FEET[i][1]), 2.6, 0.26, 0.1, MT.dark));
   return bake(parts);
 }
+
+// ---------- black widow (build 35) ----------
+// Glossy black: a big round abdomen with the red hourglass, a small head-thorax,
+// eight long thin jointed legs. Poses: 'hang' (legs spread, as in her web) and
+// 'bite' (front legs raised, fangs forward).
+const BW = { black: '#141218', sheen: '#3a3448', red: '#d0201c', leg: '#1c1a22', joint: '#2e2a36', fang: '#5a1a14' };
+export function widowGeometry(pose = 'hang') {
+  const parts = [];
+  // Abdomen, the red hourglass on top so it reads from above.
+  parts.push(blob([-2.2, 2.6, 0], [2.4, 2.1, 2.2], [14, 10], (x, y, z) => {
+    const u = (x + 2.2) / 2.4, az = Math.abs(z);
+    if (y > 4.0 && az < 0.9 - Math.abs(u) * 0.5 && Math.abs(u) < 0.75) return BW.red;
+    return y > 3.6 && az < 1.0 ? BW.sheen : BW.black;
+  }));
+  // Head-thorax and fangs.
+  parts.push(blob([0.9, 2.0, 0], [1.1, 0.8, 0.95], [10, 6], BW.black));
+  for (const side of [-1, 1]) {
+    const f0 = V(1.8, 1.8, side * 0.3), f1 = V(pose === 'bite' ? 2.9 : 2.3, 1.3, side * 0.35);
+    parts.push(strut(f0, f1, 0.18, 0.06, BW.fang, 3));
+  }
+  // Eight legs: long, thin, knees high.
+  const HIPS = [[1.4, 0.6], [1.0, 0.7], [0.6, 0.7], [0.2, 0.6]], FEET = [[5.6, 3.2], [3.0, 5.4], [-1.2, 5.6], [-4.6, 4.0]];
+  for (const side of [-1, 1]) for (let i = 0; i < 4; i++) {
+    let fx = FEET[i][0], fz = FEET[i][1], fy = 0, up = 2.4;
+    if (pose === 'bite' && i === 0) { fx = 5.0; fy = 3.4; fz = 1.8; up = 1.2; }
+    parts.push(...leg(V(HIPS[i][0], 2.0, side * HIPS[i][1]), V(fx, fy, side * fz), up, 0.2, 0.08, BW.leg, BW.joint));
+  }
+  return bake(parts);
+}

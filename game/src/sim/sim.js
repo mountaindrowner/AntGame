@@ -474,7 +474,7 @@ function killAnt(s, a, cause){
     a.hp = 1; a.carry = 0; a.follow = false; a.infect = null; enterNest(s, a); s.colony.saved = (s.colony.saved || 0) + 1; if (s.colony.saved === 1) s.player.msg = 'Your medics carried a fallen ant home and saved it.'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
-  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.', mantis: 'The mantis caught you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
+  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.', mantis: 'The mantis caught you.', widow: 'The black widow bit you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
   if (!a.team){ const i = idx(Math.min(W-1,Math.max(0,Math.floor(a.x/T))), Math.min(H-1,Math.max(0,Math.floor(a.y/T)))); s.alarm[i] += 3; s.hot.add(i); }
   const c = colonyOf(s, a); c.deaths[cause] = (c.deaths[cause]||0) + 1;
   // Build 24. A rival killed near its own nest: the War camp loots its food; Brood raiding brings back its brood.
@@ -843,6 +843,7 @@ function tick(s, dt){
       if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)){ const p = preyNear(s, 60); if (p && Math.random() < 0.6) chooseToward(s, a, p.x, p.y); else chooseExplore(s, a, 40); }
       continue;
     }
+    if (a.state === 'raid' && s.colony.trophies.widowsilk && !a.webbed && Math.hypot(a.tx - c.ex, a.ty - c.ey) < 3){ a.webbed = true; a.lockT = 3; a.webT = s.t + 3; } // build 35: the widow's silk at your door
     if (a.state === 'raid'){
       const gx = (c.ex+0.5)*T, gy = (c.ey+0.5)*T;
       if (Math.hypot(a.x-gx, a.y-gy) < 1.5*T){ const guarded = s.ants.some(o => !o.team && o.state!=='dead' && CASTES[o.caste].fight >= 3 && (o.state==='patrol'||o.state==='fight') && Math.hypot(o.tx-c.ex, o.ty-c.ey) < 4) || (picked(s, 'nurse', 'broodguard') && s.ants.some(o => !o.team && o.caste === 'nurse' && (o.state === 'in' || o.state === 'build')));
@@ -1524,7 +1525,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   if (a.knockT > 0){ knock(s, a, dt); P.pathKey = -1; return; }
   let moving = false;
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
-  let speed = youPace(s)*SURF*(a.slowT > 0 ? 0.5 : 1);
+  let speed = youPace(s)*SURF*(a.slowT > 0 ? 0.5 : 1)*(a.webT > s.t ? 0 : 1);
   if (a.slowT > 0) a.slowT -= dt;
   if (P.big){ const crew = crewAt(s), need = FOODS[P.big.type].crew;
     if (crew < need){ dropBig(s); P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`; }
@@ -1604,6 +1605,7 @@ function enemyAt(s, x, y){
   if (s.cat) take('cat', 0, s.cat.x, s.cat.y, 3*T, 'the caterpillar');
   for (const b of s.critters || []) if (b.hp > 0) take('bug', b.id, b.x, b.y, 2*T, 'the ' + (BUGS[b.kind] ? BUGS[b.kind].name : b.kind));
   for (const q of s.stalks || []) if (!q.gone) take('stalk', q.id, q.x, q.y, 2*T, 'the stalk');
+  { const wb = s.bosses && s.bosses.widow; if (wb && !wb.dead && wb.web && !wb.grounded) wb.web.anchors.forEach((an, i) => { if (an.hp > 0) take('anchor', i, an.x, an.y, 1.6*T, 'a web anchor'); }); }
   for (const a of s.ants) if (outside(a) && (a.team || a.zombie)) take('ant', a.id, a.x, a.y, 1.4*T, a.zombie ? 'the infected ant' : a.champion ? a.name : 'the ' + rspec(a).name.toLowerCase().replace(/s$/, ''));
   return best;
 }
@@ -1611,6 +1613,7 @@ function attackTarget(s){
   const A = s.player.attack; if (!A) return null;
   if (A.kind === 'boss'){ const b = (s.bosses || {})[A.ref]; return b && !b.dead ? b : null; }
   if (A.kind === 'door'){ const r = s.rivals[A.ref - 1]; return r && r.queenAlive && s.myRaid ? { x: (r.ex + 0.5)*T, y: (r.ey + 0.5)*T } : null; }
+  if (A.kind === 'anchor'){ const wb = s.bosses && s.bosses.widow; const an = wb && !wb.dead && !wb.grounded && wb.web && wb.web.anchors[A.ref]; return an && an.hp > 0 ? an : null; }
   if (A.kind === 'spider') return s.spider || null;
   if (A.kind === 'cat') return s.cat || null;
   if (A.kind === 'bug') return (s.critters || []).find(b => b.id === A.ref && b.hp > 0) || null;
@@ -1618,7 +1621,7 @@ function attackTarget(s){
   return s.ants.find(a => a.id === A.ref && outside(a)) || null;
 }
 // How close the crew stands to bite it.
-function attackReach(s, A){ return A.kind === 'door' ? 1.2*T : A.kind === 'boss' ? (BOSSES[A.ref].r + 0.5)*T : A.kind === 'spider' ? SPIDER_REACH*0.8 : A.kind === 'cat' ? CAT_REACH*0.8 : A.kind === 'bug' ? 0.9*T : A.kind === 'stalk' ? 1.2*T : 0.5*T; }
+function attackReach(s, A){ return A.kind === 'anchor' ? 0.8*T : A.kind === 'door' ? 1.2*T : A.kind === 'boss' ? (BOSSES[A.ref].r + 0.5)*T : A.kind === 'spider' ? SPIDER_REACH*0.8 : A.kind === 'cat' ? CAT_REACH*0.8 : A.kind === 'bug' ? 0.9*T : A.kind === 'stalk' ? 1.2*T : 0.5*T; }
 const crewSize = s => s.ants.filter(o => o.follow && o.state === 'follow').length;
 function crewAttack(s, x, y){
   const P = s.player; if (!P.ant || P.inNest || !crewSize(s)) return false;
@@ -1759,7 +1762,8 @@ function tickStrikes(s, dt){
   // New visitors: each region's clock only runs while ants are about.
   for (let i=0;i<AREAS.length;i++){ const st = s.event && s.event.key === 'picnic' && s.event.data.region === i ? PICNIC_FEET : AREAS[i].strike; if (!st || !s.active[i] || s.strikes.some(k => k.region === i)) continue;
     if (st.kind === 'bird' && s.colony.kills.robin && LAWN_ZONE.has(AREAS[i].key)) continue;
-    if (st.kind === 'toad' && s.colony.kills.toad && WET_ZONE.has(AREAS[i].key)) continue; // build 31: Old Warty beaten // build 30: the Old Robin driven off, no robins over the lawn
+    if (st.kind === 'toad' && s.colony.kills.toad && WET_ZONE.has(AREAS[i].key)) continue;
+    if (st.kind === 'spray' && s.colony.kills.widow && SIDE_ZONE.has(AREAS[i].key)) continue; // build 35: the widow beaten // build 31: Old Warty beaten // build 30: the Old Robin driven off, no robins over the lawn
     const here = out.get(i); if (!here) continue;
     s.strikeT[i] -= dt; if (s.strikeT[i] > 0) continue;
     s.strikeT[i] = (st.every[0] + Math.random()*(st.every[1] - st.every[0]))*(prizeFx(s, i) === 'calm' ? 2 : 1);
@@ -2357,7 +2361,11 @@ const BOSSES = {
   // Build 34: the Hedge Row's guardian.
   mantis: { name: 'The Praying Mantis', title: 'Ghost of the Hedge Row', region: 'hedge3', hp: 560, r: 2.2, aggro: 6, meat: 90, chitin: 15, trophy: 'claw', phase2: 0.5, slayer: 'Mantis-breaker',
     tip: 'You won’t see it until you’re close. When it sways, get out of the lane in front of it: it grabs what’s there and eats it. While it eats, its claws are busy: bite it for double. A Mandible Lock makes it drop its meal.', rage: 'The mantis strikes twice now, and flutters after you!' },
+  // Build 35: the Side Yard's guardian.
+  widow: { name: 'The Black Widow', title: 'Queen of the Shed', region: 'shed', hp: 520, r: 1.8, aggro: 8, meat: 60, chitin: 20, trophy: 'widowsilk', phase2: 0.5, slayer: 'Web-cutter',
+    tip: 'Her web holds anything that walks into it, and her bite is deadly. Bite through the four white anchors at its edge and she drops to the floor: swarm her then, bites do double. A Mandible Lock works on her anywhere.', rage: 'The widow drops on a thread to spin a new web!' },
 };
+const SIDE_ZONE = new Set(['shed', 'side2', 'side3', 'side4']);
 const HEDGE_ZONE = new Set(['hedge1', 'hedge2', 'hedge3', 'hedge4', 'hedge5', 'hedge6']);
 const WET_ZONE = new Set(['toadhole', 'thistles', 'reeds', 'slugs', 'drain', 'mudflat', 'wetedge']);
 // The Great Lawn: the regions the Old Robin rules (no robins over them once it's driven off).
@@ -2367,6 +2375,7 @@ const TROPHY = {
   shell: { name: 'The beetle’s shell', fx: 'you can build an Armory: every ant 50% tougher, foragers shrug off a foot or beak' },
   mandible: { name: 'The antlion’s mandible', fx: 'fighters bite 15% harder, and the pits never drag your ants down' },
   feather: { name: 'The Old Robin’s feather', fx: 'birds never take your ants, and no robins hunt the Great Lawn' },
+  widowsilk: { name: 'The widow’s silk', fx: 'a web at your door: raiders stick in it for 3 seconds, and no bug spray in the shed' },
   claw: { name: 'The mantis’s claw', fx: 'each of your fighters’ first bite on a foe always lands, for double; the hedge is safe, and your ants run through it half again faster' },
   poison: { name: 'Old Warty’s poison', fx: 'your ants taste bitter: toads, birds and spiders spit out half the ants they catch, and no toads hunt the Wet Edge' },
 };
@@ -2381,10 +2390,11 @@ function ensureBoss(s, key){
     let bd = -1; w.pits.forEach((p, i) => { const d = Math.hypot(p.x - w.ex, p.y - w.ey); if (d > bd){ bd = d; pit = i; } });
     if (pit < 0) return null; x = w.pits[pit].x; y = w.pits[pit].y;
   } else {
-    let best = -1; const cx = key === 'mantis' ? b0.x0 + 5 : (b0.x0 + b0.x1)/2, cy = (b0.y0 + b0.y1)/2; // the mantis waits at the hedge's edge, facing the lawn
+    const shed = key === 'widow' ? w.landmarks.find(l => l.kind === 'shed') : null;
+    let best = -1; const cx = key === 'mantis' ? b0.x0 + 5 : shed ? shed.x0 + shed.w + 5 : (b0.x0 + b0.x1)/2, cy = shed ? shed.y0 + shed.h*0.4 : (b0.y0 + b0.y1)/2; // the mantis at the hedge's edge; the widow by the shed wall // the mantis waits at the hedge's edge, facing the lawn
     for (let ty = b0.y0 + 6; ty < b0.y1 - 6; ty += 2) for (let tx = b0.x0 + 6; tx < b0.x1 - 6; tx += 2){
       const room = cl[ty*W + tx]; if (room < (key === 'mantis' ? 2 : 4)) continue;
-      const sc = room*3 - Math.hypot(tx - cx, ty - cy)*(key === 'mantis' ? 1.5 : 0.3); if (sc > best){ best = sc; x = tx + 0.5; y = ty + 0.5; } }
+      const sc = room*3 - Math.hypot(tx - cx, ty - cy)*(key === 'mantis' || key === 'widow' ? 1.5 : 0.3); if (sc > best){ best = sc; x = tx + 0.5; y = ty + 0.5; } }
     if (x == null) return null;
   }
   return (s.bosses[key] = { key, x: x*T, y: y*T, hx: x*T, hy: y*T, hp: B.hp, maxHp: B.hp, mode: 'idle', phase: 1, atk: null, cd: 2, dx: 1, dy: 0, t: 0, pit, under: key === 'antlion', dead: false });
@@ -2394,6 +2404,7 @@ const bossArmour = (s, b, a) => {
   if (b.key === 'antlion') return b.under ? 0 : 1;
   if (b.key === 'robin') return b.air ? 0 : b.pinned ? 2 : 1;
   if (b.key === 'mantis') return b.eat ? 2 : 1;
+  if (b.key === 'widow') return b.grounded ? 2 : 0.35; // up in her web she is hard to reach
   if (b.key === 'toad'){ const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, behind = ((a.x - b.x)*b.dx + (a.y - b.y)*b.dy)/d < -0.3; return (behind ? 2 : 1)*(b.puffT > 0 ? 0.5 : 1); }
   return 1;
 };
@@ -2437,6 +2448,7 @@ function tickBosses(s, dt){
     else if (key === 'robin') stepRobin(s, b, B, dt);
     else if (key === 'toad') stepToad(s, b, B, dt);
     else if (key === 'mantis') stepMantis(s, b, B, dt);
+    else if (key === 'widow') stepWidow(s, b, B, dt);
     else stepAntlion(s, b, B, dt);
   }
   // Goo the hornworm spat: it slows ants that walk through it.
@@ -2622,6 +2634,49 @@ function stepMantis(s, b, B, dt){
   if (b.cd <= 0 && d < 4.6*T){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: 4.8*T, w: 2.2*T, t: 0, at: fast ? 0.45 : 0.6 }; return; }
   if (fast && d > 6*T && b.cd <= 0){ const k = Math.min(5*T, d - 2.5*T); b.hop = { x0: b.x, y0: b.y, x1: b.x + b.dx*k, y1: b.y + b.dy*k, t: 0 }; b.cd = 0.6; return; }
   if (d > 3.5*T) bossWalk(s, b, a.x, a.y, 9, dt);
+}
+// The black widow (build 35). Her web (4½ tiles round) holds any ant that walks in for 3 s. Four white
+// anchors at its edge: bite through all four and she falls to the floor for 12 s (bites double; up in
+// the web, a third). She bites at a red dot, deadly. Phase 2: she drops on a thread to a new spot and
+// spins a fresh web there (anchors already cut stay cut).
+function spinWeb(s, b, x, y, keep){
+  const R = 4.5*T, old = b.web ? b.web.anchors : null;
+  // Each anchor sits on open ground an ant can reach: pulled in toward the middle if the edge is blocked.
+  b.web = { x, y, r: R, anchors: [0, 1, 2, 3].map(i => { const a = i*Math.PI/2 + 0.4; const cut = keep && old && old[i].hp <= 0; let k = R; while (k > 1.5*T && !walk(s, Math.floor((x + Math.cos(a)*k)/T), Math.floor((y + Math.sin(a)*k)/T))) k -= 0.5*T; return { x: x + Math.cos(a)*k, y: y + Math.sin(a)*k, hp: cut ? 0 : 30, max: 30 }; }) };
+}
+function stepWidow(s, b, B, dt){
+  const P = s.player;
+  if (!b.web) spinWeb(s, b, b.hx, b.hy);
+  const W2 = b.web;
+  // The web holds what walks into it.
+  if (!b.grounded) for (const a of s.ants){ if (a.team || !outside(a)) continue;
+    if (Math.hypot(a.x - W2.x, a.y - W2.y) < W2.r && !(a.webT > s.t) && !(a.webFree > s.t)){ a.webT = s.t + 3; a.webFree = s.t + 5; if (!a.isPlayer) a.lockT = 3; if (a.isPlayer || !b.warnedWeb){ b.warnedWeb = true; if (playerNear(s, W2.x, W2.y, 24)) P.msg = a.isPlayer ? 'You’re stuck in the widow’s web!' : 'Your ants are stuck in the widow’s web. Cut the anchors!'; } } }
+  // The anchors: fighters, your crew and you bite through them.
+  if (!b.grounded){ let cutNow = false;
+    for (const an of W2.anchors){ if (an.hp <= 0) continue;
+      for (const a of s.ants){ if (a.team || !outside(a) || !(CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer)) continue; if (Math.hypot(a.x - an.x, a.y - an.y) < 1.2*T){ an.hp -= bite(s, a)*dt*(a.isPlayer ? 2 : 1); an.hitT = s.t; } }
+      if (an.hp <= 0){ an.hp = 0; cutNow = true; s.events.push('attackdone'); } }
+    const left = W2.anchors.filter(an => an.hp > 0).length;
+    if (cutNow && left && playerNear(s, b.x, b.y, 24)) P.msg = `An anchor snaps! ${left} left.`;
+    if (!left){ b.grounded = true; b.groundT = 12; b.atk = null; b.drop = null; b.x = W2.x; b.y = W2.y; b.landAt = s.t; if (playerNear(s, b.x, b.y, 24)) P.msg = 'The web falls, and the widow with it! Swarm her: bites do double!'; s.events.push('bossphase'); } }
+  else { b.groundT -= dt; if (b.groundT <= 0){ b.grounded = false; spinWeb(s, b, b.x, b.y); if (playerNear(s, b.x, b.y, 24)) P.msg = 'The widow climbs back up and spins a new web.'; } }
+  if (b.mode === 'idle'){ if (!b.grounded){ b.x += (W2.x - b.x)*Math.min(1, dt); b.y += (W2.y - b.y)*Math.min(1, dt); } return; }
+  const fast = b.phase === 2;
+  if (b.drop){ const D = b.drop; D.t += dt; if (D.t < D.at) return; b.drop = null; b.x = D.x; b.y = D.y; spinWeb(s, b, D.x, D.y, true); b.cd = 1.5; b.landAt = s.t; return; }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return;
+    b.atk = null; b.atkDone = { kind: 'ring', x: k.x, y: k.y, r: k.r, t: s.t }; b.biteAt = s.t;
+    if (k.what === 'drop'){ b.drop = { x: k.x, y: k.y, t: 0, at: 0.3 }; return; }
+    for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; hurtAnt(s, a, 8, 'widow'); spark(s, null, a.x, a.y, 1); }
+    b.cd = fast ? 1.1 : 1.6; return; }
+  b.cd -= dt; b.dropCd = (b.dropCd ?? 10) - dt;
+  if (fast && !b.grounded && b.dropCd <= 0){ b.dropCd = 13; const a = Math.random()*Math.PI*2, d = 3*T + Math.random()*3*T; let x = b.hx + Math.cos(a)*d, y = b.hy + Math.sin(a)*d; if (!walk(s, Math.floor(x/T), Math.floor(y/T))){ x = b.hx; y = b.hy; } b.atk = { kind: 'ring', what: 'drop', x, y, r: 2*T, t: 0, at: 1.0 }; return; }
+  // Prey: a stuck ant first, else the nearest.
+  let tg = null, td = Infinity; for (const a of s.ants){ if (a.team || !outside(a) || (a.isPlayer && a.feign > s.t)) continue; const d = Math.hypot(a.x - b.x, a.y - b.y) - (a.webT > s.t ? 2*T : 0); if (d < td){ td = d; tg = a; } }
+  if (!tg) return; const d = Math.hypot(tg.x - b.x, tg.y - b.y); b.dx = (tg.x - b.x)/(d || 1); b.dy = (tg.y - b.y)/(d || 1);
+  if (b.cd <= 0 && d < 3.5*T){ b.atk = { kind: 'ring', what: 'bite', x: tg.x, y: tg.y, r: 0.9*T, t: 0, at: fast ? 0.55 : 0.7 }; return; }
+  // She keeps to her web (on the floor she crawls).
+  const gx = b.grounded ? tg.x : W2.x + Math.max(-1, Math.min(1, (tg.x - W2.x)/W2.r))*W2.r*0.7, gy = b.grounded ? tg.y : W2.y + Math.max(-1, Math.min(1, (tg.y - W2.y)/W2.r))*W2.r*0.7;
+  if (d > 1.5*T) bossWalk(s, b, gx, gy, b.grounded ? 6 : 14, dt);
 }
 function stepBeetle(s, b, B, dt){
   if (b.dazeT > 0){ b.dazeT -= dt; return; }
@@ -2970,7 +3025,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
