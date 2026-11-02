@@ -441,6 +441,23 @@ export function createUI(app) {
     C.classList.toggle('hidden', !h);
     if (C.dataset.h !== h) { C.dataset.h = h; C.innerHTML = h; }
   }
+  // Build 39: the yard is yours. The camera rises over it; the 13 crests light one by one; your colony's
+  // record; then the back door of the house swings open (Phase 2, the house, comes later).
+  function showPhase1(s) {
+    let el2 = document.getElementById('phase1'); if (!el2) { el2 = document.createElement('div'); el2.id = 'phase1'; document.body.appendChild(el2); }
+    const c = s.colony, hrs = Math.floor(s.t / 3600), mins = Math.floor((s.t % 3600) / 60);
+    const guardians = ['spider', 'hornworm', 'beetle', 'antlion', 'robin', 'toad', 'mantis', 'widow', 'centipede'].reduce((n, k) => n + ((c.kills[k] || 0) ? 1 : 0), 0);
+    const rec = [['Time', hrs ? `${hrs} h ${mins} min` : `${mins} min`], ['Ants raised', c.hatched || 0], ['Ants now', SIM.antCount(s)], ['Duels won', c.duelsWon || 0], ['Crits', c.crits || 0], ['Raids led', c.raidsLed || 0], ['Queens killed', c.kills.queens || 0], ['Guardians beaten', guardians], ['Legends', (c.fallen || []).filter((f) => f.rank >= 4).length + s.ants.filter((a) => !a.team && a.legend).length], ['Regions held', Object.keys(c.held || {}).length]];
+    el2.innerHTML = `<div class="p1"><h1>The yard is yours</h1><div class="sub">Every zone taken, every guardian fallen.</div>
+      <div class="crests">${SIM.ZONES.map((z) => `<div><b>★</b>${z.name}</div>`).join('')}</div>
+      <div class="rec">${rec.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
+      <div class="door">Behind you, the back door of the house creaks open. Warm light, a crumb-strewn floor, a world a thousand times bigger.<br><i>Phase 2, the house, is coming.</i></div>
+      <button data-p1="1">Keep playing the yard</button></div>`;
+    el2.classList.remove('hidden'); app.paused = true; sfx.play('cheer');
+    const prevZoom = app.zoomMul; app.zoomMul = 0.5; // the camera rises over the yard
+    el2.querySelectorAll('.crests div').forEach((d, i) => setTimeout(() => { d.classList.add('on'); sfx.play('twinkle'); }, 500 + i * 260));
+    el2.querySelector('[data-p1]').addEventListener('click', () => { el2.classList.add('hidden'); app.paused = false; app.zoomMul = prevZoom; });
+  }
   function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.dataset.h = ''; el.sheet.classList.remove('hidden'); renderSheet(); }
   function closeMenu() { app.menu = null; app.menuCell = null; el.sheet.classList.add('hidden'); app.paused = false; }
   function openHelp(tab) {
@@ -523,6 +540,9 @@ export function createUI(app) {
   function bossUi(s) {
     const B = s.bosses || {}, pa = P().ant, fx = pa && !P().inNest ? pa.x : (s.world.ex + 0.5) * T, fy = pa && !P().inNest ? pa.y : (s.world.ey + 0.5) * T;
     if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'toad' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : s.bossIntro.key === 'widow' ? '🕷' : s.bossIntro.key === 'centipede' ? '🐛' : '🌀', D.name, D.tip, D.title); }
+    // Build 39: a zone taken; and once all 13 are, the end of Phase 1.
+    if (s.zoneTaken && s.zoneTaken.t !== app.zoneSeen) { app.zoneSeen = s.zoneTaken.t; const Z = SIM.ZONES.find((z) => z.key === s.zoneTaken.key); if (Z) showBanner('win', '★', `Zone taken: ${Z.name}`, `${s.zoneTaken.n} of ${SIM.ZONES.length} zones. Open the map to see what’s left.`); }
+    if (s.phase1 && !s.seen.phase1Shown) { s.seen.phase1Shown = true; showPhase1(s); }
     if (s.bossDown && s.bossDown.t !== downSeen) { downSeen = s.bossDown.t; const D = SIM.BOSSES[s.bossDown.key], Tr = SIM.TROPHY[D.trophy]; showBanner('win', '🏆', `${D.name} ${D.flees ? "flies off for good" : "is dead"}!`, `${Tr.name}: ${Tr.fx}. +4 🧬 and its chitin.`, 'Victory'); }
     if (s.banner && s.banner.t !== bannerSeen) { bannerSeen = s.banner.t; showBanner(s.banner.kind, s.banner.icon, s.banner.title, s.banner.line); }
     let pick = null, pd = 34 * T;

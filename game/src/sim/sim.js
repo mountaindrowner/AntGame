@@ -1,7 +1,7 @@
 // Underfoot simulation (build 6, from prototype/sim.js). No DOM, no renderer:
 // the views read this state; nothing here knows how it is drawn.
 import { makeYard, AREAS, AREA, BLOCK, SCALE, REGION, areaBounds } from './yard.js';
-import { UPGRADES, EVO, EVO_BY, evoCost, laterIn, RANKS, rankOf, NAMES, FAMILY, PROMOS, QUEEN_LEVELS, QUEEN_TRAITS, OUTPOST, GUARDIANS, prizeOf, GOALS, goalBoard, SETS, TIERS } from './growth.js';
+import { UPGRADES, EVO, EVO_BY, evoCost, laterIn, RANKS, rankOf, NAMES, FAMILY, PROMOS, QUEEN_LEVELS, QUEEN_TRAITS, OUTPOST, GUARDIANS, prizeOf, GOALS, goalBoard, SETS, TIERS, ZONES, ZONE_OF } from './growth.js';
 const SIM = (() => {
 const W = AREA*BLOCK.cols, H = AREA*BLOCK.rows, T = 16; // surface tiles: the built yard (yard.js)
 // Everything on the surface is twice as big as it was (yard.js SCALE), so
@@ -766,7 +766,7 @@ function tick(s, dt){
   // The Picnic Blanket held: a treat lands there every few minutes.
   for (const i in s.colony.held) if (prizeFx(s, i) === 'picnic'){ s.picnicT = (s.picnicT || 0) + dt; if (s.picnicT > 150 && !s.items.some(f => heavy(f) && w.area[idx(f.x,f.y)] === +i)){ s.picnicT = 0; const A = AREAS[i]; const it = spawnInArea(s, +i, 'food', A.treats ? A.treats[Math.floor(Math.random()*A.treats.length)] : 'cookie'); if (it && !P.msg) P.msg = `A ${FOODS[it.type].name} landed on the Picnic Blanket.`; } }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
-  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickAttack(s); tickOutposts(s, dt); tickGoals(s, dt);
+  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickAttack(s); tickZones(s, dt); tickOutposts(s, dt); tickGoals(s, dt);
   s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player); tickCurios(s, pa);
     // Walking into a dormant region wakes it: its food appears and starts to grow.
     const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); populateBugs(s, ai); }
@@ -1652,6 +1652,17 @@ function crewFollow(s){
   return n;
 }
 const heldCount = s => s.ants.filter(o => o.follow && o.state === 'hold').length;
+// Build 39: zones taken. Each second, any zone whose guardian has fallen is marked; all 13 ends Phase 1.
+function zonesTaken(s){ return ZONES.filter(z => (s.colony.zones || {})[z.key] != null).length; }
+function tickZones(s, dt){
+  s.zoneT = (s.zoneT || 0) + dt; if (s.zoneT < 1) return; s.zoneT = 0;
+  const c = s.colony; if (!c.zones) c.zones = {};
+  for (const z of ZONES){ if (c.zones[z.key] != null || !z.done(s)) continue;
+    c.zones[z.key] = s.t; const n = zonesTaken(s);
+    s.zoneTaken = { key: z.key, t: s.t, n }; s.events.push('zone');
+    s.player.msg = `Zone taken: ${z.name} (${n} of ${ZONES.length}).${n < ZONES.length ? '' : ' The whole yard is yours!'}`;
+    if (n >= ZONES.length && !s.phase1){ s.phase1 = { t: s.t }; s.events.push('phase1'); } }
+}
 function tickAttack(s){
   const P = s.player, A = P.attack; if (!A) return;
   const o = attackTarget(s), a = P.ant;
@@ -3178,6 +3189,7 @@ function serialize(s){
   return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
+    phase1: s.phase1 || null,
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
@@ -3186,7 +3198,7 @@ function deserialize(json){
   const d = JSON.parse(json); if (d.v !== 10 && d.v !== 11) throw new Error('old save'); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
+  s.t = d.t; s.phase1 = d.phase1 || null; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   for (const a of s.ants) if (a.state === 'away'){ a.state = 'return'; a.follow = false; a.carry = a.loot || 0; a.kind = a.lootKind === 'brood' ? 'brood' : 'food'; a.loot = 0; } // build 28: a raid in progress isn't saved; its raiders walk home
@@ -3200,7 +3212,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

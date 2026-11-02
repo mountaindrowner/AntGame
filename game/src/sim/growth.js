@@ -202,6 +202,26 @@ export const GUARDIANS = {
   oak: ['the carpenter ants’ queen', (s) => !rivalAlive(s, 'carpenter')],
 };
 // Build 30: the Great Lawn's regions are held once the Old Robin is driven off.
+// Build 39: the yard's 13 zones, each with the guardian that rules it (COMBAT.md). Phase 1 ends when all
+// 13 have fallen.
+export const ZONES = [
+  { key: 'patio', home: 'patio', name: 'The Patio', regions: ['patio', 'steps', 'porch', 'grill', 'cooler'], guardian: 'the pavement ants’ queen', icon: '🐜', done: (s) => !s.rival.queenAlive },
+  { key: 'trash', home: 'trash', name: 'The Trash', regions: ['trash'], guardian: 'the odorous ants’ queen', icon: '🐜', done: (s) => !rivalAlive(s, 'odorous') },
+  { key: 'flowerbed', home: 'flowerbed', name: 'The Flowerbed', regions: ['flowerbed'], guardian: 'the wolf spider', icon: '🕷', done: (s) => (s.colony.kills.spider || 0) >= 1 },
+  { key: 'garden', home: 'tomatoes', name: 'The Vegetable Garden', regions: ['tomatoes', 'beans', 'peppers', 'herbs', 'spigot'], guardian: 'the hornworm', icon: '🐛', done: (s) => (s.colony.kills.hornworm || 0) >= 1 },
+  { key: 'rocks', home: 'rockgarden', name: 'The Rock Garden', regions: ['rockgarden', 'rockgarden2', 'stones', 'gnomes'], guardian: 'the ground beetle', icon: '🪲', done: (s) => (s.colony.kills.beetle || 0) >= 1 },
+  { key: 'playground', home: 'sandbox', name: 'The Playground', regions: ['sandbox', 'swings', 'trampoline', 'soccer'], guardian: 'the antlion queen', icon: '🌀', done: (s) => (s.colony.kills.antlion || 0) >= 1 },
+  { key: 'oak', home: 'oak', name: 'The Oak', regions: ['oakroots', 'oak', 'acorns', 'branches', 'oakeast', 'fallen'], guardian: 'the carpenter ants’ queen', icon: '🐜', done: (s) => !rivalAlive(s, 'carpenter') },
+  { key: 'fire', home: 'firemound', name: 'Fire Ant Country', regions: ['fireout', 'firemound'], guardian: 'the fire ants’ queen', icon: '🔥', done: (s) => !rivalAlive(s, 'fire') },
+  { key: 'lawn', home: 'bare', name: 'The Great Lawn', regions: ['lawn', 'clover', 'molehills', 'dandelions', 'pool', 'sprinkler', 'fairyring', 'gnome', 'frisbee', 'bone', 'cloverhill', 'truck', 'bare', 'longgrass', 'daisies', 'lawnedge'], guardian: 'the Old Robin', icon: '🐦', done: (s) => (s.colony.kills.robin || 0) >= 1 },
+  { key: 'wet', home: 'toadhole', name: 'The Wet Edge', regions: ['toadhole', 'thistles', 'reeds', 'slugs', 'drain', 'mudflat', 'wetedge'], guardian: 'Old Warty the toad', icon: '🐸', done: (s) => (s.colony.kills.toad || 0) >= 1 },
+  { key: 'hedge', home: 'hedge3', name: 'The Hedge Row', regions: ['hedge1', 'hedge2', 'hedge3', 'hedge4', 'hedge5', 'hedge6'], guardian: 'the praying mantis', icon: '🦗', done: (s) => (s.colony.kills.mantis || 0) >= 1 },
+  { key: 'side', home: 'shed', name: 'The Side Yard', regions: ['shed', 'side2', 'side3', 'side4'], guardian: 'the black widow', icon: '🕷', done: (s) => (s.colony.kills.widow || 0) >= 1 },
+  { key: 'rot', home: 'leaves2', name: 'The Rot', regions: ['leaves', 'leaves2', 'compost'], guardian: 'the giant centipede', icon: '🐛', done: (s) => (s.colony.kills.centipede || 0) >= 1 },
+];
+export const ZONE_OF = Object.fromEntries(ZONES.flatMap((z) => z.regions.map((k) => [k, z])));
+// (Zones are for the map and for progress. Outlying regions with no guardian of their own, like the
+// Spigot and the Back Steps, stay free to hold, as they always were.)
 // Build 36: the Rot (the leaves and the compost), once the giant centipede is dead.
 for (const k of ['leaves', 'leaves2', 'compost']) GUARDIANS[k] = ['the giant centipede', (s) => (s.colony.kills.centipede || 0) >= 1];
 // Build 35: the Side Yard, once the black widow is dead.

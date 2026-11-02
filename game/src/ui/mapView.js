@@ -7,6 +7,12 @@ import { sfx } from '../audio/sfx.js';
 
 const { T, AREAS, SEE } = SIM;
 
+// Build 39: a region's zone, and who rules it.
+function zoneLine(s, key) {
+  const Z = SIM.ZONE_OF[key]; if (!Z) return '<dt>Zone</dt><dd>Free ground: no guardian</dd>';
+  const done = (s.colony.zones || {})[Z.key] != null;
+  return `<dt>Zone</dt><dd>${Z.name}: ${done ? '★ taken' : 'ruled by ' + Z.guardian}</dd>`;
+}
 export class MapView {
   constructor(app, onPlan) {
     this.app = app;
@@ -121,6 +127,31 @@ export class MapView {
     // Markers stay the same size at any zoom.
     const at = (x, y) => [this.ox + x * K * this.z, this.oy + y * K * this.z];
     const seen = (tx, ty) => s.seenMap[Math.floor(ty / SEE.cell) * (w.W / SEE.cell) + Math.floor(tx / SEE.cell)];
+    // Build 39: the 13 zones. Each outlined, red while its guardian rules it, gold once taken (faint
+    // where you haven't been), with a crest at its middle.
+    const taken = (s.colony.zones || {}), REG = SIM.REGION, crests = [];
+    for (const Z of SIM.ZONES) {
+      const done = taken[Z.key] != null, idxs = Z.regions.map((k) => REG[k]).filter((i) => i != null);
+      if (!idxs.length) continue;
+      const inZ = new Set(idxs), boxes = idxs.map((i) => SIM.areaBounds(i));
+      let seenAny = false, cx = 0, cy = 0;
+      for (const b of boxes) { cx += (b.x0 + b.x1 + 1) / 2; cy += (b.y0 + b.y1 + 1) / 2; for (let y = b.y0; y <= b.y1 && !seenAny; y += SEE.cell) for (let x = b.x0; x <= b.x1; x += SEE.cell) if (seen(x, y)) { seenAny = true; break; } }
+      g.lineWidth = done ? 3 : 2.5; g.strokeStyle = done ? 'rgba(255,211,77,0.95)' : seenAny ? 'rgba(228,82,74,0.9)' : 'rgba(228,82,74,0.35)';
+      // Each region's edges that don't border another region of the same zone.
+      const neighbour = (b, dx, dy) => { const ai = SIM.areaOf(s, Math.max(0, Math.min(w.W - 1, Math.floor((b.x0 + b.x1) / 2) + dx * (SIM.AREA))), Math.max(0, Math.min(w.H - 1, Math.floor((b.y0 + b.y1) / 2) + dy * (SIM.AREA)))); return inZ.has(ai) && ai !== SIM.areaOf(s, Math.floor((b.x0 + b.x1) / 2), Math.floor((b.y0 + b.y1) / 2)); };
+      g.beginPath();
+      for (const b of boxes) {
+        const [x0, y0] = at(b.x0 * T, b.y0 * T), [x1, y1] = at((b.x1 + 1) * T, (b.y1 + 1) * T);
+        if (!neighbour(b, 0, -1)) { g.moveTo(x0, y0); g.lineTo(x1, y0); }
+        if (!neighbour(b, 0, 1)) { g.moveTo(x0, y1); g.lineTo(x1, y1); }
+        if (!neighbour(b, -1, 0)) { g.moveTo(x0, y0); g.lineTo(x0, y1); }
+        if (!neighbour(b, 1, 0)) { g.moveTo(x1, y0); g.lineTo(x1, y1); }
+      }
+      g.stroke();
+      // The crest sits on the guardian's own region (a zone's middle can fall outside it).
+      const hb = REG[Z.home] != null ? SIM.areaBounds(REG[Z.home]) : null;
+      crests.push({ Z, done, seenAny, at: hb ? at(((hb.x0 + hb.x1 + 1) / 2) * T, ((hb.y0 + hb.y1 + 1) / 2) * T) : at((cx / boxes.length) * T, (cy / boxes.length) * T) });
+    }
     // Region names, where you've seen any of the region.
     g.font = '600 11px ui-rounded, system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
     // Names only once a region is big enough on screen to hold one.
@@ -139,6 +170,16 @@ export class MapView {
       g.beginPath(); g.arc(px, py, 6, 0, Math.PI * 2); g.fillStyle = color; g.fill(); g.lineWidth = 2; g.strokeStyle = '#1b150e'; g.stroke();
       if (label) { g.font = '700 11px ui-rounded, system-ui, sans-serif'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,12,4,0.8)'; g.strokeText(label, px, ly); g.fillStyle = '#fff'; g.fillText(label, px, ly); }
     };
+    // The crests: a gold star once taken, the guardian's sign while it rules, a ? where unexplored.
+    const showNames = SIM.AREA * T * K * this.z <= 95;
+    for (const c of crests) {
+      const [x, y] = c.at;
+      g.beginPath(); g.arc(x, y, 13, 0, Math.PI * 2); g.fillStyle = c.done ? '#ffd34d' : c.seenAny ? '#8a2a1e' : 'rgba(60,40,30,0.8)'; g.fill();
+      g.lineWidth = 2.5; g.strokeStyle = c.done ? '#7a5a10' : '#1b150e'; g.stroke();
+      g.font = '15px system-ui, sans-serif'; g.fillStyle = '#fff'; g.fillText(c.done ? '★' : c.seenAny ? c.Z.icon : '?', x, y + 1);
+      if (showNames) { g.font = '700 10px ui-rounded, system-ui, sans-serif'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,12,4,0.85)'; g.strokeText(c.Z.name, x, y + 22); g.fillStyle = c.done ? '#ffd34d' : '#f6eedc'; g.fillText(c.Z.name, x, y + 22); }
+    }
+    const sp = this.el.querySelector('.mv-sp'), txt = `Zones taken: ${SIM.zonesTaken(s)} of ${SIM.ZONES.length}`; if (sp.textContent !== txt) sp.textContent = txt;
     if (s.queen.placed) pin((w.ex + 0.5) * T, (w.ey + 0.5) * T, '#8fd36b', 'Nest');
     for (const r of s.rivals) if (!r.asleep && r.queenAlive && seen(r.ex, r.ey)) pin((r.ex + 0.5) * T, (r.ey + 0.5) * T, '#e4524a', r.team === 1 ? 'Rival nest' : SIM.RIVALS[r.team - 1].name);
     for (const o of s.outposts || []) if (seen(o.x, o.y)) pin((o.x + 0.5) * T, (o.y + 0.5) * T, o.done ? '#c9b27a' : '#8a8272', s.colony.held[o.region] ? 'Held' : o.done ? 'Outpost' : 'Building');
@@ -154,7 +195,7 @@ export class MapView {
     const seen = s.seenMap[Math.floor(wy / SEE.cell) * (w.W / SEE.cell) + Math.floor(wx / SEE.cell)];
     const A = AREAS[SIM.areaOf(s, Math.floor(wx), Math.floor(wy))];
     this.card.innerHTML = seen
-      ? `<strong>${A.name}</strong><div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd></dl>`
+      ? `<strong>${A.name}</strong><div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${zoneLine(s, A.key)}</dl>`
       : `<strong>Unexplored</strong><div>Walk your ant out here to see what's in this part of the yard.</div>`;
     this.card.classList.remove('hidden');
   }

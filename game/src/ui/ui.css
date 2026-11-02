@@ -209,7 +209,7 @@ body.title-on .card-tip, body.cine-on .card-tip { display: none !important; }
 /* The yard map: a full-screen photo of the yard under a fog of war. */
 #mapview { position: fixed; inset: 0; z-index: 40; background: #1b150e; display: flex; flex-direction: column; touch-action: none; }
 #mapview .mv-head { display: flex; align-items: center; gap: 8px; padding: calc(env(safe-area-inset-top, 0px) + 8px) 10px 6px; color: #f6eedc; zoom: var(--ui, 1); }
-#mapview .mv-sp { flex: 1; }
+#mapview .mv-sp { flex: 1; text-align: center; font: 800 12px ui-rounded, system-ui, sans-serif; color: #ffd34d; }
 #mapview .mv-btn { min-height: 32px; padding: 4px 12px; font-size: 13px; }
 #mapview .mv-canvas { flex: 1; width: 100%; min-height: 0; display: block; cursor: grab; touch-action: none; }
 #mapview .mv-zoom { position: absolute; right: 10px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); display: flex; flex-direction: column; gap: 6px; zoom: var(--ui, 1); }
@@ -466,3 +466,18 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #skills .skill.locked .ic { filter: grayscale(1); font-size: 18px; }
 #skills .skill.lv2 { border-color: #ffd34d; }
 #skills .skill.lv2::after { content: 'II'; position: absolute; right: 3px; top: 1px; font: 900 9px ui-rounded, system-ui, sans-serif; color: #b07a10; }
+
+/* Build 39: the end of Phase 1. */
+#phase1 { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(40,24,8,0.55), rgba(10,6,2,0.9)); }
+#phase1.hidden { display: none; }
+#phase1 .p1 { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; background: #2a1d12; border: 3px solid #ffd34d; border-radius: 16px; padding: 18px 20px; color: #f1e8d6; text-align: center; box-shadow: 0 6px 0 #1d1710; }
+#phase1 h1 { font: 400 30px/1.1 Bungee, ui-rounded, system-ui, sans-serif; color: #ffd34d; margin: 4px 0 6px; }
+#phase1 .sub { font: 600 13px ui-rounded, system-ui, sans-serif; color: #e8dcc4; margin-bottom: 12px; }
+#phase1 .crests { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; margin: 8px 0 14px; }
+#phase1 .crests div { font: 700 11px ui-rounded, system-ui, sans-serif; background: #3a2a18; border-radius: 8px; padding: 6px; opacity: 0; transform: scale(0.8); transition: opacity 0.4s, transform 0.4s; }
+#phase1 .crests div.on { opacity: 1; transform: none; }
+#phase1 .crests b { display: block; font-size: 18px; color: #ffd34d; }
+#phase1 .rec { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; text-align: left; font: 600 12px ui-rounded, system-ui, sans-serif; margin: 0 auto 12px; max-width: 360px; }
+#phase1 .rec b { color: #ffd34d; float: right; }
+#phase1 .door { font: 600 13px ui-rounded, system-ui, sans-serif; color: #fff4dc; margin: 10px 0 14px; }
+#phase1 button { font: 800 13px ui-rounded, system-ui, sans-serif; background: #2f7a3a; color: #fff; border: 0; border-radius: 10px; padding: 8px 18px; cursor: pointer; }

@@ -2,6 +2,50 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the zone map and the end of Phase 1 (build 39)
+
+Mark: "Do the zone map."
+
+**The 13 zones** (`ZONES` in `growth.js`): the yard's regions grouped under the guardian that rules each group.
+
+| Zone | Guardian |
+|---|---|
+| The Patio | pavement ants' queen |
+| The Trash | odorous ants' queen |
+| The Flowerbed | the wolf spider |
+| The Vegetable Garden | the hornworm |
+| The Rock Garden | the ground beetle |
+| The Playground | the antlion queen |
+| The Oak | carpenter ants' queen |
+| Fire Ant Country | fire ants' queen |
+| The Great Lawn | the Old Robin |
+| The Wet Edge | Old Warty |
+| The Hedge Row | the mantis |
+| The Side Yard | the black widow |
+| The Rot | the giant centipede |
+
+- A few regions belong to no zone and are free ground: under the Rock (home), the Woodpile, the bird feeders, the birdbath and the Picnic Blanket.
+- Outlying regions with no guardian of their own, like the Spigot and the Back Steps, stay free to hold as before. A first try locked them behind their zone's guardian. That would have taken away the easy early outposts, and the outpost tests caught it.
+
+**On the map:**
+- **Outlines:** every zone is outlined, red while its guardian rules it and gold once taken. Unexplored zones are faint.
+- **Crests:** a crest sits on the guardian's own region. It shows the guardian's sign while it lives, a gold ★ once taken, and a ? where you haven't been. Zoomed out, the zone names show under the crests.
+- **The count:** "Zones taken: 3 of 13" in the map's header.
+- **The card:** tapping a region now also says its zone and who rules it ("The Great Lawn: ruled by the Old Robin", or "★ taken"), or "Free ground".
+
+**Taking a zone:** within a second of its guardian falling, a gold banner says "Zone taken: The Great Lawn, 5 of 13 zones. Open the map to see what's left."
+
+**The end of Phase 1:** when all 13 are taken, Phase 1 is over (`s.phase1`, kept in saves).
+- The camera pulls back over the yard and "The yard is yours" comes up.
+- The 13 zone crests light one by one.
+- **Your colony's record:** time, ants raised and alive, duels won, crits, raids led, queens killed, guardians beaten, Legends and regions held.
+- Then: "Behind you, the back door of the house creaks open…". Phase 2, the house, is still to come.
+- **Keep playing the yard** closes it.
+
+**Checks:**
+- 159 tests, 3 new (`tests/zones.test.js`): 13 zones made of real regions, none in two; a guardian falling takes its zone with the banner and count; and all 13 end Phase 1, kept in a save.
+- A browser run showed the zone map zoomed out and in, with crests, outlines, the count and the ending screen. Two errors found on the way are fixed: two crests stacked on the Flowerbed, and a map helper used before it was defined.
+
 ## Nov 2: the hunting wasp and the skink (build 38)
 
 Mark: "Go". These are the other two hunters, which completes the tier.
