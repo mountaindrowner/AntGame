@@ -58,7 +58,11 @@ test('pointing at a critter sends the crew to bite it till it dies, then they fa
 test('pointing at a rival ant: the crew kills it', () => {
   const s = withCrew(8), P = s.player, me = P.ant;
   const r = s.ants.find((a) => a.team === 1 && a.state !== 'dead');
-  Object.assign(r, { state: 'explore', x: me.x + 6 * T, y: me.y, tx: Math.floor(me.x / T) + 6, ty: Math.floor(me.y / T), hp: 10 });
+  // Open ground about 6 tiles off (a test that dropped it inside an obstacle failed at random).
+  const W = s.world.W || SIM.W, ok = (x, y) => !s.world.blocked[y * W + x];
+  let gx = Math.floor(me.x / T) + 6, gy = Math.floor(me.y / T);
+  for (let d = 0; d < 6 && !ok(gx, gy); d++) for (const [dx, dy] of [[0, d], [0, -d], [d, 0], [-d, 0]]) if (ok(gx + dx, gy + dy)) { gx += dx; gy += dy; break; }
+  Object.assign(r, { state: 'patrol', x: (gx + 0.5) * T, y: (gy + 0.5) * T, tx: gx, ty: gy, hp: 10, flee: 0 });
   assert.ok(SIM.crewAttack(s, r.x, r.y));
   const dead = step(s, 30, () => { P.tx = me.x; P.ty = me.y; return r.state === 'dead' || !s.ants.includes(r); });
   assert.ok(dead, 'the rival ant is dead');

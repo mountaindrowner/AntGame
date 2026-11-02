@@ -2,6 +2,59 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: ant against ant is a duel of dice (build 27)
+
+Mark: "think one-on-one, when it's ants against ants, it should be something. Dice rolls against each other, or attacks against each other." He asked "What's next?", and I took step 1 of `COMBAT.md`.
+
+**How a duel works** (`swing` in the sim):
+- A fighter that meets an enemy locks on to one foe and swings at it every 0.7 seconds. Your ant swings every 0.6.
+- Each swing rolls **1d6 + Attack** against the foe's **1d6 + Defence**:
+  - **Higher:** a hit.
+  - **Higher by 3 or more:** a hard hit, for half again.
+  - **A natural 6 that hits:** a **crit**, for double. It also lames the foe, which is slower for 4 seconds. Venom ants crit on a 5 or 6.
+  - **A tie:** mandibles locked. Neither moves for a round, and they shove at each other on screen.
+  - **Lower:** a miss.
+- **Ganging up:** each other ant on the same foe adds +1, up to +3. A swarm ant (odorous) counts double.
+- **Pinned:** with 3 or more on it, a foe is pinned. It can't run, and every hit on it is a hard hit. Supermajors can't be pinned.
+- **Fire ants:** each hit burns for 1 more over 3 seconds.
+- **Argentine ants:** never run.
+- **Damage:** bite strength, the same as before, times 1.4 per hit. On average a duel hurts about as much as the old steady damage did. The difference is that ganging up, ranks and luck now matter.
+
+**Attack / Defence:**
+
+| Ant | Attack / Defence |
+|---|---|
+| Workers | 0 / 0 |
+| Harvester | 1 / 1 |
+| Soldier | 2 / 2 |
+| Venom ant | 2 / 1 |
+| Major | 3 / 4 |
+| Supermajor | 4 / 6 |
+| Exploder | 1 / 0 |
+| Your ant | 2 / 2 |
+| Pavement ants | 0 / 0, soldiers 2 / 2 |
+| Odorous ants | −1 / −1 |
+| Argentine ants | 0 / 0, soldiers 1 / 1 |
+| Carpenter ants | 3 / 4 |
+| Fire ants | 2 / 1 |
+
+- The war party's champion gets +2 / +2.
+- **Ranks:** Seasoned +1 / 0, Veteran +1 / +1, Elite +2 / +2, Legend +3 / +3.
+- **Upgrades:** Strong mandibles and the Trap-jaw line +1 Attack. Tough cuticle and the Armory +1 Defence. Your ant's third upgrade +1 / +1. Propaganda takes 1 off rival Attack.
+
+**What you see:**
+- **Your duel:** your dice next to your health bar for a second and a half: "🎲 You 5+2 vs Pavement ant 3+2: hit". Their swings at you show too: "🎲 Pavement ant 4+0 vs you 2+2: blocked".
+- **Numbers over fights:** small rising numbers over your own fights. "CRIT 6" over crits nearby, gold for yours and red for theirs. Now and then "⚔" over locked mandibles.
+- **Crit sparks:** a crit flashes white and twice the size.
+- **The raid report** now counts your crits.
+- **Help** has a Duels line.
+
+**Checks:**
+- 106 tests, 6 new (`tests/duels.test.js`): the stats; each outcome with fixed dice; a soldier landing about 60%+ on a forager while a forager still lands 8–35% on a soldier; ganging up doubling hits and pinning making hard hits; venom crits and fire burns; and a ground fight where 5 soldiers beat 5 foragers.
+- The crew-attack test sometimes dropped its rival ant inside an obstacle. It now uses open ground.
+- A browser run showed the dice readout, crit pops and the white crit flash, with no errors.
+- 45-minute bots, same seeds side by side: the previous build reached 40 ants in 3 of 4, duels in 2 of 4, with no more ants lost to rivals. That is within the usual swing. Military bots won both their runs.
+
 ## Nov 2: attack on purpose (build 26)
 
 Mark: "attacking on purpose, when you have recruits, say you recruit everybody and then you attack on purpose, I think that's the best way to go. You hover over an enemy and it causes ants to begin a combat where they just bite at it."

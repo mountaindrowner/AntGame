@@ -415,6 +415,8 @@ export class SurfaceView {
       // grey-green, twitch, and a stalk pokes from the head.
       if (a.infect != null) { color = tintCache.get('z' + (a.zombie ? 1 : 0)) || (tintCache.set('z' + (a.zombie ? 1 : 0), new THREE.Color(color).lerp(new THREE.Color('#8a9470'), a.zombie ? 0.85 : 0.35)), tintCache.get('z' + (a.zombie ? 1 : 0)));
         if (a.zombie) { tmpQ.multiply(tmpQ3.setFromAxisAngle(UP, Math.sin(t * 23 + a.id) * 0.35)); if (a.clamp) tmpV.y += 3; } }
+      // Build 27: mandibles locked, the two shove back and forth.
+      if (a.lockT > 0) { const sh = Math.sin(t * 40 + a.id) * 1.6; tmpV.x += a.dx * sh; tmpV.z += a.dy * sh; tmpV.y += 1; }
       if (a.knockT > 0) { const u = 1 - a.knockT / 0.3; tmpQ.multiply(tmpQ3.setFromAxisAngle(XAX, u * Math.PI * 2)); tmpV.y += Math.sin(u * Math.PI) * 6; }
       // Still ants stand and breathe instead of walking on the spot.
       this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
@@ -895,10 +897,10 @@ export class SurfaceView {
     const F = this.fx, cq = this.camera.quaternion;
     for (const h of s.hits || []) {
       const u = (s.t - h.t) / 0.35; if (u < 0 || u > 1) continue;
-      const c = h.k ? '#ff5236' : '#fff0b0';
+      const c = h.k === 2 ? '#ffffff' : h.k ? '#ff5236' : '#fff0b0', big = h.k === 2 ? 2 : 1; // build 27: a crit flashes white and big
       tmpV.set(h.x, 8 + u * 5, h.y);
       tmpQ.copy(cq).multiply(tmpQ2.setFromAxisAngle(ZAX, h.t * 13 + u));
-      F.pushAt('star', FOOD.star, tmpV, tmpQ, 12 * (1 - u) + 3, c);
+      F.pushAt('star', FOOD.star, tmpV, tmpQ, (12 * (1 - u) + 3) * big, c);
       for (let j = 0; j < 4; j++) {
         const a = h.t * 31 + j * 1.7, r = u * 13;
         tmpV.set(h.x + Math.cos(a) * r, 8 + u * 9 - u * u * 10, h.y + Math.sin(a) * r);

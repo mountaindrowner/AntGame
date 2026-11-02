@@ -22,6 +22,7 @@ export class LabelLayer {
       if (d.textContent !== it.text) d.textContent = it.text;
       if (d.dataset.kind !== it.kind) d.dataset.kind = it.kind;
       d.style.transform = `translate(${Math.round(it.x)}px, ${Math.round(it.y)}px)`;
+      const op = it.o == null ? '' : String(Math.round(it.o * 100) / 100); if (d.style.opacity !== op) d.style.opacity = op;
     });
   }
 }

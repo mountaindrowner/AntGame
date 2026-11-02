@@ -315,6 +315,13 @@ function frame(now) {
       if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue;
       out.push({ text: a.legend || a.title ? `★ ${a.name}` : a.name, x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: a.legend || a.title ? 'legend' : 'name' });
     }
+    // Build 27: duel numbers and crits, rising and fading over a second.
+    for (const q of s.pops || []) {
+      const age = s.t - q.t; if (age < 0 || age > 1.1) continue;
+      nameV.set(q.x, 6, q.y).project(cam);
+      if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue;
+      out.push({ text: q.text, x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH - age * 26, kind: 'pop-' + q.k, o: Math.min(1, (1.1 - age) * 2.5) });
+    }
     labels.set(out);
   } else labels.set([]);
 

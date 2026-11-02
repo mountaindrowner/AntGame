@@ -528,6 +528,13 @@ export function createUI(app) {
     const low = pa && hp < 0.4, hurt = $('hurt');
     $('hpbar').closest('.vital').classList.toggle('low', !!low);
     el.hungerBar.closest('.vital').classList.toggle('low', !!pa && P().hunger < 30);
+    // Build 27: your duel's dice, by your health bar, for a second and a half after each swing.
+    let dEl = $('duel'); if (!dEl) { dEl = document.createElement('div'); dEl.id = 'duel'; $('vitals').after(dEl); }
+    const D = P().duel, live = D && s.t - D.t < 1.5;
+    dEl.classList.toggle('on', !!live);
+    if (live) { const sg = (m) => (m >= 0 ? '+' : '−') + Math.abs(m), W = { crit: 'CRIT!', hard: 'hard hit!', hit: 'hit', lock: 'locked!', miss: D.you ? 'miss' : 'blocked' }[D.kind];
+      const txt = D.you ? `🎲 You ${D.ra}${sg(D.ma)} vs ${D.foe} ${D.rd}${sg(D.md)}: ${W}` : `🎲 ${D.foe} ${D.ra}${sg(D.ma)} vs you ${D.rd}${sg(D.md)}: ${W}`;
+      if (dEl.textContent !== txt) dEl.textContent = txt; dEl.dataset.kind = (D.you ? 'y-' : 't-') + D.kind; }
     if (P().hit && P().hit !== app.lastHit) { app.lastHit = P().hit; hurt.classList.add('on'); setTimeout(() => hurt.classList.remove('on'), 160); sfx.play('bonk'); }
     if (P().died && P().died !== app.lastDied) { app.lastDied = P().died; hurt.classList.add('dead'); setTimeout(() => hurt.classList.remove('dead'), 1600); }
     hurt.classList.toggle('low', !!low);

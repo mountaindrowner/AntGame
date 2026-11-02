@@ -57,6 +57,7 @@ export const HELP_PAGES = [
 <div class="h"><b>Jobs</b> The clipboard button. Each kind of ant does the first job on its list that needs doing (gather food, fetch water or stone, hunt, dig and build, tend eggs, guard the door), then helps with the next. Tap a job to put it first; ✕ turns it off.</div>
 <div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades. 🍯 Sugar: honeydew and sweet treats, for the queen's later levels and nurses. 🪲 Chitin: dead bugs, beetle shells and boss kills, for tough bodies and fighters.</div>
 <div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>
+<div class="h"><b>Duels</b> Ant against ant is dice: each swing rolls 1–6 plus Attack against 1–6 plus Defence. Beat it to hit, by 3 for a hard hit; a 6 that hits is a crit. A tie locks mandibles. Gang up: each extra ant on one foe adds +1, and three pin it so it can't run. Soldiers and ranks roll higher.</div>
 <div class="h"><b>Attack</b> With a crew, rest the mouse on an enemy (or click it): a red ring marks it and the crew charges it and bites till it falls, then comes back to you.</div>`],
   ['Growth', `
 <div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs, big kills and goals. Spend them on the evolution tree.</div>
