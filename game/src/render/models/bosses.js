@@ -149,3 +149,41 @@ export function alateGeometry() {
   }
   return bake(parts);
 }
+
+// ---------- praying mantis (build 34) ----------
+// A tall green ambusher: a long abdomen with folded wings, a raised neck, a
+// triangle head with bulging eyes, and spiny raptorial forelegs. Poses: 'stand'
+// (forelegs folded as if praying), 'strike' (flung out to the ground ahead),
+// 'eat' (clutched up to its jaws).
+const MT = { green: '#7cc04a', dark: '#4e8a2c', light: '#a8dc70', wing: '#b8e48a', eye: '#d8f0a0', pupil: '#2a3a18', spine: '#35561c', mouth: '#5a3a1a' };
+export function mantisGeometry(pose = 'stand') {
+  const parts = [];
+  // Abdomen, with the folded wings laid over it.
+  parts.push(blob([-4.2, 2.8, 0], [4.2, 1.15, 1.35], [12, 7], (x, y) => (y < 2.3 ? MT.dark : MT.green)));
+  parts.push(blob([-3.6, 3.75, 0], [3.8, 0.35, 1.1], [10, 4], (x, y, z) => (Math.abs(z) < 0.08 ? MT.dark : MT.wing)));
+  // Thorax: a long neck rising up and forward.
+  const t0 = V(-0.2, 3.1, 0), t1 = V(3.4, 6.6, 0);
+  parts.push(strut(t0, t1, 0.62, 0.42, MT.green, 6));
+  parts.push(blob([0.3, 3.2, 0], [1.0, 0.75, 0.8], [8, 5], MT.green));
+  // Head: a wide triangle, eyes bulging at its corners, little jaws below.
+  parts.push(blob([4.0, 7.15, 0], [0.75, 0.85, 1.35], [8, 6], (x, y) => (y < 6.6 ? MT.mouth : MT.light)));
+  for (const side of [-1, 1]) {
+    parts.push(blob([4.15, 7.55, side * 1.25], [0.5, 0.55, 0.5], [6, 5], (x, y, z) => (x > 4.4 && y > 7.5 ? MT.pupil : MT.eye)));
+    const a0 = V(4.4, 7.9, side * 0.4), a1 = V(6.0, 9.6, side * 1.4), a2 = V(7.8, 10.2, side * 2.4);
+    parts.push(strut(a0, a1, 0.08, 0.06, MT.dark, 3), strut(a1, a2, 0.06, 0.04, MT.dark, 3));
+  }
+  // Raptorial forelegs: coxa, femur (with spines), tibia.
+  for (const side of [-1, 1]) {
+    const z = (v) => side * v;
+    let c0 = V(3.1, 6.0, z(0.45)), c1, f1, t2;
+    if (pose === 'strike') { c1 = V(5.2, 5.4, z(0.8)); f1 = V(8.0, 3.6, z(0.9)); t2 = V(10.4, 1.0, z(0.6)); }
+    else if (pose === 'eat') { c1 = V(4.4, 5.3, z(0.85)); f1 = V(5.0, 6.7, z(0.95)); t2 = V(4.5, 6.9, z(0.35)); }
+    else { c1 = V(4.0, 4.5, z(0.85)); f1 = V(5.1, 6.4, z(0.95)); t2 = V(4.5, 4.9, z(0.7)); }
+    parts.push(strut(c0, c1, 0.42, 0.36, MT.green, 5), strut(c1, f1, 0.42, 0.3, MT.light, 5), strut(f1, t2, 0.28, 0.12, MT.green, 4));
+    for (let k = 1; k <= 3; k++) { const p = c1.clone().lerp(f1, k / 4), q = p.clone().add(V(0, -0.45, 0)).add(f1.clone().sub(c1).normalize().multiplyScalar(-0.3)); parts.push(strut(p, q, 0.08, 0.03, MT.spine, 3)); }
+  }
+  // Four walking legs: long, thin, knees high.
+  const HIPS = [[0.6, 0.5], [-0.8, 0.5]], FEET = [[2.6, 4.2], [-4.4, 4.6]];
+  for (const side of [-1, 1]) for (let i = 0; i < 2; i++) parts.push(...leg(V(HIPS[i][0], 3.0, side * HIPS[i][1]), V(FEET[i][0], 0, side * FEET[i][1]), 2.6, 0.26, 0.1, MT.dark));
+  return bake(parts);
+}

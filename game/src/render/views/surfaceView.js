@@ -12,7 +12,7 @@ import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../mode
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
 import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
-import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry } from '../models/bosses.js';
+import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
@@ -1157,6 +1157,31 @@ export class SurfaceView {
         const col = !tw.dead && flashed(s, tw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : tw.puffT > 0 ? '#e8d890' : '#b8c0a8'; // bitten all the time: a flicker, not solid red
         for (const m of this.wartyMats) m.color.set(col);
         if (!tw.dead && tw.hp < tw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], tw.x, tw.y, 70 + y, tw.hp / tw.maxHp, '#b04ad0');
+      }
+    }
+    // The praying mantis (build 34): nearly invisible in the hedge until you're close; it sways before it
+    // strikes, flings its forelegs out, and eats with them clutched to its jaws.
+    const mt = B.mantis;
+    if (mt && !this.mantis) {
+      this.mantisGeo = { stand: mantisGeometry('stand'), strike: mantisGeometry('strike'), eat: mantisGeometry('eat') };
+      this.mantisMat = psx({ vertexColors: true, transparent: true, opacity: 1 });
+      this.mantis = new THREE.Mesh(this.mantisGeo.stand, this.mantisMat); this.mantis.rotation.order = 'YZX'; this.dyn.add(this.mantis); this.mantisAnim = { yaw: 0, see: 0 };
+    }
+    if (this.mantis) {
+      const M = this.mantis, MA = this.mantisAnim, show = mt && (!mt.dead || s.t - mt.deadT < 14);
+      M.visible = !!show;
+      if (show) {
+        tele(mt);
+        const aim = Math.atan2(mt.dy || 0, mt.dx ?? 1); MA.yaw += wrapAngle(aim - MA.yaw) * Math.min(1, fdt * 6);
+        MA.see += ((mt.hidden && !mt.dead ? 0.12 : 1) - MA.see) * Math.min(1, fdt * 3);
+        const striking = mt.strikeAt != null && s.t - mt.strikeAt < 0.3;
+        M.geometry = mt.eat ? this.mantisGeo.eat : striking ? this.mantisGeo.strike : this.mantisGeo.stand;
+        const sway = mt.atk ? Math.sin(t * 14) * 0.18 - 0.12 : mt.hidden ? Math.sin(t * 1.3) * 0.04 : 0;
+        let y = 0; if (mt.hop) y = Math.sin(Math.PI * Math.min(1, mt.hop.t / 0.45)) * 40;
+        M.position.set(mt.x, y, mt.y); M.rotation.set(mt.dead ? 1.3 : 0, MA.yaw, mt.dead ? 0 : sway); M.scale.setScalar(5);
+        this.mantisMat.opacity = MA.see; this.mantisMat.depthWrite = MA.see > 0.9;
+        this.mantisMat.color.set(!mt.dead && flashed(s, mt) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : mt.eat ? '#fff0b0' : '#ffffff');
+        if (!mt.dead && !mt.hidden && mt.hp < mt.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], mt.x, mt.y, 60 + y, mt.hp / mt.maxHp, '#b04ad0');
       }
     }
     // Hornworm goo.

@@ -506,6 +506,7 @@ export function createUI(app) {
     hornworm: (b) => (b.roll ? 'ROLLING!' : b.atk && b.atk.kind === 'ring' ? 'Rearing to thrash: get out of the ring!' : b.atk && b.atk.kind === 'lane' ? 'About to roll: get out of the lane!' : b.atk ? 'Spitting goo: move!' : b.phase === 2 ? 'Frenzied' : 'Stripping the plants'),
     beetle: (b) => (b.dazeT > 0 ? '★ DAZED: BITE NOW! ★' : b.charge ? 'CHARGING!' : b.atk ? 'Pawing the ground: get out of the lane!' : b.phase === 2 ? 'Enraged: it charges twice' : 'Armoured: bites barely scratch it'),
     antlion: (b) => (b.move ? 'Tunnelling to another pit…' : !b.under ? '★ SURFACED: BITE NOW! ★' : b.atk && b.atk.kind === 'grab' ? 'The sand swirls: step off it!' : b.atk ? 'Flinging sand!' : b.lureT > 0 ? 'Your crew is drawing her up…' : 'Under the sand: bring 8 ants to the pit’s edge'),
+    mantis: (b) => (b.eat ? '★ EATING, CLAWS BUSY: BITE IT NOW! ★' : b.hidden ? 'Hidden in the hedge…' : b.atk ? 'Swaying: get out of the lane in front of it!' : b.hop ? 'Fluttering after you!' : b.phase === 2 ? 'It strikes twice now' : 'Watching, still as a stick'),
     toad: (b) => (b.held ? '★ AN ANT IS IN ITS MOUTH: BITE IT, NOW! ★' : b.leap ? 'LEAPING!' : b.atk && b.atk.kind === 'lane' ? 'Tongue: get out of the thin lane!' : b.atk ? 'About to leap: get out of the ring!' : b.puffT > 0 ? 'Puffed up: bites do half' : b.phase === 2 ? 'Furious: two tongues at a time' : 'Bite it from behind: it only looks ahead'),
     robin: (b) => (b.pinned ? '★ PINNED BY THE FEET: BITE NOW! ★' : b.swoop ? 'SWOOPING!' : b.air ? (b.atk ? 'Diving: get out of the lane!' : 'Circling overhead, out of reach') : b.atk && b.atk.what === 'peck' ? 'Pecking at the red dot: move!' : b.atk ? 'Wings up: get out of the ring!' : b.phase === 2 ? 'It will take off again: pin it!' : 'Hopping after your ants'),
   };
@@ -519,7 +520,7 @@ export function createUI(app) {
   }
   function bossUi(s) {
     const B = s.bosses || {}, pa = P().ant, fx = pa && !P().inNest ? pa.x : (s.world.ex + 0.5) * T, fy = pa && !P().inNest ? pa.y : (s.world.ey + 0.5) * T;
-    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'toad' ? '🐸' : '🌀', D.name, D.tip, D.title); }
+    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'toad' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : '🌀', D.name, D.tip, D.title); }
     if (s.bossDown && s.bossDown.t !== downSeen) { downSeen = s.bossDown.t; const D = SIM.BOSSES[s.bossDown.key], Tr = SIM.TROPHY[D.trophy]; showBanner('win', '🏆', `${D.name} ${D.flees ? "flies off for good" : "is dead"}!`, `${Tr.name}: ${Tr.fx}. +4 🧬 and its chitin.`, 'Victory'); }
     if (s.banner && s.banner.t !== bannerSeen) { bannerSeen = s.banner.t; showBanner(s.banner.kind, s.banner.icon, s.banner.title, s.banner.line); }
     let pick = null, pd = 34 * T;

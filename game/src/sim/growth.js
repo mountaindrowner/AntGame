@@ -202,6 +202,8 @@ export const GUARDIANS = {
   oak: ['the carpenter ants’ queen', (s) => !rivalAlive(s, 'carpenter')],
 };
 // Build 30: the Great Lawn's regions are held once the Old Robin is driven off.
+// Build 34: the Hedge Row, once the mantis is dead.
+for (const k of ['hedge1', 'hedge2', 'hedge3', 'hedge4', 'hedge5', 'hedge6']) GUARDIANS[k] = ['the praying mantis', (s) => (s.colony.kills.mantis || 0) >= 1];
 // Build 31: the Wet Edge, once Old Warty is beaten.
 for (const k of ['toadhole', 'thistles', 'reeds', 'slugs', 'drain', 'mudflat', 'wetedge']) GUARDIANS[k] = ['Old Warty the toad', (s) => (s.colony.kills.toad || 0) >= 1];
 for (const k of ['lawn', 'clover', 'molehills', 'dandelions', 'pool', 'sprinkler', 'fairyring', 'gnome', 'frisbee', 'bone', 'cloverhill', 'truck', 'bare', 'longgrass', 'daisies', 'lawnedge']) GUARDIANS[k] = ['the Old Robin', (s) => (s.colony.kills.robin || 0) >= 1];

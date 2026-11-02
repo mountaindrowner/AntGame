@@ -2,6 +2,38 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the praying mantis, guardian of the Hedge Row (build 34)
+
+This is the third new guardian from `COMBAT.md`, and the first with a new model.
+
+**The fight:**
+- **Lair:** at the Hedge Row's west edge (by the stones), facing the lawn. It rules all six hedge regions.
+  - The first try put it deep in the hedge, where the leaves cover the whole screen. It now waits at the edge, still in the hedge and in sight.
+- **Hidden:** until an ant comes within 6 tiles it's a faint shimmer (12% opacity). Its banner only comes up once it shows itself, and the message says "The hedge moves: a mantis was there all along!"
+- **Strike:** it sways for 0.6 s (the tell, and the bar says "Swaying"), then snaps a lane 4.8 tiles long in front of it.
+  - It grabs the first **two** ants in the lane. Anything else in the lane takes a cut.
+  - Your own ant is hurt, not grabbed.
+- **Eating (4 s):** the grabbed ants are in its claws.
+  - Its claws are busy, so it can't strike, and **bites on it do double**. The bar says "EATING, CLAWS BUSY: BITE IT NOW!"
+  - Bite it for 40 or more, or **Mandible Lock** it, and it drops them alive. Otherwise they're eaten.
+- **Phase 2 (half health):** two strikes in a row, and fluttering 5-tile hops after you.
+
+**What you get:**
+- **The mantis's claw:** each of your fighters' first bite on a new foe always lands, as a double-damage crit.
+- **The hedge:** it can be held, and your ants run through it half again faster.
+- Plus 90 meat, 15 chitin, 4 genes and a Legend ("Mantis-breaker").
+
+**The model** (`mantisGeometry` in `models/bosses.js`), built from simple shapes like the other bosses:
+- a long green abdomen with folded wings over it;
+- a tall raised neck, and a triangle head with bulging eyes and antennae;
+- spiny raptorial forelegs and four thin walking legs.
+- Three poses: forelegs folded as if praying, flung out to the ground to strike, and clutched to the jaws to eat.
+- It rocks as it sways and turns to face its prey.
+
+**Checks:**
+- 139 tests, 5 new (`tests/mantis.test.js`): it rules the hedge; it stays hidden until an ant is close; a strike takes the first two in the lane and eats them if left alone; hard bites or a lock make it drop its meal alive; and beaten, it gives the claw (first bite is a crit).
+- A browser run showed it hidden, then the strike, the eating and the close-up, with no errors.
+
 ## Nov 2: second levels for your ant's abilities (build 33)
 
 Mark: "do the second levels, then the mantis."

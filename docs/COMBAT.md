@@ -94,7 +94,7 @@ This answers "what does the robin do?" Robins stay a hazard on the lawn, and the
 - **Zone eases:** no more toads on the wet edge.
 - **Trophy, toad's poison:** your ants taste bitter. Anything that eats ants (toads, birds, spiders) kills half as many.
 
-### The praying mantis (zone 11)
+### The praying mantis (zone 11). Built, build 34
 - **Lair:** the middle of the hedge. The hedge stops being "safe ground".
 - **Moves:**
   - **Hidden:** you only see a shimmer until you are within 6 tiles.

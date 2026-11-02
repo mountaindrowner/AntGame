@@ -474,7 +474,7 @@ function killAnt(s, a, cause){
     a.hp = 1; a.carry = 0; a.follow = false; a.infect = null; enterNest(s, a); s.colony.saved = (s.colony.saved || 0) + 1; if (s.colony.saved === 1) s.player.msg = 'Your medics carried a fallen ant home and saved it.'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
-  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
+  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.', mantis: 'The mantis caught you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
   if (!a.team){ const i = idx(Math.min(W-1,Math.max(0,Math.floor(a.x/T))), Math.min(H-1,Math.max(0,Math.floor(a.y/T)))); s.alarm[i] += 3; s.hot.add(i); }
   const c = colonyOf(s, a); c.deaths[cause] = (c.deaths[cause]||0) + 1;
   // Build 24. A rival killed near its own nest: the War camp loots its food; Brood raiding brings back its brood.
@@ -550,6 +550,7 @@ const reachOf = (s, a) => !a.team && CASTES[a.caste].fight >= 3 && has(s, 'formi
 // Walking pace outdoors: rank (for gatherers), trails, upgrades, promotions.
 function paceOf(s, a, base){
   if (a.team) return base*(a.stunned > s.t ? 0 : 1);
+  if (s.colony.kills.mantis && HEDGE_ZONE.has(AREAS[s.world.area[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))]].key)) base *= 1.5; // build 34: the hedge is yours
   if (a.frenzy > s.t) base *= 1.25;
   let v = base; if (FAMILY[a.caste] === 'gather') v *= jobMul(a);
   const onTrail = s.trail[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))] >= 0.3;
@@ -1870,7 +1871,8 @@ function swing(s, a, o, mul = 1){
   const pinned = pinnedNow(s, o), ra = 1 + Math.floor(Math.random()*6), rd = 1 + Math.floor(Math.random()*6);
   const A = ra + atk + help, D = rd + def, critOn = !a.team && a.caste === 'venom' ? 5 : 6;
   let kind = 'miss', m = 0;
-  if (A > D){ if (ra >= critOn){ kind = 'crit'; m = 2; } else if (A - D >= 3 || pinned){ kind = 'hard'; m = 1.5; } else { kind = 'hit'; m = 1; } }
+  if (!a.team && s.colony.trophies.claw && a.clawFoe !== o.id){ a.clawFoe = o.id; kind = 'crit'; m = 2; } // build 34: the mantis's claw
+  else if (A > D){ if (ra >= critOn){ kind = 'crit'; m = 2; } else if (A - D >= 3 || pinned){ kind = 'hard'; m = 1.5; } else { kind = 'hit'; m = 1; } }
   else if (A === D){ kind = 'lock'; if (!a.isPlayer) a.lockT = DUEL_ROUND; if (!o.isPlayer) o.lockT = DUEL_ROUND; }
   const col = colonyOf(s, a);
   let dmg = 0;
@@ -2352,7 +2354,11 @@ const BOSSES = {
   // Build 31: the Wet Edge's guardian.
   toad: { name: 'Old Warty', title: 'King of the Wet Edge', region: 'toadhole', hp: 750, r: 2.4, aggro: 9, meat: 140, chitin: 0, trophy: 'poison', phase2: 0.5, slayer: 'Toad-sticker',
     tip: 'Its tongue shoots down the thin red lane and swallows the first ant in it: bite the toad within 3 seconds and it spits the ant out alive. It only looks ahead: bites from behind do double. Its skin is poison, unless a medic is near.', rage: 'Old Warty puffs himself up and lashes twice!' },
+  // Build 34: the Hedge Row's guardian.
+  mantis: { name: 'The Praying Mantis', title: 'Ghost of the Hedge Row', region: 'hedge3', hp: 560, r: 2.2, aggro: 6, meat: 90, chitin: 15, trophy: 'claw', phase2: 0.5, slayer: 'Mantis-breaker',
+    tip: 'You won’t see it until you’re close. When it sways, get out of the lane in front of it: it grabs what’s there and eats it. While it eats, its claws are busy: bite it for double. A Mandible Lock makes it drop its meal.', rage: 'The mantis strikes twice now, and flutters after you!' },
 };
+const HEDGE_ZONE = new Set(['hedge1', 'hedge2', 'hedge3', 'hedge4', 'hedge5', 'hedge6']);
 const WET_ZONE = new Set(['toadhole', 'thistles', 'reeds', 'slugs', 'drain', 'mudflat', 'wetedge']);
 // The Great Lawn: the regions the Old Robin rules (no robins over them once it's driven off).
 const LAWN_ZONE = new Set(['lawn', 'clover', 'molehills', 'dandelions', 'pool', 'sprinkler', 'fairyring', 'gnome', 'frisbee', 'bone', 'cloverhill', 'truck', 'bare', 'longgrass', 'daisies', 'lawnedge']);
@@ -2361,6 +2367,7 @@ const TROPHY = {
   shell: { name: 'The beetle’s shell', fx: 'you can build an Armory: every ant 50% tougher, foragers shrug off a foot or beak' },
   mandible: { name: 'The antlion’s mandible', fx: 'fighters bite 15% harder, and the pits never drag your ants down' },
   feather: { name: 'The Old Robin’s feather', fx: 'birds never take your ants, and no robins hunt the Great Lawn' },
+  claw: { name: 'The mantis’s claw', fx: 'each of your fighters’ first bite on a foe always lands, for double; the hedge is safe, and your ants run through it half again faster' },
   poison: { name: 'Old Warty’s poison', fx: 'your ants taste bitter: toads, birds and spiders spit out half the ants they catch, and no toads hunt the Wet Edge' },
 };
 // Where each boss lives, made when its region first wakes.
@@ -2374,10 +2381,10 @@ function ensureBoss(s, key){
     let bd = -1; w.pits.forEach((p, i) => { const d = Math.hypot(p.x - w.ex, p.y - w.ey); if (d > bd){ bd = d; pit = i; } });
     if (pit < 0) return null; x = w.pits[pit].x; y = w.pits[pit].y;
   } else {
-    let best = -1; const cx = (b0.x0 + b0.x1)/2, cy = (b0.y0 + b0.y1)/2;
+    let best = -1; const cx = key === 'mantis' ? b0.x0 + 5 : (b0.x0 + b0.x1)/2, cy = (b0.y0 + b0.y1)/2; // the mantis waits at the hedge's edge, facing the lawn
     for (let ty = b0.y0 + 6; ty < b0.y1 - 6; ty += 2) for (let tx = b0.x0 + 6; tx < b0.x1 - 6; tx += 2){
-      const room = cl[ty*W + tx]; if (room < 4) continue;
-      const sc = room*3 - Math.hypot(tx - cx, ty - cy)*0.3; if (sc > best){ best = sc; x = tx + 0.5; y = ty + 0.5; } }
+      const room = cl[ty*W + tx]; if (room < (key === 'mantis' ? 2 : 4)) continue;
+      const sc = room*3 - Math.hypot(tx - cx, ty - cy)*(key === 'mantis' ? 1.5 : 0.3); if (sc > best){ best = sc; x = tx + 0.5; y = ty + 0.5; } }
     if (x == null) return null;
   }
   return (s.bosses[key] = { key, x: x*T, y: y*T, hx: x*T, hy: y*T, hp: B.hp, maxHp: B.hp, mode: 'idle', phase: 1, atk: null, cd: 2, dx: 1, dy: 0, t: 0, pit, under: key === 'antlion', dead: false });
@@ -2386,6 +2393,7 @@ const bossArmour = (s, b, a) => {
   if (b.key === 'beetle'){ if (b.dazeT > 0) return 2.5; return a.caste === 'venom' ? 0.5 : a.isPlayer ? 0.35 : 0.15; }
   if (b.key === 'antlion') return b.under ? 0 : 1;
   if (b.key === 'robin') return b.air ? 0 : b.pinned ? 2 : 1;
+  if (b.key === 'mantis') return b.eat ? 2 : 1;
   if (b.key === 'toad'){ const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, behind = ((a.x - b.x)*b.dx + (a.y - b.y)*b.dy)/d < -0.3; return (behind ? 2 : 1)*(b.puffT > 0 ? 0.5 : 1); }
   return 1;
 };
@@ -2396,7 +2404,7 @@ function tickBosses(s, dt){
     const b = s.bosses[key], B = BOSSES[key]; if (b.dead) continue;
     b.t += dt; if (b.slowT > 0) b.slowT -= dt;
     // The first time you come near: its name, and how to beat it.
-    if (!b.intro && playerNear(s, b.x, b.y, 18)){ b.intro = true; s.bossIntro = { key, t: s.t }; s.events.push('boss'); P.msg = `${B.name}, ${B.title}. ${B.tip}`; }
+    if (!b.intro && playerNear(s, b.x, b.y, 18) && !(key === 'mantis' && b.mode === 'idle')){ /* the mantis stays a secret until it shows itself */ b.intro = true; s.bossIntro = { key, t: s.t }; s.events.push('boss'); P.msg = `${B.name}, ${B.title}. ${B.tip}`; }
     const near = nearAnt(s, b, B.aggro*T, (o) => !o.team); // (build 25: rival colonies living near a boss don't wake it)
     if (b.mode === 'idle' && (near || s.t - (b.hitT ?? -9) < 1)){ b.mode = 'fight'; b.leaveT = 0; b.wakeAt = s.t; b.cost0 = deathTotal(c); s.events.push('bossawake'); }
     if (b.mode === 'fight'){
@@ -2422,11 +2430,13 @@ function tickBosses(s, dt){
     if (key === 'robin'){ const was = b.pinned; b.pinned = !b.air && onIt >= 6; if (b.pinned && !was && playerNear(s, b.x, b.y, 24)) P.msg = 'Your ants have the Old Robin by the feet: it’s pinned! Bites do double!'; }
     if (b.phase === 1 && b.hp < b.maxHp*B.phase2){ b.phase = 2; s.events.push('bossphase'); if (playerNear(s, b.x, b.y, 30)) P.msg = B.rage; }
     if (b.hp <= 0){ bossDies(s, b, B); continue; }
+    if (key === 'mantis' && b.eat && stunned(s, b)) mantisDrops(s, b, 'Locked in your jaws, the mantis drops its meal!');
     if (stunned(s, b)) continue; // build 32: Mandible lock
     if (key === 'hornworm') stepHornworm(s, b, B, dt);
     else if (key === 'beetle') stepBeetle(s, b, B, dt);
     else if (key === 'robin') stepRobin(s, b, B, dt);
     else if (key === 'toad') stepToad(s, b, B, dt);
+    else if (key === 'mantis') stepMantis(s, b, B, dt);
     else stepAntlion(s, b, B, dt);
   }
   // Goo the hornworm spat: it slows ants that walk through it.
@@ -2573,6 +2583,45 @@ function stepToad(s, b, B, dt){
     if (d > 6*T || (d > 3*T && Math.random() < 0.3)){ const k = Math.min(d, 7*T); b.atk = { kind: 'ring', x: b.x + (a.x - b.x)/d*k, y: b.y + (a.y - b.y)/d*k, r: 2.6*T, t: 0, at: fast ? 0.8 : 1.1 }; return; }
     if (off < 0.5){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: Math.min(9*T, d + 2*T), w: 0.9*T, t: 0, at: fast ? 0.7 : 0.9 }; return; }
   }
+}
+// The praying mantis (build 34). Hidden (a shimmer) until an ant comes within 6 tiles. It sways for a
+// moment, then snaps a lane in front of it and grabs the first one or two ants there; while it eats (4 s)
+// it can't strike and bites on it do double. Hurt it badly or lock it, and it drops its meal alive.
+// Phase 2: two strikes in a row, and short fluttering hops after you.
+function mantisDrops(s, b, msg){
+  const E = b.eat; if (!E) return; b.eat = null;
+  for (const id of E.ids){ const a = s.ants.find(o => o.id === id); if (!a || a.state !== 'away') continue; a.state = E.states[id] || 'return'; a.x = b.x + b.dx*1.6*T; a.y = b.y + b.dy*1.6*T; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); shove(s, a, b.x, b.y, 1.5); }
+  if (msg && playerNear(s, b.x, b.y, 24)) s.player.msg = msg; b.cd = 1.2;
+}
+function stepMantis(s, b, B, dt){
+  if (b.dx == null){ b.dx = 1; b.dy = 0; }
+  const near = nearAnt(s, b, 6*T, (o) => !o.team);
+  if (b.mode === 'idle'){ b.hidden = !near; if (!b.gx || b.t > 9){ b.t = 0; const a = Math.random()*Math.PI*2; b.gx = b.hx + Math.cos(a)*3*T; b.gy = b.hy + Math.sin(a)*3*T; } bossWalk(s, b, b.gx, b.gy, 4, dt); return; }
+  if (b.hidden){ b.hidden = false; if (playerNear(s, b.x, b.y, 24)) s.player.msg = 'The hedge moves: a mantis was there all along!'; }
+  const fast = b.phase === 2;
+  // Eating: claws busy. Big damage makes it let go.
+  if (b.eat){ const E = b.eat; E.t -= dt;
+    if (b.maxHp - b.hp >= E.hp0 + 40){ mantisDrops(s, b, 'Bitten hard, the mantis drops its meal!'); return; }
+    if (E.t <= 0){ for (const id of E.ids){ const a = s.ants.find(o => o.id === id); if (a && a.state === 'away'){ a.state = E.states[id] || 'return'; killAnt(s, a, 'mantis'); } } b.eat = null; b.cd = fast ? 0.8 : 1.4; }
+    return; }
+  if (b.hop){ const H = b.hop; H.t += dt; const u = Math.min(1, H.t/0.45); b.x = H.x0 + (H.x1 - H.x0)*u; b.y = H.y0 + (H.y1 - H.y0)*u; if (u >= 1) b.hop = null; return; }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return;
+    b.atk = null; b.atkDone = { kind: k.kind, t: s.t, x: k.x, y: k.y }; b.strikeAt = s.t;
+    const hit = [];
+    for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; hit.push([((a.x - k.x)*k.dx + (a.y - k.y)*k.dy), a]); }
+    hit.sort((p, q) => p[0] - q[0]);
+    const grab = hit.slice(0, 2).map(h => h[1]), E = { ids: [], states: {}, t: 4, hp0: b.maxHp - b.hp };
+    for (const a of grab){ if (a.isPlayer){ hurtAnt(s, a, 6, 'mantis'); continue; } E.states[a.id] = a.state; a.state = 'away'; a.foeId = 0; E.ids.push(a.id); }
+    for (const [, a] of hit.slice(2)) if (outside(a)) hurtAnt(s, a, 2, 'mantis');
+    if (E.ids.length){ b.eat = E; if (playerNear(s, b.x, b.y, 24)) s.player.msg = `The mantis snatched ${E.ids.length === 1 ? 'an ant' : 'two ants'}! While it eats, bite it: double damage.`; return; }
+    if (fast && !k.second){ const tg = bossTarget(s, b, 8); if (tg){ const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d; b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: 4.8*T, w: 2.2*T, t: 0, at: 0.4, second: true }; return; } }
+    b.cd = fast ? 1.1 : 1.8; return; }
+  b.cd -= dt;
+  const tg = bossTarget(s, b, 14); if (!tg) return;
+  const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
+  if (b.cd <= 0 && d < 4.6*T){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: 4.8*T, w: 2.2*T, t: 0, at: fast ? 0.45 : 0.6 }; return; }
+  if (fast && d > 6*T && b.cd <= 0){ const k = Math.min(5*T, d - 2.5*T); b.hop = { x0: b.x, y0: b.y, x1: b.x + b.dx*k, y1: b.y + b.dy*k, t: 0 }; b.cd = 0.6; return; }
+  if (d > 3.5*T) bossWalk(s, b, a.x, a.y, 9, dt);
 }
 function stepBeetle(s, b, B, dt){
   if (b.dazeT > 0){ b.dazeT -= dt; return; }
@@ -2921,7 +2970,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
