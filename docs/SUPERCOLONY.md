@@ -1,6 +1,6 @@
 # The supercolony: where the game goes (draft, Nov 2)
 
-A working plan from Mark's brainstorm after build 41. Nothing here is built yet. Decided items are marked **Decided**; the rest are proposals to react to.
+A working plan from Mark's brainstorm after build 41. **Build 42 built the nest sections, depth bands, the bedrock, the 100-ant nest, the alerts at limits and the genes counter** (see DECISIONS.md). The rest is not built yet. Decided items are marked **Decided**; the rest are proposals to react to.
 
 It extends `PROGRESSION.md` (Oct 29), which already sketched pieces of this:
 - satellite nests, each with its own small nest (Track 2);

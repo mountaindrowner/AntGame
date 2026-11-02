@@ -237,11 +237,11 @@ export class NestView {
 
     // Few, soft stones: a busy high-contrast fleck across the whole cutaway tires the eye.
     // Build 22: each soil band has its own grain (models/underground.js).
-    this.soilMats = [0, 1, 2].map((i) => psx({ map: soilTexture(i) }));
+    this.soilMats = [0, 1, 2, 3, 4].map((i) => psx({ map: soilTexture(i) }));
     this.sideMats = PALETTE.soil.map((ramp, i) => psx({ map: rampTexture(13 + i, ramp.map((c) => shade(c, 0.5)), { size: 16, repeat: [1 / 24, 1 / 24] }) }));
     // Beyond the cutaway (build 14): the same soil bands carry on, a little darker, so zooming out shows ground, not a box's edge.
     // (Build 22: the same grain, barely darker, mapped by world position so it lines up with the cutaway's.)
-    this.beyondMats = [0, 1, 2].map((i) => psx({ map: soilTexture(i, 0.92) }));
+    this.beyondMats = [0, 1, 2, 3, 4].map((i) => psx({ map: soilTexture(i, 0.92) }));
     this.soil = new THREE.Group();
     this.scene.add(this.soil);
 
@@ -255,15 +255,15 @@ export class NestView {
     const grass = new THREE.Mesh(new THREE.BoxGeometry(NW * T + 6000, 5, DEPTH + 10).translate((NW * T) / 2, 2.5, -DEPTH / 2), psx({ map: rampTexture(9, PALETTE.grass, { size: 16, repeat: [20 * (NW * T + 6000) / (NW * T + 40), 1] }) }));
     this.scene.add(grass);
     // Solid ground either side of and under the cutaway, in the same bands.
-    const W2 = 3000, edges = [0, SOIL_TOP[1] * T, SOIL_TOP[2] * T, NH * T + 1500];
-    for (let i = 0; i < 3; i++) {
+    const W2 = 3000, edges = [...SOIL_TOP.map((y) => y * T), NH * T + 1500];
+    for (let i = 0; i < SOIL_TOP.length; i++) {
       const h = edges[i + 1] - edges[i];
       for (const sx of [-1, 1]) {
         const slab = new THREE.Mesh(worldUV(new THREE.BoxGeometry(W2, h, DEPTH + 10).translate(sx < 0 ? -W2 / 2 : NW * T + W2 / 2, -edges[i] - h / 2, -DEPTH / 2 - 5)), this.beyondMats[i]);
         this.scene.add(slab);
       }
     }
-    const under = new THREE.Mesh(worldUV(new THREE.BoxGeometry(NW * T + 6000, 1500, DEPTH + 10).translate((NW * T) / 2, -NH * T - 750, -DEPTH / 2 - 5)), this.beyondMats[2]);
+    const under = new THREE.Mesh(worldUV(new THREE.BoxGeometry(NW * T + 6000, 1500, DEPTH + 10).translate((NW * T) / 2, -NH * T - 750, -DEPTH / 2 - 5)), this.beyondMats[4]);
     this.scene.add(under);
     // Build 22: the things buried in the ground beside and below the cutaway
     // (roots, stones, junk, burrows, an old drain pipe, a mole's tunnel). The
@@ -337,7 +337,7 @@ export class NestView {
       grid[k] = Math.max(-x, x - W, -y, y - H, -grid[k]);
     }
     const soil = (x, y) => grid[Math.round((y - y0) / SOIL_STEP) * nx + Math.round((x - x0) / SOIL_STEP)];
-    const bands = [[-1e9, SOIL_TOP[1] * T], [SOIL_TOP[1] * T, SOIL_TOP[2] * T], [SOIL_TOP[2] * T, 1e9]];
+    const bands = SOIL_TOP.map((y, i) => [i ? y * T : -1e9, i < SOIL_TOP.length - 1 ? SOIL_TOP[i + 1] * T : 1e9]);
     bands.forEach(([top, bot], tier) => {
       const f = (x, y) => Math.max(soil(x, y), top - y, y - bot);
       // Trace only this band's rows (snapped to the shared grid).
@@ -613,6 +613,7 @@ export class NestView {
         this._outline(x * T + 2, y * T + 2, T - 4, T - 4, '#ffffff', 0.8);
       }
     }
+    this._seams(s, t);
     this.crowd.end();
     this.dust.end();
     this.props.end();
@@ -620,8 +621,12 @@ export class NestView {
     this.motion.sweep();
 
     this.labels.push({ text: 'exit', x: (SHAFT + 0.5) * T, y: 12, z: 0, kind: 'hint' });
-    this.labels.push({ text: 'packed soil · needs Workshop', x: 4, y: -SOIL_TOP[1] * T - 2, z: 0, kind: 'band' });
-    this.labels.push({ text: 'clay · needs Workshop + queen upgrade', x: 4, y: -SOIL_TOP[2] * T - 2, z: 0, kind: 'band' });
+    const bx = SIM.HOME_X0 * T + 4;
+    this.labels.push({ text: 'packed soil · needs Workshop', x: bx, y: -SOIL_TOP[1] * T - 2, z: 0, kind: 'band' });
+    this.labels.push({ text: 'clay · needs Workshop + queen level 2', x: bx, y: -SOIL_TOP[2] * T - 2, z: 0, kind: 'band' });
+    this.labels.push({ text: 'deep rock · cool and wet · queen level 3', x: bx, y: -SOIL_TOP[3] * T - 2, z: 0, kind: 'band' });
+    this.labels.push({ text: 'bedrock · a block at a time, very slowly', x: bx, y: -SOIL_TOP[4] * T - 2, z: 0, kind: 'band' });
+    this._ground(s, t);
 
     // Weather.
     this.scene.background.set(s.rain.on ? '#6f7f8f' : '#9bc7e6');
@@ -642,7 +647,7 @@ export class NestView {
     const minY = -viewH / 2 + 90, maxY = NH * T - viewH / 2 + 60 - shift;
     const cy = maxY < minY ? (NH * T) / 2 : Math.max(minY, Math.min(maxY, fy - shift));
     const viewW = across;
-    const fx = (app.focus ? app.focus.x : a ? a.nx : q.x + 0.5) * T;
+    const fx = (app.focus ? app.focus.x : a ? a.nx : q.x + 0.5) * T + (app.panX || 0);
     const cx = viewW >= NW * T ? (NW * T) / 2 : Math.max(viewW / 2 - 20, Math.min(NW * T - viewW / 2 + 20, fx));
     this.target.lerp(tmpV.set(cx, -cy, -DEPTH / 2), this.camInit ? 0.2 : 1);
     this.camInit = true;
@@ -653,6 +658,30 @@ export class NestView {
     this.lantern.position.set(this.target.x, this.target.y + 40, 90);
     this.scene.fog.near = dist + 200;
     this.scene.fog.far = dist + 1200;
+  }
+
+  // Build 42: shut sections: a root-and-stone seam round each, and dust where builders break through.
+  _seams(s, t) {
+    const open = s.nest.open || {}, B = s.nest.breach;
+    for (const S of SIM.NEST_SECTIONS) {
+      if (open[S.key]) continue;
+      const x0 = S.x0 * T, y0 = S.y0 * T, w = (S.x1 - S.x0 + 1) * T, h = (S.y1 - S.y0 + 1) * T, on = B && B.key === S.key;
+      // Breaking in, the seam glows and throbs with the builders' chewing.
+      const pulse = on ? 0.5 + 0.5 * Math.sin(t * 7) : 0;
+      this._outline(x0 + 1, y0 + 1, w - 2, h - 2, on ? (pulse > 0.5 ? '#ffe08a' : '#d89a40') : '#8a6a42', on ? 1.4 + pulse * 1.2 : 1.1);
+    }
+  }
+
+  // Section names and prices on the shut ground; a glint where a bedrock prize lies.
+  _ground(s, t) {
+    const open = s.nest.open || {}, B = s.nest.breach, c = s.colony;
+    for (const S of SIM.NEST_SECTIONS) {
+      if (open[S.key]) continue;
+      const cost = Object.entries(S.cost).map(([k, v]) => ({ food: '🌾', grit: '🪨', sugar: '🍯', genes: '🧬' }[k] || k) + v).join(' ');
+      const text = B && B.key === S.key ? `⛏ breaking in… ${Math.floor((B.progress / S.work) * 100)}%` : `🔒 ${S.name.replace(/^the /, '')} · ${cost}${S.curios ? ' · ' + S.curios + ' curios' : ''}`;
+      this.labels.push({ text, x: ((S.x0 + S.x1 + 1) / 2) * T, y: -((S.y0 + S.y1 + 1) / 2) * T, z: 0, kind: 'section' });
+    }
+    for (const P of SIM.BEDROCK_PRIZES) if (!(c.prizes || {})[P.key] && Math.sin(t * 2 + P.x) > 0.2) this.labels.push({ text: '✦', x: (P.x + 0.5) * T, y: -(P.y + 0.5) * T, z: 0, kind: 'glint' });
   }
 
   // Screen NDC → nest cell [cx, cy] on the front face.

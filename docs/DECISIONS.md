@@ -2,6 +2,68 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the nest grows, a section at a time (build 42)
+
+Mark: "Lets build all the progression that doesnt require anything that isnt build already, and implement the single nest internal expansion." The plan is `SUPERCOLONY.md`. Mark left section prices to me: "appropriately costly without being restrictive". The ant cap is 100 for now, and day/night is a separate build.
+
+**The nest is twice as wide and deeper:**
+- It's now 48 wide × 64 deep. Your colony starts in the open middle: the old 24 columns, down to the bottom of the clay.
+- The brown ground either side, and two new bands below, are real but shut:
+  - **deep rock** (12 rows): cool and wet; needs the queen at level 3;
+  - **bedrock** (4 rows): no section to open, but each block takes about 15× the work of clay.
+
+**Eleven sections, each opened with a break-in event.** You pay, then the builders inside (up to four) chew through the wall. The seam glows while they work. Then a banner, "Broke through!", says what was hidden behind it.
+
+| Section | Price | Behind the wall |
+|---|---|---|
+| West / East Roots (topsoil) | 🌾40 🪨15 | an old mole tunnel, already dug / a seed cache (+60 🌾) |
+| West / East Loam | 🌾70 🪨25 | a beetle grub (+30 🥩 +10 🪲) / root aphids (+1 🍯 a minute, for good) |
+| West / East Hardpan (packed soil; needs a Workshop) | 🌾110 🪨40, 2 curios found | a buried trinket (+2 🧬) / a mole tunnel |
+| West / East Clay (needs the queen at level 2) | 🌾140 🪨60 🍯15, 4 curios found | a water seep (+1 💧 every 20 s, for good) / a fat grub |
+| The Deep: west, middle, east (needs the queen at level 3) | 🌾200 🪨80 🧬3, 6 curios found | a seep / root aphids / a buried trinket |
+
+- **Curios are a requirement, not a payment.** You need that many found in the yard, and you keep them.
+- **No price is above what the stores can hold for that depth:**
+  - the clay costs 140, under one Food store's 150;
+  - the Deep's 200 needs a second store or Store II, and the sheet says so.
+- **The bedrock's three prizes:**
+  - a fossil ant: +5 🧬, and every ant 10% tougher;
+  - an underground spring: +3 💧 every 20 s;
+  - a gold ring: +4 🧬.
+  - A ✦ glints where each one lies.
+
+**Ways to break in:**
+- tap shut ground;
+- Build → New ground.
+
+Each section shows its name, price and lock on the map.
+
+**Depth bands (rooms work better in the right place):**
+- Hatchery or Nursery in warm topsoil: eggs hatch 10% faster each.
+- Food store or Granary in dry packed soil or clay: holds 25% more.
+- Cistern in cool clay or deep rock: holds 50% more.
+- Fungus garden in cool clay or deep rock: grows 25% more.
+- Tunnels in the deep never cave in.
+- The Build sheet says where each room does best.
+
+**The nest view now pans sideways too.** Drag left or right.
+
+**Old saves (v12 and before) move into the middle of the bigger nest.** Every room, tunnel, order and ant shifts 12 columns right; the save is now **v13**. A build-41 campaign save was checked in the browser.
+
+**A nest holds 100 ants.** Queen levels past that give their traits but no more room; the queen sheet says so. Daughter colonies will be the way past it.
+
+**Cards at every limit, one each:** when the queen is at her cap, the food or water store is full, your tunnels reach the edge of your ground or the bottom of the clay, or 15 or more genes are waiting. Each says what gets you past it. A card shows once, and again only after that limit has eased for 3 minutes.
+
+**Genes:**
+- Evolve → Goals now shows "🧬 Genes found: X of about 430", with each source: scouting, held regions, curios, goals, guardians, buried finds.
+- Filling the tree means taking the yard.
+- Guardians and bosses now pay 6 🧬, up from 4, so the tree's top nodes come with boss wins.
+
+**Checks:**
+- **Tests:** 10 new ones in `tests/nest42.test.js`, 187 in all, including the old-save move checked cell by cell against the new layout. The end-to-end browser test passes.
+- **Bots:** six 45-minute games. None collapsed, and most reached 40–60 ants. The bot now buys sections when it has food to spare, and no longer plans rooms on shut ground.
+- **A 20-minute stress run** on a 90-minute colony opened 8 sections and saved and loaded every minute: no NaN, no ants lost on load. The Deep waited for more food cap, as it should.
+
 ## Nov 2: the second pass, and playing it (build 41)
 
 Mark: "Do another pass and check it all again. Play the game and see how it feels."

@@ -10,6 +10,17 @@ function founded(seed = 7) {
   for (let i = 0; i < 20 * 10; i++) SIM.tick(s, 0.05);
   return s;
 }
+// A save as builds 40–41 wrote it: the nest 24 × 48, without the sides and the deep (build 42).
+function downgrade(d, v = 12) {
+  const X = SIM.NEST_SHIFT, o = JSON.parse(JSON.stringify(d)), cells = [];
+  for (let y = 0; y < 48; y++) for (let x = 0; x < 24; x++) cells.push(o.nest.cells[y * SIM.NW + x + X]);
+  o.nest.cells = cells; delete o.nest.open; delete o.nest.breach; o.v = v;
+  const mx = (q) => { if (typeof q.x === 'number') q.x -= X; if (typeof q.ax === 'number') q.ax -= X; if (typeof q.x0 === 'number') q.x0 -= X; };
+  o.nest.rooms.forEach(mx); o.nest.digOrders.forEach(mx); o.nest.fillOrders.forEach(mx); o.repairs.forEach(mx); o.colony.buildQueue.forEach(mx);
+  o.queen.x -= X; if (o.queen.room) mx(o.queen.room);
+  for (const a of o.ants) if (!a.team) { a.nx -= X; a.ntx -= X; }
+  return o;
+}
 const step = (s, sec) => { for (let i = 0; i < sec * 20; i++) SIM.tick(s, 0.05); };
 const rich = (c) => Object.assign(c, { store: 300, water: 200, waterCap: 300, protein: 200, grit: 200, sugar: 200, chitin: 50, wood: 100, genes: 50 });
 
@@ -52,9 +63,9 @@ test('on a 1-gene node, its deed halves the other costs instead', () => {
 
 test('saves are versioned: a newer one is refused, older ones step up', () => {
   const s = founded(); const d = JSON.parse(SIM.serialize(s));
-  assert.equal(d.v, 12);
+  assert.equal(d.v, 13);
   assert.throws(() => SIM.deserialize(JSON.stringify({ ...d, v: 99 })), /newer/);
-  const old = SIM.deserialize(JSON.stringify({ ...d, v: 11 })); assert.ok(old.t > 0);
+  const old = SIM.deserialize(JSON.stringify(downgrade(d, 11))); assert.ok(old.t > 0);
 });
 
 test('a save keeps ability cooldowns, a rival raid on you, and timed effects on ants', () => {

@@ -102,8 +102,8 @@ test('rooms: one of each per queen level, each extra dearer, and every room eats
 test('a second hatchery, store and cistern add to the first', () => {
   const s = founded(), c = s.colony;
   s.queen.level = 1;
-  let y = 20;
-  const add = (key) => { c.buildQueue.push({ room: key, x0: 2, y0: y, w: 4, h: 3, progress: 1e9, x: 3, y: y + 1 }); y += 4; step(s, 0.1); };
+  let y = 1, x0 = 2; // (topsoil, so the depth bands of build 42 don't change the sums)
+  const add = (key) => { c.buildQueue.push({ room: key, x0, y0: y, w: 4, h: 3, progress: 1e9, x: x0 + 1, y: y + 1 }); y += 4; if (y > 12) { y = 1; x0 += 6; } step(s, 0.1); };
   for (const key of ['hatchery', 'store', 'cistern']) add(key);
   const one = { hatch: c.hatchCap, cap: c.cap, water: c.waterCap };
   for (const key of ['hatchery', 'store', 'cistern']) add(key);

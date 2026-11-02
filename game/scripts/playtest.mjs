@@ -118,7 +118,7 @@ function choosePocket(key, R) {
     for (let y = y0 - 1; y <= y0 + R.h && ok; y++) for (let x = x0 - 1; x <= x0 + R.w; x++) {
       const inside = y >= y0 && y < y0 + R.h && x >= x0 && x < x0 + R.w;
       const v = n.cells[y * NW + x];
-      if (inside && v) { ok = false; break; }
+      if (inside && (v || SIM.cellLocked(s, x, y))) { ok = false; break; } // (build 42: not into shut ground)
       if (!inside && v === 2) { ok = false; break; } // keep a wall between rooms
       if (!inside && v === 1 && (x >= x0 && x < x0 + R.w || y >= y0 && y < y0 + R.h)) touch = true;
     }
@@ -170,6 +170,10 @@ function grow() {
   const qu = SIM.QUEEN_UP[s.queen.level];
   if (qu && !qu.sugar && SIM.antCount(s) >= SIM.queenCap(s.queen.level) - 3) return;
   const spare = c.cap >= 150 && c.store > c.cap * 0.6;
+  // Build 42: break into new ground, side sections first, with food to spare and a builder or two.
+  if (spare && !s.nest.breach && s.ants.some((a) => a.caste === 'builder' && !a.team)) {
+    for (const S of SIM.NEST_SECTIONS) { if (SIM.sectionLock(s, S.key) || !SIM.canPay(c, S.cost) || c.store - (S.cost.food || 0) < c.cap * 0.3) continue; if (SIM.startBreach(s, S.key)) { note(`breaking into ${S.name}`); mile('first new ground'); } break; }
+  }
   const order = EVO_WANT[strategy] || EVO_WANT.sensible;
   for (const k of order) {
     if (SIM.evoLock(s, k) || (process.env.SKIP || '').split(',').includes(k)) continue;

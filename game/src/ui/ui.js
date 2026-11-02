@@ -155,6 +155,15 @@ export function createUI(app) {
       for (const b of s.critters || []) if (b.state !== 'fly' && Math.hypot(a.x - b.x, a.y - b.y) < 9 * T) { showExplainer(b.kind); if (tipBusy()) return; }
     }
     if (!s.seen.grit && s.colony.grit > 0) showExplainer('grit');
+    // Build 42: a card at each limit you hit, saying what gets you past it.
+    if (!tipBusy() && s.advice && s.advice.length) showAdvice(s.advice.shift());
+  }
+  function showAdvice(A) {
+    sfx.play('explainer');
+    tipCard.innerHTML = `<b>${A.title}</b><span>${A.text}</span><em>✕</em>`;
+    tipCard.classList.remove('hidden');
+    const until = (app.tipUntil = performance.now() + 11000);
+    setTimeout(() => { if (app.tipUntil === until) tipCard.classList.add('hidden'); }, 11000);
   }
 
   // A cost as resource icons (the top bar's), not words: "🌾10 🪨5".
@@ -178,8 +187,26 @@ export function createUI(app) {
     return h;
   }
   const there = (A) => A.name.replace(/^The /, 'the ');
+  // Build 42: the nest's shut ground, a section at a time. `first`: the section tapped, shown on top.
+  function groundList(s, c, first, bare) {
+    const open = s.nest.open || {}, B = s.nest.breach;
+    let h = `${bare ? '' : '<div class="t" style="margin-top:10px">New ground</div>'}<div class="note">Your nest opens a section at a time: pay, and your builders break through the wall. Something is always hidden behind it. Curios found out in the yard open the deeper ones.</div><div class="btns">`;
+    const list = SIM.NEST_SECTIONS.slice().sort((a, b) => (b.key === first) - (a.key === first));
+    for (const S of list) {
+      const name = S.name.replace(/^./, (ch) => ch.toUpperCase()), F = SIM.NEST_FINDS[S.find];
+      if (open[S.key]) { h += `<button disabled>${sicon('dig')}<b>${name}</b><i>open · found ${F.name}</i></button>`; continue; }
+      if (B && B.key === S.key) { h += `<button disabled>${sicon('dig')}<b>${name}</b><i>breaking through… ${Math.floor((B.progress / S.work) * 100)}%</i><i>builders inside chew at the wall</i></button>`; continue; }
+      const lock = SIM.sectionLock(s, S.key), pay = SIM.canPay(c, S.cost);
+      h += `<button data-breach="${S.key}" ${lock || !pay ? 'disabled' : ''}>${sicon('dig')}<b>${name} · ${S.x1 - S.x0 + 1}×${S.y1 - S.y0 + 1}</b><i>${costIcons(S.cost)}${S.curios ? ` · ${S.curios} curios found` : ''}</i><i>${lock || ((S.cost.food || 0) > c.cap ? `needs more food cap (${c.cap}): another Food store, or Store II` : pay ? 'ready: break through' : 'short on: ' + SIM.costText(S.cost))}</i></button>`;
+    }
+    const pz = c.prizes || {};
+    h += `</div><div class="note">Under it all, the bedrock: any builder can dig it, a block at a time, very slowly. Three things are down there${Object.keys(pz).length ? ` (${Object.keys(pz).length} found)` : ''}.</div>`;
+    return h;
+  }
   function growGoals(s, c) {
-    let h = `<div class="note">Three goals at a time. Each pays 🧬; finish a whole set for a reward for good.</div>`;
+    const G = SIM.genesFound(s);
+    let h = `<div class="t">🧬 Genes found: ${G.total} of about ${G.pool}</div><div class="note">Most genes are found once: the tree is yours in full only when the yard is. ${G.rows.map((r) => `${r.name} ${r.got}/${r.of}`).join(' · ')} · and rival queens, first foods, first kills.</div>`;
+    h += `<div class="note">Three goals at a time. Each pays 🧬; finish a whole set for a reward for good.</div>`;
     for (const g of goalBoard(s)) {
       if (!g) continue;
       const n = Math.min(g.of, Math.floor(g.n(s)));
@@ -313,7 +340,7 @@ export function createUI(app) {
       const cap = SIM.queenCap(s.queen.level, s), up = SIM.QUEEN_UP[s.queen.level];
       h += `<div class="note">Queen level ${s.queen.level + 1} · holds ${cap} ants (${SIM.antCount(s)} now)${SIM.antCount(s) >= cap ? ' · at the cap, eggs paused' : ''}</div>`;
       const later = up && laterIn(up);
-      if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}>${sicon('queen')}<b>Upgrade queen to level ${s.queen.level + 2}</b><i>${costIcons(up)} · +20 ants${s.queen.level === 0 ? ' · unlocks clay digging' : ''}</i>${later ? `<i>needs ${LATER[later]}: coming in a later build</i>` : ''}</button></div>`;
+      if (up) h += `<div class="btns one"><button data-up="1" ${SIM.canPay(c, up) ? '' : 'disabled'}>${sicon('queen')}<b>Upgrade queen to level ${s.queen.level + 2}</b><i>${costIcons(up)} ${SIM.queenCap(s.queen.level + 1, s) > cap ? ` · +${SIM.queenCap(s.queen.level + 1, s) - cap} ants` : ` · (a nest holds ${SIM.NEST_CAP} at most)`}${s.queen.level === 0 ? ' · unlocks clay digging' : s.queen.level === 1 ? ' · unlocks the deep' : ''}</i>${later ? `<i>needs ${LATER[later]}: coming in a later build</i>` : ''}</button></div>`;
       // Her traits: one pick, for good, at levels IV, VI and VIII.
       for (const Q of QUEEN_TRAITS) if (s.queen.level >= Q.level && !c.qtraits[Q.level]) {
         h += `<div class="note">Level ${Q.level + 1}: pick a trait, for good.</div><div class="btns">` + Q.picks.map(([k, n, d]) => `<button data-qt="${Q.level}:${k}"><b>${n}</b><i>${d}</i></button>`).join('') + `</div>`;
@@ -337,6 +364,8 @@ export function createUI(app) {
       h = renderReborn();
     } else if (app.menu === 'jobs') {
       h = renderJobs();
+    } else if (app.menu === 'ground') {
+      h += `<div class="row head"><strong>New ground</strong><button class="x" data-close="1">Close</button></div>` + groundList(s, c, app.menuCell, true);
     } else if (app.menu === 'catalog') {
       const builders = s.ants.filter((a) => a.caste === 'builder').length;
       h += `<div class="row head"><strong>Build</strong><button class="x" data-close="1">Close</button></div>`;
@@ -349,7 +378,7 @@ export function createUI(app) {
         // A cost above the food cap can never be paid: say what unlocks it.
         const overCap = (rc.food || 0) > c.cap;
         const status = lock ? (n && lock !== 'being built' ? 'built · ' + lock : lock) : overCap ? `needs more food cap (${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(rc) : n ? `ready: a ${['', 'second', 'third', 'fourth', 'fifth'][n] || 'another'} one` : 'ready to place';
-        h += `<button data-place="${k}" ${lock || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}${n ? ` <span class="cnt">${n}/${SIM.roomCap(s)}</span>` : ''}</b><i>${costIcons(rc)} · ${n ? R.more : R.desc}</i><i>${status}</i></button>`;
+        h += `<button data-place="${k}" ${lock || !fits || !pay ? 'disabled' : ''}>${sicon(k)}<b>${R.name} · ${R.w}×${R.h}${n ? ` <span class="cnt">${n}/${SIM.roomCap(s)}</span>` : ''}</b><i>${costIcons(rc)} · ${n ? R.more : R.desc}${SIM.BAND_TEXT[k] ? ` · best in ${SIM.BAND_TEXT[k]}` : ''}</i><i>${status}</i></button>`;
       }
       // Room levels (build 23): each new room kind goes up to III, bought here.
       const ups = ROOM_KEYS.filter((k) => ROOMS[k].lv && SIM.roomCount(s, k));
@@ -362,7 +391,7 @@ export function createUI(app) {
           h += `<button data-roomup="${k}" ${pay ? '' : 'disabled'}>${sicon(k)}<b>${R.name} → level ${['', 'I', 'II', 'III'][n + 1]}</b><i>${costIcons(U.cost)} · ${U.fx}</i><i>${pay ? 'ready' : 'short on: ' + SIM.costText(U.cost)}</i></button>`;
         }
       }
-      h += `</div><div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
+      h += `</div>` + groundList(s, c) + `<div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
       h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
       h += `<button data-tool="remove"><b>Remove room</b><i>Tap a room to tear it out, half the cost back</i></button>`;
       h += `<button data-cleardigs="1" ${s.nest.digOrders.length || s.nest.fillOrders.length || s.colony.buildQueue.length ? '' : 'disabled'}><b>Clear orders</b><i>Cancel pending digs, fills and rooms not yet built (cost back)</i></button>`;
@@ -706,6 +735,7 @@ export function createUI(app) {
     if (b.dataset.jobfirst) { const [k, d] = b.dataset.jobfirst.split(':'); SIM.setJobFirst(s, k, d); renderSheet(); return; }
     if (b.dataset.jobtoggle) { const [k, d] = b.dataset.jobtoggle.split(':'); SIM.toggleJob(s, k, d); renderSheet(); return; }
     if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; const n = SIM.cancelBuilds(s); if (n) flash(`${n} room${n === 1 ? '' : 's'} cancelled, cost refunded (half if building had begun).`, /cancelled/, 3000); renderSheet(); return; }
+    if (b.dataset.breach) { if (SIM.startBreach(s, b.dataset.breach)) { sfx.play('evolve'); closeMenu(); app.view = 'nest'; } else renderSheet(); return; }
     if (b.dataset.place) { app.placing = { kind: 'room', key: b.dataset.place }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.tool) { app.placing = { kind: b.dataset.tool }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.confirm) { const fn = app.confirmAction; app.confirmAction = null; closeMenu(); if (b.dataset.confirm === 'yes' && fn) fn(); }

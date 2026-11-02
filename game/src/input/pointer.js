@@ -50,6 +50,8 @@ export function attachPointer(canvas, app, ui, views) {
     const v = s.nest.cells[cy * NW + cx];
     const placing = app.placing;
     if (!v && placing && placing.kind !== 'room') return;
+    // Build 42: shut ground: what it takes to break in.
+    if (!v && SIM.cellLocked(s, cx, cy)) { const S = SIM.sectionAt(cx, cy); if (S) ui.openMenu('ground', S.key); return; }
     if (!v) {
       const res = SIM.toggleDigOrder(s, cx, cy);
       if (res !== 'added' && res !== 'removed') {
@@ -107,7 +109,7 @@ export function attachPointer(canvas, app, ui, views) {
       P().holding = true;
       return;
     }
-    drag = { y0: e.clientY, pan0: app.panY, moved: false };
+    drag = { y0: e.clientY, x0: e.clientX, pan0: app.panY, panX0: app.panX || 0, moved: false };
   });
 
   canvas.addEventListener('pointermove', (e) => {
@@ -127,10 +129,10 @@ export function attachPointer(canvas, app, ui, views) {
       return;
     }
     if (drag) {
-      const dy = e.clientY - drag.y0;
-      if (Math.abs(dy) > 12) drag.moved = true;
-      // Roughly one cell per 16 CSS px at 1×, scaled by zoom.
-      if (drag.moved) app.panY = drag.pan0 - (dy / Math.max(0.3, app.zoomMul)) * 0.9;
+      const dy = e.clientY - drag.y0, dx = e.clientX - drag.x0;
+      if (Math.abs(dy) > 12 || Math.abs(dx) > 12) drag.moved = true;
+      // Roughly one cell per 16 CSS px at 1×, scaled by zoom. Build 42: sideways too (the nest is twice as wide).
+      if (drag.moved) { app.panY = drag.pan0 - (dy / Math.max(0.3, app.zoomMul)) * 0.9; app.panX = drag.panX0 - (dx / Math.max(0.3, app.zoomMul)) * 0.9; }
     }
   });
 

@@ -63,7 +63,7 @@ test('sugar and chitin now pay for upgrades, the queen and evolutions', () => {
   assert.ok(SIM.buyEvo(s, 'cuticle'));
   assert.ok(SIM.maxHp(s, f) >= 3, 'tough cuticle: half again the health');
   s.queen.level = 4; assert.ok(SIM.upgradeQueen(s), 'queen V for sugar');
-  assert.equal(SIM.queenCap(s.queen.level), 120);
+  assert.equal(SIM.queenCap(s.queen.level), SIM.NEST_CAP); // build 42: 100 a nest (was 120 at this level)
   // Wood is still to come.
   s.queen.level = 7; assert.equal(SIM.upgradeQueen(s), false);
 });

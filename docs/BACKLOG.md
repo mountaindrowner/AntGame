@@ -21,6 +21,13 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
 **Gameplay**
 - **Slowing the whole colony:** dropped. Mark: "don't slow the colony further."
+- **Next up (Mark, Nov 2):**
+  - day and night, its own build;
+  - then daughter colonies via the nuptial flight, the tunnels between nests and the wilds tier (`SUPERCOLONY.md`);
+  - boss characters, later.
+- **Nest sections (build 42):**
+  - Shut ground looks like open ground apart from its seam and label; a darker tint might read better.
+  - Builders break in from where they stand: they don't walk to the wall.
 - **The economy is tight** (build 41). The colony now eats meat before starving, and starvation is slower, so colonies no longer collapse. But food still sits under 20% of the cap through much of the middle game, and a colony down to just you can only rebuild by your own foraging. Look at forager income against upkeep at 15–30 ants.
 - **The long game starves** (bot campaigns, build 25.1). At 40 to 60 ants, upkeep runs past what the yard near the nest regrows. Starvation deaths reach 200 to 300 over 200 minutes. Part of this is the bot, part is the economy. For the combat and economy sit-down.
 - **Rooms not built yet** (`ROOMS.md`):

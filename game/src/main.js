@@ -39,6 +39,7 @@ const app = {
   paused: false,
   zoomMul: 1,
   panY: 0,
+  panX: 0,
   fps: 0,
   confirmAction: null,
   insets: { top: 0, bottom: 0, h: 1 },
@@ -50,7 +51,7 @@ const app = {
     this.s.seen.film = true; // the film plays once per player, not on every reset
     this.placing = null;
     this.view = 'nest';
-    this.panY = 0;
+    this.panY = 0; this.panX = 0;
     ui.closeMenu();
   },
   // Cells where a w×h room fits (green highlight), and whether any do.
@@ -282,7 +283,7 @@ function frame(now) {
   if (s.player.inNest !== wasInNest) {
     wasInNest = s.player.inNest;
     app.view = wasInNest ? 'nest' : 'surface';
-    app.panY = 0;
+    app.panY = 0; app.panX = 0;
   }
 
   // Behind the title screen: a slow drift over the yard round home.

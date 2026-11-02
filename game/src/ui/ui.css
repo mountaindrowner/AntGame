@@ -73,6 +73,8 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   color: #fff3dc; text-shadow: 0 1px 0 #000, 1px 0 0 #000, -1px 0 0 #000, 0 -1px 0 #000; margin-left: 0; translate: -50% -100%; }
 .label[data-kind="band"] { translate: 0 -100%; color: rgba(255, 240, 210, 0.7); font-weight: 500; font-size: 10px; }
 .label[data-kind="hint"] { color: rgba(255, 240, 210, 0.85); font-size: 10px; }
+.label[data-kind="section"] { translate: -50% -50%; color: rgba(255, 228, 180, 0.92); font-size: 11px; background: rgba(28, 16, 8, 0.55); padding: 3px 7px; border-radius: 7px; }
+.label[data-kind="glint"] { translate: -50% -50%; color: #ffe9a0; font-size: 13px; text-shadow: 0 0 6px #ffd060; }
 #boot { position: fixed; inset: 0; display: grid; place-items: center; background: #120a05; color: #f1e8d6; font: 600 14px ui-monospace, monospace; letter-spacing: 0.1em; }
 /* Keep the hint clear of the right-hand button column. */
 #top { padding-right: 92px; }

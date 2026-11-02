@@ -56,6 +56,8 @@ export function soilTexture(tier, dim = 1) {
       ['#3e2818', '#4e3220', '#5e3c26', '#6e4a2e', '#7a5434'], // loam
       ['#4a3828', '#56422e', '#625036', '#6e5a3e', '#7c6648'], // packed
       ['#6a321e', '#7a3e26', '#8a4a2e', '#9a5634', '#a8643c'], // clay
+      ['#3a3430', '#46403a', '#524a42', '#5e564c', '#6a6256'], // deep rock (build 42)
+      ['#22242a', '#2c2e34', '#36383e', '#404248', '#4c4e54'], // bedrock (build 42)
     ][tier];
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       const u = x / size, v = y / size, s = (xx, yy) => n(xx * k * (tier === 1 ? 0.6 : 1), yy * k * (tier === 1 ? 2.2 : 1));
@@ -70,6 +72,11 @@ export function soilTexture(tier, dim = 1) {
     } else if (tier === 1) {
       // Pebbles, each with a lit edge.
       for (let i = 0; i < 9; i++) { const x = Math.floor(r() * 60), y = Math.floor(r() * 60), w = 2 + Math.floor(r() * 3); g.fillStyle = sh(r() < 0.5 ? '#8a8476' : '#6e6a62', 1); g.fillRect(x, y, w, w - 1); g.fillStyle = sh('#b4ac9c', 1); g.fillRect(x, y, w - 1, 1); }
+    } else if (tier >= 3) {
+      // Build 42: cracked stone, and in the bedrock, block seams.
+      for (let i = 0; i < 6; i++) { let x = r() * size, y = r() * size; g.fillStyle = sh(tier === 3 ? '#26201c' : '#14161a', 1); for (let s = 0; s < 10; s++) { g.fillRect(Math.floor(x) & 63, Math.floor(y) & 63, 1, 1); x += r() * 2 - 0.6; y += r() * 2 - 0.4; } }
+      if (tier === 4) { g.fillStyle = sh('#121418', 1); for (let y = 0; y < size; y += 16) { g.fillRect(0, y, size, 1); for (let x = (y / 16) % 2 ? 0 : 16; x < size; x += 32) g.fillRect(x, y, 1, 16); } }
+      for (let i = 0; i < 14; i++) { g.fillStyle = sh(r() < 0.5 ? '#8a8478' : '#6a7480', 1); g.fillRect(Math.floor(r() * size), Math.floor(r() * size), 1, 1); }
     } else {
       // Grey-blue mottles where the clay stays wet, rusty specks.
       for (let i = 0; i < 7; i++) { const x = r() * size, y = r() * size, rr = 2 + r() * 4; g.fillStyle = sh('#7a6a68', 1); for (let a = 0; a < 18; a++) { const q = r() * 6.28, d = r() * rr; g.fillRect(Math.floor(x + Math.cos(q) * d) % size, Math.floor(y + Math.sin(q) * d) % size, 1, 1); } }

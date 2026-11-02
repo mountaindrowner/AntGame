@@ -80,6 +80,8 @@ export const PALETTE = {
     ['#4e3220', '#6e4a2e', '#7e5634', '#94683e'], // soft topsoil
     ['#4a3426', '#5e4434', '#6e5440', '#7e644c'], // packed
     ['#5a2a1c', '#7a3e2a', '#8a4a30', '#9a5a3a'], // clay
+    ['#3e3832', '#4a443c', '#565046', '#625a50'], // deep rock (build 42)
+    ['#26282e', '#303238', '#3a3c42', '#44464c'], // bedrock (build 42)
   ],
   back: ['#3e2a1a', '#46301e', '#4e3624'], // nest wall: darker than the soil face so tunnels read; dark ants still show
   grass: ['#2e4a1a', '#3a5e22', '#4f7a2e', '#5e8a34'],
