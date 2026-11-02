@@ -72,3 +72,24 @@ test('rival colonies are kept across a save', () => {
   assert.equal(s2.rivals.find((r) => r.key === 'fire').asleep, true);
   step(s2, 2);
 });
+
+// Build 25.1: a colony waking in a region nobody has walked into used to starve out in four minutes.
+test('every later colony is still there ten minutes after it wakes', () => {
+  const s = founded();
+  s.patioDeadAt = s.t - 4 * 1800 - 1; step(s, 600);
+  for (const r of s.rivals.slice(1)) {
+    const n = s.ants.filter((a) => a.team === r.team && a.state !== 'dead').length;
+    assert.ok(!r.asleep && n >= 10, `${r.key}: ${n} ants`);
+  }
+});
+
+test('the big fire mound stings at a tenth once its colony is awake, and not at all when it falls', () => {
+  const s = founded(), fire = s.rivals.find((r) => r.key === 'fire'), z = s.world.stings.find((q) => q.big);
+  const pa = s.player.ant, hit = () => { pa.hp = pa.maxHp = 1000; pa.state = 'out'; pa.x = (z.x + 0.5) * SIM.T; pa.y = (z.y + 4) * SIM.T; s.player.tx = pa.x; s.player.ty = pa.y; step(s, 2); return 1000 - pa.hp; };
+  const asleep = hit();
+  s.patioDeadAt = s.t - 4 * 1800 - 1; step(s, 0.2); assert.equal(fire.asleep, false);
+  const awake = hit();
+  fire.queenAlive = false; const dead = hit();
+  assert.ok(asleep > 0 && awake < asleep * 0.2, `asleep ${asleep.toFixed(2)}, awake ${awake.toFixed(2)}`);
+  assert.equal(dead, 0);
+});

@@ -4,14 +4,21 @@ Mark's wish list after build 11 (Oct 28). Grouped by area, in his words where th
 
 Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
-## Still open (Nov 1, after build 25)
+## Still open (Nov 2, after build 25.1)
 
 **Waiting on Mark's word**
 - **The house's inside.** Mark: "later". The outside is built for it (`models/house.js`).
 - **The grand arc** (yard → house → neighbourhood → city → world → space). This needs a design document first.
+- **Sit-downs Mark asked for:**
+  - combat: one-on-one, crews, bosses
+  - what the robin is for
+  - the War camp and the other rooms left
+  - the Phase 1 cap: when every main region and boss is beaten, the yard is done and Phase 2 (the house) opens
+- **Phase 2 scaling** (Mark's "radioactive waste" in the house) and the great evolutions: later phases.
 
 **Gameplay**
-- **Slowing the whole colony.** Your ant is slower (build 22.1). Slowing everyone by 6–13% starved the bot colonies. It needs more food near home, or fewer threats early.
+- **Slowing the whole colony:** dropped. Mark: "don't slow the colony further."
+- **The long game starves** (bot campaigns, build 25.1). At 40 to 60 ants, upkeep runs past what the yard near the nest regrows. Starvation deaths reach 200 to 300 over 200 minutes. Part of this is the bot, part is the economy. For the combat and economy sit-down.
 - **Rooms not built yet** (`ROOMS.md`):
   - War camp (a room with Raiders)
   - Gatehouse (Doorkeepers)
@@ -23,12 +30,12 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
   The nodes behind them already do something smaller (build 24).
 - **Great evolutions:** three a colony, from the list in `growth.js` (Living Bridges, Raft Colony, Supercolony…). The list exists, but nothing uses it.
-- **A rival trait not built:** odorous house ants stealing from your trails. For now they're just many and weak.
+- **A rival trait not built:** odorous house ants stealing from your trails. They are now a swarm (build 25.1), but they don't steal.
 
 **Testing**
-- **The bots don't use rooms or kinds from builds 23–25.** So their balance checks don't cover those rooms.
-- **A flaky test:** the robin test sometimes fails in a full test run, and passes on its own.
+- **Bots still don't save up for the evolved rooms:** they build them once established (build 25.1), but rarely get there. `CAMPAIGN=1` runs the long game.
+- **Flaky tests,** which pass when run alone: the robin test, and "a room only builds with a builder inside it" (about 1 run in 6).
 
 **Later, by Mark's call**
-- **A phone pass.** PC first for now.
-- **A camera tilt near the house,** so more of it shows in play. Offered, not asked for.
+- **A phone pass in Phase 3 or 4** (Mark).
+- **Camera tilt near the house:** no. Mark: keep it close up.

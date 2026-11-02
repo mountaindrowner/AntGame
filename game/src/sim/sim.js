@@ -232,8 +232,11 @@ function newColony(ex, ey, team){
 // A rival colony not yet woken (build 25).
 function sleepingRival(w, team){ const R = RIVALS[team - 1], n = w.rnests[team], r = newColony(n.x, n.y, team); Object.assign(r, { key: R.key, asleep: true, store: 30, cap: 200, water: 999, waterCap: 999, hatchCap: 2, raidCd: 0, qhp: R.qhp }); return r; }
 function wakeRival(s, r, say){ const R = RIVALS[r.team - 1]; r.asleep = false;
+  // Build 25.1: their region comes alive with them, food and all. Food only grows in regions
+  // someone has walked into, so a colony waking in an unvisited one starved out in four minutes.
+  const ai = s.world.area[idx(r.ex, r.ey)]; if (ai != null && !s.active[ai]){ s.active[ai] = true; for (let k = 0; k < AREAS[ai].start; k++) spawnFood(s, ai, false); populateBugs(s, ai); }
   if (say){ s.banner = { key: 'rival-' + R.key, t: s.t, icon: '🐜', title: R.name, line: R.arrival, kind: 'hard' }; s.events.push('event'); s.player.msg = R.name + ': ' + R.arrival; }
-  for (let i = 0; i < R.start[0]; i++) mkAnt(s, 'forager', 'in', r.ex, r.ey, r.team); for (let i = 0; i < R.start[1]; i++) mkAnt(s, 'soldier', 'in', r.ex, r.ey, r.team); }
+  r.store = Math.max(r.store, 80); for (let i = 0; i < R.start[0]; i++) mkAnt(s, 'forager', 'in', r.ex, r.ey, r.team); for (let i = 0; i < R.start[1]; i++) mkAnt(s, 'soldier', 'in', r.ex, r.ey, r.team); }
 function growthState(){
   return { genes: 0, genesTotal: 0, up: {}, picks: {}, evo: {}, doctrine: {}, qtraits: {}, found: {}, scouted: {},
     hatched: 0, treats: 0, foodTotal: 0, storePeak: 0, repaired: 0, raidsBeaten: 0, fallen: [], named: 0,
@@ -905,7 +908,7 @@ function tick(s, dt){
     if (!r.queenAlive){ if (!r.cleared){ for (const a of s.ants) if (a.team === r.team && Math.random() < dt/60) a.state = 'dead'; if (!s.ants.some(a => a.team === r.team && a.state !== 'dead')) r.cleared = true; } continue; }
     let ours = 0, theirs = 0, power = 0;
     for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const d = Math.hypot(a.tx - r.ex, a.ty - r.ey);
-      if (!a.team && d <= 2 && (CASTES[a.caste].fight >= 3 || a.isPlayer)){ ours++; const b = bite(s, a); power += b; gainXp(s, a, b*0.5*dt/3); } if (a.team === r.team && d <= 3 && (CASTES[a.caste].fight >= 3 || R.fierce)) theirs++; }
+      if (!a.team && d <= 2 && (CASTES[a.caste].fight >= 3 || a.isPlayer)){ ours++; const b = bite(s, a); power += b; gainXp(s, a, b*0.5*dt/3); } if (a.team === r.team && d <= 3 && (CASTES[a.caste].fight >= 3 || R.fierce || R.swarm)) theirs++; /* build 25.1: a swarm's workers all hold the door */ }
     // Our fighters at their door raise the alarm: their soldiers pour out to defend.
     if (ours) raiseAlarm(s, r.ex, r.ey, 1.5);
     // Eight fighters holding the door with no defenders left wear the queen down; she heals 3 a second.
@@ -927,9 +930,12 @@ function tickColony(s, c, dt){
   let eat = 0; for (const a of s.ants) if (a.state !== 'dead' && a.team === c.team) eat += CASTES[a.caste].eat;
   if (!c.team && has(s, 'longlived')) eat *= 0.75;
   if (!c.team) eat += roomUpkeep(s); // rooms cost food to run (build 17)
+  // Build 25.1: the later colonies also feed beyond what we model (the bins, the tree, their side
+  // of the fence), so they need half what they eat from the yard.
+  if (c.team > 1) eat *= 0.5;
   const bite = eat/60*dt; c.eaten[0] += bite; c.store -= bite; if (!c.team && c.store > c.storePeak) c.storePeak = c.store;
   if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The colony is starving. Forage farther.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
-  if (c.starve > 20 && (c.starve - 20) % (!c.team && has(s, 'stomach') ? 10 : 5) < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); }
+  if (c.starve > 20 && (c.starve - 20) % (!c.team && has(s, 'stomach') ? 10 : 5) < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.team === c.team); if (v.length && !(c.team > 1 && v.length <= RIVALS[c.team - 1].start[0] + RIVALS[c.team - 1].start[1])) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); } // build 25.1: a later colony never starves below the size it came with
   const overCap = !c.team && s.ants.filter(a => !a.team).length >= queenCap(s.queen.level, s);
   if (c.queenAlive && (c.team || s.queen.placed) && !overCap){
     while (c.eggQueue.length && c.eggs.length < c.hatchCap){ const caste = c.eggQueue.shift(); c.eggs.push({ caste, t: 0, need: CASTES[caste].hatch * c.hatchMul }); }
@@ -1041,6 +1047,7 @@ function tickInside(s, a, dt){
   if (a.team){ // rival: abstract
     a.rest -= dt; if (a.rest > 0) return;
     const hunger = Math.max(0, 1 - col.store/col.cap);
+    if (rspec(a).swarm && s.alarm[idx(col.ex,col.ey)] > 0.2){ exitNest(s, a, 'fight'); return; } // build 25.1: the whole swarm pours out to defend
     if (C.fight >= 3){ if (s.alarm[idx(col.ex,col.ey)] > 0.2) exitNest(s, a, 'fight'); else if (Math.random() < 0.2) exitNest(s, a, 'patrol'); else a.rest = 3; }
     else { if (0.3 + hunger*0.9 > a.thr.f) exitNest(s, a, 'explore'); else a.rest = 2; }
     return;
@@ -1699,14 +1706,17 @@ function tickStrikes(s, dt){
 // Fire ants: the ground round their mounds stings anything that stays on it.
 function tickStings(s, dt){
   const w = s.world; s.stingT = (s.stingT || 0) + dt; if (s.stingT < 0.5) return; const k = s.stingT; s.stingT = 0;
-  for (const z of w.stings) for (const a of s.ants){
+  // Build 25.1: once the fire colony is awake the big mound's stinging is its ants' work: the ground
+  // stings at a tenth, so a siege can stand at the door, and not at all once their queen is dead.
+  const fire = s.rivals.find(r => r.key === 'fire');
+  for (const z of w.stings){ const zf = z.big && fire && !fire.asleep ? (fire.queenAlive ? 0.1 : 0) : 1; if (!zf) continue; for (const a of s.ants){
     if (!outside(a) || a.team) continue;
     const d = Math.hypot(a.x/T - z.x, a.y/T - z.y); if (d > z.r) continue;
-    a.hp -= z.power * k * (a.isPlayer ? 0.6 : 1); if (a.isPlayer) s.player.hit = s.t;
+    a.hp -= z.power * zf * k * (a.isPlayer ? 0.6 : 1); if (a.isPlayer) s.player.hit = s.t;
     if (!a.isPlayer){ a.flee = Math.max(a.flee, 1); a.fleeFrom = { x: z.x*T, y: z.y*T }; }
     else if (!s.stungWarned){ s.stungWarned = true; s.events.push('fireants'); s.player.msg = 'Fire ants! Keep moving.'; }
     if (a.hp <= 0) killAnt(s, a, 'fireants');
-  }
+  } }
 }
 // ---------- small creatures (build 16) ----------
 // Ladybugs eat your aphids, earwigs pinch, crickets hop away, millipedes curl

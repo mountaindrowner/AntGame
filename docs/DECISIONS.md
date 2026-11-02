@@ -2,6 +2,47 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: odorous swarm, one zoom notch less, bots on the new content (build 25.1)
+
+Mark: "make the odorous house ants really aggressive and numerous. Not as damaging, but more numerous." "I would remove one zoom notch." "We have to make sure number 7 works out" (the bots on the new content). Also: "don't slow the colony further."
+
+**Odorous house ants:**
+- They start with 24 ants and grow up to 110, twice as fast as other colonies.
+- Each one is weaker: 0.5 health, 0.45 bite, 0.8 size.
+- Every one of them picks a fight with any ant it meets.
+- When you siege their nest the whole swarm pours out to hold the door, and while any of them stand there their queen can't be hurt.
+- In a test, 10 soldiers lose to them; 20 win with one ant lost.
+
+**Zoom:** the farthest zoom is one wheel notch closer (`zoomMin` 0.45 to 0.5).
+
+**Bugs the bots found, now fixed:**
+- **Later colonies starved out in about four minutes.** Food only grows in regions someone has walked into, and they woke in unvisited ones. Now:
+  - when a colony wakes, its region comes alive with food;
+  - it starts with 80 food;
+  - it needs only half its food from the yard (the bins, the tree, beyond the fence);
+  - it never starves below the size it arrived with.
+  - Ten minutes in: odorous about 60, carpenter about 26, Argentine about 30, fire 12.
+- **The fire ants couldn't be beaten.** Their door sits inside the big mound's sting zone, which killed a 30-ant siege in 5 seconds. Now, once their colony is awake, the ground there stings at a tenth (their ants do the fighting), and not at all once their queen is dead. 20 soldiers come within 26 health of the queen; 30 win.
+- **Carpenter ants:** 20 plain soldiers lose to them, which is meant. They are the wall that majors are for.
+
+**The bot (`scripts/playtest.mjs`) now plays the new content:**
+- Once the colony is established (30 ants with a third of the store full, or the Patio taken), it:
+  - evolves the late nodes;
+  - builds the evolved rooms and raises their levels;
+  - lays two of each new ant once its room stands, and majors as a quarter of the army.
+- Its sieges go after each awake colony in turn.
+- `CAMPAIGN=1` plays on past the Patio.
+
+**Results:**
+- 45-minute runs: all 4 reached 40 ants and 3 won, about as before.
+- Three 200-minute campaigns:
+  - every colony arrived on schedule;
+  - the bot took the Patio and attacked the odorous ants;
+  - but the long game starves. At 40 to 60 ants, upkeep (55 to 80 a minute) runs past income (25 to 60). Starvation deaths reach 200 to 300, and in 2 of 6 long runs the Argentines killed a starving queen.
+- This is partly the bot (it never saves up for the fungus garden or granary, and holds few outposts) and partly real: the yard near the nest regrows food more slowly than a big colony eats. It is listed in BACKLOG for the combat and economy sit-down.
+
+**Tests:** 96, 2 new (later colonies survive ten minutes; the fire mound's stings soften). Known flakes, which pass when run alone: the robin test, and "a room only builds with a builder inside it" (about 1 run in 6).
+
 ## Nov 1: rival colonies across the yard (build 25)
 
 Mark: "next." Then, as I built it: "obviously the rivals should show up at specific times... say after the patio colony is gone or after 30 min." I first had them arrive at 20, 30, 40 and 50 minutes. Mark: "thats too fast. Maybe new ants every 30 min after the patio is dead."

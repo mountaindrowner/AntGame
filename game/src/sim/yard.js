@@ -585,7 +585,7 @@ export function makeYard(seed) {
   // Fire ants: little mounds, then the great one in the corner.
   here('fireout', 'mound', 8); some(5, 4, 4, 32, 32, (x, y) => { const r = u(1.6 + rnd()); disc(x, y, r); mark('firemound', { x, y, r }); });
   here('firemound', 'mound', 6); disc(u(20), u(20), u(7)); mark('firemound', { x: u(20), y: u(20), r: u(7), big: true });
-  const stings = [...landmarks.filter((l) => l.kind === 'firemound')].map((l) => ({ x: l.x, y: l.y, r: l.r + (l.big ? u(9) : u(4)), power: l.big ? 1.2 : 0.5 }));
+  const stings = [...landmarks.filter((l) => l.kind === 'firemound')].map((l) => ({ x: l.x, y: l.y, r: l.r + (l.big ? u(9) : u(4)), power: l.big ? 1.2 : 0.5, big: !!l.big }));
 
   // The great lawn's long grass: columns 1–6, rows 4–6 of the yard map.
   O.x = O.y = 0;
