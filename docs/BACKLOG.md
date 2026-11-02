@@ -37,7 +37,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
 **Testing**
 - **Bots still don't save up for the evolved rooms:** they build them once established (build 25.1), but rarely get there. `CAMPAIGN=1` runs the long game.
-- **Flaky tests,** which pass when run alone: the robin test, "a room only builds with a builder inside it" (about 1 run in 6), and, rarely, the duel test "a fight on the ground" (it depends on the dice).
+- **Flaky tests,** which pass when run alone: the robin test, "a room only builds with a builder inside it" (about 1 run in 6), and, rarely, the duel test "a fight on the ground" (it depends on the dice), "medics heal the wounded", and "pointing at a rival ant: the crew kills it" (about 1 run in 5 inside the full suite, never alone).
 
 **Later, by Mark's call**
 - **A phone pass in Phase 3 or 4** (Mark).

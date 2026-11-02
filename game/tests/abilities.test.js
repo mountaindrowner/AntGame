@@ -75,3 +75,18 @@ test('each ability is learned in the evolution tree', () => {
   assert.equal(SIM.abilityLock(s, 'dead'), '');
   assert.ok(SIM.useAbility(s, 'dead'));
 });
+
+test('second levels: wider, longer, stronger', () => {
+  const { s, me } = out();
+  assert.equal(SIM.abilityLevel(s, 'spray'), 1);
+  for (const k of ['spray2', 'alarm2', 'lock2', 'dead2']) s.colony.evo[k] = true;
+  assert.equal(SIM.abil(s, 'spray').r, 3.5); assert.equal(SIM.abil(s, 'spray').cd, 7);
+  // A rival 3 tiles off the cloud's centre: inside at level II, not at level I.
+  const r = ant(s, me.x + 6 * T, me.y + 3 * T, { team: 1 });
+  assert.ok(SIM.useAbility(s, 'spray', me.x + 6 * T, me.y)); assert.ok(r.exposed > s.t + 8);
+  const c = ant(s, me.x + 10 * T, me.y, { follow: true, state: 'follow' });
+  assert.ok(SIM.useAbility(s, 'alarm')); assert.ok(c.frenzy > s.t + 11); assert.equal(c.frenzyAtk, 3);
+  // Death feint: a rival on you loses track.
+  const f = ant(s, me.x + 0.5 * T, me.y, { team: 1, state: 'fight', foeId: me.id });
+  assert.ok(SIM.useAbility(s, 'dead')); assert.equal(f.foeId, 0); assert.ok(me.feign > s.t + 4.5);
+});

@@ -2,6 +2,23 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: second levels for your ant's abilities (build 33)
+
+Mark: "do the second levels, then the mantis."
+
+Each ability gets a level II node in the evolution tree, right after the node that teaches it:
+
+| Node (branch) | Cost | Level II |
+|---|---|---|
+| **Acid jets** (Bodies, after Formic spray) | 4 🧬 + 20 protein | 🧪 Formic Spray II: cloud 2½ → 3½ tiles wide, Exposed 6 → 9 s, cooldown 10 → 7 s |
+| **War scent** (Senses, after Danger scent) | 4 🧬 | 📯 Alarm Call II: reaches 8 → 12 tiles, Frenzy 8 → 12 s, +2 → +3 Attack |
+| **Iron grip** (Bodies, after Strong mandibles) | 4 🧬 + 15 protein | 🦷 Mandible Lock II: stun 2½ → 4 s (a boss 1½ → 2½ s), cooldown 16 → 11 s |
+| **Death feint** (Bodies, after Playing dead) | 3 🧬 | 💀 Play Dead II: 3 → 5 s, heal 30 → 60%, and rival ants fighting you lose track of you |
+
+**On the bar:** a level II ability has a gold rim and a small "II". Its tooltip gives the level II numbers, or names the node that gives them.
+
+**Checks:** 134 tests, 1 new (level II numbers; a rival 3 tiles from the cloud's centre is caught only at level II; a +3 Frenzy; Death feint shaking off an attacker). "Pointing at a rival ant: the crew kills it" fails about 1 run in 5 inside the full suite and never alone. It's logged with the other known flaky tests.
+
 ## Nov 2: abilities are learned in the evolution tree (build 32.1)
 
 Mark: "Maybe make those available through evolve tree."

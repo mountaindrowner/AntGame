@@ -1864,7 +1864,7 @@ const pinnedNow = (s, o) => o.caste !== 'supermajor' && s.gangs && (s.gangs.get(
 function pop(s, x, y, text, k){ (s.pops || (s.pops = [])).push({ x, y, text, k, t: s.t }); if (s.pops.length > 40) s.pops.shift(); }
 // One swing of a at o. Returns what happened. mul scales the damage (your ant bites twice as hard).
 function swing(s, a, o, mul = 1){
-  const P = s.player, [atk0] = duelStats(s, a), [, def0] = duelStats(s, o), atk = atk0 + (frenzied(s, a) ? 2 : 0), def = def0 - (exposed(s, o) ? 1 : 0);
+  const P = s.player, [atk0] = duelStats(s, a), [, def0] = duelStats(s, o), atk = atk0 + (frenzied(s, a) ? (a.frenzyAtk || 2) : 0), def = def0 - (exposed(s, o) ? 1 : 0);
   if (o.isPlayer && o.feign > s.t) return 'miss'; // playing dead
   const me = a.team && rspec(a).swarm ? 2 : 1, help = Math.min(3, Math.max(0, ((s.gangs && s.gangs.get(o.id)) || 0) - (a.foeId === o.id ? me : 0)));
   const pinned = pinnedNow(s, o), ra = 1 + Math.floor(Math.random()*6), rd = 1 + Math.floor(Math.random()*6);
@@ -2044,6 +2044,15 @@ const ABILITIES = {
   dead:   { name: 'Play Dead', icon: '💀', evo: 'thanatosis', cd: 30, dur: 3, heal: 0.3, line: 'Drop and lie still: nothing hurts you for 3 s, and you heal 30%.' },
 };
 const ABILITY_KEYS = ['spray', 'alarm', 'lock', 'dead'];
+// Build 33: second levels, from the evolution tree. abil(s, k) gives an ability's numbers as they stand.
+const ABILITY_II = {
+  spray: { evo: 'spray2', cd: 7, r: 3.5, dur: 9 },
+  alarm: { evo: 'alarm2', r: 12, dur: 12, atk: 3 },
+  lock:  { evo: 'lock2', cd: 11, dur: 4, boss: 2.5 },
+  dead:  { evo: 'dead2', dur: 5, heal: 0.6, shake: true },
+};
+const abilityLevel = (s, k) => (ABILITY_II[k] && has(s, ABILITY_II[k].evo) ? 2 : 1);
+const abil = (s, k) => abilityLevel(s, k) === 2 ? { ...ABILITIES[k], ...ABILITY_II[k], level: 2 } : { ...ABILITIES[k], atk: 2, level: 1 };
 const exposed = (s, o) => o && o.exposed > s.t;
 const stunned = (s, o) => o && o.stunned > s.t;
 const frenzied = (s, a) => a && a.frenzy > s.t;
@@ -2066,7 +2075,7 @@ function foesNear(s, x, y, r){
 }
 function useAbility(s, key, x, y){
   if (abilityLock(s, key)) return false;
-  const P = s.player, a = P.ant, A = ABILITIES[key];
+  const P = s.player, a = P.ant, A = abil(s, key);
   if (x == null){ x = a.x + (a.dx || 0)*3*T; y = a.y + (a.dy || 0)*3*T; }
   let n = 0;
   if (key === 'spray'){
@@ -2075,8 +2084,8 @@ function useAbility(s, key, x, y){
     for (const o of foesNear(s, x, y, A.r*T)){ o.exposed = s.t + A.dur; o.hitT = s.t; if (o.caste && o.state !== 'dead'){ o.hp -= 1; if (o.hp <= 0) killAnt(s, o, 'war'); } n++; }
     P.msg = n ? `Formic spray! ${n} ${n === 1 ? 'enemy is' : 'enemies are'} Exposed.` : 'Formic spray: nothing caught in it.';
   } else if (key === 'alarm'){
-    for (const o of s.ants) if (!o.team && !o.isPlayer && outside(o) && (o.follow || CASTES[o.caste].fight >= 3) && Math.hypot(o.x - a.x, o.y - a.y) <= A.r*T){ o.frenzy = s.t + A.dur; n++; }
-    a.frenzy = s.t + A.dur; x = a.x; y = a.y;
+    for (const o of s.ants) if (!o.team && !o.isPlayer && outside(o) && (o.follow || CASTES[o.caste].fight >= 3) && Math.hypot(o.x - a.x, o.y - a.y) <= A.r*T){ o.frenzy = s.t + A.dur; o.frenzyAtk = A.atk; n++; }
+    a.frenzy = s.t + A.dur; a.frenzyAtk = A.atk; x = a.x; y = a.y;
     P.msg = n ? `Alarm call! ${n} of your ants Frenzy.` : 'Alarm call: no fighters near enough to hear it.';
   } else if (key === 'lock'){
     let best = null, bd = Infinity;
@@ -2088,8 +2097,9 @@ function useAbility(s, key, x, y){
     best.hitT = s.t; x = best.x; y = best.y; n = 1;
     P.msg = boss ? `You lock your mandibles on ${boss.name}! Stunned${best.interruptAt === s.t ? ', its attack cancelled' : ''}.` : 'Mandible lock! It’s stunned.';
   } else if (key === 'dead'){
-    a.feign = s.t + A.dur; a.foeId = 0; const pm = Math.max(youHp(s), maxHp(s, a)); a.hp = Math.min(pm, a.hp + pm*A.heal); x = a.x; y = a.y;
-    P.msg = 'You drop and play dead. Nothing touches you.';
+    a.feign = s.t + A.dur; a.foeId = 0;
+    if (A.shake) for (const o of s.ants) if (o.team && o.state !== 'dead' && o.foeId === a.id){ o.foeId = 0; if (o.state === 'fight') o.state = 'return'; } const pm = Math.max(youHp(s), maxHp(s, a)); a.hp = Math.min(pm, a.hp + pm*A.heal); x = a.x; y = a.y;
+    P.msg = A.level === 2 ? 'You drop and play dead so well your attackers lose track of you.' : 'You drop and play dead. Nothing touches you.';
   }
   (P.cds || (P.cds = {}))[key] = s.t + A.cd;
   (s.casts || (s.casts = [])).push({ key, x, y, r: key === 'spray' ? A.r*T : key === 'alarm' ? A.r*T : T, t: s.t }); if (s.casts.length > 12) s.casts.shift();
@@ -2911,7 +2921,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
