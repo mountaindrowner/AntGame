@@ -43,7 +43,8 @@ test('a soldier usually beats a forager, but not always', () => {
   const a = ant(s, 'soldier'), o = ant(s, 'forager', 1, { hp: 1e9 });
   const f = ant(s, 'forager'), so = ant(s, 'soldier', 1, { hp: 1e9 });
   let up = 0, down = 0;
-  for (let i = 0; i < 2000; i++) { if (/hit|hard|crit/.test(SIM.swing(s, a, o))) up++; if (/hit|hard|crit/.test(SIM.swing(s, f, so))) down++; }
+  // xp reset each swing: fighting ranks them up, which would shift the odds mid-test.
+  for (let i = 0; i < 2000; i++) { a.xp = f.xp = 0; if (/hit|hard|crit/.test(SIM.swing(s, a, o))) up++; if (/hit|hard|crit/.test(SIM.swing(s, f, so))) down++; }
   assert.ok(up > 1200, `soldier lands ${up} of 2000`);
   assert.ok(down > 150 && down < 700, `forager lands ${down} of 2000 on a soldier`);
 });
@@ -55,7 +56,7 @@ test('ganging up: more ants on one foe hit more, and three pin it', () => {
   SIM.duelGangs(s);
   let alone = 0, gang = 0;
   const lone = ant(s, 'forager'), o2 = ant(s, 'soldier', 1, { hp: 1e9 }); // nobody else on o2
-  for (let i = 0; i < 2000; i++) { if (/hit|hard|crit/.test(SIM.swing(s, lone, o2))) alone++; if (/hit|hard|crit/.test(SIM.swing(s, crew[0], o))) gang++; }
+  for (let i = 0; i < 2000; i++) { lone.xp = crew[0].xp = 0; if (/hit|hard|crit/.test(SIM.swing(s, lone, o2))) alone++; if (/hit|hard|crit/.test(SIM.swing(s, crew[0], o))) gang++; }
   assert.ok(gang > alone * 2, `with help ${gang}, alone ${alone}`);
   // Pinned, every hit counts as hard.
   assert.equal(dice([4, 4], () => SIM.swing(s, crew[0], o)), 'hard', '4+0+3 vs 4+2 hits; pinned makes it hard');

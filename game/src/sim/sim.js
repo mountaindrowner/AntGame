@@ -447,6 +447,7 @@ function deposit(s, a){
     // Honeydew and bits of sweets are sugar too (build 18).
     if (!a.team && a.carry && a.itype === 'aphids') addSugar(s, (has(s, 'aphids') ? 3 : 1)*(prizeFx(s, a.ireg) === 'aphids' ? 2 : 1));
     else if (!a.team && a.carry && FOODS[a.itype] && FOODS[a.itype].sweet) addSugar(s, Math.ceil(a.carry*0.3)); }
+  else if (a.kind === 'brood'){ if (!a.team){ for (let i = 0; i < a.carry; i++){ if (antCount(s) < queenCap(s.queen.level, s)) mkAnt(s, has(s, 'warcamp') ? 'soldier' : 'forager', 'in', c.ex, c.ey, 0); else c.protein += 3; } c.captured = (c.captured || 0) + a.carry; if (!s.seen.pupae){ s.seen.pupae = true; s.player.msg = 'Stolen pupae hatch in your nest as your own ants.'; } } }
   else if (a.kind === 'water') c.water = Math.min(c.waterCap, c.water + a.carry);
   else if (a.kind === 'protein'){ c.protein += a.carry; if (!a.team && CHITIN_OF[a.itype]) addChitin(s, CHITIN_OF[a.itype]*(prizeFx(s, a.ireg) === 'chitin' ? 2 : 1)); }
   else if (a.kind === 'chitin'){ if (!a.team) addChitin(s, a.carry); }
@@ -767,16 +768,17 @@ function tick(s, dt){
   stepCat(s, dt); if (!s.cat){ s.catRespawn -= dt; if (s.catRespawn <= 0){ spawnCat(s); s.catRespawn = 90; } }
   // buckets for combat
   const buckets = new Map();
-  for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const k = a.tx+','+a.ty; let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(a); }
+  for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; const k = a.tx+','+a.ty; let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(a); }
   // Fighters near the spider, per team: guards only take it on as a crew.
   const spiderCrew = [0, 0, 0, 0, 0, 0];
-  if (s.spider) for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; if ((CASTES[a.caste].fight >= 3 || a.follow) && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 4*T) spiderCrew[a.team]++; }
+  if (s.spider) for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; if ((CASTES[a.caste].fight >= 3 || a.follow) && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 4*T) spiderCrew[a.team]++; }
   duelGangs(s);
   const enemiesNear = (a, r) => { const out = []; for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){ const b = buckets.get((a.tx+dx)+','+(a.ty+dy)); if (b) for (const o of b) if (o.team !== a.team && o.state !== 'dead') out.push(o); } return out; };
   for (const a of s.ants){
     if (a.state === 'dead') continue;
     if (a.isPlayer){ stepPlayer(s, a, dt, enemiesNear); continue; }
     const C = CASTES[a.caste], col = colonyOf(s, a), home = homeOf(s, a);
+    if (a.state === 'away') continue; // build 28: inside a rival nest on your raid
     if (a.state === 'in' || a.state === 'build' || a.state === 'nest'){ tickInside(s, a, dt); continue; }
     if (a.knockT > 0){ knock(s, a, dt); continue; }
     if (a.slowT > 0) a.slowT -= dt;
@@ -893,7 +895,7 @@ function tick(s, dt){
   if (s.spider){
     let power = 0; const near = [];
     const biters = [];
-    for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const d = Math.hypot(a.x-s.spider.x, a.y-s.spider.y); if (d < SPIDER_REACH*reachOf(s, a)){ if (d < SPIDER_REACH) near.push(a); if (a.state==='fight' || a.state==='follow' || a.isPlayer || a.state==='raid'){ const b = bite(s, a, 'spider'); power += b; biters.push(a); gainXp(s, a, b*0.5*dt/3); stingSlow(s, a, s.spider); } } }
+    for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; const d = Math.hypot(a.x-s.spider.x, a.y-s.spider.y); if (d < SPIDER_REACH*reachOf(s, a)){ if (d < SPIDER_REACH) near.push(a); if (a.state==='fight' || a.state==='follow' || a.isPlayer || a.state==='raid'){ const b = bite(s, a, 'spider'); power += b; biters.push(a); gainXp(s, a, b*0.5*dt/3); stingSlow(s, a, s.spider); } } }
     s.spider.hp -= power*0.5*dt; s.spider.bite += dt;
     // Eating or full it only bites back when bitten.
     const sp = s.spider, calm = sp.eatT > 0 || sp.full > 0;
@@ -918,25 +920,18 @@ function tick(s, dt){
     if (picked(s, 'venom', 'hunter')) trailHome(s, s.cat.x, s.cat.y);
     if (!c.kills.caterpillar) gainGenes(s, 1, 'your first hunt');
     c.kills.caterpillar = (c.kills.caterpillar||0)+1; if (!P.msg) P.msg = 'Caterpillar down! Haul the meat home.'; s.catCorpse = { x: s.cat.x, y: s.cat.y, t: s.t }; s.cat = null; s.catRespawn = 90; }
-  // A siege on any rival's entrance (build 25: every colony).
+  // Build 28: rival nests fall to raids you lead (tickMyRaid). A fallen colony's last ants die off.
   for (const r of s.rivals){
     if (r.asleep) continue;
-    const R = RIVALS[r.team - 1];
     if (!r.queenAlive){ if (!r.cleared){ for (const a of s.ants) if (a.team === r.team && Math.random() < dt/60) a.state = 'dead'; if (!s.ants.some(a => a.team === r.team && a.state !== 'dead')) r.cleared = true; } continue; }
-    let ours = 0, theirs = 0, power = 0;
-    for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; const d = Math.hypot(a.tx - r.ex, a.ty - r.ey);
-      if (!a.team && d <= 2 && (CASTES[a.caste].fight >= 3 || a.isPlayer)){ ours++; const b = bite(s, a); power += b; gainXp(s, a, b*0.5*dt/3); } if (a.team === r.team && d <= 3 && (CASTES[a.caste].fight >= 3 || R.fierce || R.swarm)) theirs++; /* build 25.1: a swarm's workers all hold the door */ }
-    // Our fighters at their door raise the alarm: their soldiers pour out to defend.
+    if (r.qhp == null) r.qhp = RIVALS[r.team - 1].qhp;
+    // Our fighters at their door raise the alarm: their guards pour out. Left alone, the queen heals.
+    let ours = 0; for (const a of s.ants){ if (a.team || !outside(a)) continue; if ((CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer) && Math.hypot(a.tx - r.ex, a.ty - r.ey) <= 2.5) ours++; }
     if (ours) raiseAlarm(s, r.ex, r.ey, 1.5);
-    // Eight fighters holding the door with no defenders left wear the queen down; she heals 3 a second.
-    if (r.qhp == null) r.qhp = R.qhp;
-    if (ours >= 8 && theirs === 0){ r.siege = 1; r.qhp -= power*0.5*dt; if (r.qhp <= 0){ r.qhp = 0; r.queenAlive = false;
-      const ai = areaOf(s, r.ex, r.ey); if (!s.outposts.some(o => o.region === ai)) addOutpost(s, r.ex, r.ey, true);
-      c.kills.queens = (c.kills.queens || 0) + 1;
-      if (r.team === 1){ s.won = true; s.patioDeadAt = s.t; gainGenes(s, 5, 'the rival queen is dead'); P.msg = 'The rival queen is dead. The yard is yours.'; }
-      else { gainGenes(s, 3, 'the ' + R.name.toLowerCase() + '’ queen is dead'); P.msg = `The ${R.name.toLowerCase()}’ queen is dead. Their nest is yours.`; s.events.push('held'); } } }
-    else { r.siege = 0; r.qhp = Math.min(R.qhp, r.qhp + 3*dt); }
+    r.siege = s.myRaid && s.myRaid.team === r.team ? 1 : 0;
+    if (!r.siege) r.qhp = Math.min(RIVALS[r.team - 1].qhp, r.qhp + 3*dt);
   }
+  tickMyRaid(s, dt);
   for (const a of s.ants){ if (a.team && a.state !== 'dead' && a.state !== 'in' && CASTES[a.caste].fight >= 3 && Math.hypot(a.tx - c.ex, a.ty - c.ey) < 3){ raiseAlarm(s, c.ex, c.ey, 1.2); break; } }
   for (const r of s.rivals) if (!r.asleep) rivalBrain(s, r, dt);
   s.ants = s.ants.filter(a => a.state !== 'dead');
@@ -1063,6 +1058,7 @@ function tickInside(s, a, dt){
   const col = colonyOf(s, a), C = CASTES[a.caste];
   if (a.team){ // rival: abstract
     a.rest -= dt; if (a.rest > 0) return;
+    if (s.myRaid && s.myRaid.phase === 'inside' && s.myRaid.team === a.team){ a.rest = 1; return; } // build 28: holding their halls
     const hunger = Math.max(0, 1 - col.store/col.cap);
     if (rspec(a).swarm && s.alarm[idx(col.ex,col.ey)] > 0.2){ exitNest(s, a, 'fight'); return; } // build 25.1: the whole swarm pours out to defend
     if (C.fight >= 3){ if (s.alarm[idx(col.ex,col.ey)] > 0.2) exitNest(s, a, 'fight'); else if (Math.random() < 0.2) exitNest(s, a, 'patrol'); else a.rest = 3; }
@@ -1345,13 +1341,17 @@ function rivalBrain(s, r, dt){
   const mine = s.ants.filter(a => a.team===r.team && a.state!=='dead'); const foragers = mine.filter(a => a.caste==='forager').length, soldiers = mine.filter(a => a.caste==='soldier');
   // grow
   if (r.store >= 10 && r.eggQueue.length < (RS.swarm ? 4 : 2) && mine.length < Math.min(RS.max, (RS.swarm ? 30 : 12) + s.t/30)){ r.eggQueue.push(soldiers.length < foragers*RS.soldiers ? 'soldier' : 'forager'); r.store -= 4; }
-  if (!RS.raids) return;
+  const revenge = r.revengeAt && s.t >= r.revengeAt;
+  if (!RS.raids && !revenge) return;
   // raid when strong, not before 5 minutes, at most every 2 minutes
   r.raidCd = (r.raidCd || 0) - 10;
   const ourSoldiers = s.ants.filter(a => a.team===0 && CASTES[a.caste].fight >= 3).length;
-  const idle = soldiers.filter(a => a.state==='in' || a.state==='patrol');
+  const idle = (revenge ? mine.filter(a => CASTES[a.caste].fight >= 3 || RS.swarm || RS.fierce || mine.length < 12) : soldiers).filter(a => a.state==='in' || a.state==='patrol');
   // Raids start at six minutes and grow: 3 soldiers, then one more every 2.5 minutes.
   const size = Math.min(14, 3 + Math.floor(Math.max(0, s.t - 360)/150));
+  if (revenge && !s.raidLive && idle.length >= 3 && s.queen.placed && !s.lost){ const n = Math.min(idle.length, Math.max(4, size)); for (let i = 0; i < n; i++){ const a = idle[i]; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } r.revengeAt = null; s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen, crits: s.colony.crits || 0 }; s.player.msg = `The ${RS.name.toLowerCase()} strike back! ${n} of them march on your nest.`; s.events.push('raid'); return; }
+  if (revenge && s.t > r.revengeAt + 300) r.revengeAt = null;
+  if (!RS.raids) return;
   if (s.t > (RS.raidFrom || 360) && !s.raidLive && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen, crits: s.colony.crits || 0 }; s.player.msg = `Raid! ${size} ${r.team === 1 ? 'rivals are' : RS.name.toLowerCase() + ' are'} coming.`; s.events.push('raid'); }
 }
 
@@ -1483,7 +1483,7 @@ function stepCat(s, dt){
   if (ct.slowT > 0) ct.slowT -= dt;
   if (d > 1){ ddx/=d; ddy/=d; const cs = 8*SURF*dt*(ct.slowT > 0 ? 0.5 : 1), nx = ct.x + ddx*cs, ny = ct.y + ddy*cs; if (walk(s, Math.floor(nx/T), Math.floor(ny/T))){ ct.x = nx; ct.y = ny; } else ct.wander = 0; }
   // attacked by soldiers/venom on patrol/fight nearby
-  for (const a of s.ants){ if (a.team || a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest') continue; if (CASTES[a.caste].fight < 3 && !a.follow && !a.isPlayer) continue; const dd = Math.hypot(a.x-ct.x, a.y-ct.y); if (dd < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt*0.5; ct.hp -= dmg; ct.hitT = s.t; spark(s, a, (a.x + ct.x)/2, (a.y + ct.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, ct); } else if (dd < 5*T && CASTES[a.caste].fight >= 3 && a.state === 'patrol'){ a.state = 'fight'; a.goal = 'cat'; chooseToward(s, a, ct.x, ct.y); } }
+  for (const a of s.ants){ if (a.team || a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; if (CASTES[a.caste].fight < 3 && !a.follow && !a.isPlayer) continue; const dd = Math.hypot(a.x-ct.x, a.y-ct.y); if (dd < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt*0.5; ct.hp -= dmg; ct.hitT = s.t; spark(s, a, (a.x + ct.x)/2, (a.y + ct.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, ct); } else if (dd < 5*T && CASTES[a.caste].fight >= 3 && a.state === 'patrol'){ a.state = 'fight'; a.goal = 'cat'; chooseToward(s, a, ct.x, ct.y); } }
   // fight-state soldiers targeting cat
   for (const a of s.ants){ if (a.goal === 'cat' && a.state === 'fight'){ if (Math.hypot(a.x-ct.x, a.y-ct.y) > CAT_REACH*0.8){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, CASTES[a.caste].speed), dt)) chooseToward(s, a, ct.x, ct.y); } } }
 }
@@ -1588,6 +1588,7 @@ function enemyAt(s, x, y){
 function attackTarget(s){
   const A = s.player.attack; if (!A) return null;
   if (A.kind === 'boss'){ const b = (s.bosses || {})[A.ref]; return b && !b.dead ? b : null; }
+  if (A.kind === 'door'){ const r = s.rivals[A.ref - 1]; return r && r.queenAlive && s.myRaid ? { x: (r.ex + 0.5)*T, y: (r.ey + 0.5)*T } : null; }
   if (A.kind === 'spider') return s.spider || null;
   if (A.kind === 'cat') return s.cat || null;
   if (A.kind === 'bug') return (s.critters || []).find(b => b.id === A.ref && b.hp > 0) || null;
@@ -1595,7 +1596,7 @@ function attackTarget(s){
   return s.ants.find(a => a.id === A.ref && outside(a)) || null;
 }
 // How close the crew stands to bite it.
-function attackReach(s, A){ return A.kind === 'boss' ? (BOSSES[A.ref].r + 0.5)*T : A.kind === 'spider' ? SPIDER_REACH*0.8 : A.kind === 'cat' ? CAT_REACH*0.8 : A.kind === 'bug' ? 0.9*T : A.kind === 'stalk' ? 1.2*T : 0.5*T; }
+function attackReach(s, A){ return A.kind === 'door' ? 1.2*T : A.kind === 'boss' ? (BOSSES[A.ref].r + 0.5)*T : A.kind === 'spider' ? SPIDER_REACH*0.8 : A.kind === 'cat' ? CAT_REACH*0.8 : A.kind === 'bug' ? 0.9*T : A.kind === 'stalk' ? 1.2*T : 0.5*T; }
 const crewSize = s => s.ants.filter(o => o.follow && o.state === 'follow').length;
 function crewAttack(s, x, y){
   const P = s.player; if (!P.ant || P.inNest || !crewSize(s)) return false;
@@ -1608,8 +1609,9 @@ function tickAttack(s){
   const P = s.player, A = P.attack; if (!A) return;
   const o = attackTarget(s), a = P.ant;
   if (!a || P.inNest || !crewSize(s)){ P.attack = null; return; }
+  if (!o && A.kind === 'door'){ P.attack = null; return; }
   if (!o){ P.attack = null; P.msg = `${A.name.replace(/^the /, 'The ').replace(/^./, ch => ch.toUpperCase())} is down. Your crew falls back in.`; s.events.push('attackdone'); return; }
-  if (Math.hypot(o.x - a.x, o.y - a.y) > ATTACK_LEASH*T){ P.attack = null; P.msg = 'Too far: your crew falls back in.'; }
+  if (Math.hypot(o.x - a.x, o.y - a.y) > ATTACK_LEASH*T){ P.attack = null; P.msg = 'Too far: your crew falls back in.'; if (s.myRaid && s.myRaid.phase === 'breach') endRaid(s, 'called off'); }
 }
 function crewAt(s){ const a = s.player.ant; if (!a) return 0; let n = 1; for (const o of s.ants) if (o.follow && o.state !== 'dead' && Math.hypot(o.x-a.x, o.y-a.y) < 3*T) n++; return n; }
 function dropBig(s){ const b = s.player.big; if (!b) return; b.carried = false; delete b.px; delete b.py; s.player.big = null; }
@@ -1701,7 +1703,7 @@ const HUNT = {
   toad: { land: 1.0, peck: 1.7, pecks: 5, leave: 1.0, reach: 5, hop: 1.2, sight: 10, scare: 5, cause: 'toad', name: 'toad', msg: 'A toad! Keep your distance.', ev: 'toad' },
 };
 const FOOT = DROP.foot, BIRD = HUNT.bird;
-const outside = a => a.state !== 'dead' && a.state !== 'in' && a.state !== 'build' && a.state !== 'nest';
+const outside = a => a.state !== 'dead' && a.state !== 'in' && a.state !== 'build' && a.state !== 'nest' && a.state !== 'away';
 // Inside a drop's print (x, y in tiles), scaled by k.
 const underFoot = (st, x, y, k) => { const D = DROP[st.kind], dx = x - st.x, dy = y - st.y, c = Math.cos(st.yaw), n = Math.sin(st.yaw), u = (dx*c + dy*n)/(D.a*k), v = (-dx*n + dy*c)/(D.b*k); return u*u + v*v <= 1; };
 const PICNIC_FEET = { kind: 'foot', every: [16, 28] }; // feet round a picnic (build 19)
@@ -1841,6 +1843,149 @@ function swing(s, a, o, mul = 1){
   if (a.isPlayer || o.isPlayer) P.duel = { you: a.isPlayer, ra, ma: atk + help, rd, md: def, kind, foe: (a.isPlayer ? o : a).team ? rspec(a.isPlayer ? o : a).name.replace(/s$/, '') : 'Ant', t: s.t };
   if (o.hp <= 0 && o.state !== 'dead'){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); if (!a.team) s.colony.duelsWon = (s.colony.duelsWon || 0) + 1; else if (!o.team) s.colony.duelsLost = (s.colony.duelsLost || 0) + 1; }
   return kind;
+}
+// Build 28: raids you lead (Mark: "I want raids to feel interesting and important. You raid other
+// colonies"). Bring a crew to a rival door and press Raid; pick a prize; break their door (six of yours
+// there, none of theirs, for 5 s); then the crew storms in and the fight plays out in rounds of dice on
+// the raid card. Pull out when you like. Survivors carry the prize home, and the colony strikes back.
+const RAID = { near: 8, minCrew: 3, door: 6, hold: 5, round: 1.0, maxRounds: 60, breachMax: 120 };
+function raidTarget(s){
+  const a = s.player.ant; if (!a || s.player.inNest || s.myRaid) return null;
+  return s.rivals.find(r => !r.asleep && r.queenAlive && Math.hypot(a.tx - r.ex, a.ty - r.ey) <= RAID.near) || null;
+}
+// What your scouts see: their numbers, store, brood and queen, against your crew.
+function raidScout(s, r){
+  const R = RIVALS[r.team - 1], theirs = s.ants.filter(a => a.team === r.team && a.state !== 'dead');
+  const guards = theirs.filter(a => CASTES[a.caste].fight >= 3 || R.swarm || R.fierce).length;
+  const crew = s.ants.filter(a => a.follow && a.state === 'follow');
+  return { team: r.team, key: R.key, name: R.name, guards, workers: theirs.length - guards, total: theirs.length, store: Math.floor(r.store), brood: broodOf(s, r), qhp: Math.ceil(r.qhp == null ? R.qhp : r.qhp), qmax: R.qhp,
+    crew: crew.length, fighters: crew.filter(a => CASTES[a.caste].fight >= 3).length, attack: crew.reduce((n, a) => n + duelStats(s, a)[0], 0) };
+}
+const broodOf = (s, r) => r.eggs.length + r.eggQueue.length + Math.floor(s.ants.filter(a => a.team === r.team && a.state !== 'dead').length / 5);
+function raidLock(s, prize){
+  const r = raidTarget(s); if (!r) return 'walk your crew to a rival nest';
+  const n = crewSize(s); if (n < RAID.minCrew) return `recruit a crew first (${n} of ${RAID.minCrew})`;
+  if (prize === 'store' && r.store < 4) return 'their store is empty';
+  if (prize === 'brood' && !broodOf(s, r)) return 'they have no brood';
+  return '';
+}
+function startRaid(s, prize){
+  if (raidLock(s, prize)) return false;
+  const r = raidTarget(s), R = RIVALS[r.team - 1], P = s.player;
+  const theirs = s.ants.filter(a => a.team === r.team && a.state !== 'dead').length;
+  s.myRaid = { team: r.team, prize, phase: 'breach', t0: s.t, hold: 0, round: 0, rT: 0, raiders: [], log: [], loot: { food: 0, brood: 0 }, cap: Math.floor(r.store/2), broodLeft: broodOf(s, r),
+    start: { theirs, lost: deathTotal(s.colony), killed: r.deaths.war || 0, crits: s.colony.crits || 0, qhp: r.qhp == null ? R.qhp : r.qhp } };
+  P.attack = { kind: 'door', ref: r.team, name: 'the ' + R.name.toLowerCase() + '’ door', t: s.t };
+  raiseAlarm(s, r.ex, r.ey, 3);
+  P.msg = `Raid! Break the ${R.name.toLowerCase()}’ door: ${RAID.door} of yours there, none of theirs.`; s.seen.raided = true; s.events.push('attack');
+  return true;
+}
+function raidSay(M, text){ M.log.push(text); if (M.log.length > 6) M.log.shift(); }
+function tickMyRaid(s, dt){
+  const M = s.myRaid; if (!M) return;
+  const r = s.rivals[M.team - 1], R = RIVALS[M.team - 1], P = s.player;
+  if (M.phase === 'breach'){
+    const crew = s.ants.filter(a => a.follow && a.state === 'follow');
+    let ours = 0, theirs = 0;
+    for (const a of s.ants){ if (!outside(a)) continue; const d = Math.hypot(a.tx - r.ex, a.ty - r.ey);
+      if (!a.team && d <= 2 && (a.follow || a.isPlayer || CASTES[a.caste].fight >= 3)) ours++;
+      if (a.team === r.team && d <= 3 && (CASTES[a.caste].fight >= 3 || R.fierce || R.swarm)) theirs++; }
+    M.ours = ours; M.theirs = theirs;
+    const need = Math.min(RAID.door, Math.max(RAID.minCrew, crew.length));
+    M.need = need;
+    if (ours >= need && theirs === 0) M.hold += dt; else M.hold = Math.max(0, M.hold - dt*0.5);
+    if (!P.attack && crew.length) P.attack = { kind: 'door', ref: r.team, name: 'the door', t: s.t };
+    if (!r.queenAlive || crew.length + (P.ant ? 0 : 0) < 1 || s.t - M.t0 > RAID.breachMax){ endRaid(s, 'broken'); return; }
+    if (M.hold >= RAID.hold){
+      // Storm: every crew ant near the door goes in.
+      M.phase = 'inside'; M.rT = 0.5; P.attack = null;
+      for (const a of crew) if (Math.hypot(a.x/T - r.ex, a.y/T - r.ey) < 5){ a.state = 'away'; a.follow = false; a.x = (r.ex + 0.5)*T; a.y = (r.ey + 0.5)*T; a.tx = r.ex; a.ty = r.ey; a.foeId = 0; a.loot = 0; M.raiders.push(a.id); }
+      raidSay(M, `The door is yours. ${M.raiders.length} raiders storm the nest.`);
+      P.msg = `Your crew storms the ${R.name.toLowerCase()}’ nest!`; s.events.push('attack');
+    }
+    return;
+  }
+  if (M.phase !== 'inside') return;
+  M.rT -= dt; if (M.rT > 0) return; M.rT = RAID.round; M.round++;
+  const raiders = M.raiders.map(id => s.ants.find(a => a.id === id)).filter(a => a && a.state === 'away');
+  if (!raiders.length){ raidSay(M, 'Your last raider falls.'); endRaid(s, 'lost'); return; }
+  // Their guards inside: soldiers first; a swarm sends everyone.
+  const inside = s.ants.filter(a => a.team === r.team && a.state === 'in');
+  const guards = inside.filter(a => CASTES[a.caste].fight >= 3 || R.swarm || R.fierce);
+  const def = guards.length ? guards : inside.slice(0, Math.ceil(inside.length/3));
+  // Everyone on both sides fights in pairs; ganging up counts as in a duel on the surface.
+  for (const a of raiders) a.foeId = 0;
+  const order = raiders.slice().sort(() => Math.random() - 0.5);
+  let crits = 0, felled = 0, lost = 0; const free = [];
+  order.forEach((a, i) => { if (!def.length) { free.push(a); return; } a.foeId = def[i % def.length].id; });
+  duelGangs(s);
+  for (const a of order){
+    if (!a.foeId){ continue; }
+    const o = def.find(d => d.id === a.foeId); if (!o || o.state === 'dead'){ free.push(a); continue; }
+    const k = swing(s, a, o); if (k === 'crit') crits++; if (o.state === 'dead') felled++;
+    if (o.state !== 'dead' && a.state !== 'dead'){ swing(s, o, a); if (a.state === 'dead') lost++; }
+  }
+  // Raiders with nobody in front of them go for the prize.
+  let took = 0;
+  for (const a of free){
+    if (a.state === 'dead') continue;
+    if (M.prize === 'store' && M.loot.food < M.cap && r.store >= 1){ const n = Math.min(carryCap(s, a, { type: 'crumb' })*2, M.cap - M.loot.food, r.store); a.loot = (a.loot || 0) + n; M.loot.food += n; r.store -= n; took += n; }
+    else if (M.prize === 'brood' && M.broodLeft > 0 && !a.loot){ a.loot = 1; a.lootKind = 'brood'; M.loot.brood++; M.broodLeft--; if (r.eggQueue.length) r.eggQueue.pop(); else if (r.eggs.length) r.eggs.pop(); took++; }
+    else if (M.prize === 'queen' && r.queenAlive){
+      // The queen: 1d6 + Attack against her 1d6 + 4; she bites back at one raider a round.
+      const ra = 1 + Math.floor(Math.random()*6), rd = 1 + Math.floor(Math.random()*6), [atk] = duelStats(s, a);
+      if (ra + atk > rd + 4){ const dmg = bite(s, a)*3*(ra === 6 ? 2 : 1); r.qhp -= dmg; if (ra === 6){ crits++; s.colony.crits = (s.colony.crits || 0) + 1; } }
+    }
+  }
+  if (M.prize === 'queen' && r.queenAlive && free.length){ const v = free[Math.floor(Math.random()*free.length)]; const [, d] = duelStats(s, v); if (1 + Math.floor(Math.random()*6) + 3 > 1 + Math.floor(Math.random()*6) + d){ v.hp -= 4; if (v.hp <= 0){ killAnt(s, v, 'rival'); lost++; } } }
+  // One line a round: the best thing that happened.
+  const left = raiders.filter(a => a.state !== 'dead').length, gl = def.filter(d => d.state !== 'dead').length;
+  const hero = raiders.find(a => a.name && a.state !== 'dead');
+  let line = `Round ${M.round}: `;
+  if (crits) line += `${hero ? hero.name : 'a raider'} rolls a 6, crit! `;
+  if (felled) line += `${felled} guard${felled === 1 ? '' : 's'} fall${felled === 1 ? 's' : ''}. `;
+  if (lost) line += `${lost} raider${lost === 1 ? '' : 's'} fall${lost === 1 ? 's' : ''}. `;
+  if (took && M.prize === 'store') line += `+${Math.round(took)} food grabbed. `;
+  if (took && M.prize === 'brood') line += `${took} pupa${took === 1 ? '' : 'e'} taken. `;
+  if (M.prize === 'queen' && free.length && r.queenAlive) line += `The queen: ${Math.max(0, Math.ceil(r.qhp))} health. `;
+  if (line === `Round ${M.round}: `) line += gl ? `${left} raiders against ${gl} guards. Mandibles locked.` : 'The halls are clear.';
+  raidSay(M, line.trim());
+  if (M.prize === 'queen' && r.queenAlive && r.qhp <= 0){ queenFalls(s, r); raidSay(M, 'The queen is dead!'); endRaid(s, 'won'); return; }
+  if (M.prize === 'store' && (M.loot.food >= M.cap || r.store < 1)){ raidSay(M, 'Their store is stripped.'); endRaid(s, 'done'); return; }
+  if (M.prize === 'brood' && M.broodLeft <= 0 && !free.some(a => !a.loot)){ raidSay(M, 'No more brood to take.'); endRaid(s, 'done'); return; }
+  if (M.prize === 'brood' && raiders.every(a => a.state === 'dead' || a.loot)){ raidSay(M, 'Every raider has a pupa.'); endRaid(s, 'done'); return; }
+  if (M.round >= RAID.maxRounds){ raidSay(M, 'Worn out, your raiders fall back.'); endRaid(s, 'out'); }
+}
+function pullOut(s){ const M = s.myRaid; if (!M) return false; if (M.phase === 'inside'){ raidSay(M, 'You pull your raiders out.'); endRaid(s, 'out'); } else endRaid(s, 'called off'); return true; }
+// The raid ends: survivors come out at the door carrying what they took, and head home.
+function endRaid(s, how){
+  const M = s.myRaid; if (!M) return; const r = s.rivals[M.team - 1], R = RIVALS[M.team - 1], P = s.player, c = s.colony;
+  const out = M.raiders.map(id => s.ants.find(a => a.id === id)).filter(a => a && a.state === 'away');
+  for (const a of out){
+    a.x = (r.ex + 0.5)*T + (Math.random() - 0.5)*T; a.y = (r.ey + 0.5)*T + (Math.random() - 0.5)*T; a.tx = r.ex; a.ty = r.ey; a.foeId = 0;
+    if (a.loot){ a.carry = a.loot; a.kind = a.lootKind === 'brood' ? 'brood' : 'food'; a.itype = a.lootKind === 'brood' ? 'pupa' : 'crumb'; a.state = 'return'; a.explore = 0; }
+    else if (P.ant && !P.inNest && Math.hypot(P.ant.x - a.x, P.ant.y - a.y) < 16*T){ a.state = 'follow'; a.follow = true; }
+    else a.state = 'return';
+    a.loot = 0; a.lootKind = null;
+  }
+  const theirs = s.ants.filter(a => a.team === r.team && a.state !== 'dead').length, lost = deathTotal(c) - M.start.lost, killed = (r.deaths.war || 0) - M.start.killed, crits = (c.crits || 0) - M.start.crits;
+  const got = M.loot.food ? `${Math.round(M.loot.food)} food` : M.loot.brood ? `${M.loot.brood} pupa${M.loot.brood === 1 ? '' : 'e'}` : '';
+  s.report = { kind: 'myraid', how, team: M.team, name: R.name, prize: M.prize, food: Math.round(M.loot.food), brood: M.loot.brood, lost, killed, crits, before: M.start.theirs, after: theirs, rounds: M.round, t: s.t };
+  c.raidsLed = (c.raidsLed || 0) + 1;
+  const head = how === 'won' ? `You took the ${R.name.toLowerCase()}’ nest!` : how === 'lost' ? `Your raid on the ${R.name.toLowerCase()} failed.` : how === 'broken' || how === 'called off' ? `The raid on the ${R.name.toLowerCase()} broke at the door.` : `Raid on the ${R.name.toLowerCase()}:`;
+  P.msg = `${head}${got ? ` ${out.length} raider${out.length === 1 ? '' : 's'} carry home ${got}.` : ''} Lost ${lost}, killed ${killed}${crits > 0 ? ` (${crits} crit${crits === 1 ? '' : 's'})` : ''}. Their numbers: ${M.start.theirs} → ${theirs}.`;
+  s.events.push('report');
+  // They strike back, a few minutes on, if they still can.
+  if (r.queenAlive) r.revengeAt = s.t + 90 + Math.random()*120;
+  M.phase = 'over'; s.lastRaid = M; s.myRaid = null; if (P.attack && P.attack.kind === 'door') P.attack = null;
+}
+function queenFalls(s, r){
+  const R = RIVALS[r.team - 1], c = s.colony, P = s.player;
+  r.qhp = 0; r.queenAlive = false;
+  const ai = areaOf(s, r.ex, r.ey); if (!s.outposts.some(o => o.region === ai)) addOutpost(s, r.ex, r.ey, true);
+  c.kills.queens = (c.kills.queens || 0) + 1;
+  if (r.team === 1){ s.won = true; s.patioDeadAt = s.t; gainGenes(s, 5, 'the rival queen is dead'); P.msg = 'The rival queen is dead. The yard is yours.'; }
+  else { gainGenes(s, 3, 'the ' + R.name.toLowerCase() + '’ queen is dead'); P.msg = `The ${R.name.toLowerCase()}’ queen is dead. Their nest is yours.`; s.events.push('held'); }
 }
 function spark(s, by, x, y, k){
   if (by){ if (s.t - (by.sparkT || -9) < 0.3) return; by.sparkT = s.t; }
@@ -2537,7 +2682,7 @@ function stats(s){
 function serialize(s){
   return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
-    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads })),
+    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind })),
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
@@ -2549,6 +2694,7 @@ function deserialize(json){
   s.t = d.t; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
+  for (const a of s.ants) if (a.state === 'away'){ a.state = 'return'; a.follow = false; a.carry = a.loot || 0; a.kind = a.lootKind === 'brood' ? 'brood' : 'food'; a.loot = 0; } // build 28: a raid in progress isn't saved; its raiders walk home
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);
   s.lost = !!d.lost; if (d.mower) s.mower = d.mower; if (d.areaT) s.areaT = d.areaT; if (d.strikeT) s.strikeT = d.strikeT; s.player.big = s.player.ant && s.items.find(f => f.carried) || null;
   if (d.active) s.active = d.active;
@@ -2559,7 +2705,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

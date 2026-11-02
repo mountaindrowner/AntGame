@@ -52,13 +52,17 @@ test('carpenter ants are big and tough; odorous house ants small and weak', () =
   assert.ok(s.ants.filter((a) => a.team === 2).length > s.ants.filter((a) => a.team === 4).length * 3, 'odorous ants swarm');
 });
 
-test('eight fighters at a rival door kill its queen; its region can then be held', () => {
-  const s = founded(), r = s.rivals.find((x) => x.key === 'odorous');
+test('a queen raid kills a rival queen; its nest becomes an outpost', () => {
+  const s = founded(), r = s.rivals.find((x) => x.key === 'odorous'), P = s.player;
   s.patioDeadAt = s.t - 1800; step(s, 1);
   s.ants = s.ants.filter((a) => a.team !== r.team);
   r.qhp = 5;
-  for (let i = 0; i < 9; i++) { SIM.stress(s, 1); const a = s.ants[s.ants.length - 1]; Object.assign(a, { caste: 'soldier', state: 'patrol', tx: r.ex, ty: r.ey, x: (r.ex + 0.5) * SIM.T, y: (r.ey + 0.5) * SIM.T, hp: 99 }); }
-  step(s, 3);
+  // You and a crew of nine soldiers at their door.
+  P.inNest = false; const me = P.ant; Object.assign(me, { state: 'player', tx: r.ex, ty: r.ey + 2, x: (r.ex + 0.5) * SIM.T, y: (r.ey + 2.5) * SIM.T }); P.tx = me.x; P.ty = me.y;
+  for (let i = 0; i < 9; i++) { SIM.stress(s, 1); const a = s.ants[s.ants.length - 1]; Object.assign(a, { caste: 'soldier', state: 'patrol', tx: r.ex, ty: r.ey + 1, x: (r.ex + 0.5) * SIM.T, y: (r.ey + 1.5) * SIM.T, hp: 99 }); }
+  assert.ok(SIM.recruit(s, 9) >= 8);
+  assert.ok(SIM.startRaid(s, 'queen'), SIM.raidLock(s, 'queen'));
+  for (let i = 0; i < 20 * 20 && r.queenAlive; i++) { SIM.tick(s, 0.05); P.tx = me.x; P.ty = me.y; }
   assert.equal(r.queenAlive, false);
   assert.ok(s.outposts.some((o) => o.x === r.ex && o.y === r.ey), 'their nest becomes an outpost');
   assert.equal(s.won, false, 'only the pavement queen wins the yard');
