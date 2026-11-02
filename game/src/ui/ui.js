@@ -41,6 +41,14 @@ export function createUI(app) {
   const mk = (id, icon, tip) => { const b = document.createElement('button'); b.id = id; b.className = 'ico hidden'; setIcon(b, icon, tip); return b; };
   el.hold = mk('holdbtn', 'hold', 'Hold'); el.split = mk('splitbtn', 'split', 'Split'); el.follow = mk('followbtn', 'follow', 'Follow');
   el.release.after(el.hold, el.split, el.follow);
+  // Build 32: your ant's abilities, bottom left: click, or press 1–4. Aimed ones aim at the mouse.
+  el.skills = document.createElement('div'); el.skills.id = 'skills'; el.skills.className = 'hidden';
+  el.skills.innerHTML = SIM.ABILITY_KEYS.map((k, i) => `<button data-skill="${k}" class="skill"><span class="ic">${SIM.ABILITIES[k].icon}</span><b class="key">${i + 1}</b><i class="cd"></i><em class="secs"></em></button>`).join('');
+  document.body.appendChild(el.skills);
+  const cast = (k) => { const s = app.s, m = app.mouseWorld; if (SIM.useAbility(s, k, m ? m.x : null, m ? m.y : null)) sfx.play(k === 'alarm' ? 'raid' : k === 'dead' ? 'bonk' : 'charge'); else { const why = SIM.abilityLock(s, k); if (why) flash(SIM.ABILITIES[k].name + ': ' + why + '.', /: (ready in|outside only|nothing)/, 1500); } };
+  el.skills.addEventListener('click', (e) => { const b = e.target.closest('[data-skill]'); if (b) cast(b.dataset.skill); });
+  window.addEventListener('keydown', (e) => { if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || /input|textarea/i.test((e.target && e.target.tagName) || '')) return; const i = '1234'.indexOf(e.key); if (i >= 0 && app.view === 'surface' && !app.titleOpen) cast(SIM.ABILITY_KEYS[i]); });
+  for (const b of el.skills.querySelectorAll('[data-skill]')) { const A = SIM.ABILITIES[b.dataset.skill]; b.dataset.tip = `${A.name} (key ${SIM.ABILITY_KEYS.indexOf(b.dataset.skill) + 1}): ${A.line} Cooldown ${A.cd} s.`; b.setAttribute('aria-label', b.dataset.tip); }
   el.raidCard = document.createElement('div'); el.raidCard.id = 'raidcard'; el.raidCard.className = 'hidden'; document.body.appendChild(el.raidCard);
   setIcon(el.enter, 'enter', 'Enter nest'); setIcon(el.buildNest, 'dig', 'Build nest'); setIcon(el.queen, 'queen', 'Queen: lay eggs');
   setIcon(el.exitNest, 'exit', 'Exit nest'); setIcon(el.map, 'map', 'Yard map'); setIcon(el.menu, 'menu', 'Main menu: options, sound, new colony (Esc)'); setIcon(el.evolve, 'evolve', 'Goals and evolution'); setIcon(el.jobs, 'jobs', 'Jobs: what each kind of ant does first'); setIcon(el.zoom, 'zoom', 'Zoom'); setIcon(el.help, 'help', 'Help');
@@ -604,6 +612,10 @@ export function createUI(app) {
     const rt = SIM.raidTarget(s); el.raid.classList.toggle('hidden', !rt);
     if (rt) { const n = SIM.crewSize(s); setIcon(el.raid, 'raid', n >= SIM.RAID.minCrew ? `Raid the ${SIM.RIVALS[rt.team - 1].name} with your crew of ${n}` : `Raid: recruit a crew first (${n} of ${SIM.RAID.minCrew})`); el.raid.classList.toggle('dim', n < SIM.RAID.minCrew); }
     renderRaidCard();
+    { const outside = P().ant && !P().inNest && app.view === 'surface'; el.skills.classList.toggle('hidden', !outside);
+      if (outside) for (const b of el.skills.querySelectorAll('[data-skill]')) { const k = b.dataset.skill, A = SIM.ABILITIES[k], left = Math.max(0, ((P().cds || {})[k] || 0) - s.t);
+        const pct = left > 0 ? Math.round((left / A.cd) * 100) : 0; const cd = b.querySelector('.cd'); if (cd.dataset.p !== String(pct)) { cd.dataset.p = String(pct); cd.style.height = pct + '%'; }
+        const secs = left > 0 ? String(Math.ceil(left)) : ''; const se = b.querySelector('.secs'); if (se.textContent !== secs) se.textContent = secs; b.classList.toggle('ready', !left); } }
     if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', why ? 'Outpost: ' + why : 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('dim', !!why); }
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;

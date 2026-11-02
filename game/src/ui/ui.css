@@ -452,3 +452,13 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #raidcard .log { margin: 4px 0; font-weight: 500; color: #e8dcc4; font-size: 11px; }
 #raidcard .log div:last-child { color: #fff; font-weight: 700; }
 #raidcard button { display: inline-block; width: auto; height: auto; min-height: 0; min-width: 0; line-height: 1.2; box-shadow: none; margin-top: 4px; font: 800 11px ui-rounded, system-ui, sans-serif; background: #6d2a1e; color: #fff; border: 0; border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+
+/* Build 32: the ability bar. */
+#skills { position: fixed; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); z-index: 12; display: flex; gap: 6px; }
+#skills.hidden { display: none; }
+#skills .skill { position: relative; width: 46px; height: 46px; border-radius: 10px; border: 2px solid #1d1710; background: #f1e8d6; box-shadow: 0 3px 0 #1d1710; padding: 0; overflow: hidden; cursor: pointer; }
+#skills .skill .ic { font-size: 24px; line-height: 42px; }
+#skills .skill .key { position: absolute; left: 3px; top: 1px; font: 800 10px ui-rounded, system-ui, sans-serif; color: #6d5a40; }
+#skills .skill .cd { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: rgba(20, 12, 4, 0.62); pointer-events: none; }
+#skills .skill .secs { position: absolute; inset: 0; font: 900 15px/42px ui-rounded, system-ui, sans-serif; font-style: normal; color: #fff; text-shadow: 0 1px 0 #000; pointer-events: none; }
+#skills .skill.ready { border-color: #2f7a3a; }

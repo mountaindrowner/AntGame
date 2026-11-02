@@ -2,6 +2,34 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: your ant's abilities (build 32)
+
+Mark: "The boss battles are basically rts and a kind of diablo esque. Maybe we need to give our main ant abilities the player can trigger that are based on him or the crowd or weakening the enemy like statuses."
+
+**Four abilities, one of each kind Mark named.** They sit in a bar at the bottom left. Click them, or press 1–4. Each has a cooldown, shown as a dark sweep with the seconds left.
+
+| | Ability | Kind | What it does | Cooldown |
+|---|---|---|---|---|
+| 1 | 🧪 **Formic Spray** | weakens the enemy | An acid cloud where the mouse points (up to 6 tiles away, 2½ wide). Everything in it is **Exposed** for 6 s: it takes half again damage and has −1 Defence in duels, and rival ants also take 1 straight away. | 10 s |
+| 2 | 📯 **Alarm Call** | the crowd | Your crew and fighters within 8 tiles, and you, **Frenzy** for 8 s: +2 Attack in duels, bites 30% harder, 25% faster. | 24 s |
+| 3 | 🦷 **Mandible Lock** | control | Grab the nearest enemy within 2½ tiles: **Stunned**. Ants, bugs and the spider are held for 2½ s and can't swing. A boss is held for 1½ s, and **the attack it was winding up is cancelled**: the answer to a telegraph you can't dodge. | 16 s |
+| 4 | 💀 **Play Dead** | yourself | You flip on your back: for 3 s nothing hurts you and bosses look past you. You heal 30%. | 30 s |
+
+**Statuses work on everything:** rival ants, zombies, bugs, the spider, the caterpillar and every boss.
+
+**On screen:**
+- Exposed things wear a yellow-green ring.
+- Stunned things have stars circling over them.
+- Frenzied ants wear a red ring.
+- **Casts:** the spray is a drifting green cloud, the alarm call sends red rings outward, and the lock a white flash.
+- Help has a line on them, and the tutorial has a step.
+
+**Not yet:** abilities that unlock or upgrade over time (through your ant's upgrades or evolution), and more of them. These four are there from the start.
+
+**Checks:**
+- 132 tests, 5 new (`tests/abilities.test.js`): the spray exposes only what's in the cloud, then cools down; exposed means half again damage in a duel; the alarm call frenzies nearby crew (+30% bite); a lock on Old Warty cancels his wind-up and holds him still; and while playing dead nothing hurts or kills you, and you heal.
+- A browser run used all three attack abilities on Old Warty with keys 1–3, with no errors. It showed the bar and cooldown numbers, Warty exposed and stunned (stars), and 9 frenzied ants. Big rings now draw as thin outlines, after a first try drew them as thick red bands.
+
 ## Nov 2: Old Warty, guardian of the Wet Edge (build 31)
 
 Mark: "go". This is the second new guardian from `COMBAT.md`.

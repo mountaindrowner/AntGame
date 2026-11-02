@@ -112,6 +112,7 @@ export function attachPointer(canvas, app, ui, views) {
 
   canvas.addEventListener('pointermove', (e) => {
     const p = ptrs.get(e.pointerId);
+    if (e.pointerType === 'mouse' && app.view === 'surface') { const w = surfacePoint(e); if (w) app.mouseWorld = w; } // build 32: where abilities aim
     if (!p) { if (e.pointerType === 'mouse') hoverAt(e); return; }
     p.x = e.clientX;
     p.y = e.clientY;

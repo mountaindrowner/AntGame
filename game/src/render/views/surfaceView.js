@@ -419,6 +419,7 @@ export class SurfaceView {
         if (a.zombie) { tmpQ.multiply(tmpQ3.setFromAxisAngle(UP, Math.sin(t * 23 + a.id) * 0.35)); if (a.clamp) tmpV.y += 3; } }
       // Build 27: mandibles locked, the two shove back and forth.
       if (a.lockT > 0) { const sh = Math.sin(t * 40 + a.id) * 1.6; tmpV.x += a.dx * sh; tmpV.z += a.dy * sh; tmpV.y += 1; }
+      if (a.isPlayer && a.feign > s.t) { tmpQ.multiply(tmpQ3.setFromAxisAngle(XAX, Math.PI)); tmpV.y += 3; } // build 32: playing dead
       if (a.knockT > 0) { const u = 1 - a.knockT / 0.3; tmpQ.multiply(tmpQ3.setFromAxisAngle(XAX, u * Math.PI * 2)); tmpV.y += Math.sin(u * Math.PI) * 6; }
       // Still ants stand and breathe instead of walking on the spot.
       this.crowd.pushAtScale(plan + frame, antGeometry(plan, frame), tmpV, tmpQ, k * (1 + 0.012 * b), k * (1 + 0.04 * b), k * (1 + 0.025 * b), color);
@@ -512,6 +513,7 @@ export class SurfaceView {
     this._fx(s, t, fdt);
     this._bosses(s, t, fdt);
     this._reticle(s, t);
+    this._status(s, t);
     this._curios(s, t);
     this._strikes(s, t, fdt);
     this.bugs.end(); this.fx.end(); this.dustFx.end();
@@ -964,6 +966,27 @@ export class SurfaceView {
     for (let i = 0; i < 4; i++) { const tick = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.1).rotateX(-Math.PI / 2).translate(1.12, 0, 0), rmat); tick.rotation.y = (i * Math.PI) / 2; ret.add(tick); }
     for (const m of ret.children) m.renderOrder = 7;
     ret.visible = false; this.reticle = ret; this.dyn.add(ret);
+  }
+
+  // Build 32: abilities. Exposed things wear a sickly yellow-green ring; stunned ones have stars
+  // circling over them; frenzied ants a red ring. Casts: an acid cloud, the alarm's red rings.
+  _status(s, t) {
+    const F = this.fx, now = s.t;
+    if (!this.thinRingGeo) this.thinRingGeo = new THREE.RingGeometry(0.93, 1, 48).rotateX(-Math.PI / 2);
+    // Small rings use the chunky prop ring; big ones a thin outline (a chunky one that size is a red band).
+    const ringAt = (x, y, r, col) => { tmpV.set(x, 0.9, y); if (r > 14) F.pushAt('thinring', this.thinRingGeo, tmpV, tmpQ2.identity(), r, col); else F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), r, col); };
+    const stars = (x, y, h, r) => { for (let j = 0; j < 3; j++) { const a = t * 5 + j * 2.1; tmpV.set(x + Math.cos(a) * r, h, y + Math.sin(a) * r); tmpQ.copy(this.camera.quaternion); F.pushAt('star', FOOD.star, tmpV, tmpQ, 4.5, '#fff6a0'); } };
+    const mark = (o, rr, h) => { if (o.exposed > now) ringAt(o.x, o.y, rr * (1 + 0.06 * Math.sin(t * 8)), '#c8e040'); if (o.stunned > now) stars(o.x, o.y, h, rr * 0.6); };
+    for (const a of s.ants) { if (a.state === 'dead' || a.state === 'in' || a.state === 'nest' || a.state === 'build' || a.state === 'away') continue;
+      if (a.team || a.zombie) mark(a, 7, 9); else if (a.frenzy > now) ringAt(a.x, a.y, 6.5, '#ff4a30'); }
+    for (const b of s.critters || []) mark(b, 12, 14);
+    if (s.spider) mark(s.spider, 30, 30);
+    if (s.cat) mark(s.cat, 22, 18);
+    for (const k in s.bosses || {}) { const b = s.bosses[k]; if (!b.dead) mark(b, (SIM.BOSSES[k].r + 0.6) * T, 120); }
+    for (const c of s.casts || []) { const u = (now - c.t) / (c.key === 'spray' ? 1.2 : 0.8); if (u < 0 || u > 1) continue;
+      if (c.key === 'spray') { for (let j = 0; j < 14; j++) { const a = j * 0.45 + c.t, rr = c.r * (0.3 + 0.7 * ((j * 0.37) % 1)) * (0.5 + 0.5 * u); tmpV.set(c.x + Math.cos(a) * rr, 4 + 10 * u + (j % 3) * 3, c.y + Math.sin(a) * rr); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 5 * (1 - u) + 2, j % 2 ? '#d8f060' : '#a8d040'); } ringAt(c.x, c.y, c.r * (0.6 + 0.4 * u), '#c8e040'); }
+      else if (c.key === 'alarm') { ringAt(c.x, c.y, c.r * u, '#ff4a30'); ringAt(c.x, c.y, c.r * u * 0.6, '#ff8a50'); }
+      else if (c.key === 'lock') { tmpV.set(c.x, 10, c.y); tmpQ.copy(this.camera.quaternion); F.pushAt('star', FOOD.star, tmpV, tmpQ, 18 * (1 - u) + 4, '#ffffff'); } }
   }
 
   _reticle(s, t) {
