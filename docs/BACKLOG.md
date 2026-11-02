@@ -12,7 +12,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 - **The grand arc** (yard → house → neighbourhood → city → world → space). This needs a design document first.
 - **Combat plan (`COMBAT.md`):** crew attack (26), duels (27) and raids (28) are built. Still to build:
   - the zone frame: 13 zones, a crest per zone on the map, "Zones taken", hazards easing when a guardian falls, and the Phase 1 end screen;
-  - the new guardians: the Old Robin (built, build 30), Old Warty (build 31), the praying mantis (build 34) and the black widow (build 35); the giant centipede still to come, plus the yellowjackets if wanted.
+  - the new guardians: the Old Robin (built, build 30), Old Warty (build 31), the praying mantis (build 34), the black widow (build 35) and the giant centipede (build 36). All done; the yellowjackets are optional.
   - Crew orders: built (build 29). Formations were left out.
 - **Sit-downs Mark asked for:**
   - the War camp and the other rooms left

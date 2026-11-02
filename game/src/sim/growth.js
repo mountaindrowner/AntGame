@@ -202,6 +202,8 @@ export const GUARDIANS = {
   oak: ['the carpenter ants’ queen', (s) => !rivalAlive(s, 'carpenter')],
 };
 // Build 30: the Great Lawn's regions are held once the Old Robin is driven off.
+// Build 36: the Rot (the leaves and the compost), once the giant centipede is dead.
+for (const k of ['leaves', 'leaves2', 'compost']) GUARDIANS[k] = ['the giant centipede', (s) => (s.colony.kills.centipede || 0) >= 1];
 // Build 35: the Side Yard, once the black widow is dead.
 for (const k of ['shed', 'side2', 'side3', 'side4']) GUARDIANS[k] = ['the black widow', (s) => (s.colony.kills.widow || 0) >= 1];
 // Build 34: the Hedge Row, once the mantis is dead.

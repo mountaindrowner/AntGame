@@ -115,7 +115,7 @@ This answers "what does the robin do?" Robins stay a hazard on the lawn, and the
 - **Zone eases:** no more bug spray in the shed.
 - **Trophy, widow's silk:** a web at your door. Raiders stick in it for 3 seconds.
 
-### The giant centipede (zone 13)
+### The giant centipede (zone 13). Built, build 36
 - **Lair:** deep in the leaves.
 - **Moves:**
   - **Coil:** a ring shows, then it strikes outward.

@@ -12,7 +12,7 @@ import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../mode
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
 import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
-import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry, widowGeometry } from '../models/bosses.js';
+import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry, widowGeometry, centipedeGeometry } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
@@ -1223,6 +1223,39 @@ export class SurfaceView {
         // Stuck ants: a white ring.
         for (const a of s.ants) if (a.webT > s.t && a.state !== 'dead' && a.state !== 'away') { tmpV.set(a.x, 0.9, a.y); this.fx.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), 6, '#f0f0f0'); }
         if (!wd.dead && wd.hp < wd.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], wd.x, wd.y, 50 + y, wd.hp / wd.maxHp, '#b04ad0');
+      }
+    }
+    // The giant centipede (build 36): the head where it is, the rest of its segments laid back along the
+    // path its head took; their legs ripple. It curls round itself when it coils.
+    const cp = B.centipede;
+    if (cp && !this.centi) {
+      const mat = psx({ vertexColors: true });
+      this.centiGeo = { head: centipedeGeometry('head'), seg: [centipedeGeometry('seg', 0), centipedeGeometry('seg', 1)], tail: centipedeGeometry('tail') };
+      this.centi = Array.from({ length: 6 }, (_, i) => { const m = new THREE.Mesh(i ? this.centiGeo.seg[0] : this.centiGeo.head, mat); m.visible = false; this.dyn.add(m); return m; });
+      this.centiMat = mat;
+    }
+    if (this.centi) {
+      const show = cp && (!cp.dead || s.t - cp.deadT < 14), K = 11, gap = 22;
+      for (const m of this.centi) m.visible = false;
+      if (show) {
+        tele(cp);
+        const n = cp.dead ? 6 : Math.max(1, cp.segs ?? 6), coil = cp.atk && cp.atk.kind === 'ring';
+        const path = (cp.path || []).slice().reverse(); const pts = [[cp.x, cp.y]];
+        // Walk back along the path, one segment every gap pixels.
+        let acc = 0, prev = [cp.x, cp.y];
+        for (const p of path) { const d = Math.hypot(p[0] - prev[0], p[1] - prev[1]); acc += d; prev = p; if (acc >= gap) { pts.push(p); acc = 0; if (pts.length >= n) break; } }
+        while (pts.length < n) { const l = pts[pts.length - 1], a = Math.atan2(-(cp.dy || 0), -(cp.dx ?? 1)) + (coil ? pts.length * 0.9 : 0); pts.push([l[0] + Math.cos(a) * gap, l[1] + Math.sin(a) * gap]); }
+        if (coil) for (let i = 1; i < pts.length; i++) { const a = Math.atan2(-(cp.dy || 0), -(cp.dx ?? 1)) + i * 1.05, rr = 14 + i * 3; pts[i] = [cp.x + Math.cos(a) * rr, cp.y + Math.sin(a) * rr]; }
+        const col = !cp.dead && flashed(s, cp) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : coil ? '#fff0c0' : '#ffffff';
+        this.centiMat.color.set(col);
+        for (let i = 0; i < n && i < 6; i++) {
+          const m = this.centi[i], [x, z] = pts[i], ahead = i ? pts[i - 1] : [cp.x + (cp.dx ?? 1) * 10, cp.y + (cp.dy || 0) * 10];
+          m.visible = true;
+          if (i) m.geometry = i === n - 1 && n > 1 ? this.centiGeo.tail : this.centiGeo.seg[(Math.floor(t * 10) + i) % 2];
+          m.position.set(x, cp.dead ? -Math.max(0, (s.t - cp.deadT - 10) / 4) * 10 : 0, z);
+          m.rotation.set(cp.dead ? Math.PI : 0, -Math.atan2(ahead[1] - z, ahead[0] - x), 0); m.scale.setScalar(K);
+        }
+        if (!cp.dead && cp.hp < cp.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], cp.x, cp.y, 40, cp.hp / cp.maxHp, '#b04ad0');
       }
     }
     // Hornworm goo.

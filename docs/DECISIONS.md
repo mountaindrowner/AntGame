@@ -2,6 +2,33 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the giant centipede, guardian of the Rot (build 36)
+
+Mark: "Go". This is the last guardian on the `COMBAT.md` list, with a new model. Every zone in the plan now has its guardian. (The yellowjacket nest was always optional.)
+
+**The fight:**
+- **Lair:** Deep in the Leaves. It rules the Rot: the Leaf Pile, Deep in the Leaves and the Compost Heap.
+- **Six segments of 90 health each:**
+  - Every 90 damage cuts the tail segment off. It drops as a chunk of meat (12 protein), and the message says "A segment breaks off! 5 left, and it's faster."
+  - Each lost segment makes it 15% faster.
+  - At two segments it goes **frantic** (phase 2): shorter wind-ups and quicker attacks.
+- **Coil:** with 3 or more ants close, or one right by it, it coils and shows a ring, then lashes out (5 damage and a shove). **While coiled its joints are open: bites do double.** The bar says "COILED, JOINTS OPEN: BITE, THEN JUMP CLEAR!", so you have a choice: bite and get hurt, or dodge.
+- **Rush:** a lane, then it races down it at speed, biting everything it passes. Bites while it rushes do 60%.
+
+**What you get:**
+- **The centipede's fang:** your Venom ants stun whatever they bite for 1 second.
+- **The Rot eases:** no more toads in the leaves, and the Rot can be held.
+- Plus 100 meat (on top of the segment chunks), 30 chitin, 4 genes and a Legend ("Centipede-cutter").
+
+**The model** (`centipedeGeometry`):
+- **Pieces:** a head with long antennae and curved venom claws; flat armoured segments with one pair of legs each; and a tail with long legs trailing back.
+- **Movement:** the segments follow the path its head took, their legs ripple, and it curls round itself when it coils.
+- **Colours:** the first try was brown and lost in the leaf litter. It's now dark-backed with bright orange legs and band, a red head, and a third bigger.
+
+**Checks:**
+- 150 tests, 5 new (`tests/centipede.test.js`): it rules the Rot; damage cuts segments (meat drops, frantic at two); coiled it takes double; it rushes down its lane biting; and beaten, Venom ants stun.
+- A browser run showed segments breaking off, the coil ring and the bar lines, with no errors.
+
 ## Nov 2: the black widow, guardian of the Side Yard (build 35)
 
 Mark: "Go". This is the fourth new guardian, with a new model.
