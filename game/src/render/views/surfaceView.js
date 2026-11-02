@@ -10,7 +10,7 @@ import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
-import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI } from '../models/critters.js';
+import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI, jumperGeometry, assassinGeometry } from '../models/critters.js';
 import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
 import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry, widowGeometry, centipedeGeometry, CENTI_FRAMES } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
@@ -46,6 +46,8 @@ const BUG = {
   earwig: { k: 2.2, stride: 12, bar: 18, back: 2.7 },
   cricket: { k: 2.4, stride: 10, bar: 22, back: 5.4 },
   millipede: { k: 1.9, stride: 7, bar: 14, back: 2.6 },
+  jumper: { k: 3.0, stride: 9, bar: 20, back: 3.9 },     // build 37: hunters
+  assassin: { k: 2.7, stride: 11, bar: 20, back: 4.5 },
 };
 const HIT = '#ff7a6a';   // the flash on whatever a bite lands on
 // Under attack it flickers, so a long fight doesn't just turn it red.
@@ -153,6 +155,8 @@ export class SurfaceView {
       ew: walk((i) => earwigGeometry(i, 0)), ewUp: walk((i) => earwigGeometry(i, 0.85)), ewStill: earwigGeometry(-1, 0), ewSnap: earwigGeometry(-1, 1, true),
       cr: Object.fromEntries(['sit', 'walk0', 'walk1', 'crouch', 'leap', 'chirp'].map((p) => [p, cricketGeometry(p)])),
       mpHead: millipedeSegment('head', 0), mp: walk((i) => millipedeSegment('body', i)), mpTail: walk((i) => millipedeSegment('tail', i)),
+      js: walk((i) => jumperGeometry(i)), jsStill: jumperGeometry(-1), jsCrouch: jumperGeometry(-1, 'crouch'), jsLeap: jumperGeometry(-1, 'leap'),
+      ab: walk((i) => assassinGeometry(i)), abStill: assassinGeometry(-1), abStab: assassinGeometry(-1, 'stab'),
     };
     this.bugAnim = new Map();
     this.bugBars = Array.from({ length: 6 }, () => this._bar());
@@ -789,6 +793,7 @@ export class SurfaceView {
   // Build 16: ladybugs, earwigs, crickets and millipedes, live and dead.
   _critters(s, t, fdt) {
     const B = this.bugs, G = this.bugGeo, live = new Set();
+    this._hunterAtk = [];
     let bars = 0;
     const put = (geo, x, y, z, q, k, color, sy) => { tmpV.set(x, y, z); if (sy) B.pushAtScale(geo.uuid, geo, tmpV, q, k, k * sy, k, color); else B.pushAt(geo.uuid, geo, tmpV, q, k, color); };
     // yaw about up, then pitch (nose up +) about the body's side, then roll about its length.
@@ -835,7 +840,16 @@ export class SurfaceView {
           const chirp = s.t - (b.chirpAt ?? -9) < 0.9 && Math.floor(t * 14) % 2;
           put(chirp ? G.cr.chirp : G.cr.sit, b.x, 0, b.y, orient(A.yaw), k, color);
         }
+      } else if (b.kind === 'jumper') {
+        // Build 37: crouches (the tell), leaps in an arc, bites what it lands on.
+        if (b.state === 'hop') { const u = Math.min(1, b.t / 0.35); put(G.jsLeap, b.x, Math.sin(Math.PI * u) * 26, b.y, orient(A.yaw, 0.25 - u * 0.5), k, color); }
+        else if (b.atk) put(G.jsCrouch, b.x, 0, b.y, orient(A.yaw, 0.08 + Math.sin(t * 30) * 0.04), k, color);
+        else put(walking ? G.js[frame] : G.jsStill, b.x, 0, b.y, orient(A.yaw), k, color);
+      } else if (b.kind === 'assassin') {
+        const stab = b.held || (b.stabAt != null && s.t - b.stabAt < 0.3);
+        put(stab ? G.abStab : b.atk ? G.abStill : walking ? G.ab[frame] : G.abStill, b.x, 0, b.y, orient(A.yaw, b.atk ? 0.12 : 0), k, color);
       } else this._millipede(s, b, A, t, fdt, put, orient, color, walking);
+      if (b.atk && SIM.BUGS[b.kind].hunter) this._hunterAtk.push(b.atk); // drawn with the bosses' warnings
       if (b.hp < b.maxHp && bars < this.bugBars.length) this._placeBar(this.bugBars[bars++], b.x, b.y, K.bar + (b.kind === 'cricket' && b.state === 'hop' ? 30 : 0), b.hp / b.maxHp, '#f0b040');
     }
     for (const id of this.bugAnim.keys()) if (!live.has(id)) this.bugAnim.delete(id);
@@ -846,7 +860,7 @@ export class SurfaceView {
       const K = BUG[f.type], k = K.k * (0.55 + 0.45 * Math.min(1, f.amt / SIM.BUGS[f.type].meat)), x = (f.x + 0.5) * T, z = (f.y + 0.5) * T;
       const yaw = -(f.yaw || 0);
       if (f.type === 'millipede') { this._coil(x, z, yaw, k, put, orient, '#ffffff', 1, 0); continue; }
-      const geo = f.type === 'ladybug' ? G.lbStill : f.type === 'earwig' ? G.ewStill : G.cr.sit;
+      const geo = f.type === 'ladybug' ? G.lbStill : f.type === 'earwig' ? G.ewStill : f.type === 'jumper' ? G.jsStill : f.type === 'assassin' ? G.abStill : G.cr.sit;
       put(geo, x, K.back * k * 0.9, z, orient(yaw, 0, Math.PI), k, '#ffffff');
     }
   }
@@ -1265,6 +1279,7 @@ export class SurfaceView {
     for (const st of s.stalks || []) { const g = Math.min(1, st.t / 12), sw = st.t > 9 ? 1 + Math.sin(t * 18) * 0.08 * (st.t - 9) : 1; tmpV.set(st.x, 0, st.y); tmpQ.setFromAxisAngle(UP, st.id); this.bugs.pushAtScale('stalk', this.stalkGeo, tmpV, tmpQ, 3.6 * sw, 3.6 * (0.25 + 0.75 * g) * sw, 3.6 * sw, flashed(s, st) ? HIT : '#ffffff'); }
     for (const bu of s.bursts || []) { const u = (s.t - bu.t) / 1.6; if (u < 0 || u > 1) continue; for (let j = 0; j < 14; j++) { const a = j * 0.45 + bu.t, r = u * 3.5 * T * (0.6 + (j % 3) * 0.2); tmpV.set(bu.x + Math.cos(a) * r, 6 + u * 18 + (j % 4) * 3, bu.y + Math.sin(a) * r); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.6 * (1 - u * 0.5), '#e8e0a0'); } }
     // Spore puffs drifting from stalks close to bursting.
+    for (const k of this._hunterAtk || []) this._decal(di++, k, t, '#ff3020'); // build 37: hunters' warnings, in the decals left over
     for (const st of s.stalks || []) if (st.t > 6) for (let j = 0; j < 3; j++) { const u = ((t * 0.7 + j / 3) % 1); tmpV.set(st.x + Math.sin(j * 2 + t) * 6 * u, 20 + u * 16, st.y + Math.cos(j * 2 + t) * 6 * u); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 1.6, '#f0e8b0'); }
   }
 

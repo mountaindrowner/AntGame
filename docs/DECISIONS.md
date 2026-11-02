@@ -2,6 +2,42 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: hunters, the tier between bugs and bosses (build 37)
+
+Mark: "Can we have more like the wolf spider? Not full bosses or guardians but larger threats than ants but not full huge fights."
+
+**What a hunter is:**
+- It's a real yard predator of ants that roams its home regions and hunts.
+- It has one signature move, telegraphed on the ground like a boss's, and a small health bar. There's no banner, no phases and no zone to win.
+- A crew of 5–10 beats one, and it drops good meat. It comes back to its region 4 minutes after it's killed.
+- They're built on the small-creature system (`BUGS`, with `hunter: true` and a region list), so they spawn, respawn, take bites, show a card when hovered and can be crew-targeted like the earwig and the rest.
+
+**The first two:**
+- **Jumping spider** (the Patio, steps, porch, grill, cooler, stepping stones, gnomes, rock gardens): 60 health.
+  - It **crouches** while a lane shows on the ground (0.5 s), then **leaps up to 5 tiles** onto an ant and bites what it lands on.
+  - Next to an ant, it bites every second.
+  - It rests after 3 leaps. 25 protein.
+  - The model: chunky and fuzzy, black with a white band, two huge glossy front eyes, an orange-rimmed abdomen with white chevrons, and eight short thick legs. Poses: walking, crouched, and leaping.
+- **Assassin bug** (the vegetable rows, flowerbed, clovers, dandelions, daisies): 80 health and slow.
+  - It **stalks**, then a red dot shows on an ant (0.8 s), and its beak goes in: the ant is **impaled and drained**.
+  - **Bite the bug for 15 and it lets go.** Otherwise the ant is lost in a few seconds.
+  - 30 protein and 6 chitin.
+  - The model: long and narrow, a slim head on a neck, a curved beak (folded, or stabbing), orange-barred edges and long legs.
+
+**How they behave (tuned on the bots):**
+- **They eat:** after a kill a hunter stops for 8 seconds, still, which is the time to swarm it.
+- **They stay home:** a hunter only goes after ants within 12 tiles of where it lives, so it won't follow foragers back to the nest.
+- **Crowds drive them off:** with 5 or more of your ants on it (6 for the assassin) it backs off toward home.
+- **Why:** before this tuning, one jumping spider on a forager route killed 78 ants in a 45-minute bot run. After it, it killed 1 at most, and 3 of 4 bots reached 40 ants with 1 win, as usual.
+
+**Also fixed:** a critter with no first-time tip written crashed the tip code in the browser. The two hunters have tips now, and a missing tip is simply skipped.
+
+**Checks:**
+- 154 tests, 4 new (`tests/hunters.test.js`): their regions and spawning; the jumping spider's lane, leap and bite; the assassin's impale, drain and letting go when bitten; and a crowd killing one for meat and chitin.
+- A browser run showed both models, the assassin's red dot on an ant, and no errors after the fix.
+
+**Next:** the hunting wasp (it swoops from the air and carries an ant off; kill it when it lands to rest) and the skink (a lizard: it dashes and snaps, and drops its tail as a distraction when hurt).
+
 ## Nov 2: the centipede reshaped (build 36.1)
 
 Mark: "Centipede looks strange."

@@ -183,3 +183,58 @@ export function millipedeSegment(kind, frame) {
   }
   return bake(parts);
 }
+
+// ---------- jumping spider (build 37: a hunter) ----------
+// Chunky and fuzzy: black with a white band, two huge glossy front eyes, a
+// stripy abdomen, eight short thick legs (the front pair heaviest). pose:
+// walk frames, 'crouch' (cocked to leap), 'leap' (legs thrown out).
+const JS = { black: '#141214', fur: '#2a2628', white: '#e8e2d4', orange: '#d8742a', eye: '#060608', glint: '#ffffff', leg: '#1e1a1c' };
+export function jumperGeometry(frame = -1, pose = 'walk') {
+  const parts = [], crouch = pose === 'crouch', leap = pose === 'leap', h = crouch ? 1.4 : 2.0;
+  // Head-thorax: boxy, a white band across the back.
+  parts.push(blob([1.6, h + 0.4, 0], [1.7, 1.1, 1.5], [8, 6], (x, y) => (x < 0.6 && y > h + 0.7 ? JS.white : y > h + 1.1 ? JS.fur : JS.black)));
+  // The big front eyes, with a glint; two small ones above.
+  for (const side of [-1, 1]) {
+    parts.push(blob([3.15, h + 0.45, side * 0.55], [0.5, 0.55, 0.5], [6, 5], (x, y) => (x > 3.45 && y > h + 0.7 ? JS.glint : JS.eye)));
+    parts.push(blob([2.9, h + 1.2, side * 1.0], [0.22, 0.22, 0.22], [4, 3], JS.eye));
+    parts.push(strut(V(3.2, h - 0.3, side * 0.3), V(3.6, h - 0.8, side * 0.25), 0.2, 0.12, JS.orange, 3)); // pedipalps
+  }
+  // Abdomen: oval, white chevrons and an orange rim.
+  parts.push(blob([-1.5, h + 0.5, 0], [2.0, 1.35, 1.45], [9, 6], (x, y, z) => (Math.abs(z) > 1.25 ? JS.orange : y > h + 1.1 && Math.floor((x + 3) * 1.6) % 2 && Math.abs(z) < 0.7 ? JS.white : JS.fur)));
+  // Eight legs: short, thick, the front pair heaviest.
+  const HIPS = [[2.4, 0.8], [1.8, 1.0], [1.2, 1.0], [0.6, 0.8]], FEET = [[4.6, 2.4], [2.6, 3.3], [0.0, 3.4], [-2.4, 2.7]];
+  const ph = frame >= 0 ? (frame / BUG_WALK) * Math.PI * 2 : 0;
+  for (const side of [-1, 1]) for (let i = 0; i < 4; i++) {
+    let fx = FEET[i][0], fz = FEET[i][1], fy = 0;
+    if (frame >= 0){ const p = ph + ((i + (side > 0 ? 1 : 0)) % 2 ? Math.PI : 0); fx += Math.sin(p) * 0.6; fy = Math.max(0, Math.cos(p)) * 0.4; }
+    if (crouch) { fz += 0.4; fx += i < 2 ? 0.3 : -0.3; }
+    if (leap) { if (i < 2) { fx += 1.4; fy = 1.6; } else { fx -= 2.0; fy = 0.6; } }
+    parts.push(...leg(V(HIPS[i][0], h + 0.1, side * HIPS[i][1]), V(fx, fy, side * fz), crouch ? 1.0 : 1.4, i === 0 ? 0.42 : 0.32, 0.14, JS.leg, i === 0 ? JS.fur : JS.leg));
+  }
+  return bake(parts);
+}
+
+// ---------- assassin bug (build 37: a hunter) ----------
+// Long and narrow: a slim head on a neck, a curved beak folded under it (or
+// stabbed forward), a wide flat abdomen with orange-barred edges and folded
+// wings, six long thin legs and long antennae. pose: walk frames, 'stab'.
+const AB = { body: '#3a2414', dark: '#22140a', edge: '#e07a28', wing: '#5a3a20', beak: '#1a0e06', leg: '#4a2e18', eye: '#120806' };
+export function assassinGeometry(frame = -1, pose = 'walk') {
+  const parts = [], stab = pose === 'stab';
+  // Abdomen with the barred edges.
+  parts.push(blob([-2.2, 1.9, 0], [3.0, 0.65, 1.5], [10, 5], (x, y, z) => (Math.abs(z) > 1.2 ? (Math.floor((x + 6) * 1.4) % 2 ? AB.edge : AB.dark) : y > 2.2 ? AB.wing : AB.body)));
+  // Thorax, neck and slim head.
+  parts.push(blob([1.4, 2.2, 0], [1.2, 0.8, 1.0], [8, 5], AB.body));
+  parts.push(strut(V(2.4, 2.3, 0), V(3.6, 2.6, 0), 0.32, 0.26, AB.dark, 5));
+  parts.push(blob([4.3, 2.7, 0], [0.9, 0.42, 0.45], [7, 4], AB.body));
+  for (const side of [-1, 1]) {
+    parts.push(blob([4.4, 2.95, side * 0.4], [0.2, 0.2, 0.2], [4, 3], AB.eye));
+    const a0 = V(4.9, 2.9, side * 0.2), a1 = V(6.6, 4.4, side * 0.9), a2 = V(8.4, 4.0, side * 1.6);
+    parts.push(strut(a0, a1, 0.07, 0.05, AB.leg, 3), strut(a1, a2, 0.05, 0.03, AB.leg, 3));
+  }
+  // The beak: curled under the head, or stabbed forward.
+  if (stab) parts.push(strut(V(5.0, 2.5, 0), V(7.4, 1.4, 0), 0.16, 0.05, AB.beak, 4));
+  else { parts.push(strut(V(4.9, 2.45, 0), V(5.3, 1.9, 0), 0.15, 0.12, AB.beak, 3), strut(V(5.3, 1.9, 0), V(4.6, 1.6, 0), 0.12, 0.05, AB.beak, 3)); }
+  sixLegs(parts, frame, BUG_WALK, 1.9, [[1.9, 0.7], [1.2, 0.8], [0.4, 0.8]], [[4.2, 2.6], [1.0, 3.4], [-2.6, 3.4]], 1.5, 0.16, AB.leg, AB.leg, 0.9);
+  return bake(parts);
+}

@@ -474,7 +474,7 @@ function killAnt(s, a, cause){
     a.hp = 1; a.carry = 0; a.follow = false; a.infect = null; enterNest(s, a); s.colony.saved = (s.colony.saved || 0) + 1; if (s.colony.saved === 1) s.player.msg = 'Your medics carried a fallen ant home and saved it.'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
-  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.', mantis: 'The mantis caught you.', widow: 'The black widow bit you.', centipede: 'The centipede got you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
+  if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.', mantis: 'The mantis caught you.', widow: 'The black widow bit you.', centipede: 'The centipede got you.', jumper: 'A jumping spider got you.', assassin: 'An assassin bug got you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
   if (!a.team){ const i = idx(Math.min(W-1,Math.max(0,Math.floor(a.x/T))), Math.min(H-1,Math.max(0,Math.floor(a.y/T)))); s.alarm[i] += 3; s.hot.add(i); }
   const c = colonyOf(s, a); c.deaths[cause] = (c.deaths[cause]||0) + 1;
   // Build 24. A rival killed near its own nest: the War camp loots its food; Brood raiding brings back its brood.
@@ -1840,7 +1840,12 @@ const BUGS = {
   earwig:   { name: 'earwig', hp: 18, speed: 14, rush: 48, meat: 15, reach: 1.5, pinch: 2, pinchEvery: 1.6, ground: /bark|mulch|compost|soil|hedge|leaf/ },
   cricket:  { name: 'cricket', hp: 9, speed: 0, meat: 25, reach: 1.4, ground: /lawn|long|grass|wild/ },
   millipede:{ name: 'millipede', hp: 30, speed: 7, meat: 20, reach: 1.9, armour: 0.35, ground: /compost|mulch|bark|soil|mud|wet|hedge|leaf/ },
+  // Build 37: hunters. Bigger than a bug, smaller than a boss: they hunt your ants, one move each, a crew
+  // of five to ten beats them, and they come back after a while. They live in regions (by key), not ground.
+  jumper:   { name: 'jumping spider', hp: 60, speed: 22, meat: 25, reach: 1.6, hunter: true, regions: /^(patio|steps|porch|grill|cooler|stones|gnomes|rockgarden2?)$/ },
+  assassin: { name: 'assassin bug', hp: 80, speed: 9, meat: 30, chitin: 6, reach: 1.8, hunter: true, regions: /^(tomatoes|beans|peppers|herbs|flowerbed|clover|cloverhill|dandelions|daisies)$/ },
 };
+const HUNTER_BACK = 240; // seconds before a killed hunter's region gets another
 // A bright spark where a bite lands (the renderer draws them). One every so
 // often per biter, so a crowd on the spider reads as a scrap, not a fire.
 // Build 27: ant against ant is a duel of dice (Mark: "it should be something. Dice rolls against each
@@ -2150,7 +2155,9 @@ function bugSlots(s, ai){
   const g = AREAS[ai].ground || '', out = [];
   if (s.items.some(f => f.type === 'aphids' && s.world.area[idx(f.x,f.y)] === ai)) out.push('ladybug');
   for (const k of ['earwig', 'cricket', 'millipede']) if (BUGS[k].ground.test(g)) out.push(k);
-  return out.slice(0, 3);
+  const bugs = out.slice(0, 3);
+  for (const k in BUGS) if (BUGS[k].hunter && BUGS[k].regions.test(AREAS[ai].key)) bugs.push(k);
+  return bugs;
 }
 function placeBug(s, ai, k, hidden){
   const w = s.world, b = areaBounds(ai), B = BUGS[k], P = s.player, pa = P.ant && !P.inNest ? P.ant : null;
@@ -2160,7 +2167,7 @@ function placeBug(s, ai, k, hidden){
     if (aph){ if (!aph.length) return false; const f = aph[Math.floor(Math.random()*aph.length)]; x = Math.round(f.x + Math.cos(ang)*5); y = Math.round(f.y + Math.sin(ang)*5); }
     else { x = b.x0 + 4 + Math.floor(Math.random()*(AREA - 8)); y = b.y0 + 4 + Math.floor(Math.random()*(AREA - 8)); }
     if (x < b.x0 + 2 || y < b.y0 + 2 || x > b.x1 - 2 || y > b.y1 - 2) continue;
-    if (!bugTile(s, (x+0.5)*T, (y+0.5)*T) || Math.hypot(x - w.ex, y - w.ey) < (k === 'earwig' ? 30 : 14) || Math.hypot(x - w.rx, y - w.ry) < 8) continue;
+    if (!bugTile(s, (x+0.5)*T, (y+0.5)*T) || Math.hypot(x - w.ex, y - w.ey) < (k === 'earwig' || B.hunter ? 30 : 14) || Math.hypot(x - w.rx, y - w.ry) < 8) continue;
     if (s.critters.some(o => Math.hypot(o.x/T - (x+0.5), o.y/T - (y+0.5)) < 12)) continue;
     if (hidden && pa && Math.hypot(pa.x/T - x, pa.y/T - y) < 18) continue;
     s.critters.push({ id: s.nextId++, kind: k, region: ai, hx: x, hy: y, x: (x+0.5)*T, y: (y+0.5)*T, dx: Math.cos(ang), dy: Math.sin(ang), hp: B.hp, maxHp: B.hp, state: hidden && k === 'ladybug' ? 'land' : 'walk', t: Math.random()*5, life: 0 });
@@ -2177,7 +2184,7 @@ function spawnBugs(s, dt){
     for (const k of bugSlots(s, ai)){
       const key = ai + ':' + k, at = gone[key];
       if (at == null || s.critters.some(o => o.region === ai && o.kind === k)) continue;
-      if (s.t - at < BUG_BACK[0] + (ai * 37 % 60)) continue;
+      if (s.t - at < (BUGS[k].hunter ? HUNTER_BACK : BUG_BACK[0]) + (ai * 37 % 60)) continue;
       // Ladybugs fly in where you can see; the rest turn up out of sight.
       if (placeBug(s, ai, k, k !== 'ladybug')) delete gone[key];
     }
@@ -2216,6 +2223,8 @@ function stepBugs(s, dt){
     if (b.kind === 'ladybug') stepLadybug(s, b, B, dt);
     else if (b.kind === 'earwig') stepEarwig(s, b, B, dt);
     else if (b.kind === 'cricket') stepCricket(s, b, B, dt);
+    else if (b.kind === 'jumper') stepJumper(s, b, B, dt);
+    else if (b.kind === 'assassin') stepAssassin(s, b, B, dt);
     else stepMillipede(s, b, B, dt);
   }
   for (const b of s.critters) if ((b.gone || b.hp <= 0) && b.region != null) s.bugGone[b.region + ':' + b.kind] = s.t;
@@ -2224,12 +2233,68 @@ function stepBugs(s, dt){
 function bugDies(s, b){
   const B = BUGS[b.kind], c = s.colony, P = s.player, x = Math.floor(b.x/T), y = Math.floor(b.y/T);
   s.items.push({ x, y, kind: 'protein', type: b.kind, amt: B.meat, yaw: Math.atan2(b.dy || 0, b.dx || 1) });
+  if (B.chitin){ const cx = x + 1; if (walk(s, cx, y) && !itemAt(s, cx, y)) s.items.push({ x: cx, y, kind: 'chitin', type: 'shell', amt: B.chitin }); }
+  if (b.held) assassinLets(s, b); // whatever it held is free
   for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < 3*T) gainXp(s, a, 8);
   if (picked(s, 'venom', 'hunter')) trailHome(s, b.x, b.y);
   if (!c.kills[b.kind]) gainGenes(s, 1, 'your first ' + B.name);
   c.kills[b.kind] = (c.kills[b.kind] || 0) + 1; b.gone = true;
   s.bugDead = { kind: b.kind, x: b.x, y: b.y, t: s.t };
   if (playerNear(s, b.x, b.y, 16) && (!P.msg || /down!|🧬/.test(P.msg))) P.msg = `${B.name.charAt(0).toUpperCase() + B.name.slice(1)} down! ${B.meat} protein: haul it home.`;
+}
+// Build 37: hunters. Each sees ants within 8 tiles; with five or more of your ants on top of it, it backs
+// off toward home for a few seconds. Their attacks are telegraphed (b.atk), drawn like a boss's.
+// After a kill a hunter stops to eat, 8 s, still and easy to bite.
+function hunterEats(s, b){ b.eatT = 8; b.state = 'eat'; b.atk = null; }
+const crowdOn = (s, b, r) => { let n = 0; for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < r*T) n++; return n; };
+// Leashed: it hunts only ants within 12 tiles of its home (it won't follow foragers back to your nest).
+function huntTarget(s, b, r){ let best = null, bd = r*T; const hx = (b.hx + 0.5)*T, hy = (b.hy + 0.5)*T; for (const a of s.ants){ if (a.team || !outside(a) || (a.isPlayer && a.feign > s.t) || Math.hypot(a.x - hx, a.y - hy) > 12*T) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < bd){ bd = d; best = a; } } return best ? [best, bd] : null; }
+// The jumping spider: a short crouch (the tell, a lane on the ground), then a leap of up to 5 tiles onto
+// an ant; it bites what it lands on. Between leaps it bites what's next to it.
+function stepJumper(s, b, B, dt){
+  const P = s.player;
+  if (b.eatT > 0){ b.eatT -= dt; if (b.eatT <= 0) b.state = 'walk'; return; }
+  if (b.state === 'hop'){ const u = Math.min(1, b.t/0.35); b.x = b.hx0 + (b.hx1 - b.hx0)*u; b.y = b.hy0 + (b.hy1 - b.hy0)*u;
+    if (u >= 1){ b.state = 'walk'; b.t = 0; b.cd = 2.4; b.leaps = (b.leaps || 0) + 1; b.landAt = s.t;
+      let killed = false; for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < 1.3*T){ hurtAnt(s, a, 6, 'jumper'); spark(s, null, a.x, a.y, 1); if (a.state === 'dead') killed = true; }
+      if (killed) hunterEats(s, b); else if (b.leaps >= 3){ b.leaps = 0; b.restT = 6; } }
+    return; }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.state = 'hop'; b.t = 0; b.hx0 = b.x; b.hy0 = b.y; b.hx1 = b.x + k.dx*k.len; b.hy1 = b.y + k.dy*k.len; return; }
+  b.cd = (b.cd || 0) - dt; b.biteCd = (b.biteCd || 0) - dt;
+  if (crowdOn(s, b, 3) >= 5 || b.restT > 0){ if (!(b.restT > 0)) b.restT = 4; b.restT -= dt; b.state = 'walk'; if (bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, 40, dt)) b.restT = 0; if (b.leaps >= 4) b.leaps = 0; return; }
+  const tg = huntTarget(s, b, 8);
+  if (!tg){ b.state = 'walk'; if (b.gx == null || bugMove(s, b, b.gx, b.gy, B.speed*0.6, dt)) bugWander(s, b, 6); return; }
+  const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
+  if (!b.warned && playerNear(s, b.x, b.y, 14)){ b.warned = true; P.msg = 'A jumping spider! When it crouches, it leaps: get out of its line.'; }
+  if (d < 1.4*T){ if (b.biteCd <= 0){ b.biteCd = 1.0; hurtAnt(s, a, 2.5, 'jumper'); spark(s, null, a.x, a.y, 1); b.pinchAt = s.t; if (a.state === 'dead') hunterEats(s, b); } return; }
+  if (b.cd <= 0 && d < 6*T){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: Math.min(5*T, d + 0.4*T), w: 1.3*T, t: 0, at: 0.5 }; b.state = 'crouch'; return; }
+  b.state = 'walk'; bugMove(s, b, a.x, a.y, B.speed, dt);
+}
+// The assassin bug: slow, it stalks. A red dot on an ant, then its beak goes in: the ant is held and
+// drained. Bite the bug for 15 and it lets go; otherwise the ant is lost in about four seconds.
+function assassinLets(s, b){ const H = b.held; b.held = null; if (!H) return; const a = s.ants.find(o => o.id === H.id); if (a && a.state !== 'dead'){ a.lockT = 0; a.impaled = false; shove(s, a, b.x, b.y, 1.5); } }
+function stepAssassin(s, b, B, dt){
+  const P = s.player;
+  if (b.eatT > 0 && !b.held){ b.eatT -= dt; if (b.eatT <= 0) b.state = 'walk'; return; }
+  if (b.held){ const H = b.held, a = s.ants.find(o => o.id === H.id);
+    if (!a || a.state === 'dead'){ b.held = null; b.cd = 3; return; }
+    a.x = b.x + b.dx*1.9*T; a.y = b.y + b.dy*1.9*T; a.lockT = 0.2; a.impaled = true;
+    a.hp -= 1.6*dt; a.hitT = s.t; if (a.isPlayer) P.hit = s.t;
+    if (a.hp <= 0){ a.impaled = false; killAnt(s, a, 'assassin'); b.held = null; b.cd = 3; hunterEats(s, b); return; }
+    if (H.hp0 - b.hp >= 15){ assassinLets(s, b); b.cd = 2; if (playerNear(s, b.x, b.y, 16)) P.msg = 'Bitten hard, the assassin bug lets go!'; }
+    return; }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.stabAt = s.t;
+    const a = s.ants.find(o => !o.team && outside(o) && Math.hypot(o.x - k.x, o.y - k.y) < k.r);
+    if (a){ if (a.isPlayer){ hurtAnt(s, a, 4, 'assassin'); b.cd = 2.5; } else { b.held = { id: a.id, hp0: b.hp }; if (playerNear(s, b.x, b.y, 16)) P.msg = 'The assassin bug has an ant on its beak! Bite it hard to make it let go.'; } }
+    else b.cd = 2; return; }
+  b.cd = (b.cd || 0) - dt;
+  if (crowdOn(s, b, 3) >= 6){ b.state = 'walk'; bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, B.speed*2, dt); return; }
+  const tg = huntTarget(s, b, 7);
+  if (!tg){ b.state = 'walk'; if (b.gx == null || bugMove(s, b, b.gx, b.gy, B.speed, dt)) bugWander(s, b, 5); return; }
+  const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
+  if (!b.warned && playerNear(s, b.x, b.y, 14)){ b.warned = true; P.msg = 'An assassin bug is stalking your ants. It stabs where the red dot shows.'; }
+  if (b.cd <= 0 && d < 2.2*T){ b.atk = { kind: 'ring', x: a.x, y: a.y, r: 1.0*T, t: 0, at: 0.8 }; b.state = 'stab'; return; }
+  b.state = 'walk'; bugMove(s, b, a.x, a.y, B.speed, dt);
 }
 // Ladybug: flies in by your aphids and eats them. Bitten to half, or full, it flies away.
 function stepLadybug(s, b, B, dt){

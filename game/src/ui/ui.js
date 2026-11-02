@@ -117,7 +117,7 @@ export function createUI(app) {
   const tipBusy = () => (app.tipUntil || 0) > performance.now();
   function showExplainer(key) {
     const s = app.s;
-    if (s.seen[key]) return;
+    if (s.seen[key] || !EXPL[key]) return; // (no tip written for it: nothing to show)
     if (tipsSeen[key]) { s.seen[key] = true; return; }
     if (tipBusy()) return; // one at a time; it shows the next time it comes up
     s.seen[key] = tipsSeen[key] = true;

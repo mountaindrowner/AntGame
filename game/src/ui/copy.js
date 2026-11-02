@@ -12,6 +12,8 @@ export const EXPL = {
   ladybug: ['Ladybug', 'It eats your aphids. Bite it, and it flies off. A crew drives it away fast.'],
   earwig: ['Earwig', 'It pinches any ant that comes close, and foragers keep clear of it. Bring fighters, or go round.'],
   cricket: ['Cricket', '25 protein, if you can catch it. It hops away; chase it and after five hops it’s worn out.'],
+  jumper: ['Jumping spider', 'A hunter. When it crouches, a lane shows: it leaps that way onto an ant. After a kill it stops to eat: that is the time to swarm it. Five ants on it and it backs off.'],
+  assassin: ['Assassin bug', 'A hunter. It stalks slowly, then stabs an ant on its beak and drains it. Bite the bug hard and it lets go.'],
   millipede: ['Millipede', 'Harmless. Bitten, it curls into an armoured ball and takes a third of the damage. 20 protein for a patient crew.'],
   raid: ['Rival raid', 'Pavement ants from the Patio. Keep Soldiers at your door or they reach the queen.'],
   queenhit: ['Queen under attack', 'Raiders got in. Lay Soldiers to guard the door.'],
