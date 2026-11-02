@@ -194,6 +194,8 @@ export const GUARDIANS = {
   trash: ['the odorous house ants’ queen', (s) => !rivalAlive(s, 'odorous')],
   oak: ['the carpenter ants’ queen', (s) => !rivalAlive(s, 'carpenter')],
 };
+// Build 30: the Great Lawn's regions are held once the Old Robin is driven off.
+for (const k of ['lawn', 'clover', 'molehills', 'dandelions', 'pool', 'sprinkler', 'fairyring', 'gnome', 'frisbee', 'bone', 'cloverhill', 'truck', 'bare', 'longgrass', 'daisies', 'lawnedge']) GUARDIANS[k] = ['the Old Robin', (s) => (s.colony.kills.robin || 0) >= 1];
 // Each held region's prize, for good while you hold it. The sim reads `fx`.
 const GARDEN = { text: 'Aphids here refill twice as fast and give twice the 🍯', fx: 'aphids' };
 const OAKS = { text: 'Acorns fall twice as often', fx: 'acorns' };

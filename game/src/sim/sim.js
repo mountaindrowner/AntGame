@@ -460,6 +460,8 @@ function addSugar(s, n){ const c = s.colony; c.sugar += n; c.sugarTotal += n; if
 function addChitin(s, n){ const c = s.colony; c.chitin += n; c.chitinTotal += n; if (!c.found.chitin){ c.found.chitin = true; s.events.push('chitin'); } }
 function killAnt(s, a, cause){
   if (a.state === 'dead') return;
+  // Build 30: with the Old Robin's feather, birds never take your ants.
+  if (cause === 'bird' && !a.team && s.colony.trophies.feather){ a.hp = Math.max(a.hp, 1); a.flee = 2; return; }
   // A Dodger slips the first foot, beak or acorn.
   if (!a.dodged && (cause === 'foot' || cause === 'bird' || cause === 'acorn' || cause === 'toad') && (promo(s, a, 'dodger') || (!a.team && a.caste === 'forager' && roomOf(s, 'armory')))){ a.dodged = true; a.flee = 2; return; }
   // Survivor: once a life, a killing blow leaves your ant at 1 health.
@@ -1749,6 +1751,7 @@ function tickStrikes(s, dt){
   for (const a of s.ants){ if (!outside(a)) continue; const r = w.area[idx(a.tx,a.ty)]; if (!out.has(r)) out.set(r, []); out.get(r).push(a); }
   // New visitors: each region's clock only runs while ants are about.
   for (let i=0;i<AREAS.length;i++){ const st = s.event && s.event.key === 'picnic' && s.event.data.region === i ? PICNIC_FEET : AREAS[i].strike; if (!st || !s.active[i] || s.strikes.some(k => k.region === i)) continue;
+    if (st.kind === 'bird' && s.colony.kills.robin && LAWN_ZONE.has(AREAS[i].key)) continue; // build 30: the Old Robin driven off, no robins over the lawn
     const here = out.get(i); if (!here) continue;
     s.strikeT[i] -= dt; if (s.strikeT[i] > 0) continue;
     s.strikeT[i] = (st.every[0] + Math.random()*(st.every[1] - st.every[0]))*(prizeFx(s, i) === 'calm' ? 2 : 1);
@@ -2263,11 +2266,17 @@ const BOSSES = {
     tip: 'Bites barely scratch its armour. Step out of its charge lane: when it slams into something it is dazed. Then bite!', rage: 'The beetle is enraged: it charges twice!' },
   antlion: { name: 'The Antlion Queen', title: 'Terror of the Sandbox', region: 'sandbox', hp: 480, r: 2.4, aggro: 7, meat: 80, chitin: 25, trophy: 'mandible', phase2: 0.5, slayer: 'Pit-breaker',
     tip: 'She hides under the deepest pit and drags ants down: step off the swirling sand. Eight ants at the pit’s edge draw her up. Then bite!', rage: 'The antlion queen tunnels between the pits!' },
+  // Build 30: the Great Lawn's guardian (COMBAT.md). Robins hunt the whole lawn while it rules it.
+  robin: { name: 'The Old Robin', title: 'Terror of the Great Lawn', region: 'bare', hp: 600, r: 2.0, aggro: 10, meat: 70, chitin: 0, trophy: 'feather', phase2: 0.5, slayer: 'Robin-chaser', flees: true,
+    tip: 'It pecks where the red dot shows, beats its wings at a crowd and hops after the rest. Six ants on its feet pin it: no hopping, no flying off, and bites do double.', rage: 'The Old Robin takes to the air: watch its shadow, and get out of its swoop!' },
 };
+// The Great Lawn: the regions the Old Robin rules (no robins over them once it's driven off).
+const LAWN_ZONE = new Set(['lawn', 'clover', 'molehills', 'dandelions', 'pool', 'sprinkler', 'fairyring', 'gnome', 'frisbee', 'bone', 'cloverhill', 'truck', 'bare', 'longgrass', 'daisies', 'lawnedge']);
 const TROPHY = {
   silk: { name: 'Hornworm silk', fx: 'builders build rooms twice as fast' },
   shell: { name: 'The beetle’s shell', fx: 'you can build an Armory: every ant 50% tougher, foragers shrug off a foot or beak' },
   mandible: { name: 'The antlion’s mandible', fx: 'fighters bite 15% harder, and the pits never drag your ants down' },
+  feather: { name: 'The Old Robin’s feather', fx: 'birds never take your ants, and no robins hunt the Great Lawn' },
 };
 // Where each boss lives, made when its region first wakes.
 function ensureBoss(s, key){
@@ -2291,6 +2300,7 @@ function ensureBoss(s, key){
 const bossArmour = (s, b, a) => {
   if (b.key === 'beetle'){ if (b.dazeT > 0) return 2.5; return a.caste === 'venom' ? 0.5 : a.isPlayer ? 0.35 : 0.15; }
   if (b.key === 'antlion') return b.under ? 0 : 1;
+  if (b.key === 'robin') return b.air ? 0 : b.pinned ? 2 : 1;
   return 1;
 };
 function tickBosses(s, dt){
@@ -2307,21 +2317,25 @@ function tickBosses(s, dt){
       if (!nearAnt(s, b, 30*T)){ b.leaveT += dt; if (b.leaveT > 8){ b.mode = 'idle'; b.atk = null; b.charge = null; b.roll = null; } } else b.leaveT = 0;
     } else if (b.hp < b.maxHp) b.hp = Math.min(b.maxHp, b.hp + 2*dt); // left alone, it heals
     // Bitten by fighters, your crew and you; fighters on patrol nearby join in.
-    const reach = (B.r + 0.9)*T, arm0 = b.key === 'antlion' && b.under;
+    const reach = (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air);
+    let onIt = 0;
     for (const a of s.ants){
       if (a.team || !outside(a)) continue;
       const fighter = CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer, d = Math.hypot(a.x - b.x, a.y - b.y);
       if (fighter && !arm0 && d < reach*reachOf(s, a)){
+        onIt++;
         const arm = bossArmour(s, b, a), dmg = bite(s, a, 'boss')*dt*(a.isPlayer ? 2*yb : 1)*arm;
         b.hp -= dmg; gainXp(s, a, dmg/3); b.hitT = s.t; (b.biters || (b.biters = {}))[a.id] = s.t;
         spark(s, a, a.x + (b.x - a.x)*0.6, a.y + (b.y - a.y)*0.6, arm < 0.5 ? 2 : 0);
         if (a.caste === 'venom' && picked(s, 'venom', 'neurotoxin') && Math.random() < dt*0.8) b.slowT = 1.5;
       } else if (b.mode === 'fight' && d < 8*T && CASTES[a.caste].fight >= 3 && (a.state === 'patrol' || a.state === 'hunt')){ a.state = 'fight'; a.goal = 'boss'; a.bossKey = key; }
     }
+    if (key === 'robin'){ const was = b.pinned; b.pinned = !b.air && onIt >= 6; if (b.pinned && !was && playerNear(s, b.x, b.y, 24)) P.msg = 'Your ants have the Old Robin by the feet: it’s pinned! Bites do double!'; }
     if (b.phase === 1 && b.hp < b.maxHp*B.phase2){ b.phase = 2; s.events.push('bossphase'); if (playerNear(s, b.x, b.y, 30)) P.msg = B.rage; }
     if (b.hp <= 0){ bossDies(s, b, B); continue; }
     if (key === 'hornworm') stepHornworm(s, b, B, dt);
     else if (key === 'beetle') stepBeetle(s, b, B, dt);
+    else if (key === 'robin') stepRobin(s, b, B, dt);
     else stepAntlion(s, b, B, dt);
   }
   // Goo the hornworm spat: it slows ants that walk through it.
@@ -2330,10 +2344,10 @@ function tickBosses(s, dt){
 }
 function bossDies(s, b, B){
   const c = s.colony, P = s.player, x = Math.floor(b.x/T), y = Math.floor(b.y/T);
-  b.dead = true; b.deadT = s.t; b.atk = null; b.charge = null; b.roll = null;
-  // The carcass: meat in heaps round it, and its chitin.
+  b.dead = true; b.deadT = s.t; b.atk = null; b.charge = null; b.roll = null; b.swoop = null; b.air = false;
+  // The carcass: meat in heaps round it, and its chitin. (The Old Robin flies off, dropping the grubs it had.)
   for (let k = 0; k < 4; k++){ const a = k*Math.PI/2 + 0.4, mx = Math.round(x + Math.cos(a)*2), my = Math.round(y + Math.sin(a)*2); if (walk(s, mx, my)) s.items.push({ x: mx, y: my, kind: 'protein', type: 'boss', amt: Math.round(B.meat/4) }); }
-  if (walk(s, x, y)) s.items.push({ x, y, kind: 'chitin', type: 'shell', amt: B.chitin });
+  if (B.chitin && walk(s, x, y)) s.items.push({ x, y, kind: 'chitin', type: 'shell', amt: B.chitin });
   const ours = Object.entries(b.biters || {}).filter(([, t]) => s.t - t < 10).map(([id]) => s.ants.find(a => a.id === +id)).filter(a => a && a.state !== 'dead');
   for (const a of ours) gainXp(s, a, 50);
   if (ours.length) makeLegend(s, ours[Math.floor(Math.random()*ours.length)], B.slayer);
@@ -2343,7 +2357,7 @@ function bossDies(s, b, B){
   const lost = deathTotal(c) - (b.cost0 || 0);
   s.report = { kind: 'boss', key: b.key, lost, t: s.t }; s.events.push('bossdown');
   s.bossDown = { key: b.key, t: s.t };
-  P.msg = `${B.name} is dead! It cost you ${lost} ant${lost === 1 ? '' : 's'}. Trophy: ${TROPHY[B.trophy].name}: ${TROPHY[B.trophy].fx}.`;
+  P.msg = `${B.name} ${B.flees ? 'flies off for good' : 'is dead'}! It cost you ${lost} ant${lost === 1 ? '' : 's'}. Trophy: ${TROPHY[B.trophy].name}: ${TROPHY[B.trophy].fx}.`;
 }
 // Ants inside a telegraphed attack's shape.
 function inAtk(k, x, y){
@@ -2393,6 +2407,42 @@ function stepHornworm(s, b, B, dt){
     return;
   }
   if (d > B.r*T*1.1) bossWalk(s, b, a.x, a.y, fast ? 16 : 10, dt);
+}
+// The Old Robin (build 30). Pecks at a red dot, beats its wings at a crowd, hops after the rest. In its
+// second phase it takes off: its shadow circles the lair, then it swoops down a lane and lands. Six ants
+// on its feet pin it: no hops, no take-off, bites double.
+function stepRobin(s, b, B, dt){
+  if (b.mode === 'idle'){ b.air = false; if (!b.gx || b.t > 5){ b.t = 0; const a = Math.random()*Math.PI*2; b.gx = b.hx + Math.cos(a)*5*T; b.gy = b.hy + Math.sin(a)*5*T; b.hopAt = s.t; } bossWalk(s, b, b.gx, b.gy, 12, dt); return; }
+  const fast = b.phase === 2;
+  // Swooping down the lane it showed: anything in the way is struck.
+  if (b.swoop){ const S = b.swoop; S.t += dt; const u = Math.min(1, S.t/0.6); b.x = S.x0 + S.dx*S.len*u; b.y = S.y0 + S.dy*S.len*u;
+    for (const a of s.ants) if (outside(a) && !a.team && !S.hit[a.id] && Math.hypot(a.x - b.x, a.y - b.y) < 1.5*T){ S.hit[a.id] = 1; hurtAnt(s, a, 5, 'bird'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, b.x, b.y, 2); }
+    if (u >= 1){ b.swoop = null; b.air = false; b.cd = 2.2; b.atkDone = { kind: 'stop', t: s.t, x: b.x, y: b.y }; b.landAt = s.t; } return; }
+  // Aloft: it circles its lair, out of reach, then picks a lane.
+  if (b.air && !b.atk){ b.airT -= dt; b.ang = (b.ang || 0) + dt*1.1; const gx = b.hx + Math.cos(b.ang)*6*T, gy = b.hy + Math.sin(b.ang)*6*T; b.x += (gx - b.x)*Math.min(1, dt*2); b.y += (gy - b.y)*Math.min(1, dt*2);
+    if (b.airT <= 0){ const tg = bossTarget(s, b, 20); if (!tg){ b.air = false; b.landAt = s.t; return; } const [a, d] = tg, dx = (a.x - b.x)/d, dy = (a.y - b.y)/d; b.dx = dx; b.dy = dy; b.atk = { kind: 'lane', x: b.x, y: b.y, dx, dy, len: Math.min(14*T, d + 3*T), w: 2.2*T, t: 0, at: 0.9 }; }
+    return; }
+  // Hopping: a quick bound toward the crowd.
+  if (b.hop){ const H = b.hop; H.t += dt; const u = Math.min(1, H.t/0.35); b.x = H.x0 + (H.x1 - H.x0)*u; b.y = H.y0 + (H.y1 - H.y0)*u; if (u >= 1) b.hop = null; return; }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return;
+    b.atk = null; b.atkDone = { kind: k.kind, x: k.x, y: k.y, r: k.r, t: s.t };
+    if (k.kind === 'lane'){ b.swoop = { x0: b.x, y0: b.y, dx: k.dx, dy: k.dy, len: k.len, t: 0, hit: {} }; return; }
+    if (k.what === 'peck'){ b.peckAt = s.t; for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; hurtAnt(s, a, 6, 'bird'); spark(s, null, a.x, a.y, 1); } }
+    else { b.beatAt = s.t; for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; hurtAnt(s, a, 2, 'bird'); if (a.state !== 'dead') shove(s, a, b.x, b.y, 2.5); } }
+    b.cd = fast ? 1.3 : 1.9; return; }
+  b.cd -= dt; b.flyCd = (b.flyCd ?? 6) - dt;
+  // Phase 2: up it goes, unless your ants have it by the feet.
+  if (fast && !b.pinned && b.flyCd <= 0){ b.air = true; b.airT = 3; b.flyCd = 9; b.ang = Math.atan2(b.y - b.hy, b.x - b.hx); b.upAt = s.t; return; }
+  const tg = bossTarget(s, b, 16); if (!tg) return;
+  const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
+  if (b.cd <= 0){
+    let crowd = 0; for (const o of s.ants) if (outside(o) && !o.team && Math.hypot(o.x - b.x, o.y - b.y) < 2.6*T) crowd++;
+    if (crowd >= 5) b.atk = { kind: 'ring', what: 'beat', x: b.x, y: b.y, r: 3.2*T, t: 0, at: fast ? 0.8 : 1.0 };
+    else if (d < 3.5*T) b.atk = { kind: 'ring', what: 'peck', x: a.x, y: a.y, r: 1.1*T, t: 0, at: fast ? 0.6 : 0.8 };
+    else if (!b.pinned){ const k = Math.min(4*T, d - 1.5*T); b.hop = { x0: b.x, y0: b.y, x1: b.x + b.dx*k, y1: b.y + b.dy*k, t: 0 }; b.hopAt = s.t; b.cd = 0.7; }
+    return;
+  }
+  if (d > 3*T && !b.pinned) bossWalk(s, b, a.x, a.y, 10, dt);
 }
 function stepBeetle(s, b, B, dt){
   if (b.dazeT > 0){ b.dazeT -= dt; return; }
@@ -2741,7 +2791,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

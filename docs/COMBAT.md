@@ -69,7 +69,7 @@ Every guardian follows the same rules, so each fight is readable:
 6. **A trophy** with a lasting power, plus genes and a lot of meat.
 7. **It heals if you leave.** A failed attack costs ants, not progress you can't get back.
 
-### The Old Robin: Terror of the Great Lawn (zone 9)
+### The Old Robin: Terror of the Great Lawn (zone 9). Built, build 30
 This answers "what does the robin do?" Robins stay a hazard on the lawn, and the Old Robin is the one you can beat.
 - **Lair:** the bare patch, in the middle of the lawn.
 - **Moves:**

@@ -2,6 +2,34 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the Old Robin, guardian of the Great Lawn (build 30)
+
+This is the first new guardian from `COMBAT.md`. It answers Mark's "I don't know what the robin does yet": ordinary robins stay a hazard, and the Old Robin is the one that rules the lawn and can be driven off.
+
+**The fight:**
+- **Lair:** the Bare Patch, in the middle of the lawn. It rules all 16 Great Lawn regions, and none of them can be held while it's there.
+- **Peck:** a small red dot at an ant, then a strike that kills.
+- **Wing beat:** with 5 or more ants round it, a ring that knocks them back 2½ tiles.
+- **Hop:** a 4-tile bound after the nearest ant.
+- **Phase 2 (half health):** about every 9 seconds it takes off and circles its lair for 3 seconds, out of reach, with its shadow on the grass. Then it shows a lane and swoops down it, striking everything in the way, and lands.
+- **Weakness: its feet.** With 6 or more of your ants biting it, it is **pinned**: no hops, no take-off, and every bite does double. The bar says "PINNED BY THE FEET: BITE NOW!" and it struggles with its wings half up.
+- **Win:** you don't kill it. At 0 health it flies off for good, dropping the grubs it had (70 meat).
+
+**What you get:**
+- **The Old Robin's feather:** birds never take your ants anywhere.
+- **The lawn eases:** no more robins over the Great Lawn.
+- **The lawn can be held:** all 16 regions, with outposts.
+- Plus 4 genes and a Legend ("Robin-chaser").
+
+**On screen:**
+- The robin model is the one ordinary robins use, at 1.6× their size. It hops, pecks and beats its wings, and flies and swoops with a shadow.
+- Its own banner (🐦) and boss bar lines.
+- When it's beaten: "The Old Robin flies off for good!"
+
+**Checks:**
+- 122 tests, 5 new (`tests/robin.test.js`): it guards the lawn; a peck is shown first as a small dot; six ants pin it (double bites, no take-off); in phase 2 it goes up, shows a lane and swoops; and driven off, it gives the trophy, stops robins over the lawn and keeps birds off your ants.
+- A browser run showed it pinned and aloft, with no errors.
+
 ## Nov 2: crew orders: hold, send, split, follow (build 29)
 
 Mark picked the new guardians and "crew orders beyond attack that (hold, formations, splitting)": "Lets do 2 and 3". Crew orders came first, because they're smaller. The guardians follow, one per build.
