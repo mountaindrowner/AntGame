@@ -50,7 +50,7 @@ const rspec = (a) => RIVALS[(a.team || 1) - 1] || RIVALS[0];
 // Kinds the evolution tree unlocks (build 24); fighters among them also need a Barracks.
 const CASTE_EVO = { major: 'majors', supermajor: 'polymorphism', exploder: 'exploders', replete: 'honeypot', undertaker: 'midden' };
 // The room each new kind of ant needs before the queen can lay it.
-const CASTE_ROOM = { gardener: 'fungus', rancher: 'dairy', medic: 'infirmary', harvester: 'granary', major: 'barracks', supermajor: 'barracks', exploder: 'barracks', replete: 'honeypot', undertaker: 'midden' };
+const CASTE_ROOM = { venom: 'barracks', gardener: 'fungus', rancher: 'dairy', medic: 'infirmary', harvester: 'granary', major: 'barracks', supermajor: 'barracks', exploder: 'barracks', replete: 'honeypot', undertaker: 'midden' };
 const ROOMS = {
   queen:   {name:'Queen\u2019s chamber', cost:{}, work:0, w:4, h:3, desc:'Eggs, one at a time'},
   hatchery:{name:'Hatchery', cost:{food:10}, work:20, w:4, h:3, desc:'+2 eggs at a time', more:'+2 more eggs at a time'},
@@ -58,7 +58,7 @@ const ROOMS = {
   cistern: {name:'Cistern', cost:{food:15, grit:5}, work:20, w:4, h:4, desc:'Water cap 10 to 60', more:'+30 water cap'},
   nursery: {name:'Nursery', cost:{food:20, water:10}, work:25, w:4, h:3, desc:'Nurses; eggs hatch 30% faster', more:'Eggs 15% faster, 3 more nurses can help'},
   barracks:{name:'Barracks', cost:{food:30, protein:5}, work:30, w:6, h:3, desc:'Unlocks Soldiers', more:'Fighters eat 25% less protein'},
-  workshop:{name:'Workshop', cost:{food:25, grit:10}, work:25, w:5, h:4, desc:'Builders dig packed soil and build 2× faster', more:'Builders work another half again faster'},
+  workshop:{name:'Workshop', cost:{food:25, grit:10}, work:25, w:5, h:4, desc:'Builders dig packed soil and build 2× faster', more:'Builders work another quarter faster'},
   // Build 19: from the ground beetle's shell.
   armory:  {name:'Armory', cost:{food:40, grit:20, chitin:20}, work:30, w:5, h:3, desc:'Every ant 50% tougher; foragers shrug off a foot or beak', more:'Nothing more: one is enough'},
   // Build 23: rooms from the evolution tree (evo), each training its own ant
@@ -74,14 +74,14 @@ const ROOMS = {
   // Build 24.
   honeypot: {name:'Honeypot vault', cost:{food:40, sugar:20}, work:30, w:4, h:4, evo:'honeypot', caste:'replete', desc:'Repletes hang here, living jars: each holds 40 more food', more:'Room for 4 more repletes',
     lv:[{cost:{food:80, sugar:30}, fx:'Each replete holds 60, and 2 more fit'}, {cost:{food:150, sugar:50, wood:15}, fx:'In a famine the repletes feed the colony from their crops'}]},
-  midden:   {name:'Midden', cost:{food:20, grit:15}, work:20, w:4, h:3, evo:'midden', caste:'undertaker', desc:'Undertakers clear out the dead and the waste: Cordyceps spreads half as much', more:'Room for 3 more undertakers',
+  midden:   {name:'Midden', cost:{food:20, grit:15}, work:20, w:4, h:3, evo:'midden', caste:'undertaker', desc:'Undertakers carry the dead to the midden (each death near the nest gives back 2 food), and Cordyceps spreads less, more so with each undertaker', more:'Room for 3 more undertakers',
     lv:[{cost:{food:40, grit:25}, fx:'The waste composts: it feeds the fungus garden'}, {cost:{food:80, protein:10, wood:10}, fx:'Cordyceps hardly spreads at all, and cave-ins are a third rarer'}]},
 };
 // Build 17: more than one of a room. Each kind allows one per queen level;
 // each copy costs half again more than the last, and every room eats food
 // to run: half a unit a minute for the first of a kind, one for each extra.
 const roomCount = (s, key) => s.nest.rooms.filter(r => r.key === key).length;
-const roomCap = s => s.queen.level + 1;
+const roomCap = s => Math.min(5, s.queen.level + 1); // build 40: 5 at most (more than that can't fit the nest)
 function roomUpkeep(s){ let u = 0; const seen = {}; for (const r of s.nest.rooms){ if (r.key === 'queen') continue; u += seen[r.key] ? 1 : 0.5; seen[r.key] = true; } return u; }
 const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop','armory','fungus','dairy','infirmary','granary','honeypot','midden'];
 // A room kind's level (1 to 3, build 23).
@@ -199,12 +199,16 @@ function toggleFillOrder(s, x, y){
   const i = n.fillOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ n.fillOrders.splice(i,1); return 'removed'; }
   if (n.cells[nidx(x,y)] !== 1) return n.cells[nidx(x,y)] === 2 ? 'room' : 'dirt';
   if (x === SHAFT && y <= 1) return 'entrance'; if (n.fillOrders.length >= 16) return 'too many';
+  if (n.cells[nidx(x,y)] === 2 || s.colony.buildQueue.some(j => x >= j.x0 && x < j.x0 + j.w && y >= j.y0 && y < j.y0 + j.h)) return 'room'; // build 40
   n.fillOrders.push({ x, y, progress: 0, need: SOIL[soilTier(y)].work }); return 'added';
 }
 function removeRoom(s, x, y){
   const r = roomAt(s, x, y); if (!r || r.key === 'queen') return false; const c = s.colony;
   s.nest.rooms.splice(s.nest.rooms.indexOf(r), 1); for (const [cx,cy] of rectCells(r)) s.nest.cells[nidx(cx,cy)] = 1; s.nest.ver++;
   const cost = roomCost(s, r.key, roomCount(s, r.key)); for (const k in cost){ const half = Math.floor(cost[k]/2); if (k === 'food') c.store = Math.min(c.cap, c.store + half); else c[k] += half; }
+  if (!roomCount(s, r.key) && c.roomLv && c.roomLv[r.key]){ // build 40: the last one gone, its levels go with it (half their cost back)
+    const R = ROOMS[r.key]; for (let n = 1; n < c.roomLv[r.key]; n++) for (const k in R.lv[n - 1].cost){ const half = Math.floor(R.lv[n - 1].cost[k]/2); if (k === 'food') c.store += half; else c[k] = (c[k] || 0) + half; }
+    delete c.roomLv[r.key]; }
   roomsChanged(s);
   return true;
 }
@@ -443,11 +447,11 @@ function deposit(s, a){
   const c = colonyOf(s, a);
   if (!a.team && a.carry > 0){ gainXp(s, a, 3); discover(s, a.itype || a.kind); }
   if (!a.team && a.kind === 'food' && a.caste === 'harvester' && GRAIN[a.itype] && roomLevel(s, 'granary') >= 3) a.carry = Math.round(a.carry*1.5); // ant bread
-  if (a.kind === 'food'){ const put = Math.min(Math.max(0, c.cap - c.store), a.carry); c.store += put; c.delivered[0] += put; if (!a.team) c.foodTotal += put;
+  if (a.kind === 'food'){ const put = Math.min(Math.max(0, c.cap - c.store), a.carry); c.store += put; c.delivered[0] += put; if (!a.team){ c.foodTotal += put; if (c.store > (c.storePeak || 0)) c.storePeak = c.store; }
     // Honeydew and bits of sweets are sugar too (build 18).
     if (!a.team && a.carry && a.itype === 'aphids') addSugar(s, (has(s, 'aphids') ? 3 : 1)*(prizeFx(s, a.ireg) === 'aphids' ? 2 : 1));
     else if (!a.team && a.carry && FOODS[a.itype] && FOODS[a.itype].sweet) addSugar(s, Math.ceil(a.carry*0.3)); }
-  else if (a.kind === 'brood'){ if (!a.team){ for (let i = 0; i < a.carry; i++){ if (antCount(s) < queenCap(s.queen.level, s)) mkAnt(s, has(s, 'warcamp') ? 'soldier' : 'forager', 'in', c.ex, c.ey, 0); else c.protein += 3; } c.captured = (c.captured || 0) + a.carry; if (!s.seen.pupae){ s.seen.pupae = true; s.player.msg = 'Stolen pupae hatch in your nest as your own ants.'; } } }
+  else if (a.kind === 'brood'){ if (!a.team){ const per = qtrait(s, 'nations') ? 2 : 1; for (let i = 0; i < a.carry*per; i++){ if (antCount(s) < queenCap(s.queen.level, s)){ const n = mkAnt(s, has(s, 'warcamp') ? 'soldier' : 'forager', 'in', c.ex, c.ey, 0); if (qtrait(s, 'nations') && n) n.xp = Math.max(n.xp || 0, RANKS[2].xp); } else c.protein += 3; } c.captured = (c.captured || 0) + a.carry; if (!s.seen.pupae){ s.seen.pupae = true; s.player.msg = 'Stolen pupae hatch in your nest as your own ants.'; } } }
   else if (a.kind === 'water') c.water = Math.min(c.waterCap, c.water + a.carry);
   else if (a.kind === 'protein'){ c.protein += a.carry; if (!a.team && CHITIN_OF[a.itype]) addChitin(s, CHITIN_OF[a.itype]*(prizeFx(s, a.ireg) === 'chitin' ? 2 : 1)); }
   else if (a.kind === 'chitin'){ if (!a.team) addChitin(s, a.carry); }
@@ -470,15 +474,17 @@ function killAnt(s, a, cause){
   // Survivor: once a life, a killing blow leaves your ant at 1 health.
   if (a.isPlayer && !a.survived && picked(s, 'you', 'survivor')){ a.survived = true; a.hp = 1; s.player.hit = s.t; s.player.msg = 'That should have killed you. Get home!'; return; }
   // Infirmary III (build 23): medics carry the fallen home; 1 in 4 near the nest is saved.
-  if (!a.team && !a.isPlayer && cause !== 'starved' && cause !== 'hunger' && roomLevel(s, 'infirmary') >= 3 && roomOf(s, 'infirmary') && a.x != null && Math.hypot(a.x/T - s.colony.ex, a.y/T - s.colony.ey) < 24 && s.ants.some(o => !o.team && o.caste === 'medic' && o.state === 'in') && Math.random() < 0.25){
+  if (!a.team && !a.isPlayer && cause !== 'starved' && cause !== 'hunger' && cause !== 'culled' && cause !== 'cordyceps' && !a.zombie && roomLevel(s, 'infirmary') >= 3 && roomOf(s, 'infirmary') && a.x != null && Math.hypot(a.x/T - s.colony.ex, a.y/T - s.colony.ey) < 24 && s.ants.some(o => !o.team && o.caste === 'medic' && o.state === 'in') && Math.random() < 0.25){
     a.hp = 1; a.carry = 0; a.follow = false; a.infect = null; enterNest(s, a); s.colony.saved = (s.colony.saved || 0) + 1; if (s.colony.saved === 1) s.player.msg = 'Your medics carried a fallen ant home and saved it.'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
   if (a.isPlayer){ const P = s.player; if (P.big){ P.big.carried = false; P.big = null; } P.ant = null; P.pending = true; P.path = null; P.died = s.t; P.deathCause = cause; P.msg = ({ spider: 'The spider got you.', rival: 'A rival soldier got you.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad\'s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', earwig: 'An earwig pinched you to death.', hornworm: 'The hornworm crushed you.', beetle: 'The ground beetle got you.', mantis: 'The mantis caught you.', widow: 'The black widow bit you.', centipede: 'The centipede got you.', jumper: 'A jumping spider got you.', assassin: 'An assassin bug got you.', wasp: 'A hunting wasp got you.', skink: 'The skink got you.' }[cause] || 'You starved.') + ' Your crew scatters. Waiting for the next hatchling.'; }
   if (!a.team){ const i = idx(Math.min(W-1,Math.max(0,Math.floor(a.x/T))), Math.min(H-1,Math.max(0,Math.floor(a.y/T)))); s.alarm[i] += 3; s.hot.add(i); }
   const c = colonyOf(s, a); c.deaths[cause] = (c.deaths[cause]||0) + 1;
+  // Build 40: undertakers carry the dead home to the midden: each of your ants dying near the nest gives back food.
+  if (!a.team && !a.isPlayer && a.x != null && Math.hypot(a.x/T - c.ex, a.y/T - c.ey) < 24 && roomOf(s, 'midden') && workers(s, 'undertaker', 'tidy', 'midden', 3)){ c.store = Math.min(c.cap, c.store + 2); c.recycled = (c.recycled || 0) + 2; if (!s.seen.recycled){ s.seen.recycled = true; s.player.msg = 'Your undertakers carried a fallen ant to the midden: nothing is wasted (+2 food).'; } }
   // Build 24. A rival killed near its own nest: the War camp loots its food; Brood raiding brings back its brood.
-  if (a.team && cause === 'war' && Math.hypot(a.x/T - s.world.rx, a.y/T - s.world.ry) < 18){
+  if (a.team && cause === 'war' && Math.hypot(a.x/T - colonyOf(s, a).ex, a.y/T - colonyOf(s, a).ey) < 18){ // (build 40: any rival's nest, not only the pavement ants')
     if (has(s, 'warcamp')){ const x = Math.floor(a.x/T), y = Math.floor(a.y/T); if (!itemAt(s, x, y)) s.items.push({ x, y, kind: 'food', type: 'crumb', amt: 5 }); }
     if (has(s, 'broodraid') && Math.random() < 0.2 && antCount(s) < queenCap(s.queen.level, s)){ mkAnt(s, 'forager', 'in', s.world.ex, s.world.ey, 0); s.colony.captured = (s.colony.captured || 0) + 1; if (s.colony.captured === 1) s.player.msg = 'Your raiders carried home rival brood. It hatched as one of yours.'; }
   }
@@ -578,6 +584,8 @@ function workOf(s, a, kind){
   if (kind === 'j' && setDone(s, 'builder')) m *= 1.25;
   if (kind === 'j' && s.colony.trophies.silk) m *= 2;
   if (kind === 'd' && picked(s, 'builder', 'excavator')) m *= 1.5;
+  if (kind === 'd' && L >= 4) m *= 2; // build 40: level IV, "digs any soil 2x faster"
+  if (picked(s, 'builder', 'foreman')) m *= 1.5; // build 40: Foreman
   if (has(s, 'workshop3')) m *= 1.5;
   if (kind === 'd' && promo(s, a, 'quick')) m *= 1.25;
   if (kind === 'r' && (picked(s, 'builder', 'engineer') || promo(s, a, 'fixer'))) m *= 2;
@@ -968,6 +976,7 @@ function tickColony(s, c, dt){
   // of the fence), so they need half what they eat from the yard.
   if (c.team > 1) eat *= 0.5;
   const bite = eat/60*dt; c.eaten[0] += bite; c.store -= bite; if (!c.team && c.store > c.storePeak) c.storePeak = c.store;
+  if (c.store < 0 && !c.team && has(s, 'honeyeco') && (c.sugar || 0) >= 1){ const k = Math.min(c.sugar, Math.ceil(-c.store)); c.sugar -= k; c.store += k; } // build 40: Honey economy, sugar feeds the colony when food runs out
   if (c.store < 0){ c.store = 0; c.starve += dt; if (!c.team && c.starve > 10 && !c.starveWarned){ c.starveWarned = true; s.events.push('starving'); s.player.msg = 'The colony is starving. Forage farther.'; } } else { c.starve = 0; if (c.store > 20) c.starveWarned = false; }
   if (c.starve > 20 && (c.starve - 20) % (!c.team && has(s, 'stomach') ? 10 : 5) < dt){ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.state !== 'away' && a.team === c.team); if (v.length && !(c.team > 1 && v.length <= RIVALS[c.team - 1].start[0] + RIVALS[c.team - 1].start[1])) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); } // build 25.1: a later colony never starves below the size it came with
   const overCap = !c.team && s.ants.filter(a => !a.team).length >= queenCap(s.queen.level, s);
@@ -977,6 +986,7 @@ function tickColony(s, c, dt){
     let rate = 1;
     if (!c.team){ const nurses = s.ants.filter(a => a.caste==='nurse' && a.team===0 && (a.state==='in'||a.state==='build')).slice(0, (lvl(s, 'nurse') >= 2 ? 6 : 3) + 3*Math.max(0, roomCount(s, 'nursery') - 1));
       for (const a of nurses) rate += 0.12*jobMul(a)*(promo(s, a, 'gentle') ? 1.3 : 1);
+      if (s.ants.some(a => !a.team && a.caste !== 'nurse' && a.state === 'in' && promo(s, a, 'gentle'))) rate *= 1.1; // build 40: a Gentle medic, rancher, replete or undertaker helps a little too
       if (nurses.length && lvl(s, 'nurse') >= 1) rate *= 1.15;
       if (nurses.length && lvl(s, 'nurse') >= 3) rate *= 1.3;
       if (lvl(s, 'nurse') >= 4) rate *= 1.25;
@@ -992,7 +1002,7 @@ function tickColony(s, c, dt){
     const P = s.player;
     // Fighters eat protein: half a unit a minute each. With none, they starve one by one.
     // Hurt ants heal in the nest with Medic training, or near a Healer.
-    if (picked(s, 'nurse', 'medic') || s.ants.some(a => !a.team && a.caste === 'nurse' && (a.state === 'in' || a.state === 'build') && promo(s, a, 'healer')))
+    if (picked(s, 'nurse', 'medic') || s.ants.some(a => !a.team && a.caste !== 'forager' && FAMILY[a.caste] === 'nest' && (a.state === 'in' || a.state === 'build') && promo(s, a, 'healer')))
       for (const a of s.ants) if (!a.team && (a.state === 'in' || a.state === 'build') && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
     if (fighters.length){ c.protein -= fighters.length*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
@@ -1004,19 +1014,20 @@ function tickColony(s, c, dt){
     if (fg && (c.fungus || 0) > 0){ const lv = roomLevel(s, 'fungus'), rate = fg*(lv >= 3 ? 0.2 : 0.1)*dt, use = Math.min(c.fungus, rate); c.fungus -= use; c.store = Math.min(c.cap, c.store + use*(lv >= 3 ? 3 : lv >= 2 ? 2.25 : 1.5)); }
     // Aphid barn: each rancher at work makes half a 🍯 a minute.
     const rh = workers(s, 'rancher', 'herd', 'dairy', 4);
-    if (rh){ const lv = roomLevel(s, 'dairy'); c.dairyAcc = (c.dairyAcc || 0) + rh*0.5/60*dt*(lv >= 3 ? 2 : lv >= 2 ? 1.5 : 1); if (c.dairyAcc >= 1){ c.dairyAcc -= 1; addSugar(s, 1); if (lv >= 3) c.store = Math.min(c.cap, c.store + 1); } }
+    if (rh){ const lv = roomLevel(s, 'dairy'), gentle = s.ants.some(a => !a.team && a.caste === 'rancher' && a.state === 'in' && promo(s, a, 'gentle')) ? 1.3 : 1; c.dairyAcc = (c.dairyAcc || 0) + rh*0.5/60*dt*(lv >= 3 ? 2 : lv >= 2 ? 1.5 : 1)*gentle; /* build 40: a Gentle rancher milks 30% more */ if (c.dairyAcc >= 1){ c.dairyAcc -= 1; addSugar(s, 1); if (lv >= 3) c.store = Math.min(c.cap, c.store + 1); } }
     // Infirmary: medics heal the wounded inside (your ant too, at level II) and cure Cordyceps.
     const md = workers(s, 'medic', 'heal', 'infirmary', 3);
-    if (md){ const lv = roomLevel(s, 'infirmary'), hr = (lv >= 2 ? 2 : 1)*Math.min(3, md)*0.5*dt;
+    if (md){ const lv = roomLevel(s, 'infirmary'), hr = (lv >= 2 ? 2 : 1)*md*0.5*dt; // build 40: every medic counts (was capped at 3)
       for (const a of s.ants) if (!a.team && (a.state === 'in' || a.state === 'build' || (a.isPlayer && lv >= 2 && P.inNest)) && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + hr);
       for (const a of s.ants) if (!a.team && a.infect != null && a.infect < CORD.turn && a.state === 'in' && Math.random() < dt*0.25*md){ a.infect = null; if (!c.saidMedic){ c.saidMedic = true; P.msg = 'Your medics cured an ant of the fungus.'; } } }
     // Honeypot vault III: in a famine the repletes feed the colony (half a food a second each, from a reserve refilled when food is plenty).
     const rp = roomLevel(s, 'honeypot') >= 3 ? workers(s, 'replete', 'hang', 'honeypot', 4) : 0;
-    if (rp){ if (c.store > c.cap*0.6) c.crop = Math.min(rp*40, (c.crop || 0) + dt); else if (c.store < 3 && (c.crop || 0) > 0){ const g = Math.min(c.crop, rp*0.5*dt); c.crop -= g; c.store += g; } }
+    if (rp){ if (c.store > c.cap*0.6 && (c.crop || 0) < rp*40){ const put = Math.min(dt, rp*40 - (c.crop || 0)); c.crop = (c.crop || 0) + put; c.store -= put; } /* build 40: filled from the store, not from nothing */ else if (c.store < 3 && (c.crop || 0) > 0){ const g = Math.min(c.crop, rp*0.5*dt); c.crop -= g; c.store += g; } }
     // Midden II: the undertakers' compost feeds the fungus garden.
     const ut = roomLevel(s, 'midden') >= 2 && roomOf(s, 'fungus') ? workers(s, 'undertaker', 'tidy', 'midden', 3) : 0;
     if (ut) c.fungus = Math.min(fungusCap(s), (c.fungus || 0) + ut*0.5/60*dt);
     // Flower nectar (build 18): each region held gives half a 🍯 a minute.
+    if (has(s, 'nectar') && Object.keys(c.held || {}).length) for (const a of s.ants) if (!a.team && outside(a) && c.held[s.world.area[idx(a.tx, a.ty)]] && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.4*dt); // build 40: nectar heals your ants in regions you hold
     if (has(s, 'nectar')){ const n = Object.keys(c.held || {}).length; if (n){ c.nectarAcc = (c.nectarAcc || 0) + n*0.5/60*dt; if (c.nectarAcc >= 1){ c.nectarAcc -= 1; addSugar(s, 1); } } }
     // The queen heals slowly; if raiders kill her, the colony is lost.
     const q = s.queen;
@@ -1034,7 +1045,7 @@ function tickColony(s, c, dt){
     if (c.buildQueue.length){ const job = c.buildQueue[0]; const builders = atWork('j');
       job.progress += builders*ws*dt; const R = ROOMS[job.room];
       if (job.progress >= R.work){ for (const a of crewOf('j')) gainXp(s, a, 3); c.buildQueue.shift(); finishRoom(s, job); } }
-    for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
+    for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; if (s.nest.cells[nidx(o.x,o.y)] === 2){ s.nest.fillOrders.splice(i, 1); continue; } /* never into a room */ const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
     const full = (s.nest.spoil||0) >= SPOIL_MAX; // dirt waiting to go out: digging stops
     for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
   }
@@ -1055,11 +1066,12 @@ function hatch(s, c, caste){
   if (!c.team){ c.hatched++; if (c.hatched % 10 === 0) gainGenes(s, 1, c.hatched + ' eggs hatched');
     // A head start: the Drill hall for fighters, Colony memory for everyone.
     if (has(s, 'memory') || picked(s, 'nurse', 'teacher') || (has(s, 'drillhall') && CASTES[caste].fight >= 3)) a.xp = RANKS[1].xp;
+    if (has(s, 'memory')) a.xp = RANKS[2].xp; // build 40: Colony memory now hatches Veterans
     for (const n of s.ants) if (n.caste === 'nurse' && !n.team && (n.state === 'in' || n.state === 'build')) gainXp(s, n, 1); const r = s.queen.room; a.nx = r.x0+1.5; a.ny = r.y0+1.5; a.ntx = r.x0+1; a.nty = r.y0+1; a.rest = 2;
     if (s.player.pending){ a.isPlayer = true; a.hp = Math.max(youHp(s), maxHp(s, a)); s.player.rebirth = null; a.state = 'nest'; s.player.ant = a; s.player.pending = false; s.player.hunger = 100; s.player.inNest = true; s.player.tx = null; s.player.ntx = null; s.player.msg = ''; } }
 }
 // How readily Cordyceps spreads (build 24): halved by glands, and by a working Midden (all but stopped at its III).
-function cordResist(s){ let k = 1; if (has(s, 'glands')) k *= 0.5; if (roomOf(s, 'midden') && workers(s, 'undertaker', 'tidy', 'midden', 3)) k *= roomLevel(s, 'midden') >= 3 ? 0.15 : 0.5; return k; }
+function cordResist(s){ let k = 1; if (has(s, 'glands')) k *= 0.5; const u = roomOf(s, 'midden') ? workers(s, 'undertaker', 'tidy', 'midden', 3) : 0; if (u) k *= roomLevel(s, 'midden') >= 3 ? 0.15 : Math.max(0.3, 0.7 - 0.1*u); return k; } // build 40: each undertaker counts
 function enterNest(s, a){
   a.state = 'in'; a.rest = 3 + Math.random()*8; a.explore = 0; a.goal = null;
   if (!a.team){ a.nx = SHAFT; a.ny = 0; a.ntx = SHAFT; a.nty = 0; }
@@ -1322,7 +1334,7 @@ function tickRain(s, dt){
   if (!r.on && r.t >= r.next){ r.on = true; r.warned = false; r.t = 0; r.next = 480 + Math.random()*240; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
   else if (r.on){
     if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + 0.4*dt);
-    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && !has(s, 'chimneys')){ collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) collapse(s, true); note(s, 'The rain caved in a tunnel.'); } }
+    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && !has(s, 'chimneys') && !picked(s, 'builder', 'tunnelmaster')){ collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) collapse(s, true); note(s, 'The rain caved in a tunnel.'); } }
   }
 }
 function buildersInside(s){ return s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build')).length; }
@@ -1332,7 +1344,7 @@ function tickMaintenance(s, dt){
   // Steady veterans count double; Shorers and Insulation make cave-ins rarer.
   const need = Math.ceil(dugCount(s)/40), b = buildersInside(s) + s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build') && promo(s, a, 'steady')).length;
   const risk = 0.0045 * (picked(s, 'builder', 'shorer') ? 0.4 : 1) * (has(s, 'insulation') ? 0.5 : 1) * (roomLevel(s, 'midden') >= 3 && roomOf(s, 'midden') ? 0.67 : 1);
-  if (b < need && Math.random() < risk * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. You need more Builders inside.'); }
+  if (!picked(s, 'builder', 'tunnelmaster') && b < need && Math.random() < risk * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. You need more Builders inside.'); }
   // Rove beetle guests (build 24) tidy loose spoil away, a load every 20 s.
   if (has(s, 'beetles') && (s.nest.spoil || 0) > 0 && Math.random() < 0.05) s.nest.spoil--;
   for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i], crew = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y); rep.progress += crew.reduce((t, a) => t + workOf(s, a, 'r'), 0)*(has(s, 'beetles') ? 1.5 : 1); if (rep.progress >= 8){ for (const a of crew) gainXp(s, a, 2); dig(s, rep.x, rep.y); s.repairs.splice(i,1); c.repaired++; } }
@@ -1525,7 +1537,7 @@ function stepPlayer(s, a, dt, enemiesNear){
   if (a.knockT > 0){ knock(s, a, dt); P.pathKey = -1; return; }
   let moving = false;
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
-  let speed = youPace(s)*SURF*(a.slowT > 0 ? 0.5 : 1)*(a.webT > s.t ? 0 : 1);
+  let speed = youPace(s)*SURF*(a.slowT > 0 ? 0.5 : 1)*(a.webT > s.t ? 0 : 1)*(has(s, 'highways') && s.trail[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))] >= 0.3 ? 1.25 : 1);
   if (a.slowT > 0) a.slowT -= dt;
   if (P.big){ const crew = crewAt(s), need = FOODS[P.big.type].crew;
     if (crew < need){ dropBig(s); P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`; }
@@ -1657,6 +1669,7 @@ function zonesTaken(s){ return ZONES.filter(z => (s.colony.zones || {})[z.key] !
 function tickZones(s, dt){
   s.zoneT = (s.zoneT || 0) + dt; if (s.zoneT < 1) return; s.zoneT = 0;
   const c = s.colony; if (!c.zones) c.zones = {};
+  c.cap = storeCap(s); // build 40: kept current every second (repletes hanging, outposts sharing the store)
   for (const z of ZONES){ if (c.zones[z.key] != null || !z.done(s)) continue;
     c.zones[z.key] = s.t; const n = zonesTaken(s);
     s.zoneTaken = { key: z.key, t: s.t, n }; s.events.push('zone');
@@ -1881,6 +1894,13 @@ function duelStats(s, a){
   if (has(s, 'cuticle')) def++;
   if (s.colony.trophies.shell && roomOf(s, 'armory')) def++;
   if (a.isPlayer && youL(s) >= 3){ atk++; def++; }
+  // Build 40: fighting at your own door. Stridulation: +1 Attack while the alarm sounds. Honour guard: +2
+  // Defence. Hive mind: +1 Attack for every ant answering a raid.
+  const home = Math.hypot(a.tx - s.colony.ex, a.ty - s.colony.ey) < 8;
+  if (home && has(s, 'stridulation') && s.alarm[idx(s.colony.ex, s.colony.ey)] > 0.2) atk++;
+  if (home && has(s, 'honourguard')) def += 2;
+  if (home && has(s, 'hivemind') && s.raidLive) atk++;
+  // Bullet line: +1 Attack against anything slowed.
   return [atk, def];
 }
 // Who is on whom, from last tick's choices: weight of attackers per foe id.
@@ -1889,7 +1909,7 @@ const pinnedNow = (s, o) => o.caste !== 'supermajor' && s.gangs && (s.gangs.get(
 function pop(s, x, y, text, k){ (s.pops || (s.pops = [])).push({ x, y, text, k, t: s.t }); if (s.pops.length > 40) s.pops.shift(); }
 // One swing of a at o. Returns what happened. mul scales the damage (your ant bites twice as hard).
 function swing(s, a, o, mul = 1){
-  const P = s.player, [atk0] = duelStats(s, a), [, def0] = duelStats(s, o), atk = atk0 + (frenzied(s, a) ? (a.frenzyAtk || 2) : 0), def = def0 - (exposed(s, o) ? 1 : 0);
+  const P = s.player, [atk0] = duelStats(s, a), [, def0] = duelStats(s, o), atk = atk0 + (frenzied(s, a) ? (a.frenzyAtk || 2) : 0) + (!a.team && s.colony.lineage === 'bullet' && o.slowT > 0 ? 1 : 0), def = def0 - (exposed(s, o) ? 1 : 0);
   if (o.isPlayer && o.feign > s.t) return 'miss'; // playing dead
   const me = a.team && rspec(a).swarm ? 2 : 1, help = Math.min(3, Math.max(0, ((s.gangs && s.gangs.get(o.id)) || 0) - (a.foeId === o.id ? me : 0)));
   const pinned = pinnedNow(s, o), ra = 1 + Math.floor(Math.random()*6), rd = 1 + Math.floor(Math.random()*6);
@@ -1907,6 +1927,7 @@ function swing(s, a, o, mul = 1){
     if (kind === 'crit'){ o.slowT = Math.max(o.slowT || 0, 4); if (!a.team) s.colony.crits = (s.colony.crits || 0) + 1; }
     if (!a.team && a.caste === 'venom' && s.colony.trophies.fang2){ o.stunned = s.t + 1; o.lockT = Math.max(o.lockT || 0, 1); } // build 36: the centipede's fang
     if (a.team && rspec(a).key === 'fire') o.burnT = 3;
+    if (!a.team && s.colony.lineage === 'bullet' && CASTES[a.caste].fight >= 3) o.slowT = Math.max(o.slowT || 0, 2); // build 40: the Bullet line's sting slows in duels too
     if (o.champion && s.event && s.event.key === 'warparty'){ const B = s.event.data.biters || (s.event.data.biters = {}); B[a.id] = (B[a.id] || 0) + dmg; }
     gainXp(s, a, dmg/3);
   }
@@ -3149,6 +3170,7 @@ function queueEgg(s, caste){
   if (caste === 'soldier' && roomSlotIndex(s,'barracks') < 0) return false;
   if (caste === 'nurse' && roomSlotIndex(s,'nursery') < 0) return false;
   if (caste === 'venom' && !c.trophies.spider) return false;
+  if (eggLock(s, caste)) return false; // build 40: the same rules the menu shows
   if (c.eggQueue.length >= 10) return false;
   if (!payCost(c, eggCost(s, caste))) return false; c.eggQueue.push(caste); return true;
 }
@@ -3166,12 +3188,20 @@ function roomLock(s, room){
 function pickLineage(s, k){ const c = s.colony; if (!has(s, 'lineage') || c.lineage || !['acid', 'trapjaw', 'bullet'].includes(k)) return false; c.lineage = k; s.player.msg = 'Your line is ' + { acid: 'Acid', trapjaw: 'Trap-jaw', bullet: 'Bullet' }[k] + ', for good.'; return true; }
 function roomUpLock(s, key){ const R = ROOMS[key], n = roomLevel(s, key); if (!R.lv) return 'no levels'; if (!roomCount(s, key)) return 'build one first'; if (n > R.lv.length) return 'top level'; return ''; }
 function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; roomsChanged(s); s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone'); return true; }
+// Build 40: cancel every room still waiting to be built. Not started, all its cost back; started, half.
+function cancelBuilds(s){
+  const c = s.colony; let n = 0;
+  for (const j of c.buildQueue){ const cost = j.paid || roomCost(s, j.room), k2 = j.progress > 0 ? 0.5 : 1; for (const k in cost){ const back = Math.floor(cost[k]*k2); if (k === 'food') c.store = Math.min(c.cap, c.store + back); else c[k] = (c[k] || 0) + back; } n++; }
+  c.buildQueue.length = 0; return n;
+}
 function queueRoom(s, room, cell){
   const c = s.colony, R = ROOMS[room]; if (!R || !s.queen.placed || !cell) return false;
   if (roomLock(s, room)) return false;
   const rect = findRoomRect(s, cell[0], cell[1], R.w, R.h); if (!rect) return false;
   if (!payCost(c, roomCost(s, room))) return false;
-  c.buildQueue.push({ room, x0: rect.x0, y0: rect.y0, w: R.w, h: R.h, progress: 0, x: rect.x0+1, y: rect.y0+1 }); return true;
+  c.buildQueue.push({ room, x0: rect.x0, y0: rect.y0, w: R.w, h: R.h, progress: 0, x: rect.x0+1, y: rect.y0+1, paid: roomCost(s, room, roomCount(s, room)) });
+  s.nest.fillOrders = s.nest.fillOrders.filter(o => !(o.x >= rect.x0 && o.x < rect.x0 + R.w && o.y >= rect.y0 && o.y < rect.y0 + R.h)); // build 40: a room's ground isn't filled in
+  return true;
 }
 // The old "Train foragers": the Forager's next level, taking the first pick if it has one.
 function upgradeForage(s){ const U = UPGRADES.forager[s.colony.forage || 0]; return !!U && upgradeCaste(s, 'forager', U.picks ? U.picks[0][0] : undefined); }
@@ -3186,22 +3216,35 @@ function stats(s){
 }
 // ---------- save / load ----------
 function serialize(s){
-  return JSON.stringify({ v: 11, active: s.active, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
+  return JSON.stringify({ v: SAVE_VERSION, active: s.active, raidStart: s.raidStart || null, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
-    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
-    phase1: s.phase1 || null,
+    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
+    phase1: s.phase1 || null, cds: s.player.cds || null,
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
 }
+// Build 40: save versions. 11 was written by builds 12-39, 12 from build 40. Older ones step up through
+// migrate(); a save from a newer build than this one is refused (rather than half-read).
+const SAVE_VERSION = 12;
+function migrate(d){
+  if (!d || typeof d !== 'object') throw new Error('not a save');
+  if (d.v > SAVE_VERSION) throw new Error('save from a newer version of the game');
+  if (d.v < 10) throw new Error('save from before the whole yard (build 10)');
+  if (d.v <= 11){ d.v = 12; /* build 40 added raidStart, player cooldowns and timed ant effects: all default to empty */ }
+  return d;
+}
 function deserialize(json){
-  const d = JSON.parse(json); if (d.v !== 10 && d.v !== 11) throw new Error('old save'); const s = create(d.seed);
+  const d = migrate(JSON.parse(json)); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.phase1 = d.phase1 || null; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
+  s.t = d.t; s.phase1 = d.phase1 || null; s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
-  for (const a of s.ants) if (a.state === 'away'){ a.state = 'return'; a.follow = false; a.carry = a.loot || 0; a.kind = a.lootKind === 'brood' ? 'brood' : 'food'; a.loot = 0; } // build 28: a raid in progress isn't saved; its raiders walk home
+  // A raid in progress isn't saved: its raiders walk home with what they carried (build 28). Ants held by a
+  // creature (a toad's mouth, a mantis's claws, a wasp's legs) stay held (build 40).
+  { const held = new Set(); for (const k in s.bosses || {}){ const b = s.bosses[k]; if (b.held && b.held.id) held.add(b.held.id); if (b.eat) for (const id of b.eat.ids || []) held.add(id); } for (const b of s.critters || []){ if (b.carry) held.add(b.carry); }
+    for (const a of s.ants) if (a.state === 'away' && !held.has(a.id)){ a.state = 'return'; a.follow = false; a.carry = a.loot || 0; a.kind = a.lootKind === 'brood' ? 'brood' : 'food'; a.loot = 0; } }
   s.player.ant = s.ants.find(a => a.isPlayer) || null; Object.assign(s.player, d.player);
   s.lost = !!d.lost; if (d.mower) s.mower = d.mower; if (d.areaT) s.areaT = d.areaT; if (d.strikeT) s.strikeT = d.strikeT; s.player.big = s.player.ant && s.items.find(f => f.carried) || null;
   if (d.active) s.active = d.active;
@@ -3212,7 +3255,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

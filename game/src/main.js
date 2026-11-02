@@ -13,7 +13,7 @@ import { soundWatch, tapSounds } from './audio/watch.js';
 import { music } from './audio/music.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
-import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED } from './game/save.js';
+import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED, loadProblem } from './game/save.js';
 import { Cinematic, renderScoreWav } from './intro/cinematic.js';
 import { uiScale } from './config.js';
 import { GROUND_TINT } from './render/views/yardScenery.js';
@@ -27,6 +27,8 @@ const pipeline = new PS1Pipeline(canvas);
 useSnapUniforms(pipeline.uniforms);
 
 const s0 = loadGame();
+// Build 40: say so when a save couldn't be loaded (it is kept aside, never overwritten).
+if (loadProblem) s0.player.msg = loadProblem.recovered ? 'Your last save could not be loaded, so the backup from a minute before it was. (The unreadable one is kept.)' : 'Your saved colony could not be loaded. It has been kept aside, and a new colony started.';
 // Everything the UI, input and views share.
 const app = {
   s: s0,
@@ -337,11 +339,12 @@ function frame(now) {
   hudT += dt;
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }
   saveT += dt;
-  if (saveT > 10) { saveT = 0; saveGame(app.s); saveMapIfNew(); if (!app.titleOpen && app.s.queen.placed) ui.saved(); }
+  if (saveT > 10) { saveT = 0; const ok = saveGame(app.s); saveMapIfNew(); if (ok && !app.titleOpen && app.s.queen.placed) ui.saved(); }
   requestAnimationFrame(frame);
 }
 
 window.addEventListener('pagehide', () => { saveGame(app.s); saveMapIfNew(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { saveGame(app.s); saveMapIfNew(); } }); // (phones often never send pagehide)
 ui.update();
 measureHud();
 applyOptions();

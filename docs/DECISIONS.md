@@ -2,6 +2,84 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: the audit: rooms, evolutions, the nest, features, saving (build 40)
+
+Mark: "make sure every room has a purpose every evolution has depth every part of the nest can be well used that every function and feature in the game works and works well and that we can save the game and load it with updates."
+
+**How it was checked:**
+- Three read-only reviews ran side by side, one each for rooms and the nest, the evolution tree, and save/load. Each traced every item to the code.
+- The end-to-end browser test passed: intro, nest, building, crews, evolving, rebirth, outposts, creatures, events, bosses.
+- A new save/load stress test (`tests/saveload.test.js`) covers a busy colony, a boss mid-fight, a raid in progress, hunters, and an older save with the newer fields stripped.
+- Everything they found is fixed, except the few listed under "Left as is".
+
+**Saving and loading:**
+- **A save that fails to load is never lost.**
+  - Before: the game quietly started a new colony and saved it over the old one within 10 s.
+  - Now: the unreadable save is kept under its own key (`-bad`), and the backup from a minute earlier (`-prev`, refreshed every minute) is loaded if it works. A message says which happened.
+- **Real versions:**
+  - Saves were all "v11" from build 12 to 39. They're now **v12** with a `migrate()` step, so each future change steps old saves up.
+  - Older saves (v10–11) load.
+  - A save from a newer build is refused with a reason, rather than half-read or wiped.
+- **Kept now:**
+  - which rival colony is raiding you. Before, a save mid-raid by a later colony could leave raids stuck forever;
+  - ability cooldowns (reloading used to reset them);
+  - timed effects on ants: Frenzy, Play Dead, Exposed, Stunned, the Survivor perk, web stickiness, a raider's queen timer.
+- **Ants a creature is holding stay held after a load:** in a toad's mouth, a mantis's claws or a wasp's legs. Only raiders inside a rival nest walk home, as before.
+- **"Saved ✓" shows only when the save was really written.** The game now also saves when the tab is hidden, which matters on phones.
+
+**Rooms and the nest:**
+- **Food cap:** it's recalculated every second.
+  - The **Honeypot vault's** repletes never raised it before.
+  - The **Shared stores** cap at outposts never changed after an outpost was finished or lost.
+- **Fill orders** can't land in a room, and building a room clears the fill orders on its ground. Before, they punched dirt holes into finished rooms.
+- **Clear orders** now also cancels rooms still waiting to be built: all their cost back, or half once building has begun. Before, one badly placed room blocked every room queued behind it.
+- **Infirmary:** every medic heals (it was capped at 3), so a second Infirmary and level II's extra medics matter. Level III no longer "saves" Cordyceps victims.
+- **Midden:**
+  - Undertakers now carry the dead to it: each of your ants that dies near the nest gives back 2 food.
+  - Each undertaker makes Cordyceps spread less.
+  - It used to do almost nothing.
+- **Honeypot III's** famine reserve is filled from the store. It used to make food from nothing.
+- **Removing the last copy of a room** resets its levels and refunds half of what they cost. Before, a rebuilt room got its levels free.
+- **Room copies are capped at 5.** At queen level VIII the cap was 8, which can't fit the nest: all of them need 1,451 cells against 1,034.
+- **Venom ants** need a Barracks like Soldiers. Eggs can only be queued when the menu would allow it.
+- **Text:** the Workshop's and the Midden's descriptions say what they do.
+
+**Evolutions, upgrades and traits:**
+- **They did nothing before, and work now:**
+  - **Foreman**: builders work 50% faster.
+  - **Tunnel master**: no cave-ins, ever, from wear or rain.
+  - **Builder level IV**: digs 2× faster.
+  - **Mother of nations** now has a real effect: stolen pupae hatch two to one, as Veterans. Satellite queens don't exist yet.
+- **Deeds:**
+  - On a 1-gene node (Waypoints, Hatchery II, Store II), finishing the deed now halves the other costs. Halving 1 gene left it at 1, so the deed did nothing.
+  - "Fill the store to 150" counts deliveries, so it can be done with one Food store.
+  - "Kill 20 rival ants" counts every rival colony.
+- **War camp loot and Brood raiding** work at any rival's nest, not just the Patio's.
+- **Overlapping nodes now do something of their own**, in dice duels at your door:
+  - Stridulation: +1 Attack while the alarm sounds.
+  - Honour guard: +2 Defence.
+  - Hive mind: +1 Attack during a raid on you.
+  - Highways: your ant runs a quarter faster on a trail.
+- **Shallow nodes deepened:**
+  - Colony memory (the 12-gene capstone) hatches Veterans.
+  - Honey economy lets 🍯 feed the colony when the store runs dry.
+  - Flower nectar heals your ants in regions you hold.
+- **Nest-family promotions** (Gentle, Healer) work for medics, ranchers and the other nest ants, not only nurses.
+- **The Bullet line's** sting slows in duels too, and gives +1 Attack against anything slowed. It was the weakest of the three lines.
+- **Text fixes:** Fertile (25%, as coded), Neurotoxin, Guardian, Big crop.
+
+**Left as is (logged in the backlog):**
+- Heat tolerance and Social stomach stay situational.
+- The Granary and the Store both mainly raise the food cap.
+- Surplus ranchers, medics and the like sit idle.
+- Falls of feet and birds in progress aren't saved.
+- Rooms' own levels (Build list) and the older Hatchery and Store levels (evolution tree) live in two places.
+
+**Checks:**
+- 172 tests, 13 new (`tests/saveload.test.js`, `tests/audit.test.js`).
+- The end-to-end browser test passes.
+- 45-minute bots: 3 of 4 reached 40 ants and 1 won, as usual.
+
 ## Nov 2: the zone map and the end of Phase 1 (build 39)
 
 Mark: "Do the zone map."

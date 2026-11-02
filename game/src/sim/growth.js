@@ -31,7 +31,7 @@ export const PROMOS = {
   gather: [['trailwise', 'Trailwise', '20% faster on a trail'], ['strongback', 'Strongback', 'Carries one more'], ['keen', 'Keen nose', 'Spots food further off'], ['dodger', 'Dodger', 'Dodges the first foot, beak or acorn']],
   dig: [['quick', 'Quick digger', 'Digs 25% faster'], ['steady', 'Steady', 'Counts double against cave-ins'], ['packer', 'Packer', 'Hauls two loads of spoil'], ['fixer', 'Fixer', 'Repairs cave-ins twice as fast']],
   fight: [['brawler', 'Brawler', 'Bites 20% harder'], ['guard', 'Guard', 'Bites 50% harder near the nest'], ['hunter', 'Hunter', 'Bites 50% harder on big bugs'], ['skirmisher', 'Skirmisher', '20% faster']],
-  nest: [['gentle', 'Gentle', 'Eggs hatch faster in its care'], ['healer', 'Healer', 'Heals hurt ants in the nest']],
+  nest: [['gentle', 'Gentle', 'Eggs hatch faster in its care (a rancher milks 30% more)'], ['healer', 'Healer', 'Heals hurt ants in the nest']],
 };
 
 // ---------- ant upgrades ----------
@@ -67,12 +67,12 @@ export const UPGRADES = {
     { boost: 'Bites 25% harder', cost: { food: 60, protein: 15 }, picks: [['doorkeeper', 'Doorkeeper', 'Raiders steal nothing past a guarded door'], ['escort', 'Escort', 'Patrols twice as far and scares off birds']] },
     { boost: '20% faster', cost: { food: 100, protein: 25, chitin: 5 }, picks: [['alarm', 'Alarm caller', 'Wakes every idle fighter when attacked'], ['phalanx', 'Phalanx', 'Bites 50% harder with 3 or more']] },
     { boost: '50% more health again', cost: { protein: 80, chitin: 25 } },
-    { boost: 'Mastery', cost: { protein: 150, chitin: 50, genes: 2 }, picks: [['warlord', 'Warlord', 'Fighters near it bite 30% harder'], ['guardian', 'Guardian', 'Takes the hits meant for the queen']] },
+    { boost: 'Mastery', cost: { protein: 150, chitin: 50, genes: 2 }, picks: [['warlord', 'Warlord', 'Fighters near it bite 30% harder'], ['guardian', 'Guardian', 'Raiders hurt the queen half as much']] },
   ],
   venom: [
     { boost: 'Venom 25% stronger', cost: { protein: 20 } },
     { boost: '30% more health', cost: { food: 40, protein: 35 }, picks: [['paralytic', 'Paralytic', 'Stung spiders and caterpillars slow to half'], ['hunter', 'Hunter', 'A kill lays a trail home for the haulers']] },
-    { boost: 'Stings faster', cost: { protein: 60, sugar: 15 }, picks: [['neurotoxin', 'Neurotoxin', 'Every fifth sting stuns a boss'], ['lethal', 'Lethal dose', 'Small foes die in one sting']] },
+    { boost: 'Stings faster', cost: { protein: 60, sugar: 15 }, picks: [['neurotoxin', 'Neurotoxin', 'Its stings now and then slow a boss'], ['lethal', 'Lethal dose', 'Small foes die in one sting']] },
   ],
   nurse: [
     { boost: 'Eggs hatch 15% faster', cost: { food: 20, water: 10 } },
@@ -85,9 +85,9 @@ export const UPGRADES = {
 // The queen's traits: picked once each, at levels IV, VI and VIII.
 export const QUEEN_LEVELS = [{ food: 250, protein: 60, sugar: 20 }, { food: 400, protein: 90, sugar: 40 }, { food: 600, protein: 120, sugar: 60, chitin: 20 }, { food: 900, protein: 180, sugar: 100, wood: 40 }];
 export const QUEEN_TRAITS = [
-  { level: 3, picks: [['fertile', 'Fertile', 'Eggs hatch 20% faster'], ['hardy', 'Hardy', 'Raiders hurt her less than half as much']] },
+  { level: 3, picks: [['fertile', 'Fertile', 'Eggs hatch 25% faster'], ['hardy', 'Hardy', 'Raiders hurt her less than half as much']] },
   { level: 5, picks: [['broodmother', 'Brood mother', 'Eggs cost 30% less'], ['matriarch', 'Matriarch', 'Every ant has 10% more health']] },
-  { level: 7, picks: [['nations', 'Mother of nations', 'Satellite queens start at level IV'], ['eternal', 'Eternal line', 'If she dies, a new queen takes over']] },
+  { level: 7, picks: [['nations', 'Mother of nations', 'Stolen pupae hatch two to one, as Veterans'], ['eternal', 'Eternal line', 'If she dies, a new queen takes over']] },
 ];
 
 // ---------- the evolution tree ----------
@@ -102,15 +102,15 @@ export const BRANCHES = [
 ];
 export const EVO = [
   // Bodies
-  { key: 'mandibles', branch: 'bodies', name: 'Strong mandibles', cost: { genes: 2, protein: 10 }, fx: 'Fighters bite 25% harder. Your ant learns 🦷 Mandible Lock: stun an enemy, and cancel a boss’s wind-up', deed: ['Kill 20 rival ants', (s) => (s.rival.deaths.war || 0) >= 20] },
+  { key: 'mandibles', branch: 'bodies', name: 'Strong mandibles', cost: { genes: 2, protein: 10 }, fx: 'Fighters bite 25% harder. Your ant learns 🦷 Mandible Lock: stun an enemy, and cancel a boss’s wind-up', deed: ['Kill 20 rival ants', (s) => (s.rivals || [s.rival]).reduce((n, r) => n + (r.deaths.war || 0), 0) >= 20] },
   { key: 'formic', branch: 'bodies', after: 'mandibles', name: 'Formic spray', cost: { genes: 4, protein: 20 }, fx: 'Fighters bite from 2 tiles away. Your ant learns 🧪 Formic Spray: an acid cloud that Exposes enemies', deed: ['Kill the spider', (s) => (s.colony.kills.spider || 0) >= 1] },
   // Build 33: second levels of your ant's abilities.
   { key: 'spray2', branch: 'bodies', after: 'formic', name: 'Acid jets', cost: { genes: 4, protein: 20 }, fx: '🧪 Formic Spray II: a wider cloud (3½ tiles), Exposed lasts 9 s, cooldown 7 s' },
   { key: 'lock2', branch: 'bodies', after: 'mandibles', name: 'Iron grip', cost: { genes: 4, protein: 15 }, fx: '🦷 Mandible Lock II: stuns for 4 s (a boss 2½ s), cooldown 11 s' },
   { key: 'exploders', branch: 'bodies', after: 'formic', name: 'Exploders', cost: { genes: 5, protein: 40 }, fx: 'The Exploder ant: it bursts when it dies, hurting everything near' },
-  { key: 'stridulation', branch: 'bodies', after: 'mandibles', name: 'Stridulation', cost: { genes: 4 }, fx: 'Squeaks through the soil: every fighter answers an alarm', deed: ['Fight off 3 raids', (s) => (s.colony.raidsBeaten || 0) >= 3] },
+  { key: 'stridulation', branch: 'bodies', after: 'mandibles', name: 'Stridulation', cost: { genes: 4 }, fx: 'Squeaks through the soil: every fighter answers an alarm, and fights at your door with +1 Attack while it sounds', deed: ['Fight off 3 raids', (s) => (s.colony.raidsBeaten || 0) >= 3] },
   { key: 'trailrunners', branch: 'bodies', name: 'Trail runners', cost: { genes: 2, food: 30 }, fx: 'Ants on a scent trail are 25% faster', deed: ['Haul 5 treats home', (s) => (s.colony.treats || 0) >= 5] },
-  { key: 'bigcrop', branch: 'bodies', after: 'trailrunners', name: 'Big crop', cost: { genes: 3, sugar: 10 }, fx: 'Foragers carry 3 more' },
+  { key: 'bigcrop', branch: 'bodies', after: 'trailrunners', name: 'Big crop', cost: { genes: 3, sugar: 10 }, fx: 'Every ant carries 3 more' },
   { key: 'stomach', branch: 'bodies', after: 'bigcrop', name: 'Social stomach', cost: { genes: 8, sugar: 50 }, fx: 'Your ant never starves, and hunger kills half as many', big: true },
   // Build 32.1: real ants play dead when caught (thanatosis). Teaches your ant Play Dead.
   { key: 'thanatosis', branch: 'bodies', name: 'Playing dead', cost: { genes: 2 }, fx: 'Your ant learns 💀 Play Dead: 3 seconds untouchable, and it heals' },
@@ -130,7 +130,7 @@ export const EVO = [
   { key: 'danger', branch: 'senses', after: 'scent', name: 'Danger scent', cost: { genes: 2 }, fx: 'Foragers keep twice as wide of the spider. Your ant learns 📯 Alarm Call: your crew Frenzies' },
   { key: 'alarm2', branch: 'senses', after: 'danger', name: 'War scent', cost: { genes: 4 }, fx: '📯 Alarm Call II: reaches 12 tiles, Frenzy lasts 12 s and gives +3 Attack' },
   { key: 'rally', branch: 'senses', after: 'danger', name: 'Rally scent', cost: { genes: 3 }, fx: 'Recruit from half again as far' },
-  { key: 'hivemind', branch: 'senses', after: 'rally', name: 'Hive mind', cost: { genes: 10 }, fx: 'Every ant answers what the colony needs twice as readily', big: true },
+  { key: 'hivemind', branch: 'senses', after: 'rally', name: 'Hive mind', cost: { genes: 10 }, fx: 'Every ant answers what the colony needs twice as readily, and fights a raid at your door with +1 Attack', big: true },
   { key: 'propaganda', branch: 'senses', after: 'scent', name: 'Propaganda scent', cost: { genes: 7 }, fx: 'Rival ants bite 25% weaker' },
   { key: 'crews', branch: 'senses', name: 'Bigger crews', cost: { genes: 3 }, fx: 'Recruit up to 30', deed: ['Haul 3 treats home', (s) => (s.colony.treats || 0) >= 3] },
   { key: 'crews2', branch: 'senses', after: 'crews', name: 'Bigger crews II', cost: { genes: 5 }, fx: 'Recruit up to 45' },
@@ -152,23 +152,23 @@ export const EVO = [
   { key: 'workshop3', branch: 'nest', name: 'Workshop III', cost: { genes: 6, wood: 30 }, fx: 'Architects: builders work 50% faster, rooms cost 20% less' },
   { key: 'deephalls', branch: 'nest', after: 'workshop3', name: 'Deep halls', cost: { genes: 8, grit: 100 }, fx: 'The queen holds 20 more ants', big: true },
   { key: 'royal', branch: 'nest', name: 'Royal chamber', cost: { genes: 5, wood: 20 }, fx: 'Satellite nests: foragers drop their loads at a finished outpost when it’s nearer than home' },
-  { key: 'highways', branch: 'nest', after: 'royal', name: 'Highways', cost: { genes: 5, wood: 30 }, fx: 'Ants on a trail are 30% faster' },
+  { key: 'highways', branch: 'nest', after: 'royal', name: 'Highways', cost: { genes: 5, wood: 30 }, fx: 'Ants on a trail are 30% faster, and your ant a quarter faster on one' },
   { key: 'shared', branch: 'nest', after: 'highways', name: 'Shared stores', cost: { genes: 9 }, fx: 'Every finished outpost adds 50 food cap', big: true },
   // Society
   { key: 'division', branch: 'society', name: 'Division of labour', cost: { genes: 3 }, fx: 'Ants earn experience 25% faster', deed: ['Hatch 20 eggs', (s) => (s.colony.hatched || 0) >= 20] },
   { key: 'drillhall', branch: 'society', after: 'division', name: 'Drill hall', cost: { genes: 4, protein: 40 }, fx: 'Soldiers and Venom ants hatch Seasoned', need: 'barracks', deed: ['Have a Veteran fighter', (s) => s.ants.some((a) => !a.team && a.state !== 'dead' && (a.caste === 'soldier' || a.caste === 'venom') && (a.xp || 0) >= RANKS[2].xp)] },
-  { key: 'memory', branch: 'society', after: 'drillhall', name: 'Colony memory', cost: { genes: 12 }, fx: 'Every ant hatches Seasoned', big: true },
+  { key: 'memory', branch: 'society', after: 'drillhall', name: 'Colony memory', cost: { genes: 12 }, fx: 'Every ant hatches a Veteran', big: true },
   { key: 'warcamp', branch: 'society', name: 'War camp', cost: { genes: 3, grit: 30 }, fx: 'Rivals killed near their nest drop their food' },
   { key: 'broodraid', branch: 'society', after: 'warcamp', name: 'Brood raiding', cost: { genes: 6 }, fx: '1 in 5 rivals killed near their nest comes home as brood and hatches as yours' },
   { key: 'polygyny', branch: 'society', name: 'Polygyny', cost: { genes: 6, sugar: 40 }, fx: 'A second queen: 2 more eggs at once, laid 30% faster' },
-  { key: 'honourguard', branch: 'society', after: 'polygyny', name: 'Honour guard', cost: { genes: 5 }, fx: 'Raiders hurt the queen half as much' },
+  { key: 'honourguard', branch: 'society', after: 'polygyny', name: 'Honour guard', cost: { genes: 5 }, fx: 'Raiders hurt the queen half as much, and your ants fight at the door with +2 Defence' },
   // Symbiosis
   { key: 'aphids', branch: 'symbiosis', name: 'Aphid farming', cost: { genes: 2, food: 20 }, fx: 'Honeydew gives three times the 🍯' },
   { key: 'mealybugs', branch: 'symbiosis', after: 'aphids', name: 'Root aphid ranching', cost: { genes: 4, sugar: 10 }, fx: 'The Aphid barn room, and Ranchers: 🍯 underground' },
-  { key: 'honeyeco', branch: 'symbiosis', after: 'mealybugs', name: 'Honey economy', cost: { genes: 8 }, fx: '🍯 pays wherever 🌾 does', big: true },
+  { key: 'honeyeco', branch: 'symbiosis', after: 'mealybugs', name: 'Honey economy', cost: { genes: 8 }, fx: '🍯 pays wherever 🌾 does, and feeds the colony when the store runs dry', big: true },
   { key: 'fungus', branch: 'symbiosis', after: 'aphids', name: 'Fungus garden', cost: { genes: 5, food: 40 }, fx: 'The Fungus garden room, and Gardeners: leaves become food' },
   { key: 'beetles', branch: 'symbiosis', name: 'Beetle guests', cost: { genes: 4 }, fx: 'Rove beetles: cave-ins mend half again faster, loose spoil tidied away' },
-  { key: 'nectar', branch: 'symbiosis', name: 'Flower nectar', cost: { genes: 3, sugar: 10 }, fx: 'Each region you hold gives 🍯 a minute' },
+  { key: 'nectar', branch: 'symbiosis', name: 'Flower nectar', cost: { genes: 3, sugar: 10 }, fx: 'Each region you hold gives 🍯 a minute, and heals your ants in it' },
 ];
 export const EVO_BY = Object.fromEntries(EVO.map((n) => [n.key, n]));
 
@@ -178,7 +178,10 @@ export const GREAT = ['Living Bridges', 'Raft Colony', 'Weaver Canopy', 'Fungus 
 // The 🧬 part of a node's cost, halved (rounded up) once its deed is done.
 export function evoCost(s, n) {
   const cost = Object.assign({}, n.cost);
-  if (n.deed && cost.genes && n.deed[1](s)) cost.genes = Math.ceil(cost.genes / 2);
+  if (n.deed && n.deed[1](s)) {
+    if (cost.genes > 1) cost.genes = Math.ceil(cost.genes / 2);
+    else for (const k in cost) if (k !== 'genes') cost[k] = Math.ceil(cost[k] / 2); // build 40: on a 1-gene node, the deed halves the rest
+  }
   return cost;
 }
 
