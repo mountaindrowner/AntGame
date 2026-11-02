@@ -2038,10 +2038,10 @@ function queenFalls(s, r){
 // Maybe we need to give our main ant abilities the player can trigger that are based on him or the
 // crowd or weakening the enemy like statuses"). Four, each on its own cooldown.
 const ABILITIES = {
-  spray:  { name: 'Formic Spray', icon: '🧪', cd: 10, range: 6, r: 2.5, dur: 6, line: 'A cloud of acid where you point: enemies in it are Exposed for 6 s (half again damage, −1 Defence).' },
-  alarm:  { name: 'Alarm Call', icon: '📯', cd: 24, r: 8, dur: 8, line: 'Your crew and fighters within 8 tiles Frenzy for 8 s: +2 Attack, bites 30% harder, faster.' },
-  lock:   { name: 'Mandible Lock', icon: '🦷', cd: 16, range: 2.6, dur: 2.5, boss: 1.5, line: 'Grab the nearest enemy: Stunned 2.5 s. A boss: 1.5 s, and the attack it was winding up is cancelled.' },
-  dead:   { name: 'Play Dead', icon: '💀', cd: 30, dur: 3, heal: 0.3, line: 'Drop and lie still: nothing hurts you for 3 s, and you heal 30%.' },
+  spray:  { name: 'Formic Spray', icon: '🧪', evo: 'formic', cd: 10, range: 6, r: 2.5, dur: 6, line: 'A cloud of acid where you point: enemies in it are Exposed for 6 s (half again damage, −1 Defence).' },
+  alarm:  { name: 'Alarm Call', icon: '📯', evo: 'danger', cd: 24, r: 8, dur: 8, line: 'Your crew and fighters within 8 tiles Frenzy for 8 s: +2 Attack, bites 30% harder, faster.' },
+  lock:   { name: 'Mandible Lock', icon: '🦷', evo: 'mandibles', cd: 16, range: 2.6, dur: 2.5, boss: 1.5, line: 'Grab the nearest enemy: Stunned 2.5 s. A boss: 1.5 s, and the attack it was winding up is cancelled.' },
+  dead:   { name: 'Play Dead', icon: '💀', evo: 'thanatosis', cd: 30, dur: 3, heal: 0.3, line: 'Drop and lie still: nothing hurts you for 3 s, and you heal 30%.' },
 };
 const ABILITY_KEYS = ['spray', 'alarm', 'lock', 'dead'];
 const exposed = (s, o) => o && o.exposed > s.t;
@@ -2049,6 +2049,7 @@ const stunned = (s, o) => o && o.stunned > s.t;
 const frenzied = (s, a) => a && a.frenzy > s.t;
 function abilityLock(s, key){
   const P = s.player, A = ABILITIES[key]; if (!A) return 'unknown';
+  if (A.evo && !has(s, A.evo)) return 'evolve ' + EVO_BY[A.evo].name + ' to learn it'; // build 32.1: learned in the evolution tree
   if (!P.ant || P.inNest) return 'outside only';
   const left = ((P.cds || {})[key] || 0) - s.t; if (left > 0) return `ready in ${Math.ceil(left)} s`;
   return '';

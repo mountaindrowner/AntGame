@@ -11,6 +11,7 @@ function out(seed = 7) {
   const P = s.player; P.ntx = SIM.SHAFT; P.nty = 0; P.exiting = true;
   for (let i = 0; i < 600 && P.inNest; i++) SIM.tick(s, 0.05);
   s.spider = null; s.spiderRespawn = 1e9; s.director.next = 1e9; s.strikeT = s.strikeT.map(() => 1e9); s.critters = []; s.bugT = -1e9;
+  for (const k of ['formic', 'danger', 'mandibles', 'thanatosis']) s.colony.evo[k] = true; // learned
   return { s, P, me: P.ant };
 }
 const ant = (s, x, y, extra = {}) => { const me = s.player.ant, o = { ...me, isPlayer: false, name: null, id: s.nextId++, follow: false, xp: 0, caste: 'soldier', hp: 30, state: 'patrol', foeId: 0, x, y, ...extra }; o.tx = Math.floor(o.x / T); o.ty = Math.floor(o.y / T); s.ants.push(o); return o; };
@@ -25,7 +26,7 @@ test('formic spray exposes enemies in the cloud, and only them; then it cools do
 });
 
 test('exposed: one less Defence and half again damage in a duel', () => {
-  const { s, me } = out(); SIM.duelGangs(s);
+  const { s, me } = out(); SIM.duelGangs(s); delete s.colony.evo.mandibles; // plain soldier stats for the dice below
   const a = ant(s, me.x, me.y), o = ant(s, me.x + T, me.y, { team: 1, caste: 'forager', hp: 1e6 });
   const real = Math.random; const roll = (f) => { let i = 0; Math.random = () => (f[i++ % f.length] - 1) / 6 + 0.01; };
   try {
@@ -63,4 +64,14 @@ test('play dead: nothing hurts you for 3 s, and you heal', () => {
   const r = ant(s, me.x + 0.5 * T, me.y, { team: 1 }); SIM.duelGangs(s);
   assert.equal(SIM.swing(s, r, me), 'miss');
   assert.ok(me.hp >= Math.min(h, 1));
+});
+
+test('each ability is learned in the evolution tree', () => {
+  const { s, me } = out();
+  for (const k of ['formic', 'danger', 'mandibles', 'thanatosis']) delete s.colony.evo[k];
+  for (const k of SIM.ABILITY_KEYS) assert.match(SIM.abilityLock(s, k), /evolve/, k);
+  assert.equal(SIM.useAbility(s, 'dead'), false);
+  s.colony.genes = 10; assert.ok(SIM.buyEvo(s, 'thanatosis'));
+  assert.equal(SIM.abilityLock(s, 'dead'), '');
+  assert.ok(SIM.useAbility(s, 'dead'));
 });

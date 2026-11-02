@@ -45,7 +45,7 @@ export function createUI(app) {
   el.skills = document.createElement('div'); el.skills.id = 'skills'; el.skills.className = 'hidden';
   el.skills.innerHTML = SIM.ABILITY_KEYS.map((k, i) => `<button data-skill="${k}" class="skill"><span class="ic">${SIM.ABILITIES[k].icon}</span><b class="key">${i + 1}</b><i class="cd"></i><em class="secs"></em></button>`).join('');
   document.body.appendChild(el.skills);
-  const cast = (k) => { const s = app.s, m = app.mouseWorld; if (SIM.useAbility(s, k, m ? m.x : null, m ? m.y : null)) sfx.play(k === 'alarm' ? 'raid' : k === 'dead' ? 'bonk' : 'charge'); else { const why = SIM.abilityLock(s, k); if (why) flash(SIM.ABILITIES[k].name + ': ' + why + '.', /: (ready in|outside only|nothing)/, 1500); } };
+  const cast = (k) => { const s = app.s, m = app.mouseWorld; if (SIM.useAbility(s, k, m ? m.x : null, m ? m.y : null)) sfx.play(k === 'alarm' ? 'raid' : k === 'dead' ? 'bonk' : 'charge'); else { const why = SIM.abilityLock(s, k); if (why) flash(SIM.ABILITIES[k].name + ': ' + why + '.', /: (ready in|outside only|nothing|evolve)/, 2200); } };
   el.skills.addEventListener('click', (e) => { const b = e.target.closest('[data-skill]'); if (b) cast(b.dataset.skill); });
   window.addEventListener('keydown', (e) => { if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || /input|textarea/i.test((e.target && e.target.tagName) || '')) return; const i = '1234'.indexOf(e.key); if (i >= 0 && app.view === 'surface' && !app.titleOpen) cast(SIM.ABILITY_KEYS[i]); });
   for (const b of el.skills.querySelectorAll('[data-skill]')) { const A = SIM.ABILITIES[b.dataset.skill]; b.dataset.tip = `${A.name} (key ${SIM.ABILITY_KEYS.indexOf(b.dataset.skill) + 1}): ${A.line} Cooldown ${A.cd} s.`; b.setAttribute('aria-label', b.dataset.tip); }
@@ -614,8 +614,9 @@ export function createUI(app) {
     renderRaidCard();
     { const outside = P().ant && !P().inNest && app.view === 'surface'; el.skills.classList.toggle('hidden', !outside);
       if (outside) for (const b of el.skills.querySelectorAll('[data-skill]')) { const k = b.dataset.skill, A = SIM.ABILITIES[k], left = Math.max(0, ((P().cds || {})[k] || 0) - s.t);
+        const learned = !A.evo || s.colony.evo[A.evo]; b.classList.toggle('locked', !learned); const ic = b.querySelector('.ic'), want = learned ? A.icon : '🔒'; if (ic.textContent !== want) ic.textContent = want; b.dataset.tip = learned ? `${A.name} (key ${SIM.ABILITY_KEYS.indexOf(k) + 1}): ${A.line} Cooldown ${A.cd} s.` : `${A.name}: evolve ${EVO_BY[A.evo].name} to learn it. ${A.line}`;
         const pct = left > 0 ? Math.round((left / A.cd) * 100) : 0; const cd = b.querySelector('.cd'); if (cd.dataset.p !== String(pct)) { cd.dataset.p = String(pct); cd.style.height = pct + '%'; }
-        const secs = left > 0 ? String(Math.ceil(left)) : ''; const se = b.querySelector('.secs'); if (se.textContent !== secs) se.textContent = secs; b.classList.toggle('ready', !left); } }
+        const secs = left > 0 ? String(Math.ceil(left)) : ''; const se = b.querySelector('.secs'); if (se.textContent !== secs) se.textContent = secs; b.classList.toggle('ready', !left && learned); } }
     if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', why ? 'Outpost: ' + why : 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('dim', !!why); }
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;

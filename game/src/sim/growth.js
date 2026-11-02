@@ -102,13 +102,15 @@ export const BRANCHES = [
 ];
 export const EVO = [
   // Bodies
-  { key: 'mandibles', branch: 'bodies', name: 'Strong mandibles', cost: { genes: 2, protein: 10 }, fx: 'Fighters bite 25% harder', deed: ['Kill 20 rival ants', (s) => (s.rival.deaths.war || 0) >= 20] },
-  { key: 'formic', branch: 'bodies', after: 'mandibles', name: 'Formic spray', cost: { genes: 4, protein: 20 }, fx: 'Fighters bite from 2 tiles away', deed: ['Kill the spider', (s) => (s.colony.kills.spider || 0) >= 1] },
+  { key: 'mandibles', branch: 'bodies', name: 'Strong mandibles', cost: { genes: 2, protein: 10 }, fx: 'Fighters bite 25% harder. Your ant learns 🦷 Mandible Lock: stun an enemy, and cancel a boss’s wind-up', deed: ['Kill 20 rival ants', (s) => (s.rival.deaths.war || 0) >= 20] },
+  { key: 'formic', branch: 'bodies', after: 'mandibles', name: 'Formic spray', cost: { genes: 4, protein: 20 }, fx: 'Fighters bite from 2 tiles away. Your ant learns 🧪 Formic Spray: an acid cloud that Exposes enemies', deed: ['Kill the spider', (s) => (s.colony.kills.spider || 0) >= 1] },
   { key: 'exploders', branch: 'bodies', after: 'formic', name: 'Exploders', cost: { genes: 5, protein: 40 }, fx: 'The Exploder ant: it bursts when it dies, hurting everything near' },
   { key: 'stridulation', branch: 'bodies', after: 'mandibles', name: 'Stridulation', cost: { genes: 4 }, fx: 'Squeaks through the soil: every fighter answers an alarm', deed: ['Fight off 3 raids', (s) => (s.colony.raidsBeaten || 0) >= 3] },
   { key: 'trailrunners', branch: 'bodies', name: 'Trail runners', cost: { genes: 2, food: 30 }, fx: 'Ants on a scent trail are 25% faster', deed: ['Haul 5 treats home', (s) => (s.colony.treats || 0) >= 5] },
   { key: 'bigcrop', branch: 'bodies', after: 'trailrunners', name: 'Big crop', cost: { genes: 3, sugar: 10 }, fx: 'Foragers carry 3 more' },
   { key: 'stomach', branch: 'bodies', after: 'bigcrop', name: 'Social stomach', cost: { genes: 8, sugar: 50 }, fx: 'Your ant never starves, and hunger kills half as many', big: true },
+  // Build 32.1: real ants play dead when caught (thanatosis). Teaches your ant Play Dead.
+  { key: 'thanatosis', branch: 'bodies', name: 'Playing dead', cost: { genes: 2 }, fx: 'Your ant learns 💀 Play Dead: 3 seconds untouchable, and it heals' },
   { key: 'cuticle', branch: 'bodies', name: 'Tough cuticle', cost: { genes: 3, chitin: 10 }, fx: 'Every ant has 50% more health' },
   { key: 'majors', branch: 'bodies', after: 'cuticle', name: 'Majors', cost: { genes: 4, chitin: 20 }, fx: 'The Major ant: big, slow, tough' },
   { key: 'polymorphism', branch: 'bodies', after: 'majors', name: 'Polymorphism', cost: { genes: 9, chitin: 60 }, fx: 'The Supermajor ant: a living tank', big: true },
@@ -121,7 +123,7 @@ export const EVO = [
   { key: 'lookout', branch: 'senses', after: 'waypoints', name: 'Lookout', cost: { genes: 3, grit: 20 }, fx: 'Ants spot things 3 tiles further off' },
   { key: 'suncompass', branch: 'senses', after: 'lookout', name: 'Sun compass', cost: { genes: 6 }, fx: 'Foragers range 25% further on their own' },
   { key: 'scent', branch: 'senses', name: 'Strong scent', cost: { genes: 2 }, fx: 'Trails fade half as fast', deed: ['Bring home 500 food', (s) => (s.colony.foodTotal || 0) >= 500] },
-  { key: 'danger', branch: 'senses', after: 'scent', name: 'Danger scent', cost: { genes: 2 }, fx: 'Foragers keep twice as wide of the spider' },
+  { key: 'danger', branch: 'senses', after: 'scent', name: 'Danger scent', cost: { genes: 2 }, fx: 'Foragers keep twice as wide of the spider. Your ant learns 📯 Alarm Call: your crew Frenzies' },
   { key: 'rally', branch: 'senses', after: 'danger', name: 'Rally scent', cost: { genes: 3 }, fx: 'Recruit from half again as far' },
   { key: 'hivemind', branch: 'senses', after: 'rally', name: 'Hive mind', cost: { genes: 10 }, fx: 'Every ant answers what the colony needs twice as readily', big: true },
   { key: 'propaganda', branch: 'senses', after: 'scent', name: 'Propaganda scent', cost: { genes: 7 }, fx: 'Rival ants bite 25% weaker' },

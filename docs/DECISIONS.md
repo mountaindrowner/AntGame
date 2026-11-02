@@ -2,6 +2,25 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: abilities are learned in the evolution tree (build 32.1)
+
+Mark: "Maybe make those available through evolve tree."
+
+Each ability now comes with the node that fits it, from real ant behaviour. This adds one new node and no clutter:
+
+| Ability | Learned with | Branch, cost |
+|---|---|---|
+| 🦷 Mandible Lock | **Strong mandibles** | Bodies, 2 🧬 + 10 protein |
+| 🧪 Formic Spray | **Formic spray** | Bodies (after Strong mandibles), 4 🧬 + 20 protein |
+| 📯 Alarm Call | **Danger scent**: ants raise the alarm with a scent | Senses (after Strong scent), 2 🧬 |
+| 💀 Play Dead | **Playing dead**, a new node. Ants caught by a predator often go limp and play dead (thanatosis). | Bodies, 2 🧬, no prerequisite |
+
+- **In the tree:** each node's text now ends with the ability it teaches.
+- **On the bar:** locked abilities stay in place, greyed out with a 🔒. Their tooltip and the message on a press name the node to evolve.
+- **Help and the tutorial** say where each is learned.
+
+**Checks:** 133 tests, 1 new (each ability is locked until its node is bought, and works after). A browser check showed the bar with three locked and Mandible Lock learned.
+
 ## Nov 2: your ant's abilities (build 32)
 
 Mark: "The boss battles are basically rts and a kind of diablo esque. Maybe we need to give our main ant abilities the player can trigger that are based on him or the crowd or weakening the enemy like statuses."
