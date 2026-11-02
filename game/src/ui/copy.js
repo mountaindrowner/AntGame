@@ -56,7 +56,8 @@ export const HELP_PAGES = [
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging. You can build one of each per queen level; extras cost more, and every room eats a little food to run.</div>
 <div class="h"><b>Jobs</b> The clipboard button. Each kind of ant does the first job on its list that needs doing (gather food, fetch water or stone, hunt, dig and build, tend eggs, guard the door), then helps with the next. Tap a job to put it first; ✕ turns it off.</div>
 <div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades. 🍯 Sugar: honeydew and sweet treats, for the queen's later levels and nurses. 🪲 Chitin: dead bugs, beetle shells and boss kills, for tough bodies and fighters.</div>
-<div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>`],
+<div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>
+<div class="h"><b>Attack</b> With a crew, rest the mouse on an enemy (or click it): a red ring marks it and the crew charges it and bites till it falls, then comes back to you.</div>`],
   ['Growth', `
 <div class="h"><b>Evolve</b> The DNA button. 🧬 Genes come from scouting new regions, the first of each find brought home, every 10 eggs, big kills and goals. Spend them on the evolution tree.</div>
 <div class="h"><b>Upgrades</b> Each kind of ant, and you, has levels bought with materials. Some levels make you pick one of two abilities, for good.</div>
@@ -97,6 +98,7 @@ export const INTRO = [
   { text: 'When the pocket is dug, press Build, pick Hatchery, and tap the green spot.', done: s => s.nest.rooms.some(r => r.key === 'hatchery') || s.colony.buildQueue.length > 0, skip: true },
   { text: 'Lay Foragers: they bring food in on their own while you explore.', done: s => s.ants.filter(a => a.caste === 'forager' && !a.team && !a.isPlayer).length >= 3, skip: true },
   { text: 'Outside, hold Recruit by the nest to call a crew. Lead them to a treat or a caterpillar.', done: s => followers(s) >= 3 || (s.colony.treats || 0) > 0, skip: true },
+  { text: 'With a crew, rest the mouse on a bug or a rival ant: your crew attacks it.', done: s => !!s.seen.attacked, skip: true },
   { text: 'Far from home, press Trail as you walk back: foragers follow your scent out to far food.', done: s => !!s.seen.marked, skip: true },
   { text: 'You earn 🧬 Genes by playing. Tap Evolve (top right) to spend them.', done: s => !!s.seen.evolveOpened, skip: true },
   { text: 'That’s the basics. Grow, explore, and take the yard.', btn: 'Done' },

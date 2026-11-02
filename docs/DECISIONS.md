@@ -2,6 +2,42 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 2: attack on purpose (build 26)
+
+Mark: "attacking on purpose, when you have recruits, say you recruit everybody and then you attack on purpose, I think that's the best way to go. You hover over an enemy and it causes ants to begin a combat where they just bite at it."
+
+**How it plays:**
+- **When it works:** you have a crew (Recruit).
+- **Starting it:** rest the mouse on an enemy for a moment (0.18 s), or click it.
+- **What you see:**
+  - the cursor turns to a crosshair over anything the crew can attack;
+  - a turning red ring marks the target;
+  - "Your crew charges the earwig!" appears, with a war-cry sound.
+- **What the crew does:** it leaves your side, runs at the target (as fast as a crew catching up to you) and bites it. The biting is the same as before; what's new is that you say what they go for.
+- **What you do:** a click on an enemy is an order, not a walk, so you stay where you are.
+- **When it falls:** "The earwig is down. Your crew falls back in."
+- **If it gets more than 22 tiles from you,** the crew gives up and comes back. Release still sends them all home.
+- **Targets:**
+  - rival ants, and the war party's champion
+  - the bugs (earwig, cricket, millipede, ladybug)
+  - the caterpillar and the spider
+  - the three bosses
+  - Cordyceps zombies and stalks
+
+**Where it's taught:** a new tutorial step after Recruit, a Help line, and the Recruit button's tip.
+
+**Not in this build:** crew commands beyond "attack that" (hold here, formations, splitting the crew), and a touch version (phone pass is Phase 3 or 4; a tap on an enemy already works).
+
+**Checks:**
+- 100 tests, 4 new (`tests/attack.test.js`):
+  - no crew, no attack
+  - the crew reaches a critter, kills it and falls back in
+  - the crew kills a rival ant
+  - the crew gives up when the target is too far
+- A browser run: hovering an earwig with a crew of 8 gave the crosshair, the ring and the charge, and it died in under 2 seconds.
+- The bot now points its crew at the caterpillar on hunts and at defenders in sieges.
+- 45-minute bot runs are about the same as the previous bot against the same game (2 or 3 of 4 reach 40 ants). Runs vary a lot between seeds and between runs.
+
 ## Nov 2: odorous swarm, one zoom notch less, bots on the new content (build 25.1)
 
 Mark: "make the odorous house ants really aggressive and numerous. Not as damaging, but more numerous." "I would remove one zoom notch." "We have to make sure number 7 works out" (the bots on the new content). Also: "don't slow the colony further."

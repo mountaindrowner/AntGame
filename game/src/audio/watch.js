@@ -86,6 +86,8 @@ export function soundWatch(app, views) {
       else if (e === 'starving' || e === 'soldierfood') sfx.play('starving');
       else if (e === 'treat') sfx.play('treat');
       else if (e === 'raid') sfx.play('raid');
+      else if (e === 'attack') sfx.play('charge');
+      else if (e === 'attackdone') sfx.play('felled');
       else if (e === 'queenhit') sfx.play('queenHit');
       else if (e === 'dew') sfx.play('twinkle');
       else if (e === 'bighaul') sfx.play('cheer');

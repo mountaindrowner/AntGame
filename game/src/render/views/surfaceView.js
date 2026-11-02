@@ -504,6 +504,7 @@ export class SurfaceView {
     this._critters(s, t, fdt);
     this._fx(s, t, fdt);
     this._bosses(s, t, fdt);
+    this._reticle(s, t);
     this._curios(s, t);
     this._strikes(s, t, fdt);
     this.bugs.end(); this.fx.end(); this.dustFx.end();
@@ -949,6 +950,20 @@ export class SurfaceView {
     });
     this.bossBars = [this._bar(), this._bar()];
     this.dyn.add(...this.bossBars.map((b) => b.group));
+    // Build 26: what your crew is attacking: a turning red reticle on the ground round it.
+    const rmat = psxBasic({ color: '#ff3a20', transparent: true, opacity: 0.85, depthWrite: false, depthTest: false });
+    const ret = new THREE.Group();
+    ret.add(new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 32).rotateX(-Math.PI / 2), rmat));
+    for (let i = 0; i < 4; i++) { const tick = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.1).rotateX(-Math.PI / 2).translate(1.12, 0, 0), rmat); tick.rotation.y = (i * Math.PI) / 2; ret.add(tick); }
+    for (const m of ret.children) m.renderOrder = 7;
+    ret.visible = false; this.reticle = ret; this.dyn.add(ret);
+  }
+
+  _reticle(s, t) {
+    const A = s.player.attack, o = A && SIM.attackTarget(s), R = this.reticle;
+    R.visible = !!o; if (!o) return;
+    const r = (A.kind === 'boss' ? SIM.BOSSES[A.ref].r + 0.8 : A.kind === 'spider' ? 2.2 : A.kind === 'cat' ? 1.8 : A.kind === 'bug' ? 1.2 : A.kind === 'stalk' ? 1.2 : 0.9) * SIM.T;
+    R.position.set(o.x, 1.1, o.y); R.rotation.y = t * 1.6; R.scale.setScalar(r * (1 + 0.06 * Math.sin(t * 9)));
   }
 
   _decal(i, k, t, color, done) {

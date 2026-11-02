@@ -757,7 +757,7 @@ function tick(s, dt){
   // The Picnic Blanket held: a treat lands there every few minutes.
   for (const i in s.colony.held) if (prizeFx(s, i) === 'picnic'){ s.picnicT = (s.picnicT || 0) + dt; if (s.picnicT > 150 && !s.items.some(f => heavy(f) && w.area[idx(f.x,f.y)] === +i)){ s.picnicT = 0; const A = AREAS[i]; const it = spawnInArea(s, +i, 'food', A.treats ? A.treats[Math.floor(Math.random()*A.treats.length)] : 'cookie'); if (it && !P.msg) P.msg = `A ${FOODS[it.type].name} landed on the Picnic Blanket.`; } }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
-  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickOutposts(s, dt); tickGoals(s, dt);
+  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickAttack(s); tickOutposts(s, dt); tickGoals(s, dt);
   s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player); tickCurios(s, pa);
     // Walking into a dormant region wakes it: its food appears and starts to grow.
     const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); populateBugs(s, ai); }
@@ -834,8 +834,14 @@ function tick(s, dt){
     }
     if (a.state === 'follow'){
       if (!P.ant || P.inNest){ a.follow = false; a.state = 'explore'; continue; }
-      const pd = Math.hypot(a.x - P.ant.x, a.y - P.ant.y);
-      if (pd > 16*T){ a.follow = false; a.state = 'explore'; continue; }
+      const pd = Math.hypot(a.x - P.ant.x, a.y - P.ant.y), tg = attackTarget(s);
+      if (pd > (tg ? ATTACK_LEASH + 10 : 16)*T){ a.follow = false; a.state = 'explore'; continue; }
+      if (tg){ // build 26: charging what you pointed at
+        if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }
+        const td = Math.hypot(a.x - tg.x, a.y - tg.y);
+        if (td > attackReach(s, P.attack)){ if (stepTo(a, a.tx, a.ty, 95*(picked(s, 'you', 'hero') ? 1.25 : 1), dt)) chooseToward(s, a, tg.x + (Math.random()-0.5)*T, tg.y + (Math.random()-0.5)*T); }
+        continue;
+      }
       if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }
       // A crew that falls behind hurries to keep up with you.
       if (pd > 1.3*T){ if (stepTo(a, a.tx, a.ty, (pd > 3*T ? 95 : C.speed+15)*(picked(s, 'you', 'hero') ? 1.25 : 1), dt)) chooseToward(s, a, P.ant.x + (Math.random()-0.5)*T, P.ant.y + (Math.random()-0.5)*T); }
@@ -1551,6 +1557,47 @@ function doAction(s){
   if (f){ const take = Math.min(picked(s, 'you', 'bigjaws') ? 8 : 5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; }
 }
 // You plus every recruited ant within three tiles.
+// Build 26: attack on purpose (Mark: "you recruit everybody and then you attack on purpose... you hover
+// over an enemy and it causes ants to begin a combat where they just bite at it"). With a crew, point at an
+// enemy: the crew leaves your side, charges it and bites until it falls, then falls back in.
+const ATTACK_LEASH = 22; // tiles from you a crew will chase before giving up
+function enemyAt(s, x, y){
+  let best = null, bd = Infinity;
+  const take = (kind, ref, ox, oy, r, name) => { const d = Math.hypot(ox - x, oy - y) / r; if (d < 1 && d < bd){ bd = d; best = { kind, ref, name }; } };
+  for (const k in s.bosses || {}){ const b = s.bosses[k]; if (!b.dead) take('boss', k, b.x, b.y, (BOSSES[k].r + 1.5)*T, BOSSES[k].name); }
+  if (s.spider) take('spider', 0, s.spider.x, s.spider.y, 3.5*T, 'the spider');
+  if (s.cat) take('cat', 0, s.cat.x, s.cat.y, 3*T, 'the caterpillar');
+  for (const b of s.critters || []) if (b.hp > 0) take('bug', b.id, b.x, b.y, 2*T, 'the ' + (BUGS[b.kind] ? BUGS[b.kind].name : b.kind));
+  for (const q of s.stalks || []) if (!q.gone) take('stalk', q.id, q.x, q.y, 2*T, 'the stalk');
+  for (const a of s.ants) if (outside(a) && (a.team || a.zombie)) take('ant', a.id, a.x, a.y, 1.4*T, a.zombie ? 'the infected ant' : a.champion ? a.name : 'the ' + rspec(a).name.toLowerCase().replace(/s$/, ''));
+  return best;
+}
+function attackTarget(s){
+  const A = s.player.attack; if (!A) return null;
+  if (A.kind === 'boss'){ const b = (s.bosses || {})[A.ref]; return b && !b.dead ? b : null; }
+  if (A.kind === 'spider') return s.spider || null;
+  if (A.kind === 'cat') return s.cat || null;
+  if (A.kind === 'bug') return (s.critters || []).find(b => b.id === A.ref && b.hp > 0) || null;
+  if (A.kind === 'stalk') return (s.stalks || []).find(q => q.id === A.ref && !q.gone) || null;
+  return s.ants.find(a => a.id === A.ref && outside(a)) || null;
+}
+// How close the crew stands to bite it.
+function attackReach(s, A){ return A.kind === 'boss' ? (BOSSES[A.ref].r + 0.5)*T : A.kind === 'spider' ? SPIDER_REACH*0.8 : A.kind === 'cat' ? CAT_REACH*0.8 : A.kind === 'bug' ? 0.9*T : A.kind === 'stalk' ? 1.2*T : 0.5*T; }
+const crewSize = s => s.ants.filter(o => o.follow && o.state === 'follow').length;
+function crewAttack(s, x, y){
+  const P = s.player; if (!P.ant || P.inNest || !crewSize(s)) return false;
+  const e = enemyAt(s, x, y); if (!e) return false;
+  if (P.attack && P.attack.kind === e.kind && P.attack.ref === e.ref) return true;
+  P.attack = { kind: e.kind, ref: e.ref, name: e.name, t: s.t };
+  P.msg = `Your crew charges ${e.name}!`; s.seen.attacked = true; s.events.push('attack'); return true;
+}
+function tickAttack(s){
+  const P = s.player, A = P.attack; if (!A) return;
+  const o = attackTarget(s), a = P.ant;
+  if (!a || P.inNest || !crewSize(s)){ P.attack = null; return; }
+  if (!o){ P.attack = null; P.msg = `${A.name.replace(/^the /, 'The ').replace(/^./, ch => ch.toUpperCase())} is down. Your crew falls back in.`; s.events.push('attackdone'); return; }
+  if (Math.hypot(o.x - a.x, o.y - a.y) > ATTACK_LEASH*T){ P.attack = null; P.msg = 'Too far: your crew falls back in.'; }
+}
 function crewAt(s){ const a = s.player.ant; if (!a) return 0; let n = 1; for (const o of s.ants) if (o.follow && o.state !== 'dead' && Math.hypot(o.x-a.x, o.y-a.y) < 3*T) n++; return n; }
 function dropBig(s){ const b = s.player.big; if (!b) return; b.carried = false; delete b.px; delete b.py; s.player.big = null; }
 function deliverBig(s){
@@ -2447,7 +2494,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

@@ -19,6 +19,23 @@ export function attachPointer(canvas, app, ui, views) {
   const nestCell = (e) => { const [x, y] = ndc(e); return views.nest.pick(x, y); };
   const say = (text, test, ms) => ui.flash(text, test, ms);
 
+  // Build 26: attack on purpose. With a crew, rest the mouse on an enemy for a moment (or click it)
+  // and the crew charges it. The cursor turns to a crosshair over anything they can attack.
+  const HOVER_MS = 180;
+  let hover = null; // { key, timer }
+  const canAttack = () => app.view === 'surface' && P().ant && !P().inNest && SIM.crewSize(app.s) > 0;
+  const enemyUnder = (e) => { if (!canAttack()) return null; const w = surfacePoint(e); return w ? { w, en: SIM.enemyAt(app.s, w.x, w.y) } : null; };
+  function hoverAt(e) {
+    const h = enemyUnder(e), en = h && h.en, key = en ? en.kind + ':' + en.ref : null;
+    canvas.style.cursor = en ? 'crosshair' : '';
+    if (hover && hover.key === key) return;
+    if (hover) clearTimeout(hover.timer);
+    hover = null;
+    if (!en) return;
+    const { x, y } = h.w;
+    hover = { key, timer: setTimeout(() => { if (canAttack()) SIM.crewAttack(app.s, x, y); }, HOVER_MS) };
+  }
+
   function nestTap(cx, cy) {
     const s = app.s;
     if (s.phase === 'dig') { SIM.queenDig(s, cx, cy); return; }
@@ -82,6 +99,8 @@ export function attachPointer(canvas, app, ui, views) {
       const w = surfacePoint(e);
       if (!w) return;
       if (app.callout) app.callout.tap(w.x, w.y);
+      // A click on an enemy with a crew at your side is an attack order: you stay where you are.
+      if (canAttack() && SIM.crewAttack(app.s, w.x, w.y)) return;
       P().tx = w.x;
       P().ty = w.y;
       P().holding = true;
@@ -92,7 +111,7 @@ export function attachPointer(canvas, app, ui, views) {
 
   canvas.addEventListener('pointermove', (e) => {
     const p = ptrs.get(e.pointerId);
-    if (!p) return;
+    if (!p) { if (e.pointerType === 'mouse') hoverAt(e); return; }
     p.x = e.clientX;
     p.y = e.clientY;
     if (pinch && ptrs.size === 2) {
@@ -129,6 +148,7 @@ export function attachPointer(canvas, app, ui, views) {
     }
   };
   canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointerleave', () => { if (hover) clearTimeout(hover.timer); hover = null; canvas.style.cursor = ''; });
   canvas.addEventListener('pointercancel', up);
   // Desktop: wheel zooms.
   canvas.addEventListener('wheel', (e) => {

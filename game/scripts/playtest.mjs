@@ -208,7 +208,9 @@ function missions() {
     if (a.tx === t.x && a.ty === t.y) { SIM.doAction(s); if (P.big) note(`lifted ${t.type} with crew ${SIM.crewAt(s)}`); return 'busy'; }
     tapSurface((t.x + 0.5) * T, (t.y + 0.5) * T); return 'busy';
   }
-  if (mission === 'cat') { tapSurface(s.cat.x, s.cat.y); return 'busy'; }
+  // Build 26: point the crew at the caterpillar, and at defenders by a rival door.
+  if (mission === 'cat') { if (!P.attack) SIM.crewAttack(s, s.cat.x, s.cat.y); tapSurface(s.cat.x, s.cat.y); return 'busy'; }
+  if (mission === 'siege' && !P.attack && target) { const d = s.ants.find((o) => o.team === target.team && o.state !== 'dead' && o.state !== 'in' && dist(o.x, o.y, a.x, a.y) < 6 * T); if (d && SIM.crewAttack(s, d.x, d.y)) note('crew attack on a ' + target.key + ' ant'); }
   if (mission === 'siege') { tapSurface((target.ex + 0.5) * T, (target.ey + 0.5) * T); return 'busy'; }
   const nearHome = dist(a.tx, a.ty, w.ex, w.ey) < 3;
   if (strategy === 'idle') return;

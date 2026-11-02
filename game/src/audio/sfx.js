@@ -172,6 +172,9 @@ const SOUNDS = {
   spiderDie: { cool: 2, always: true, fn: (s, o, t) => { s.puff(o, t, 0.3, 700, 0.5, 'lowpass', 150); [67, 72, 76, 79, 84].forEach((n, i) => s.blip(o, t + 0.3 + i * 0.09, N(n), i === 4 ? 0.5 : 0.1, 0.2, 'square')); return 1.2; } },
   catDie: { cool: 1, fn: (s, o, t) => { s.chirp(o, t, 800, 200, 0.4, 0.3, 'triangle'); return 0.5; } },
   raid: { cool: 4, always: true, fn: (s, o, t) => { for (let r = 0; r < 3; r++) for (let i = 0; i < 3; i++) s.thump(o, t + r * 0.6 + i * 0.13, 110, 55, 0.12, 0.6); return 2; } },
+  // Build 26: the crew charges (a rising war cry of clicks), and what they attacked falls.
+  charge: { cool: 0.6, fn: (s, o, t) => { for (let i = 0; i < 5; i++) s.thump(o, t + i * 0.06, 140 + i * 30, 70, 0.06, 0.35); s.chirp(o, t + 0.25, 500, 1100, 0.12, 0.18, 'square'); return 0.45; } },
+  felled: { cool: 0.6, fn: (s, o, t) => { s.thump(o, t, 120, 50, 0.2, 0.45); s.blip(o, t + 0.15, N(79), 0.14, 0.18, 'square'); return 0.4; } },
   queenHit: { cool: 3, fn: (s, o, t) => { for (let i = 0; i < 6; i++) s.blip(o, t + i * 0.18, i % 2 ? N(76) : N(83), 0.16, 0.18, 'square'); return 1.2; } },
   win: { cool: 5, fn: (s, o, t) => { [60, 64, 67, 72, 67, 72, 76, 79].forEach((n, i) => s.blip(o, t + i * 0.12, N(n), i === 7 ? 0.8 : 0.12, 0.22, 'square')); s.thump(o, t + 0.84, 120, 50, 0.5, 0.6); return 1.8; } },
   lost: { cool: 5, fn: (s, o, t) => { [69, 67, 65, 64, 60, 57].forEach((n, i) => s.blip(o, t + i * 0.35, N(n), 0.4, 0.2, 'sine')); return 2.4; } },

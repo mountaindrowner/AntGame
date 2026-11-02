@@ -538,7 +538,7 @@ export function createUI(app) {
     el.act.disabled = !SIM.actionLabel(s);
     setIcon(el.release, 'release', st.followers ? `Release ${st.followers}` : 'Release', st.followers || '');
     // Recruit shows your crew against the cap (build 15), when it isn't being held.
-    if (!app.recruiting) { const capN = SIM.crewCap(s); setIcon(el.recruit, 'recruit', `Recruit (hold for more): crew ${st.followers} of ${capN}. They follow you up to 16 tiles away.`, st.followers ? `${st.followers}/${capN}` : ''); }
+    if (!app.recruiting) { const capN = SIM.crewCap(s); setIcon(el.recruit, 'recruit', `Recruit (hold for more): crew ${st.followers} of ${capN}. They follow you up to 16 tiles away. Point at an enemy to send them at it.`, st.followers ? `${st.followers}/${capN}` : ''); }
     el.release.disabled = !st.followers;
     el.mark.classList.toggle('on', !!P().mark);
     // Outpost: once Waypoints is evolved, while you're out in the yard.
