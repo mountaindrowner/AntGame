@@ -8,7 +8,7 @@ import { BRANCHES, EVO, EVO_BY, evoCost, laterIn, LATER, RES } from '../sim/grow
 import { sfx } from '../audio/sfx.js';
 
 const costIcons = (cost) => Object.entries(cost).map(([k, v]) => `<span class="cost">${RES[k] || k}${v}</span>`).join(' ') || 'free';
-const BRANCH_ART = { bodies: '🦴', senses: '👁', nest: '🏺', society: '👑', symbiosis: '🌿' };
+const BRANCH_ART = { bodies: '🦴', senses: '👁', nest: '🏺', society: '👑', symbiosis: '🌿', great: '🌍' };
 
 export class EvolveView {
   // pages: { goals(), you(), ants(), ranks() } → html, from the HUD's sheet code.
@@ -79,7 +79,7 @@ export class EvolveView {
     const node = (n) => {
       const lock = SIM.evoLock(s, n.key), pay = SIM.canPay(s.colony, evoCost(s, n));
       const cls = lock === 'owned' ? 'owned' : n.soon ? 'soon' : !lock && pay ? 'ready' : 'locked';
-      const k = kids(n.key), G = SIM.EVO_GATE[n.key], gate = G && !SIM.dRoomBuilt(s, G) ? SIM.DAUGHTERS[SIM.DROOMS[G].d].icon : ''; /* build 50: needs a daughter's room */
+      const k = kids(n.key), G = SIM.EVO_GATE[n.key], gate = G && !SIM.dRoomBuilt(s, G) ? SIM.DAUGHTERS[SIM.DROOMS[G].d].icon : (n.dneed || []).filter((k) => !SIM.dRoomBuilt(s, SIM.DROOMS_OF[k][1])).map((k) => SIM.DAUGHTERS[k].icon).join(''); /* build 50, 51: needs a daughter's room */
       return `<li><button class="enode ${cls}${n.big ? ' big' : ''}${this.pick === n.key ? ' pick' : ''}" data-node="${n.key}"><b>${n.name}</b><i>${lock === 'owned' ? 'evolved' : n.soon ? 'later' : (gate ? gate + ' ' : '') + '🧬' + evoCost(s, n).genes}</i></button>${k.length ? `<ul>${k.map(node).join('')}</ul>` : ''}</li>`;
     };
     return `<div class="evo-tree"><ul>${kids(null).map(node).join('')}</ul></div><div class="evo-legend"><span class="owned">evolved</span><span class="ready">ready</span><span class="locked">not yet</span><span class="soon">later build</span><span class="dgate">⚔🥚👁⛏🌿 needs a daughter’s room</span></div>`;

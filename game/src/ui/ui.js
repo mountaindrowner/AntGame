@@ -204,6 +204,7 @@ export function createUI(app) {
     if (here) h += `<div class="note">You’re in her nest. Build her rooms here, paid from your stores. Tap above ground to step out at her door, or travel home by tunnel.</div><div class="btns one"><button data-travel="home">🏠 Travel home by tunnel</button></div>`;
     else if (P0.inNest) h += `<div class="note">From inside your nest you can travel by tunnel to any daughter whose tunnel is through.</div>`;
     else h += `<div class="note">Go inside a nest to travel by tunnel, or walk to a daughter’s door and go in.</div>`;
+    if (s.colony.evo.swarmcall) { const sl = SIM.swarmCallLock(s); h += `<div class="btns one"><button data-swarm="1" ${sl ? 'disabled' : ''}>🪽 Call a Swarm day${sl ? `<i>${sl}</i>` : '<i>winged queens rain down: free 🥩 meat</i>'}</button></div>`; } /* build 51 */
     if (!ds.length) h += `<div class="note">None yet. With the Royal chamber evolved, a winged queen comes after the 3rd, 5th, 7th, 9th and 11th guardian beaten.</div>`;
     for (const d of ds) {
       const R = SIM.DAUGHTERS[d.key], ready = d.state === 'ready';
@@ -775,6 +776,7 @@ export function createUI(app) {
     if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.raid) { if (SIM.startRaid(s, b.dataset.raid)) { closeMenu(); sfx.play('raid'); } else flash('Raid: ' + SIM.raidLock(s, b.dataset.raid) + '.', /^Raid:/, 2600); return; }
+    if (b.dataset.swarm) { if (SIM.callSwarm(s)) { closeMenu(); sfx.play('evolve'); } else renderSheet(); return; }
     if (b.dataset.travel) { goTunnel(b.dataset.travel === 'home' ? null : b.dataset.travel); return; }
     if (b.dataset.droom) { const [dk, rk] = b.dataset.droom.split(':'); if (SIM.buildDRoom(s, dk, rk)) sfx.play('roomPlaced'); else flash(SIM.DROOMS[rk].name + ': ' + SIM.dRoomLock(s, dk, rk) + '.', /:/, 2600); renderSheet(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }

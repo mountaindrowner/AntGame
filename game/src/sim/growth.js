@@ -99,8 +99,23 @@ export const BRANCHES = [
   { key: 'nest', name: 'Nest', note: 'How the colony lives' },
   { key: 'society', name: 'Society', note: 'How ants organise' },
   { key: 'symbiosis', name: 'Symbiosis', note: 'Partners from other species' },
+  { key: 'great', name: 'Great evolutions', note: 'What your colonies become together' }, // build 51
 ];
 export const EVO = [
+  // Build 51: the great evolutions. Each needs the named daughters' second rooms (their specialties) built;
+  // Swarm Day needs the Royal chamber and two daughters joined; the Supercolony, all five.
+  { key: 'titan', branch: 'great', name: 'Titan Line', dneed: ['brood'], cost: { genes: 14, protein: 80, chitin: 40 }, fx: 'Majors and Supermajors hatch twice as fast with half again more health; Supermajors need no chitin', big: true },
+  { key: 'armymarch', branch: 'great', name: 'Army of the March', dneed: ['war'], cost: { genes: 14, protein: 60, food: 200 }, fx: 'Every 3 minutes, while you’re out in the yard far from her, a column of 8 War Camp soldiers marches to you and joins your crew', big: true },
+  { key: 'broodempire', branch: 'great', after: 'armymarch', name: 'Brood Empire', dneed: ['war', 'brood'], cost: { genes: 16, protein: 60, sugar: 40 }, fx: 'Pupae carried home from raids hatch two ants each, and every raid you win brings 30 🥩 meat', big: true },
+  { key: 'greatmound', branch: 'great', name: 'The Great Mound', dneed: ['quarry'], cost: { genes: 16, grit: 150, wood: 40 }, fx: 'A mound rises over your nest: room for 50 more ants (150)', big: true },
+  { key: 'bridges', branch: 'great', after: 'greatmound', name: 'Living Bridges', dneed: ['watch', 'quarry'], cost: { genes: 14, grit: 60, wood: 40 }, fx: 'Your ants link bodies over every gap: all of them move 15% faster', big: true },
+  { key: 'raft', branch: 'great', after: 'greatmound', name: 'Raft Colony', dneed: ['quarry', 'garden'], cost: { genes: 14, wood: 30, sugar: 30 }, fx: 'Rain is no threat: it washes no trails, sends no forager home, caves in no tunnel, and fills the cistern twice as fast', big: true },
+  { key: 'fungusempire', branch: 'great', name: 'Fungus Empire', dneed: ['garden'], cost: { genes: 14, food: 150, sugar: 40 }, fx: 'Each fungus garden grows 2 🌾 food a minute on its own, leaves or no leaves', big: true },
+  { key: 'peony', branch: 'great', after: 'fungusempire', name: 'The Peony Pact', dneed: ['garden'], cost: { genes: 12, sugar: 60 }, fx: 'The flowers feed you for guarding them: Flower nectar gives three times the 🍯', big: true },
+  { key: 'butterfly', branch: 'great', after: 'fungusempire', name: 'Blue Butterfly Pact', dneed: ['garden', 'watch'], cost: { genes: 16, sugar: 60, protein: 30 }, fx: 'Blue butterfly caterpillars live in your nest: 4 🍯 sugar and 2 🥩 meat a minute', big: true },
+  { key: 'weaver', branch: 'great', after: 'butterfly', name: 'Weaver Canopy', dneed: ['garden', 'watch'], cost: { genes: 16, wood: 50, sugar: 40 }, fx: 'Leaf shelters over your outposts: nothing can knock them flat, and your ants heal beside them', big: true },
+  { key: 'swarmcall', branch: 'great', name: 'Swarm Day', djoin: 2, cost: { genes: 12, protein: 40, sugar: 40 }, fx: 'Call a Swarm day yourself (from the 🏕 sheet), once every 20 minutes: winged queens rain down, free 🥩 meat', big: true },
+  { key: 'supercolony', branch: 'great', after: 'swarmcall', name: 'Supercolony', dneed: ['war', 'brood', 'watch', 'quarry', 'garden'], cost: { genes: 30, food: 400, protein: 100, sugar: 100, grit: 100, wood: 50 }, fx: 'Your colonies become one: each daughter holds 100, their gifts of stone and sugar double, and the way into the wilds opens (a later build)', big: true },
   // Bodies
   { key: 'mandibles', branch: 'bodies', name: 'Strong mandibles', cost: { genes: 2, protein: 10 }, fx: 'Fighters bite 25% harder. Your ant learns 🦷 Mandible Lock: stun an enemy, and cancel a boss’s wind-up', deed: ['Kill 20 rival ants', (s) => (s.rivals || [s.rival]).reduce((n, r) => n + (r.deaths.war || 0), 0) >= 20] },
   { key: 'formic', branch: 'bodies', after: 'mandibles', name: 'Formic spray', cost: { genes: 4, protein: 20 }, fx: 'Fighters bite from 2 tiles away. Your ant learns 🧪 Formic Spray: an acid cloud that Exposes enemies', deed: ['Kill the spider', (s) => (s.colony.kills.spider || 0) >= 1] },
@@ -173,7 +188,7 @@ export const EVO = [
 ];
 export const EVO_BY = Object.fromEntries(EVO.map((n) => [n.key, n]));
 
-// Great evolutions: three per colony, from a later build.
+// Great evolutions: built in build 51 (EVO entries with branch 'great'); this list is their names.
 export const GREAT = ['Living Bridges', 'Raft Colony', 'Weaver Canopy', 'Fungus Empire', 'The Great Mound', 'Army of the March', 'The Peony Pact', 'Blue Butterfly Pact', 'Supercolony', 'Swarm Day', 'Titan Line', 'Brood Empire'];
 
 // The 🧬 part of a node's cost, halved (rounded up) once its deed is done.

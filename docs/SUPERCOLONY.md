@@ -164,7 +164,23 @@ A caste that needs meat hatches as a forager when there's none. Her builders and
 | Quarry | Cutting hall: Deep halls, Thermal chimneys, Highways, Shared stores | Rock cellar: her stone doubled |
 | Garden | Greenhouse: Honey economy, Flower nectar, the Fungus garden's level III | Honeydew vault: her sugar doubled |
 
-Seats cost about 120 food plus a themed resource and take 90 s; specialties about 200 food and take 150 s (a Quarry builds half again faster). Still to come: the great evolutions that need several daughters (Supercolony, Swarm Day and the pacts).
+Seats cost about 120 food plus a themed resource and take 90 s; specialties about 200 food and take 150 s (a Quarry builds half again faster). 
+**The great evolutions (build 51).** A sixth page in Evolve. Each needs the named daughters' specialty rooms (their second room) built:
+
+| Great evolution | Needs | Genes | What it does |
+|---|---|---|---|
+| Titan Line | Brood Hall | 14 | Majors and Supermajors hatch twice as fast, half again more health; Supermajors need no chitin |
+| Army of the March | War Camp | 14 | Every 3 minutes, out in the yard far from her, a column of 8 of her soldiers joins your crew |
+| Brood Empire (after Army) | War Camp, Brood Hall | 16 | Raid pupae hatch two ants each; every raid won brings 30 meat |
+| The Great Mound | Quarry | 16 | The main nest holds 50 more (150) |
+| Living Bridges (after Mound) | Watch, Quarry | 14 | All your ants move 15% faster |
+| Raft Colony (after Mound) | Quarry, Garden | 14 | Rain washes no trails, sends no forager home, caves nothing in, fills the cistern twice as fast |
+| Fungus Empire | Garden | 14 | Each fungus garden grows 2 food a minute on its own |
+| The Peony Pact (after Fungus) | Garden | 12 | Flower nectar gives three times the sugar |
+| Blue Butterfly Pact (after Fungus) | Garden, Watch | 16 | 4 sugar and 2 meat a minute |
+| Weaver Canopy (after Butterfly) | Garden, Watch | 16 | Outposts can't be knocked flat; your ants heal beside them |
+| Swarm Day | Royal chamber, 2 daughters joined | 12 | Call a Swarm day yourself, once every 20 minutes (🏕 sheet) |
+| Supercolony (after Swarm Day) | all five | 30 | Each daughter holds 100, their stone and sugar double; the way into the wilds opens (a later build) |
 
 ### Tunnels: the big goal
 

@@ -2,6 +2,18 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: the great evolutions (build 51)
+
+Mark: "do great evos." The twelve names reserved in the tree since build 24 are now real, on a sixth Evolve page. The table is in SUPERCOLONY.md; Mark can veto any.
+
+- **What they need:** each needs the named daughters' **specialty** (second) room, as the plan of record says ("great evolutions need the daughter's specialisations"). Swarm Day needs the Royal chamber and two daughters joined; the Supercolony needs all five, and Swarm Day before it.
+- **The tree:** five roots (Titan Line, Army of the March, the Great Mound, Fungus Empire, Swarm Day), the pacts after them. Each node shows the icons of the daughters it still waits on.
+- **Cost:** 12–30 genes plus resources, the most expensive nodes in the game.
+- **Deliberately modest where it touches the economy:**
+  - Blue Butterfly gives 2 meat a minute, a little help with the meat ceiling, not a fix.
+  - The Supercolony's 100-a-daughter cap means up to 650 ants. Far daughters are numbers, so the cost is food, not frames.
+- **The way into the wilds** is promised by the Supercolony's banner; it comes with the outer wasteland build.
+
 ## Nov 3: her nest, her rooms, travel by tunnel; the tree's top nodes gated (build 50)
 
 Mark: "Do it" (the next daughter build in SUPERCOLONY.md).

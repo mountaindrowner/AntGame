@@ -171,7 +171,7 @@ const SPOIL_MAX = 3;
 // Queen levels I→IV are built; V→VIII need materials from later builds (growth.js).
 const QUEEN_UP = [ {food:40, protein:10}, {food:80, protein:20, grit:20}, {food:150, protein:40, grit:40}, ...QUEEN_LEVELS ];
 const NEST_CAP = 100; // build 42: a nest holds 100 at most; more needs a daughter colony (to come)
-const queenCap = (lvl, s) => Math.min(NEST_CAP, 20 + 20*lvl + (s && has(s, 'deephalls') ? 20 : 0));
+const queenCap = (lvl, s) => Math.min(NEST_CAP + (s && has(s, 'greatmound') ? 50 : 0), 20 + 20*lvl + (s && has(s, 'deephalls') ? 20 : 0) + (s && has(s, 'greatmound') ? 50 : 0)); // build 51: the Great Mound, +50
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 const idx = (x,y) => y*W + x;
 const nidx = (x,y) => y*NW + x;
@@ -284,7 +284,7 @@ function advise(s, dt){
     a.off = 0; if (a.shown) return; a.shown = true; out.push({ key, title, text }); };
   const ants = antCount(s), cap = queenCap(s.queen.level, s), up = QUEEN_UP[s.queen.level];
   say('ants', s.queen.placed && ants >= cap, cap >= NEST_CAP ? 'The nest is full' : 'The queen is at her limit',
-    cap >= NEST_CAP ? `A nest holds ${NEST_CAP} ants. Daughter colonies, to come, will hold more.` : `She holds ${cap} ants. Upgrade her (Nest, tap the queen) for 20 more${up ? ': ' + costText(up) : ''}.`);
+    cap >= NEST_CAP ? `A nest holds ${cap} ants. Daughter colonies hold more, each in her own nest.` : `She holds ${cap} ants. Upgrade her (Nest, tap the queen) for 20 more${up ? ': ' + costText(up) : ''}.`);
   say('food', s.queen.placed && c.store >= c.cap - 0.5 && c.cap < 1000, 'The food store is full',
     roomCount(s, 'store') ? 'Food coming in now goes to waste. Build another Food store, or a Granary; one in dry packed soil or clay holds 25% more.' : 'Food coming in now goes to waste. Dig a 5×3 pocket and build a Food store: it holds 150.');
   say('water', s.queen.placed && c.water >= c.waterCap - 0.5 && c.waterCap <= 70, 'The water store is full', roomCount(s, 'cistern') ? 'Build another Cistern; one in cool clay or deep rock holds half again more.' : 'Dig a 4×4 pocket and build a Cistern: it holds 60.');
@@ -333,7 +333,7 @@ const EVO_GATE = { polymorphism: 'royalnursery', exploders: 'royalnursery', long
   memory: 'drill', broodraid: 'drill', honourguard: 'drill', hivemind: 'lookout', warcolumns: 'lookout', propaganda: 'lookout', suncompass: 'lookout',
   deephalls: 'cutting', chimneys: 'cutting', highways: 'cutting', shared: 'cutting', honeyeco: 'greenhouse', nectar: 'greenhouse' };
 const dRoomBuilt = (s, rkey) => { const R = DROOMS[rkey], d = R && (s.daughters || []).find(q => q.key === R.d); return !!(d && (d.rooms || []).some(r => r && r.key === rkey && r.done)); };
-const dcap = (s, d) => DAUGHTER_CAP + (d.key === 'brood' && dRoomBuilt(s, 'broodcells') ? 25 : 0);
+const dcap = (s, d) => DAUGHTER_CAP + (d.key === 'brood' && dRoomBuilt(s, 'broodcells') ? 25 : 0) + (has(s, 'supercolony') ? 50 : 0); // build 51: the Supercolony, +50 each
 const DQUEEN = { key: 'queen', x0: 19, y0: 6, w: 4, h: 3 }, DHATCH = { key: 'hatchery', x0: 26, y0: 6, w: 4, h: 3 };
 const DSLOTS = [{ x0: 16, y0: 12, w: 5, h: 3 }, { x0: 28, y0: 12, w: 5, h: 3 }];
 const DOPEN = {}; for (const S of NEST_SECTIONS) DOPEN[S.key] = true;
@@ -367,6 +367,9 @@ function buildDRoom(s, dkey, rkey){
   const R = DROOMS[rkey], d = s.daughters.find(q => q.key === dkey); payCost(s.colony, R.cost);
   d.rooms = d.rooms || [null, null]; d.rooms[R.seat ? 0 : 1] = { key: rkey, done: false, progress: 0 }; s.events.push('roomPlaced'); return true;
 }
+// Build 51: Swarm Day, called by you once every 20 minutes.
+function swarmCallLock(s){ if (!has(s, 'swarmcall')) return 'evolve Swarm Day first'; if (s.event) return 'something is already happening'; const left = (s.colony.swarmCallAt ?? -1e9) + 1200 - s.t; if (left > 0) return `ready in ${Math.ceil(left/60)} min`; return ''; }
+function callSwarm(s){ if (swarmCallLock(s)) return false; s.colony.swarmCallAt = s.t; startEvent(s, 'swarm'); return true; }
 // Travel by tunnel (build 50): from inside one nest to inside another, home or a joined daughter.
 function travelLock(s, dkey){
   const P = s.player; if (!P.ant || !P.inNest) return 'be inside a nest';
@@ -478,11 +481,16 @@ function tickDaughters(s, dt){
     }
     // Build 47: far away her ants starve too, when the store has been empty a while (as real ones do).
     if (!d.real && c.starve > 30){ d.starveAcc = (d.starveAcc || 0) + dt; if (d.starveAcc >= 10){ d.starveAcc = 0; const k = Object.keys(d.pop).filter(q => d.pop[q] > 0).sort((p, q) => d.pop[q] - d.pop[p])[0]; if (k){ d.pop[k]--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } }
+    // Build 51: Army of the March. Far from her, every 3 minutes a column of up to 8 of her soldiers joins your crew.
+    if (d.key === 'war' && has(s, 'armymarch')){ d.marchT = (d.marchT || 0) + dt;
+      if (d.marchT >= 180 && pa && !d.real && (d.pop.soldier || 0) > 0 && !s.lost){ d.marchT = 0; const n = Math.min(8, d.pop.soldier); d.pop.soldier -= n;
+        for (let i = 0; i < n; i++){ const a = mkAnt(s, 'soldier', 'follow', pa.tx, pa.ty, 0); a.dh = 'war'; a.follow = true; a.state = 'follow'; a.xp = Math.max(a.xp || 0, RANKS[1].xp); a.x = pa.x + (Math.random() - 0.5)*3*T; a.y = pa.y + (Math.random() - 0.5)*3*T; }
+        P.msg = `⚔ A column of ${n} from the War Camp marches up and joins your crew.`; s.events.push('rally'); } }
     // Build 50: her rooms going up (a Quarry builds half again faster).
     for (const r of d.rooms || []) if (r && !r.done){ r.progress = (r.progress || 0) + dt*(d.key === 'quarry' ? 1.5 : 1); if (r.progress >= ROOMS[r.key].work){ r.done = true; s.events.push('roomDone');
       s.banner = { key: 'droom-' + r.key, t: s.t, icon: R.icon, title: ROOMS[r.key].name + ' built', line: `In ${R.name}: ${ROOMS[r.key].desc}.`, kind: 'gift' }; } }
     // Build 49: the Quarry's stone and the Garden's honeydew, from her ants near or far (build 50: doubled by her Rock cellar or Honeydew vault).
-    if (d.key === 'quarry' || d.key === 'garden'){ const per = (d.key === 'quarry' ? 4 : 5)/(dRoomBuilt(s, d.key === 'quarry' ? 'cellar' : 'dewvault') ? 2 : 1); d.giftAcc = (d.giftAcc || 0) + (d.real ? daughterAnts(s, d).length : dpop(d))/per/60*dt;
+    if (d.key === 'quarry' || d.key === 'garden'){ const per = (d.key === 'quarry' ? 4 : 5)/(dRoomBuilt(s, d.key === 'quarry' ? 'cellar' : 'dewvault') ? 2 : 1)/(has(s, 'supercolony') ? 2 : 1); d.giftAcc = (d.giftAcc || 0) + (d.real ? daughterAnts(s, d).length : dpop(d))/per/60*dt;
       while (d.giftAcc >= 1){ d.giftAcc -= 1; if (d.key === 'quarry'){ c.grit += 1; c.gritTotal = (c.gritTotal || 0) + 1; } else addSugar(s, 1); } }
     // Build 47.3: far away her ants still meet the yard's dangers, at about half the rate measured near her
     // (0.1 a minute per 50 there): one ant per 1,000 ant-minutes. Conservative, not immune.
@@ -821,7 +829,7 @@ function deposit(s, a){
     // Honeydew and bits of sweets are sugar too (build 18).
     if (!a.team && a.carry && a.itype === 'aphids') addSugar(s, (has(s, 'aphids') ? 3 : 1)*(prizeFx(s, a.ireg) === 'aphids' ? 2 : 1));
     else if (!a.team && a.carry && FOODS[a.itype] && FOODS[a.itype].sweet) addSugar(s, Math.ceil(a.carry*0.3)); }
-  else if (a.kind === 'brood'){ if (!a.team){ const per = qtrait(s, 'nations') ? 2 : 1; for (let i = 0; i < a.carry*per; i++){ if (antCount(s) < queenCap(s.queen.level, s)){ const n = mkAnt(s, has(s, 'warcamp') ? 'soldier' : 'forager', 'in', c.ex, c.ey, 0); if (qtrait(s, 'nations') && n) n.xp = Math.max(n.xp || 0, RANKS[2].xp); } else c.protein += 3; } c.captured = (c.captured || 0) + a.carry; if (!s.seen.pupae){ s.seen.pupae = true; s.player.msg = 'Stolen pupae hatch in your nest as your own ants.'; } } }
+  else if (a.kind === 'brood'){ if (!a.team){ const per = (qtrait(s, 'nations') ? 2 : 1)*(has(s, 'broodempire') ? 2 : 1); /* build 51: Brood Empire */ for (let i = 0; i < a.carry*per; i++){ if (antCount(s) < queenCap(s.queen.level, s)){ const n = mkAnt(s, has(s, 'warcamp') ? 'soldier' : 'forager', 'in', c.ex, c.ey, 0); if (qtrait(s, 'nations') && n) n.xp = Math.max(n.xp || 0, RANKS[2].xp); } else c.protein += 3; } c.captured = (c.captured || 0) + a.carry; if (!s.seen.pupae){ s.seen.pupae = true; s.player.msg = 'Stolen pupae hatch in your nest as your own ants.'; } } }
   else if (a.kind === 'water') c.water = Math.min(c.waterCap, c.water + a.carry);
   else if (a.kind === 'protein'){ c.protein += a.carry; if (!a.team && CHITIN_OF[a.itype]) addChitin(s, CHITIN_OF[a.itype]*(prizeFx(s, a.ireg) === 'chitin' ? 2 : 1)); }
   else if (a.kind === 'chitin'){ if (!a.team) addChitin(s, a.carry); }
@@ -898,7 +906,7 @@ function rankUp(s, a, r){
 // A boss's killing bite makes a Legend.
 function makeLegend(s, a, title){ nameAnt(s, a); a.legend = true; a.title = title; if (rankOf(a) === 4) { s.player.msg = `${a.name} ${title} is a Legend!`; } }
 function maxHp(s, a){ const C = CASTES[a.caste]; if (a.team) return C.hp; let h = C.hp; if (a.caste === 'soldier' && lvl(s, 'soldier') >= 1) h *= 1.3; if (a.caste === 'soldier' && lvl(s, 'soldier') >= 4) h *= 1.5; if (a.caste === 'venom' && lvl(s, 'venom') >= 2) h *= 1.3;
-  if (has(s, 'cuticle')) h *= 1.5; if (qtrait(s, 'matriarch')) h *= 1.1; if ((s.colony.prizes || {}).fossil) h *= 1.1; if (s.colony.trophies.shell && roomOf(s, 'armory')) h *= 1.5; return h; }
+  if (has(s, 'cuticle')) h *= 1.5; if (qtrait(s, 'matriarch')) h *= 1.1; if ((s.colony.prizes || {}).fossil) h *= 1.1; if (s.colony.trophies.shell && roomOf(s, 'armory')) h *= 1.5; if ((a.caste === 'major' || a.caste === 'supermajor') && has(s, 'titan')) h *= 1.5; /* build 51: Titan Line */ return h; }
 // How hard an ant bites: its kind, rank, upgrades, evolution and promotions.
 function bite(s, a, vs){
   const C = CASTES[a.caste]; let f = C.fight; if (a.champion) return f*2; if (a.team) return f*rspec(a).bite*(has(s, 'propaganda') ? 0.75 : 1);
@@ -928,6 +936,7 @@ function paceOf(s, a, base){
   if (a.team) return base*(a.stunned > s.t ? 0 : 1);
   if (s.colony.kills.mantis && HEDGE_ZONE.has(AREAS[s.world.area[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))]].key)) base *= 1.5; // build 34: the hedge is yours
   if (a.frenzy > s.t) base *= 1.25;
+  if (has(s, 'bridges')) base *= 1.15; // build 51: Living Bridges
   let v = base; if (FAMILY[a.caste] === 'gather') v *= jobMul(a);
   const onTrail = s.trail[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))] >= 0.3;
   if (onTrail && has(s, 'trailrunners')) v *= 1.25;
@@ -975,7 +984,8 @@ const hatchCapOf = s => { const n = roomCount(s, 'hatchery'); return 1 + (has(s,
 function eggCost(s, caste){
   const cost = Object.assign({}, CASTES[(caste === 'soldier' || caste === 'venom') && picked(s, 'nurse', 'shaper') ? 'forager' : caste].cost);
   let k = 1; if (picked(s, 'nurse', 'wetnurse')) k *= 0.7; if (has(s, 'brood')) k *= 0.75; if (qtrait(s, 'broodmother')) k *= 0.7;
-  if (cost.food) cost.food = Math.ceil(cost.food * k); if (cost.protein && k < 1) cost.protein = Math.ceil(cost.protein * Math.max(k, 0.7)); return cost; }
+  if (cost.food) cost.food = Math.ceil(cost.food * k); if (cost.protein && k < 1) cost.protein = Math.ceil(cost.protein * Math.max(k, 0.7));
+  if (caste === 'supermajor' && has(s, 'titan')) delete cost.chitin; /* build 51: Titan Line */ return cost; }
 function roomCost(s, key, nth){
   const arch = has(s, 'workshop3') ? 0.8 : 1;
   // nth: which copy (0 the first); by default the next one you'd build.
@@ -1005,6 +1015,8 @@ function evoLock(s, key){
   const n = EVO_BY[key], c = s.colony; if (!n) return 'unknown';
   if (c.evo[key]) return 'owned';
   if (n.soon) return 'coming in a later build';
+  if (n.dneed){ const miss = n.dneed.find(k => !dRoomBuilt(s, DROOMS_OF[k][1])); if (miss) return 'needs ' + DAUGHTERS[miss].name + '’s ' + DROOMS[DROOMS_OF[miss][1]].name; } // build 51: great evolutions
+  if (n.djoin){ if (!has(s, 'royal')) return 'needs the Royal chamber'; const j = (s.daughters || []).filter(d => d.state === 'ready').length; if (j < n.djoin) return `needs ${n.djoin} daughters joined (${j} so far)`; }
   if (EVO_GATE[key] && !dRoomBuilt(s, EVO_GATE[key])){ const R = DROOMS[EVO_GATE[key]]; return 'needs ' + DAUGHTERS[R.d].name + '’s ' + R.name; } // build 50
   if (n.after && !c.evo[n.after]) return 'needs ' + EVO_BY[n.after].name + ' first';
   if (n.need && !roomOf(s, n.need)) return 'needs a ' + ROOMS[n.need].name;
@@ -1014,6 +1026,9 @@ function buyEvo(s, key){
   if (evoLock(s, key)) return false; const c = s.colony;
   if (!payCost(c, evoCost(s, EVO_BY[key]))) return false;
   c.evo[key] = true; c.cap = storeCap(s); c.hatchCap = hatchCapOf(s);
+  if (EVO_BY[key].branch === 'great'){ s.events.push('great'); s.banner = key === 'supercolony'
+    ? { key: 'great-supercolony', t: s.t, icon: '🌍', title: 'The Supercolony', line: 'Six nests, one colony. Every daughter holds 100, their gifts double, and beyond the fence the wilds are waiting.', kind: 'gift' }
+    : { key: 'great-' + key, t: s.t, icon: '✨', title: EVO_BY[key].name, line: EVO_BY[key].fx + '.', kind: 'gift' }; } // build 51
   if (key === 'waypoints'){ s.player.msg = 'Outposts unlocked! Walk far from the nest and press Outpost on the bottom bar.'; s.events.push('waypoints'); }
   return true;
 }
@@ -1097,7 +1112,7 @@ function tickOutposts(s, dt){
   for (const i in c.held) if (!now[i]){ delete c.held[i]; P.msg = `You lost your hold on ${AREAS[i].name.replace(/^The /, 'the ')}.`; c.waterCap = waterCapOf(s); }
 }
 // An outpost knocked about by a foot or flattened by the mower.
-function hitOutpost(s, o, dmg){ o.hp -= dmg; if (o.hp > 0) return; s.outposts.splice(s.outposts.indexOf(o), 1); outpostsChanged(s); s.player.msg = `An outpost in ${AREAS[o.region].name.replace(/^The /, 'the ')} was knocked flat.`; s.events.push('outpostlost'); }
+function hitOutpost(s, o, dmg){ if (has(s, 'weaver')) return; /* build 51: Weaver Canopy */ o.hp -= dmg; if (o.hp > 0) return; s.outposts.splice(s.outposts.indexOf(o), 1); outpostsChanged(s); s.player.msg = `An outpost in ${AREAS[o.region].name.replace(/^The /, 'the ')} was knocked flat.`; s.events.push('outpostlost'); }
 const deathTotal = c => Object.values(c.deaths).reduce((t, n) => t + n, 0);
 const waterCapOf = s => { const n = roomCount(s, 'cistern'); return (n ? Math.round((60 + 30*(n - 1))*(1 + 0.5*inBand(s, 'cistern'))) : 10) + (heldFx(s, 'water') ? 40 : 0); };
 // ---------- the goals board ----------
@@ -1149,9 +1164,9 @@ function tick(s, dt){
   while (s.splashes.length && s.t - s.splashes[0].t > 0.9) s.splashes.shift();
   if (s.spiderCorpse && s.t - s.spiderCorpse.t > 6) s.spiderCorpse = null;
   if (s.catCorpse && s.t - s.catCorpse.t > 3) s.catCorpse = null;
-  const td = Math.pow(0.5, dt/(s.rain && s.rain.on ? 4 : has(s, 'scent') ? 180 : 90)), ad = Math.pow(0.5, dt/8); const tr = s.trail, al = s.alarm;
+  const td = Math.pow(0.5, dt/(s.rain && wet(s) ? 4 : has(s, 'scent') ? 180 : 90)), ad = Math.pow(0.5, dt/8); const tr = s.trail, al = s.alarm;
   // Only tiles with scent on them decay (s.hot); the yard is too big to sweep.
-  const keep = s.keepMask; for (const i of s.hot){ if (keep[i] && !(s.rain && s.rain.on)){ if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; continue; } if (tr[i] > 0.001) tr[i] *= td; else tr[i] = 0; if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; if (!tr[i] && !al[i]) s.hot.delete(i); }
+  const keep = s.keepMask; for (const i of s.hot){ if (keep[i] && !(s.rain && wet(s))){ if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; continue; } if (tr[i] > 0.001) tr[i] *= td; else tr[i] = 0; if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; if (!tr[i] && !al[i]) s.hot.delete(i); }
   for (const col of [c, ...s.rivals]) if (!col.asleep) tickColony(s, col, dt);
   if (s.queen.placed) tickDaughters(s, dt);
   // A rival colony moves in at its time, or once you've done what brings it (build 25; see RIVALS).
@@ -1248,7 +1263,7 @@ function tick(s, dt){
     // caterpillar, and leave the meat for foragers to haul.
     if (a.state === 'hunt'){
       a.explore += dt;
-      if (a.explore > 50 || s.rain.on){ a.state = 'return'; a.explore = 0; continue; }
+      if (a.explore > 50 || wet(s)){ a.state = 'return'; a.explore = 0; continue; }
       let prey = null, pd = 10*T;
       if (s.cat){ const d = Math.hypot(a.x - s.cat.x, a.y - s.cat.y); if (d < pd){ pd = d; prey = s.cat; } }
       for (const b of s.critters){ if (b.state === 'fly') continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < pd){ pd = d; prey = b; } }
@@ -1303,7 +1318,7 @@ function tick(s, dt){
       continue;
     }
     if (a.state === 'explore' || a.state === 'patrol'){
-      a.explore += dt; if (s.rain.on && !a.team && a.state === 'explore' && a.explore > 2 && !has(s, 'nightsense')){ a.state = 'return'; a.explore = 0; continue; }
+      a.explore += dt; if (wet(s) && !a.team && a.state === 'explore' && a.explore > 2 && !has(s, 'nightsense')){ a.state = 'return'; a.explore = 0; continue; }
       const f = itemAt(s, a.tx, a.ty); const want0 = a.state === 'explore' ? wanted(s, a) : null, want = () => want0; // build 45: only foragers use it (worked out at the same moment as before, so answers are unchanged)
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
       if (f && a.state === 'explore' && a.carry === 0 && want()[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a, f), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.ireg = w.area[idx(f.x,f.y)]; a.state = 'return'; continue; }
@@ -1392,7 +1407,7 @@ function tickColony(s, c, dt){
   if (c.starve > 30 && (c.starve - 30) % (!c.team ? (has(s, 'stomach') ? 20 : 10) : 5) < dt){ /* build 41: slower for yours (was 20 s, then one every 5) */ const v = s.ants.filter(a => !a.isPlayer && a.state !== 'dead' && a.state !== 'away' && a.team === c.team); if (v.length && !(c.team > 1 && v.length <= RIVALS[c.team - 1].start[0] + RIVALS[c.team - 1].start[1])) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); } // build 25.1: a later colony never starves below the size it came with
   const overCap = !c.team && antCount(s) >= queenCap(s.queen.level, s);
   if (c.queenAlive && (c.team || s.queen.placed) && !overCap){
-    while (c.eggQueue.length && c.eggs.length < c.hatchCap){ const caste = c.eggQueue.shift(); c.eggs.push({ caste, t: 0, need: CASTES[caste].hatch * c.hatchMul }); }
+    while (c.eggQueue.length && c.eggs.length < c.hatchCap){ const caste = c.eggQueue.shift(); c.eggs.push({ caste, t: 0, need: CASTES[caste].hatch * c.hatchMul * ((caste === 'major' || caste === 'supermajor') && has(s, 'titan') ? 0.5 : 1) }); } /* build 51: Titan Line */
     // Nurses inside speed the eggs: three can help (six with Nurse II), each by its rank.
     let rate = 1;
     if (!c.team){ const nurses = s.ants.filter(a => a.caste==='nurse' && a.team===0 && (a.state==='in'||a.state==='build')).slice(0, (lvl(s, 'nurse') >= 2 ? 6 : 3) + 3*Math.max(0, roomCount(s, 'nursery') - 1));
@@ -1437,6 +1452,11 @@ function tickColony(s, c, dt){
     // Honeypot vault III: in a famine the repletes feed the colony (half a food a second each, from a reserve refilled when food is plenty).
     const rp = roomLevel(s, 'honeypot') >= 3 ? workers(s, 'replete', 'hang', 'honeypot', 4) : 0;
     if (rp){ if (c.store > c.cap*0.6 && (c.crop || 0) < rp*40){ const put = Math.min(dt, rp*40 - (c.crop || 0)); c.crop = (c.crop || 0) + put; c.store -= put; } /* build 40: filled from the store, not from nothing */ else if (c.store < 3 && (c.crop || 0) > 0){ const g = Math.min(c.crop, rp*0.5*dt); c.crop -= g; c.store += g; } }
+    // Build 51: Fungus Empire (2 food a minute a garden, leaves or not), Blue Butterfly Pact (4 sugar, 2 meat a minute),
+    // Weaver Canopy (your ants heal beside an outpost).
+    if (has(s, 'fungusempire') && fg) c.store = Math.min(c.cap, c.store + fg*2/60*dt);
+    if (has(s, 'butterfly')){ c.bflyAcc = (c.bflyAcc || 0) + dt/15; while (c.bflyAcc >= 1){ c.bflyAcc -= 1; addSugar(s, 1); if (c.bflyN = ((c.bflyN || 0) + 1) % 2) c.protein += 1; } }
+    if (has(s, 'weaver') && s.keepMask) for (const a of s.ants) if (!a.team && outside(a) && s.keepMask[idx(a.tx, a.ty)] && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
     // Egg larder (build 48): food made into meat while the store is over a quarter full and the larder under 150.
     const lr = roomCount(s, 'larder');
     if (lr && c.store > c.cap*0.25 && c.protein < LARDER_FULL){ const lv = roomLevel(s, 'larder'), per = LARDER_RATE[lv - 1]*(1 + 0.5*(lr - 1))/60*dt, cost = per*LARDER_FOOD[lv - 1];
@@ -1446,7 +1466,7 @@ function tickColony(s, c, dt){
     if (ut) c.fungus = Math.min(fungusCap(s), (c.fungus || 0) + ut*0.5/60*dt);
     // Flower nectar (build 18): each region held gives half a 🍯 a minute.
     if (has(s, 'nectar') && Object.keys(c.held || {}).length) for (const a of s.ants) if (!a.team && !a.zombie && outside(a) && c.held[s.world.area[idx(a.tx, a.ty)]] && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.4*dt); // build 40: nectar heals your ants in regions you hold
-    if (has(s, 'nectar')){ const n = Object.keys(c.held || {}).length; if (n){ c.nectarAcc = (c.nectarAcc || 0) + n*0.5/60*dt; if (c.nectarAcc >= 1){ c.nectarAcc -= 1; addSugar(s, 1); } } }
+    if (has(s, 'nectar')){ const n = Object.keys(c.held || {}).length; if (n){ c.nectarAcc = (c.nectarAcc || 0) + n*0.5*(has(s, 'peony') ? 3 : 1)/60*dt; /* build 51: the Peony Pact */ if (c.nectarAcc >= 1){ c.nectarAcc -= 1; addSugar(s, 1); } } }
     // The queen heals slowly; if raiders kill her, the colony is lost.
     const q = s.queen;
     if (q.placed && q.hp <= 0 && qtrait(s, 'eternal') && !c.eternalUsed){ c.eternalUsed = true; q.hp = 60; P.msg = 'The queen fell, but a daughter takes her place. The line goes on.'; }
@@ -1629,7 +1649,7 @@ function onDuty(s, d, me){ let n = 0; for (const o of s.ants) if (o !== me && !o
 function covered(s, a, d, short){ return onDuty(s, d, a) >= Math.max(1, Math.ceil(short/5)); }
 // How much a duty needs doing right now, for this ant (0: not at all).
 function dutyNeed(s, a, d){
-  const c = s.colony, raining = s.rain.on;
+  const c = s.colony, raining = wet(s);
   if (DUTIES[d].out && raining && d !== 'hunt' && !has(s, 'nightsense')) return 0;
   if (d === 'food' && covered(s, a, d, c.cap - c.store)) return 0;
   if (d === 'water' && covered(s, a, d, c.waterCap - c.water)) return 0;
@@ -1759,6 +1779,8 @@ function nestStep(s, a, speed, dt){
   return false;
 }
 function note(s, msg){ s.player.msg = msg; }
+// Build 51: rain that matters to your ants (not with the Raft Colony).
+const wet = s => s.rain.on && !has(s, 'raft');
 function tickRain(s, dt){
   const r = s.rain; r.t += dt;
   // Thunder in the distance twenty seconds before it rains (build 14).
@@ -1766,8 +1788,8 @@ function tickRain(s, dt){
   // Rain every 8 to 12 minutes (build 14: was every 3 to 5).
   if (!r.on && r.t >= r.next){ r.on = true; r.warned = false; r.t = 0; r.next = 480 + Math.random()*240; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
   else if (r.on){
-    if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + 0.4*dt);
-    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && canCave(s) && !has(s, 'chimneys') && !picked(s, 'builder', 'tunnelmaster')){ let fell = collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) fell = collapse(s, true) || fell; if (fell) note(s, 'The rain caved in a tunnel.'); } }
+    if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + (has(s, 'raft') ? 0.8 : 0.4)*dt); // build 51: Raft Colony, twice
+    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && canCave(s) && !has(s, 'chimneys') && !has(s, 'raft') && !picked(s, 'builder', 'tunnelmaster')){ let fell = collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) fell = collapse(s, true) || fell; if (fell) note(s, 'The rain caved in a tunnel.'); } }
   }
 }
 function buildersInside(s){ return s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build')).length; }
@@ -2518,6 +2540,7 @@ function endRaid(s, how){
   const got = M.loot.food ? `${Math.round(M.loot.food)} food` : M.loot.brood ? `${M.loot.brood} pupa${M.loot.brood === 1 ? '' : 'e'}` : '';
   s.report = { kind: 'myraid', how, team: M.team, name: R.name, prize: M.prize, food: Math.round(M.loot.food), brood: M.loot.brood, lost, killed, crits, before: M.start.theirs, after: theirs, rounds: M.round, t: s.t };
   c.raidsLed = (c.raidsLed || 0) + 1;
+  if (how === 'won' && has(s, 'broodempire')) c.protein += 30; // build 51: Brood Empire
   const head = how === 'won' ? `You took the ${R.name.toLowerCase()}’ nest!` : how === 'lost' ? `Your raid on the ${R.name.toLowerCase()} failed.` : how === 'broken' || how === 'called off' ? `The raid on the ${R.name.toLowerCase()} broke at the door.` : `Raid on the ${R.name.toLowerCase()}:`;
   P.msg = `${head}${got ? ` ${out.length} raider${out.length === 1 ? '' : 's'} carry home ${got}.` : ''} Lost ${lost}, killed ${killed}${crits > 0 ? ` (${crits} crit${crits === 1 ? '' : 's'})` : ''}. Their numbers: ${M.start.theirs} → ${theirs}.`;
   s.events.push('report');
@@ -2925,7 +2948,7 @@ function stepMillipede(s, b, B, dt){
 }
 // Rain (build 16): drops knock ants about outside. Some lose what they carry.
 function tickSplash(s, dt){
-  if (!s.rain.on) return;
+  if (!wet(s)) return;
   const P = s.player;
   for (const a of s.ants){
     if (!outside(a) || a.knockT > 0 || (a.isPlayer && P.big)) continue;
@@ -3724,7 +3747,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
