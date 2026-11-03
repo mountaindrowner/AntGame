@@ -6,7 +6,7 @@ What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full
 
 Mark: "add a meat type of room. I like the tension of scarcity, but players need to be able to build sustainability to a certain extent."
 
-**Trophic eggs** (Nest branch, after Hatchery II; 4 genes and 60 food, or half with the deed "have 10 fighters at once") unlocks the **Egg larder**. Real ants do this: many species lay trophic eggs, food eggs that never hatch.
+**Trophic eggs** (Nest branch, after Hatchery II; 4 genes and 60 food, half the genes with the deed "have 10 fighters at once") unlocks the **Egg larder**. Real ants do this: many species lay trophic eggs, food eggs that never hatch.
 
 - **What it does:** turns food into meat, 2 a minute at level I for 3 food each; 3 at II for 2.5; 4 at III for 2. Each extra larder adds half again (two at III: 6 a minute; five: 12).
 - **Its limits:** it runs only while the food store is over a quarter full, so it never starves the colony, and stops at 150 meat.
