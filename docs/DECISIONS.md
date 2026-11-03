@@ -2,6 +2,31 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: themes after four games (build 44.1)
+
+Mark: "Think more Stardew Valley, Animal Crossing, Graveyard Keeper, Planet Zoo."
+
+**The ten generic themes are replaced by eight, two after each game.** They take the game's feel (materials, shapes, lettering), not its art.
+
+| Theme | After | Idea |
+|---|---|---|
+| Homestead | Stardew Valley | orange parchment in a double dark-wood frame, pixel lettering (Pixelify Sans), plank buttons, a green OK button |
+| Cellar | Stardew Valley | the same woodwork in dark oak and lantern gold |
+| Island Phone | Animal Crossing | cream, very round, a faint dotted paper, speech-bubble hints, mint (M PLUS Rounded 1c) |
+| Town Hall | Animal Crossing | leafy notice board: a green stripe on every card, leaf buttons, a sunny yellow main button |
+| Lantern & Ledger | Graveyard Keeper | stained parchment with darkened edges, ink frames, letterpress type (IM Fell English), iron and brass buttons, a wax-seal red |
+| Crypt | Graveyard Keeper | cold stone panels and candle-gold lettering |
+| Field Station | Planet Zoo | clean white management panels, a green header stripe, uppercase section titles (Nunito Sans) |
+| Keeper Tablet | Planet Zoo | the same on slate-blue panels with teal |
+
+**How it was done and checked:**
+- The shared theme layer gained two hooks: a heading font for card titles, and an optional coloured stripe across the top of cards.
+- The same paused-colony screenshots were taken for each theme.
+- One fix: Island Phone fell back to another font because only the bold weights of its rounded face were loaded. The regular weight is now loaded too, and both Animal Crossing themes are a little bolder.
+- **The gallery:** https://claude.ai/artifact/8ywmVRqY98WFpS9BKP3Xte (same link as before).
+
+Classic stays the default until Mark picks one.
+
 ## Nov 3: ten UI themes to choose from (build 44)
 
 Mark: "Let's work on creating a new UI theme. Can you provide me some options? Let's make like 10 different options. Something ant themed or nature themed, round themed... Do a few tests and create some options."
