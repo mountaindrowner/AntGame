@@ -224,6 +224,7 @@ const CLOD = whiten(new THREE.BoxGeometry(1, 1, 1));
 const DUST = ['#e8dcc4', '#d9c7a6', '#f2e9d8'];
 const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
+const tmpCol = new THREE.Color(), GLOW = new THREE.Color('#6aff8a');
 export class NestView {
   constructor() {
     this.scene = new THREE.Scene();
@@ -664,6 +665,17 @@ export class NestView {
 
   // Build 42: shut sections: a root-and-stone seam round each, and dust where builders break through.
   _seams(s, t) {
+    // Build 45: green-glowing rocks in the bedrock, barely there; brighter once you've dug down and seen them.
+    const seen = !!s.colony.glowSeen;
+    for (const [gx, gy] of SIM.GLOW_ROCKS) {
+      if (s.nest.cells[gy * NW + gx]) continue;
+      // Mixed from the bedrock's own grey toward green: before you've found it, only just lifted from the stone.
+      const p = 0.5 + 0.5 * Math.sin(t * 0.9 + gx * 1.7), k = seen ? 0.32 + 0.4 * p : 0.07 + 0.08 * p;
+      const mix = (f) => tmpCol.set('#2a2e32').lerp(GLOW, Math.min(1, f)).getStyle();
+      const x0 = gx * T, y0 = gy * T;
+      this._fill(x0 + 3, y0 + 4, 10, 8, mix(k * 0.6), 0.55); this._fill(x0 + 5, y0 + 3, 6, 10, mix(k * 0.6), 0.55);
+      this._fill(x0 + 7, y0 + 7, 2, 2, mix(seen ? k * 1.4 : k * 2.2), 0.56);
+    }
     const open = s.nest.open || {}, B = s.nest.breach;
     for (const S of SIM.NEST_SECTIONS) {
       if (open[S.key]) continue;

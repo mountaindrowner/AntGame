@@ -2,6 +2,50 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: faster, with nothing changed (build 45)
+
+Mark: speed first, but "what does that mean for ants within my area, in my nest, or within my range of view?" Plus his lore: "at the very, very bottom, you find slightly green glowing rocks… some kind of radioactive material… that's what's prompting the growth of these ants."
+
+**The rule:** speed work may not change what you see. This build goes further: it changes **nothing at all.**
+
+**What was slow,** from a profile of 200 ants:
+- Every forager re-scanned every item in the yard each time it reached a tile, to find the nearest food. This alone was 18% of all the time.
+- Neighbour checks built text keys every tick, which made a lot of garbage collection.
+- Every creature measured its distance to every ant.
+
+**The fixes, all exact:**
+- **Items sit in a grid of 8-tile cells,** so a forager looks only at the cells around it. Ties go to the same item as before.
+- **The neighbour lookups use number keys,** with a guard so they don't wrap round the edge of the yard.
+- **Creatures skip ants that are clearly out of reach** before doing the real distance sums.
+- **A forager's shopping list is worked out only for foragers,** at the same moment as before.
+
+**Proof:**
+- The old and new sim ran side by side with the same seeded randomness: three colonies, each with and without 120 extra ants, four minutes each, compared every minute. The game state came out **byte-identical** every time.
+- **New tests** in `tests/speed.test.js` compare the quick lookups against full scans across a busy colony.
+
+**Timings, per tick (20 ticks a second):**
+
+| Your ants | Before | After |
+|---|---|---|
+| 54 | 1.7 ms | 1.1 ms |
+| 111 | 2.7–3.5 ms | 1.5 ms |
+| 191 | 4.6 ms | 2.0 ms |
+| 290 | 6.0–7.1 ms | 2.2–2.4 ms |
+
+That's about 3× faster with many ants.
+
+**Not done, on purpose:**
+- **"Idle ants sleep":** this turned out to be there already. Ants resting in the nest skip almost all their work.
+- **"Spread decisions":** this would change behaviour, and with this headroom it isn't needed now. It's held for the daughter colonies, if measuring them says so.
+
+**The green glow (lore):**
+- Eleven rocks in the bedrock carry a faint green glow, barely lifted from the stone, that pulses slowly.
+- The first block your builders dig in the bedrock brings a quiet line, not a banner: *"The rock down here is warm, and it glows a faint green. Is this why we grow?"*
+- After that, the rocks glow brighter.
+- It's a seed for Mark's "radioactive" Phase 2.
+
+**Tests:** 197 in all, and the end-to-end browser test passes.
+
 ## Nov 3: daughter colonies, decided (plan only)
 
 Mark's calls:

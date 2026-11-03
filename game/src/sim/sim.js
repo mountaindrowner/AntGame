@@ -344,6 +344,10 @@ function carveMole(s, S){
     if (deep){ if (r < 0.5) y = Math.min(S.y1, y + 1); else x = Math.max(S.x0, Math.min(S.x1, x + (r < 0.75 ? -1 : 1))); }
     else { if (r < 0.6) x = Math.max(S.x0, Math.min(S.x1, x + (west ? -1 : 1))); else y = Math.max(S.y0, Math.min(S.y1, y + (r < 0.8 ? -1 : 1))); } }
 }
+// Build 45 (Mark's lore): the bedrock glows, very faintly green. The first block dug down there says so, quietly:
+// something below is why these ants grow. (The glowing rocks themselves are drawn by the nest view: GLOW_ROCKS.)
+const GLOW_ROCKS = [[3, 61], [6, 63], [11, 60], [15, 62], [19, 63], [27, 61], [31, 63], [35, 60], [38, 62], [44, 61], [46, 63]];
+function bedrockGlow(s, y){ const c = s.colony; if (y < BEDROCK_Y || c.glowSeen) return; c.glowSeen = true; s.player.msg = 'The rock down here is warm, and it glows a faint green. Is this why we grow?'; s.events.push('glow'); }
 // The bedrock's three prizes: dug out, they're found.
 function bedrockPrize(s, x, y){
   const P = BEDROCK_PRIZES.find(b => b.x === x && b.y === y), c = s.colony; if (!P || (c.prizes || {})[P.key]) return;
@@ -528,7 +532,17 @@ function spawnCat(s){
 
 const raiseAlarm = (s, x, y, v) => { const i = idx(x,y); s.alarm[i] = Math.max(s.alarm[i], v); s.hot.add(i); };
 const walk = (s,x,y) => x>=0 && y>=0 && x<W && y<H && !s.world.blocked[idx(x,y)];
-const itemAt = (s,x,y) => s.items.find(f => f.x===x && f.y===y && f.amt>0);
+// Build 45: items in a grid of 8-tile cells, so a forager looks only at the cells round it, not every item in the
+// yard. Rebuilt each tick, and again whenever the item list is replaced or grows. Answers match the plain scan
+// (ties go to the item earliest in the list, as before).
+const ICELL = 8;
+function itemGrid(s){
+  const g = s._ig; if (g && g.t === s.t && g.arr === s.items && g.len === s.items.length) return g;
+  const cols = Math.ceil(W/ICELL), cells = new Map();
+  s.items.forEach((f, i) => { const k = Math.floor(f.y/ICELL)*cols + Math.floor(f.x/ICELL); let c = cells.get(k); if (!c) cells.set(k, c = []); c.push(i); });
+  return (s._ig = { t: s.t, arr: s.items, len: s.items.length, cols, cells });
+}
+const itemAt = (s,x,y) => { const g = itemGrid(s), c = g.cells.get(Math.floor(y/ICELL)*g.cols + Math.floor(x/ICELL)); if (!c) return undefined; for (const i of c){ const f = s.items[i]; if (f.x===x && f.y===y && f.amt>0) return f; } return undefined; };
 const colonyOf = (s, a) => a.team ? s.rivals[a.team - 1] : s.colony;
 const homeOf = (s, a) => a.team ? rivalHome(s, a.team) : s.world.home;
 // Each rival nest's distance field, made when the colony wakes.
@@ -587,7 +601,14 @@ function wanted(s, a){
   if (!a.team && a.caste === 'forager' && c.store < c.cap*0.15) want.food = 2; /* build 41: a hungry colony's foragers drop their duty for food */
   return want;
 }
-function nearestItem(s, a, r, want){ let best=null, bd=r; for (const f of s.items){ if (f.amt<=0 || !want[f.kind] || (heavy(f) && !a.team && !chewsTreats(s, a)) || f.carried) continue; const d = Math.hypot(f.x-a.tx, f.y-a.ty)/want[f.kind]; if (d < bd){ bd = d; best = f; } } return best; }
+function nearestItem(s, a, r, want){
+  let wmax = 0; for (const k in want) if (want[k] > wmax) wmax = want[k]; if (!wmax) return null;
+  const g = itemGrid(s), R = r*wmax, cx0 = Math.max(0, Math.floor((a.tx - R)/ICELL)), cx1 = Math.floor((a.tx + R)/ICELL), cy0 = Math.max(0, Math.floor((a.ty - R)/ICELL)), cy1 = Math.floor((a.ty + R)/ICELL);
+  let best = null, bd = r, bi = Infinity;
+  for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1 && cx < g.cols; cx++){ const c = g.cells.get(cy*g.cols + cx); if (!c) continue;
+    for (const i of c){ const f = s.items[i]; if (f.amt<=0 || !want[f.kind] || (heavy(f) && !a.team && !chewsTreats(s, a)) || f.carried) continue; const d = Math.hypot(f.x-a.tx, f.y-a.ty)/want[f.kind]; if (d < bd || (d === bd && best && i < bi)){ bd = d; best = f; bi = i; } } }
+  return best;
+}
 function deposit(s, a){
   const c = colonyOf(s, a);
   if (!a.team && a.carry > 0){ gainXp(s, a, 3); discover(s, a.itype || a.kind); }
@@ -958,12 +979,12 @@ function tick(s, dt){
   stepCat(s, dt); if (!s.cat){ s.catRespawn -= dt; if (s.catRespawn <= 0){ spawnCat(s); s.catRespawn = 90; } }
   // buckets for combat
   const buckets = new Map();
-  for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; const k = a.tx+','+a.ty; let b = buckets.get(k); if (!b) buckets.set(k, b = []); b.push(a); }
+  for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; const k = a.ty*W + a.tx; let b = buckets.get(k); /* build 45: number keys, not strings */ if (!b) buckets.set(k, b = []); b.push(a); }
   // Fighters near the spider, per team: guards only take it on as a crew.
   const spiderCrew = [0, 0, 0, 0, 0, 0];
   if (s.spider) for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; if ((CASTES[a.caste].fight >= 3 || a.follow) && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 4*T) spiderCrew[a.team]++; }
   duelGangs(s);
-  const enemiesNear = (a, r) => { const out = []; for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){ const b = buckets.get((a.tx+dx)+','+(a.ty+dy)); if (b) for (const o of b) if (o.team !== a.team && o.state !== 'dead') out.push(o); } return out; };
+  const enemiesNear = (a, r) => { const out = []; for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){ const xx = a.tx+dx; if (xx < 0 || xx >= W) continue; const b = buckets.get((a.ty+dy)*W + xx); if (b) for (const o of b) if (o.team !== a.team && o.state !== 'dead') out.push(o); } return out; };
   for (const a of s.ants){
     if (a.state === 'dead') continue;
     if (a.isPlayer){ stepPlayer(s, a, dt, enemiesNear); continue; }
@@ -1073,15 +1094,15 @@ function tick(s, dt){
     }
     if (a.state === 'explore' || a.state === 'patrol'){
       a.explore += dt; if (s.rain.on && !a.team && a.state === 'explore' && a.explore > 2 && !has(s, 'nightsense')){ a.state = 'return'; a.explore = 0; continue; }
-      const f = itemAt(s, a.tx, a.ty); const want = wanted(s, a);
+      const f = itemAt(s, a.tx, a.ty); const want0 = a.state === 'explore' ? wanted(s, a) : null, want = () => want0; // build 45: only foragers use it (worked out at the same moment as before, so answers are unchanged)
       // Pick up on arrival: within 2 px, or within this tick's step at speed.
-      if (f && a.state === 'explore' && a.carry === 0 && want[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a, f), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.ireg = w.area[idx(f.x,f.y)]; a.state = 'return'; continue; }
+      if (f && a.state === 'explore' && a.carry === 0 && want()[f.kind] && (!heavy(f) || a.team || chewsTreats(s, a)) && !f.carried && Math.hypot(a.x-(a.tx+0.5)*T, a.y-(a.ty+0.5)*T) < 2 + C.speed*SURF*dt){ const take = Math.min(carryCap(s, a, f), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; a.ireg = w.area[idx(f.x,f.y)]; a.state = 'return'; continue; }
       // Its main work at home came up (orders to dig, eggs to tend): empty-handed, it heads back.
       if (!a.team && a.state === 'explore' && !a.carry && (a.caste === 'builder' || a.caste === 'nurse') && Math.floor(a.explore/2) > Math.floor((a.explore - dt)/2)){ const n = chooseDuty(s, a); if (n === 'build' || n === 'nurse'){ a.state = 'return'; a.duty = n; a.explore = 0; continue; } }
       // Nothing of its duty in sight for a while: help with the next one instead.
       if (!a.team && a.state === 'explore' && a.duty && Math.floor(a.explore/20) > Math.floor((a.explore - dt)/20)){ const n = chooseDuty(s, a, a.duty); if (n && DUTIES[n].out && (n !== 'hunt' || C.fight < 3)) a.duty = n; }
       if (a.explore > (a.state === 'patrol' ? 25 : 60)){ a.state = 'return'; a.explore = 0; continue; }
-      if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, sightOf(s, a), want) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : picked(s, 'soldier', 'escort') ? 18 : 9) : a.team ? 64 : forageRange(s)); }
+      if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt)){ const nf = a.state === 'explore' ? nearestItem(s, a, sightOf(s, a), want()) : null; if (nf) chooseToward(s, a, (nf.x+0.5)*T, (nf.y+0.5)*T); else chooseExplore(s, a, a.state === 'patrol' ? (a.team ? 6 : picked(s, 'soldier', 'escort') ? 18 : 9) : a.team ? 64 : forageRange(s)); }
       continue;
     }
     if (a.state === 'return'){
@@ -1225,7 +1246,7 @@ function tickColony(s, c, dt){
       if (job.progress >= R.work){ for (const a of crewOf('j')) gainXp(s, a, 3); c.buildQueue.shift(); finishRoom(s, job); } }
     for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; if (s.nest.cells[nidx(o.x,o.y)] === 2){ s.nest.fillOrders.splice(i, 1); continue; } /* never into a room */ const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
     const full = (s.nest.spoil||0) >= SPOIL_MAX; // dirt waiting to go out: digging stops
-    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
+    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); bedrockGlow(s, o.y); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
   }
 }
 function finishRoom(s, job){
@@ -2357,7 +2378,7 @@ function bugWander(s, b, r){
   for (let k = 0; k < 10; k++){ const ang = Math.random()*Math.PI*2, d = (1 + Math.random()*r)*T, x = ox + Math.cos(ang)*d, y = oy + Math.sin(ang)*d; if (bugTile(s, x, y)){ b.gx = x; b.gy = y; return; } }
   b.gx = b.x; b.gy = b.y;
 }
-function nearAnt(s, b, r, pred){ let best = null, bd = r; for (const a of s.ants){ if (!outside(a) || (pred && !pred(a)) || (a.isPlayer && a.feign > s.t)) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < bd){ bd = d; best = a; } } return best ? [best, bd] : null; }
+function nearAnt(s, b, r, pred){ let best = null, bd = r; for (const a of s.ants){ if (Math.abs(a.x - b.x) >= bd || Math.abs(a.y - b.y) >= bd || !outside(a) || (pred && !pred(a)) || (a.isPlayer && a.feign > s.t)) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < bd){ bd = d; best = a; } } return best ? [best, bd] : null; }
 const playerNear = (s, x, y, r) => { const pa = s.player.ant; return !!pa && !s.player.inNest && Math.hypot(pa.x - x, pa.y - y) < r*T; };
 // Build 16.1: the yard is populated region by region, each bug placed
 // anywhere in its region and keeping to its own patch, so they are spread
@@ -2423,9 +2444,9 @@ function stepBugs(s, dt){
     const B = BUGS[b.kind]; b.t += dt; b.life += dt; if (b.slowT > 0) b.slowT -= dt;
     // Bitten: fighters, your crew and you. Off the ground (hopping, flying) it can't be.
     if (b.state !== 'fly' && b.state !== 'hop' && b.state !== 'land' && b.state !== 'carry'){
-      const R = B.reach*T, arm = b.state === 'curl' ? B.armour : 1;
+      const R = B.reach*T, arm = b.state === 'curl' ? B.armour : 1, lim = Math.max(6*T, R*2); // (build 45: ants further than any reach here are skipped before the sums)
       for (const a of s.ants){
-        if (a.team || !outside(a)) continue;
+        if (a.team || Math.abs(a.x - b.x) >= lim || Math.abs(a.y - b.y) >= lim || !outside(a)) continue;
         const fighter = CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer, d = Math.hypot(a.x - b.x, a.y - b.y);
         if (fighter && d < R*reachOf(s, a)){
           const dmg = bite(s, a, 'bug')*dt*(a.isPlayer ? 2*yb : 1)*arm*(exposed(s, b) ? 1.5 : 1); b.hp -= a.caste === 'venom' && picked(s, 'venom', 'lethal') ? b.hp : dmg; gainXp(s, a, dmg/3); b.hitT = s.t; stingSlow(s, a, b);
@@ -2465,7 +2486,7 @@ function bugDies(s, b){
 // off toward home for a few seconds. Their attacks are telegraphed (b.atk), drawn like a boss's.
 // After a kill a hunter stops to eat, 8 s, still and easy to bite.
 function hunterEats(s, b){ b.eatT = 8; b.state = 'eat'; b.atk = null; b.fullUntil = s.t + 8 + 90; } // then sated: it won't hunt for 90 s
-const crowdOn = (s, b, r) => { let n = 0; for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < r*T) n++; return n; };
+const crowdOn = (s, b, r) => { let n = 0; const R = r*T; for (const a of s.ants) if (!a.team && Math.abs(a.x - b.x) < R && Math.abs(a.y - b.y) < R && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < R) n++; return n; };
 // Leashed: it hunts only ants within 12 tiles of its home (it won't follow foragers back to your nest).
 function huntTarget(s, b, r){ if (b.fullUntil > s.t && !b.carry) return null; if (isNight(s) && !b.carry){ if (DIURNAL[b.kind]) return null; if (b.kind === 'assassin') r *= 1.4; } /* build 43 */ let best = null, bd = r*T; const hx = (b.hx + 0.5)*T, hy = (b.hy + 0.5)*T; for (const a of s.ants){ if (a.team || !outside(a) || (a.isPlayer && a.feign > s.t) || Math.hypot(a.x - hx, a.y - hy) > 12*T) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < bd){ bd = d; best = a; } } return best ? [best, bd] : null; }
 // The jumping spider: a short crouch (the tell, a lane on the ground), then a leap of up to 5 tiles onto
@@ -3451,7 +3472,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

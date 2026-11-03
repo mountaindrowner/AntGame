@@ -165,7 +165,7 @@ Mark: daughters are **support colonies with a role, not second capitals**. Some 
 
 ### The builds, in order
 
-1. **Speed first:** idle ants sleep and decisions are spread over ticks, with a benchmark. This pays off today too.
+1. ~~**Speed first**~~: built in build 45. It's about 3× faster with many ants, and byte-identical in behaviour. Spreading decisions is held in reserve.
 2. **The nuptial flight and the first daughter (War Camp):**
    - founding at an outpost;
    - the daughter as a friendly colony that runs itself, reusing the rival-colony code;
