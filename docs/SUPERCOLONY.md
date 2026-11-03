@@ -72,6 +72,95 @@ Spending everything (evolution tree 274, caste upgrades 12) takes about 75% of t
 - **Day and night: yes.** It gives the game a schedule. **Seasons: a far maybe.**
 - **Alerts at every limit:** when you hit a ceiling, the game says so, and says what gets you past it.
 
+## Daughter colonies: the plan of record (Nov 3)
+
+Mark: daughters are **support colonies with a role, not second capitals**. Some of the tree's top nodes can only be built in the right daughter, and the biggest things only once a tunnel joins it to the main nest. **One daughter of each kind; five in all.**
+
+### The five, one per branch of the evolution tree
+
+| Daughter | Branch | Top nodes only buildable there | Its great evolutions | Natural ground |
+|---|---|---|---|---|
+| **Brood Hall** | Bodies | Polymorphism (Supermajors), Exploders, Long-lived workers, Lineage | Titan Line | sheltered soil: the flowerbed, the rot |
+| **War Camp** | Society | Colony memory, Brood raiding, Honour guard | Army of the March; Brood Empire (with Brood Hall) | near a rival colony |
+| **Watch** | Senses | Hive mind, War columns, Propaganda scent, Sun compass | Living Bridges (with Quarry) | high ground: the steps, the Oak roots |
+| **Quarry** | Nest | Deep halls, Thermal chimneys, Highways, Shared stores | The Great Mound; Raft Colony (with Garden) | the rock garden, gravel |
+| **Garden** | Symbiosis | Honey economy, Flower nectar, Fungus garden level III | Fungus Empire, The Peony Pact; Blue Butterfly Pact (with Watch); Weaver Canopy (with Watch) | the wet edge, the flowerbed |
+
+**The tree gets three tiers:**
+1. **Everything else:** buildable anywhere, as now.
+2. **The top nodes above:** need that daughter; you build its room inside the daughter's nest.
+3. **Great evolutions:** need the right daughters joined to the main nest by tunnel.
+   - **Supercolony** needs all five joined.
+   - **Swarm Day** needs the Royal chamber and two joined daughters.
+
+**Saves:** nodes a save already owns stay owned.
+
+### Founding, size and limits
+
+- **The way in:** the main nest's Royal chamber node, plus about 4–5 guardians beaten, brings the **nuptial flight**. Each flight's winged queen founds one daughter.
+- **Where:**
+  - at a finished outpost you hold;
+  - at least **two regions from every nest**, so the walk there hides the loading;
+  - within reach of an existing nest, so expansion is a chain (as SimAnt did it).
+- **Its role:** you pick the role at founding; the ground gives a bonus when it suits the role.
+- **Its nest:**
+  - small, about a third of the main one;
+  - comes pre-dug for its role;
+  - you place only its two or three special rooms;
+  - you must be inside it to build them, which gives you reasons to visit.
+- **Size:** up to ~50 ants each. With the main nest's 100, that's at most ~350, of which only the main nest and the daughter you're at run in full.
+- **Running:** each daughter runs itself.
+  - It lays its role's ants, forages and spends its own stores, and guards its door.
+  - Alerts always name the colony and offer to take you there.
+  - You can step in and override; automation is on by default (the Stellaris lesson).
+- **The capital decides:** genes, the evolution tree and queen traits stay with the main nest and apply to all colonies (as in Frostpunk 2).
+- **If the main queen dies:** still game over, unless the Eternal line trait. *(Assumed; Mark to confirm.)*
+
+### What each gives you
+
+| Daughter | What it gives |
+|---|---|
+| Brood Hall | the big castes, trained there |
+| War Camp | elite fighters who march to your raids and guardian fights |
+| Watch | the map revealed further, early raid warnings, longer outpost reach |
+| Quarry | stone, and deep and bedrock digging |
+| Garden | sugar and food, shipped home once a tunnel connects it |
+
+### Tunnels: the big goal
+
+- **What one costs:** a lot, rising with distance.
+- **What it does:**
+  - the two nests share stores;
+  - you travel through it (in at one nest, out at the other);
+  - its great evolutions unlock.
+- **What comes later:** all five joined is the supercolony, and the way into the wilds.
+
+### Keeping it fast (from how other games do it)
+
+- **Far away, a daughter is numbers, not ants:** count, food in and out, losses, catching up on elapsed time; never frozen. It fills in with real ants a region before you arrive (simulation level of detail; Dwarf Fortress, Oxygen Not Included).
+- **Idle ants sleep:** ants resting inside a nest skip their update (Factorio).
+- **Decisions are spread across ticks:** movement every tick, choices on a rolling share of ants (time slicing).
+- **Only one nest is ever drawn.** Going into a daughter swaps the nest view to its small grid.
+- **New art is small:**
+  - a mound look per role: war banners, leaf cuttings, a stone pile, a lookout twig, egg-pale walls;
+  - role icons;
+  - the tunnel line on the map.
+
+### The builds, in order
+
+1. **Speed first:** idle ants sleep and decisions are spread over ticks, with a benchmark. This pays off today too.
+2. **The nuptial flight and the first daughter (War Camp):**
+   - founding at an outpost;
+   - the daughter as a friendly colony that runs itself, reusing the rival-colony code;
+   - far away as numbers, near as real ants;
+   - the map and alerts;
+   - saves v14.
+3. **The daughter's own nest view and special rooms,** and the tree's tier 2.
+4. **The other four roles.**
+5. **Tunnels:** cost, shared stores, travel.
+6. **The great evolutions,** wired to joined daughters.
+7. **Then the wilds.**
+
 ## The open decision: open sandbox, or a guided path?
 
 **Proposal: a guided path through the middle, with freedom in how you walk it.**

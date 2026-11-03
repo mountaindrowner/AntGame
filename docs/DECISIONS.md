@@ -2,6 +2,28 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: daughter colonies, decided (plan only)
+
+Mark's calls:
+- Daughters are **support colonies with a role, not second capitals.**
+- Some of the tree's top nodes can be built **only in the right daughter**, and the big things only **once a tunnel connects it**.
+- **One of each kind, five in all:**
+  - Brood Hall (Bodies);
+  - War Camp (Society);
+  - Watch (Senses);
+  - Quarry (Nest);
+  - Garden (Symbiosis).
+- **Founding:**
+  - at an outpost;
+  - far enough away that the walk there hides the loading;
+  - far daughters run as numbers, not ants;
+  - idle ants sleep;
+  - the thinking is spread over ticks.
+
+Research behind it: how Dwarf Fortress, Oxygen Not Included, Factorio, RimWorld, Stellaris, Anno 1800, Frostpunk 2, SimAnt and Empires of the Undergrowth handle many bases and many agents.
+
+The full plan, the node-by-node gating and the build order are in `SUPERCOLONY.md`. **Assumed, for Mark to confirm:** losing the main queen is still game over unless the Eternal line trait.
+
 ## Nov 3: Town Hall is the look (build 44.2)
 
 Mark: "Let's do town hall."
