@@ -298,7 +298,7 @@ export function createUI(app) {
     h += `<div class="t" style="margin-top:10px">Named ants</div>`;
     h += named.length ? named.map((a) => `<div class="named"><b>${a.name}${a.title ? ' ' + a.title : ''}</b>${a.isPlayer ? ' (you)' : ''} · ${RANKS[rankOf(a)].name} ${CASTES[a.caste].name} · ${Math.floor(a.xp || 0)} xp</div>`).join('') : `<div class="note">None yet. Elites get names.</div>`;
     h += `<div class="t" style="margin-top:10px">The fallen</div>`;
-    h += c.fallen.length ? c.fallen.map((f) => `<div class="named">${f.name}${f.title ? ' ' + f.title : ''}${f.you ? ' (you)' : ''} · ${RANKS[f.rank].name} ${CASTES[f.caste].name} · ${({ spider: 'the spider', rival: 'a rival', war: 'in battle', antlion: 'an antlion', mower: 'the mower', foot: 'a foot', bird: 'a robin', toad: 'the toad', acorn: 'an acorn', spray: 'bug spray', fireants: 'fire ants', starved: 'starved', hunger: 'starved' }[f.cause] || f.cause)}</div>`).join('') : `<div class="note">No named ant has died.</div>`;
+    h += c.fallen.length ? c.fallen.map((f) => `<div class="named">${f.name}${f.title ? ' ' + f.title : ''}${f.you ? ' (you)' : ''} · ${RANKS[f.rank].name} ${CASTES[f.caste].name} · ${({ spider: 'the spider', rival: 'a rival', war: 'in battle', antlion: 'an antlion', mower: 'the mower', foot: 'a foot', bird: 'a robin', toad: 'the toad', acorn: 'an acorn', spray: 'bug spray', fireants: 'fire ants', starved: 'starved', hunger: 'starved', nomeat: 'for want of meat' }[f.cause] || f.cause)}</div>`).join('') : `<div class="note">No named ant has died.</div>`;
     return h;
   }
   // Your ant died: come back as one of your named ants, or wait for an egg.

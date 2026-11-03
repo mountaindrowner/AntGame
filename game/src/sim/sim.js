@@ -376,7 +376,7 @@ function tickDaughters(s, dt){
     // Her eggs, paid from the main stores.
     d.eggT += dt;
     if (d.eggT >= 30 && daughterCount(s, d) < DAUGHTER_CAP){
-      const soldier = Math.random() < (R.soldiers || 0) && c.protein >= 2, caste = soldier ? 'soldier' : 'forager', cost = soldier ? { food: 4, water: 1, protein: 2 } : { food: 2, water: 1 };
+      const soldier = Math.random() < (R.soldiers || 0) && c.protein >= 2, caste = soldier ? 'soldier' : 'forager', cost = eggCost(s, caste); /* build 47.2: the same egg discounts as the main nest */
       if (c.store > 15 && payCost(c, cost)){ d.eggT = 0; d.hatched++;
         if (d.real){ const a = mkAnt(s, caste, 'in', d.ex, d.ey, 0); a.dh = d.key; a.rest = 1; if (soldier && d.key === 'war') a.xp = Math.max(a.xp || 0, RANKS[1].xp); }
         else d.pop[caste] = (d.pop[caste] || 0) + 1; }
@@ -739,7 +739,7 @@ function killAnt(s, a, cause){
   // Survivor: once a life, a killing blow leaves your ant at 1 health.
   if (a.isPlayer && !a.survived && picked(s, 'you', 'survivor')){ a.survived = true; a.hp = 1; s.player.hit = s.t; s.player.msg = 'That should have killed you. Get home!'; return; }
   // Infirmary III (build 23): medics carry the fallen home; 1 in 4 near the nest is saved.
-  if (!a.team && !a.isPlayer && cause !== 'starved' && cause !== 'hunger' && cause !== 'culled' && cause !== 'cordyceps' && !a.zombie && roomLevel(s, 'infirmary') >= 3 && roomOf(s, 'infirmary') && a.x != null && Math.hypot(a.x/T - s.colony.ex, a.y/T - s.colony.ey) < 24 && s.ants.some(o => !o.team && o.caste === 'medic' && o.state === 'in') && Math.random() < 0.25){
+  if (!a.team && !a.isPlayer && cause !== 'starved' && cause !== 'hunger' && cause !== 'nomeat' && cause !== 'culled' && cause !== 'cordyceps' && !a.zombie && roomLevel(s, 'infirmary') >= 3 && roomOf(s, 'infirmary') && a.x != null && Math.hypot(a.x/T - s.colony.ex, a.y/T - s.colony.ey) < 24 && s.ants.some(o => !o.team && o.caste === 'medic' && o.state === 'in') && Math.random() < 0.25){
     a.hp = 1; a.carry = 0; a.follow = false; a.infect = null; enterNest(s, a); s.colony.saved = (s.colony.saved || 0) + 1; if (s.colony.saved === 1) s.player.msg = 'Your medics carried a fallen ant home and saved it.'; return; }
   a.state = 'dead';
   if (!a.team && a.name){ const f = s.colony.fallen; f.unshift({ name: a.name, title: a.title || '', caste: a.caste, rank: rankOf(a), cause, t: Math.round(s.t), you: !!a.isPlayer }); if (f.length > 30) f.pop(); }
@@ -1271,9 +1271,9 @@ function tickColony(s, c, dt){
   if (!c.team) advise(s, dt);
   c.secAcc += dt; while (c.secAcc >= 1){ c.secAcc -= 1; c.delivered.pop(); c.delivered.unshift(0); c.eaten.pop(); c.eaten.unshift(0); }
   let eat = 0; for (const a of s.ants) if (a.state !== 'dead' && a.team === c.team) eat += CASTES[a.caste].eat;
-  if (!c.team && has(s, 'longlived')) eat *= 0.75;
-  if (!c.team) eat += roomUpkeep(s); // rooms cost food to run (build 17)
   if (!c.team) for (const d of s.daughters || []) for (const k in d.pop || {}) eat += CASTES[k].eat*d.pop[k]; // (build 46: a far daughter's ants still eat)
+  if (!c.team && has(s, 'longlived')) eat *= 0.75; // (build 47.2: far daughters' ants too, as near ones)
+  if (!c.team) eat += roomUpkeep(s); // rooms cost food to run (build 17)
   // Build 25.1: the later colonies also feed beyond what we model (the bins, the tree, their side
   // of the fence), so they need half what they eat from the yard.
   if (c.team > 1) eat *= 0.5;
@@ -1311,7 +1311,7 @@ function tickColony(s, c, dt){
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
     let farF = 0; for (const d of s.daughters || []) for (const k in d.pop || {}) if (CASTES[k].fight >= 3) farF += d.pop[k]; /* build 47: a far daughter's soldiers eat protein too */
     if (fighters.length + farF){ c.protein -= (fighters.length + farF)*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
-      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); else { const d = (s.daughters || []).find(q => !q.real && q.pop && q.pop.soldier > 0); if (d){ d.pop.soldier--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
+      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer), r = Math.floor(Math.random()*(v.length + farF)); /* build 47.2: any fighter, near or far, by their numbers */ if (r < v.length) killAnt(s, v[r], 'nomeat'); else { let k = r - v.length; for (const d of s.daughters || []){ if (d.real) continue; for (const q in d.pop || {}){ if (CASTES[q].fight < 3) continue; if (k < d.pop[q]){ d.pop[q]--; c.deaths.nomeat = (c.deaths.nomeat || 0) + 1; k = -1; break; } k -= d.pop[q]; } if (k < 0) break; } } s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
       else c.pstarve = 0; }
     // Build 23: the rooms at work.
     // Fungus garden: leaves the gardeners brought in grow into food.

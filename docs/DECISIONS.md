@@ -2,6 +2,18 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: the late-game supercolony, checked (build 47.2)
+
+Mark: "simulate a full-blown 95% supercolony: what it consumes, is it maintainable or achievable; the math and realism first." Two passes: a ledger from the code, then a live simulation (100 main ants, every room at level III, 58 of 61 evolutions, the War Camp at 50, 60 game-minutes, 3 seeds, all threats on; and a five-daughter approximation, the four unbuilt ones on War Camp rules).
+
+**Found:** protein runs out first (25–40 min: 59 fighters eat about 22 a minute against 11–14 coming in), then food slides 20–50 a minute once the near ground is picked over. Main nest alone: about +50 food a minute. With the War Camp: about break-even. Five War-Camp-style daughters: a full store lasts about 25 minutes. The sim runs at 2–4% of a core with 150 real ants. Getting there takes a human an estimated 4–6 hours (the tree is 274 genes).
+
+Balance is Mark's call; none of that changed. **Fixed (far vs near again):**
+
+1. Long-lived now cuts a far daughter's upkeep too (it ate a third more than the same ants near).
+2. A daughter's eggs get the same discounts as the main nest's (Brood, Wet nurse, Broodmother).
+3. With no protein, a fighter dies from anywhere, near or far, by their numbers (the main army used to die first, though the War Camp eats most of it). It's logged as "for want of meat", not "starved", so the deaths list no longer says starved with a full store.
+
 ## Nov 3: the stress run (build 47)
 
 Mark: "put it to the wringer." Bots, a fuzzer and a numbers pass ran the game hard: 30 fuzz runs (10.7 simulated hours, 7,610 random actions, 524 save round-trips), UI abuse in the browser (no errors), a 90-minute bot playthrough, and duel, raid and progression tables.

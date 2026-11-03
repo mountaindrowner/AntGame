@@ -94,3 +94,16 @@ test('far away her soldiers still eat protein and her foragers bring in what rea
   assert.ok(prot >= 9 && prot <= 12, `20 soldiers eat about 10 protein a minute (${prot.toFixed(1)})`);
   assert.ok(food >= 24, `10 foragers bring in about 25 food a minute (${food.toFixed(1)})`);
 });
+
+test('build 47.2: far ants get Long-lived like near ones, and protein hunger takes any fighter, near or far, logged as want of meat', () => {
+  const s = founded(); beat(s, 3); s.colony.evo.royal = true; rich(s.colony);
+  const oi = farOutpost(s); SIM.foundDaughter(s, oi, 'war'); const d = s.daughters[0], c = s.colony;
+  step(s, 11); d.tunnel.progress = d.tunnel.need; step(s, 1); d.eggT = -1e9;
+  const eaten = (pop) => { d.pop = pop; c.store = 100; const e0 = c.eaten.reduce((x, y) => x + y, 0); step(s, 5); return c.eaten.reduce((x, y) => x + y, 0) - e0; };
+  c.evo.longlived = false; const a = eaten({ forager: 30 }) - eaten({});
+  c.evo.longlived = true; const b = eaten({ forager: 30 }) - eaten({});
+  assert.ok(Math.abs(b / a - 0.75) < 0.05, `far ants eat ¾ with Long-lived (${(b / a).toFixed(2)})`);
+  d.pop = { soldier: 200 }; c.protein = 0; c.pstarve = 29; for (let i = 0; i < 25; i++) { c.store = 100; c.protein = 0; step(s, 1); }
+  assert.ok((c.deaths.nomeat || 0) >= 2, `want of meat (${c.deaths.nomeat})`);
+  assert.ok(d.pop.soldier < 200, 'far soldiers die too');
+});
