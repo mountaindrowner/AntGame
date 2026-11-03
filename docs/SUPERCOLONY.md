@@ -95,6 +95,23 @@ Mark: daughters are **support colonies with a role, not second capitals**. Some 
 
 **Saves:** nodes a save already owns stay owned.
 
+### Revised by Mark (Nov 3, later): founding is a tunnel, and daughters lean on the main nest
+
+1. **The nuptial flight comes at set moments in the story.** The winged queen picks a spot, lands at the outpost you chose and digs in.
+2. **Then a tunnel is dug from the main nest to her,** slowly; the farther away, the longer.
+   - On the world map, a **translucent line** grows from your nest to hers while it's dug.
+3. **When the tunnel arrives, the daughter is built with a basic set of essentials** (room for more ants), fed and supplied from the main nest through the tunnel.
+4. **You upgrade the essentials, then build the daughter's specialisations,** paid from the main nest.
+5. **Daughters depend on the main nest.** Some can't defend themselves, and need you (or the War Camp) to defend them. The total number of ants should still go up with each daughter.
+
+**What this changes:**
+- The tunnel is part of founding, not the late "big goal".
+- Great evolutions need the daughter's specialisations, not a tunnel.
+
+**Also decided:**
+- **A short loading animation between nests is fine.** Tapping a nest's picture plays about a second of travel through the tunnel while its nest and ants load.
+- **Lore:** at the very bottom of the nest, the bedrock has **faintly glowing green rocks.** It's a hint of something radioactive below, and of why these ants grow. It's subtle, and you only see it if you dig all the way down.
+
 ### Founding, size and limits
 
 - **The way in:** the main nest's Royal chamber node, plus about 4–5 guardians beaten, brings the **nuptial flight**. Each flight's winged queen founds one daughter.
