@@ -2,6 +2,27 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: the Egg larder, meat you can build (build 48)
+
+Mark: "add a meat type of room. I like the tension of scarcity, but players need to be able to build sustainability to a certain extent."
+
+**Trophic eggs** (Nest branch, after Hatchery II; 4 genes and 60 food, or half with the deed "have 10 fighters at once") unlocks the **Egg larder**. Real ants do this: many species lay trophic eggs, food eggs that never hatch.
+
+- **What it does:** turns food into meat, 2 a minute at level I for 3 food each; 3 at II for 2.5; 4 at III for 2. Each extra larder adds half again (two at III: 6 a minute; five: 12).
+- **Its limits:** it runs only while the food store is over a quarter full, so it never starves the colony, and stops at 150 meat.
+- **No ant to train:** the queen lays the eggs. Room cost 40 food, 15 water; level II 80 food, 20 sugar; level III 150 food, 40 sugar, 15 wood.
+- When soldiers starve, the message now says to hunt or build an Egg larder.
+
+**How far it goes** (the 95% colony, 60 game-minutes, two seeds):
+
+| | Main nest at min 60 | Deaths for want of meat, min 31–60 |
+|---|---|---|
+| No larder, five daughters | 74–87 | 87–101 |
+| Three larders at III (8 a minute, 16 food a minute) | 100 | 49–54 |
+| Five larders at III (12 a minute, 24 food a minute) | 86–100 | 21–78 |
+
+Enough to keep the main army; not enough for every army at once. The Brood Hall's big castes and the War Camp still have to be paid for with hunting.
+
 ## Nov 3: far daughters lose ants too; the supercolony re-run with roles (build 47.3)
 
 Mark: far daughters get "a steady death rate, conservative but not immune."

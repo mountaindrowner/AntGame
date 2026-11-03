@@ -51,6 +51,7 @@ export const ICONS = {
   rancher: svg('<path d="M3 13c2-1 16-1 18 0"/><path d="M7 13c0-4 2-6 5-6s5 2 5 6"/><path d="M9 17h6"/>'),
   medic: svg('<circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8" stroke-width="2.4"/>'),
   honeypot: svg('<path d="M12 3v3"/><ellipse cx="12" cy="13" rx="6" ry="7"/><path d="M8 11c1-2 3-2 4-2" opacity=".6"/>'),
+  larder: svg('<path d="M4 9h16M4 15h16"/><ellipse cx="8" cy="7" rx="1.6" ry="1.2"/><ellipse cx="12" cy="7" rx="1.6" ry="1.2"/><ellipse cx="16" cy="7" rx="1.6" ry="1.2"/><ellipse cx="9" cy="13" rx="1.6" ry="1.2"/><ellipse cx="14" cy="13" rx="1.6" ry="1.2"/><path d="M5 20h14"/>'),
   midden: svg('<path d="M3 20h18"/><path d="M5 20c1-6 4-9 7-9s6 3 7 9"/><circle cx="10" cy="15" r=".9" fill="currentColor"/><circle cx="14" cy="16" r=".9" fill="currentColor"/>'),
   major: svg('<path d="M12 2l8 3.5v5.5c0 6-4 9-8 11-4-2-8-5-8-11V5.5z"/><path d="M12 7v10M8 11h8" stroke-width="2.4"/>'),
   supermajor: svg('<path d="M12 2l8 3.5v5.5c0 6-4 9-8 11-4-2-8-5-8-11V5.5z"/><path d="M8 9l4 3 4-3M8 14l4 3 4-3"/>'),

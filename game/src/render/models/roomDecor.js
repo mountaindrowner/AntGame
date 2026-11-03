@@ -108,6 +108,14 @@ const WALLS = {
     for (let i = 0; i < 60; i++) { g.fillStyle = r() < 0.5 ? '#6e4a24' : '#4e321a'; g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 2, 1); }
     g.fillStyle = '#d89a3a'; for (let i = 0; i < 10; i++) { const x = Math.floor(r() * 32); g.fillRect(x, 0, 1, 2 + Math.floor(r() * 4)); }
   },
+  // Build 48. Egg larder: cool pale clay with little cells, a trophic egg in some.
+  larder(g, r) {
+    g.fillStyle = '#8a6a50'; g.fillRect(0, 0, 32, 32);
+    for (let y = 2; y < 32; y += 8) for (let x = (y / 8) % 2 ? 6 : 2; x < 32; x += 8) {
+      g.fillStyle = '#5a4030'; g.fillRect(x, y, 5, 4);
+      if (r() < 0.6) { g.fillStyle = '#f4ecd8'; g.fillRect(x + 1, y + 1, 3, 2); }
+    }
+  },
   // Midden: dark, crumbly refuse.
   midden(g, r) {
     g.fillStyle = '#2e241c'; g.fillRect(0, 0, 32, 32);
@@ -307,6 +315,18 @@ const DRESS = {
       d.put(NEST.replete, [x, H - row * 2, -D * (0.86 - row * 0.1)], [k, k, k], TRUE, [0, 0.4 + i, Math.sin(t * 0.8 + i * 2 + row) * 0.05]);
     }
     d.put(PROPS.puddle, [W / 2, 0.3, -D * 0.55], [5, 1, 3], '#e8b040');
+  },
+  // Build 48: rows of food eggs on clay shelves, more of them the more meat is in store; a nurse's
+  // tray of chewed-up egg (meat) at the front.
+  larder(d) {
+    const { W, H, D, col } = d, fill = Math.min(1, (col.protein || 0) / 150);
+    for (let row = 0; row < 2; row++) {
+      d.put(PROPS.box, [W / 2, 3 + row * 9, -D * 0.8], [W * 0.42, 0.8, 3], '#6a4a32');
+      const n = 3 + Math.round(fill * 6);
+      for (let i = 0; i < n; i++) d.put(PROPS.egg, [8 + i * (W - 16) / 8, 4.6 + row * 9, -D * 0.8], [1.5, 1.5, 1.5], (i + row) % 3 ? '#f4ecd8' : '#ffe6b8', [0, 0, 0.4 * ((i % 2) - 0.5)]);
+    }
+    d.put(PROPS.puddle, [W * 0.3, 0.3, -D * 0.5], [5, 1, 3], '#b0503a');
+    for (let i = 0; i < 3; i++) d.put(PROPS.pebble, [W * 0.3 - 2 + i * 2, 0.8, -D * 0.5], [1, 0.7, 0.9], '#c86a4a', [0, i, 0]);
   },
   midden(d) {
     const { W, D } = d;

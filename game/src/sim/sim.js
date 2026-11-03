@@ -110,6 +110,10 @@ const ROOMS = {
   // Build 24.
   honeypot: {name:'Honeypot vault', cost:{food:40, sugar:20}, work:30, w:4, h:4, evo:'honeypot', caste:'replete', desc:'Repletes hang here, living jars: each holds 40 more food', more:'Room for 4 more repletes',
     lv:[{cost:{food:80, sugar:30}, fx:'Each replete holds 60, and 2 more fit'}, {cost:{food:150, sugar:50, wood:15}, fx:'In a famine the repletes feed the colony from their crops'}]},
+  // Build 48: meat at home. The queen lays trophic eggs, food eggs no ant will hatch from, and the colony eats
+  // them: grain made into meat (real ants do this). It runs only with food to spare, and stops at a full larder.
+  larder:   {name:'Egg larder', cost:{food:40, water:15}, work:30, w:4, h:3, evo:'trophic', desc:'The queen lays food eggs: 🌾 food becomes 🥩 meat, 2 a minute', more:'Another larder: half again more',
+    lv:[{cost:{food:80, sugar:20}, fx:'3 🥩 a minute, and less food for each'}, {cost:{food:150, sugar:40, wood:15}, fx:'4 🥩 a minute, for less food again'}]},
   midden:   {name:'Midden', cost:{food:20, grit:15}, work:20, w:4, h:3, evo:'midden', caste:'undertaker', desc:'Undertakers carry the dead to the midden (each death near the nest gives back 2 food), and Cordyceps spreads less, more so with each undertaker', more:'Room for 3 more undertakers',
     lv:[{cost:{food:40, grit:25}, fx:'The waste composts: it feeds the fungus garden'}, {cost:{food:80, protein:10, wood:10}, fx:'Cordyceps hardly spreads at all, and cave-ins are a third rarer'}]},
 };
@@ -119,7 +123,7 @@ const ROOMS = {
 const roomCount = (s, key) => s.nest.rooms.filter(r => r.key === key).length;
 const roomCap = s => Math.min(5, s.queen.level + 1); // build 40: 5 at most (more than that can't fit the nest)
 function roomUpkeep(s){ let u = 0; const seen = {}; for (const r of s.nest.rooms){ if (r.key === 'queen') continue; u += seen[r.key] ? 1 : 0.5; seen[r.key] = true; } return u; }
-const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop','armory','fungus','dairy','infirmary','granary','honeypot','midden'];
+const ROOM_KEYS = ['hatchery','store','cistern','nursery','barracks','workshop','armory','fungus','dairy','infirmary','granary','honeypot','midden','larder'];
 // A room kind's level (1 to 3, build 23).
 const roomLevel = (s, key) => (s.colony.roomLv || {})[key] || 1;
 // Food on the ground: amt is how much it holds (an ant carries 5). Treats are
@@ -333,6 +337,7 @@ function foundDaughter(s, oi, role){
   return true;
 }
 function daughterHome(s, d){ const w = s.world; w.dhomes = w.dhomes || {}; const k = d.key + ':' + d.ex + ',' + d.ey; return w.dhomes[k] || (w.dhomes[k] = bfs(w.blocked, d.ex, d.ey)); }
+const LARDER_RATE = [2, 3, 4], LARDER_FOOD = [3, 2.5, 2], LARDER_FULL = 150; // build 48: meat a minute per level, food per meat, where it stops
 const DLOSS = 0.001; // build 47.3: a far daughter's ant lost to the yard, per ant per minute
 const DFORAGE = 2.5; // build 47: a far daughter's forager, food a minute (measured near: 2 to 3)
 const dpop = d => Object.values(d.pop || {}).reduce((a, b) => a + b, 0);
@@ -1316,7 +1321,7 @@ function tickColony(s, c, dt){
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
     let farF = 0; for (const d of s.daughters || []) for (const k in d.pop || {}) if (CASTES[k].fight >= 3) farF += d.pop[k]; /* build 47: a far daughter's soldiers eat protein too */
     if (fighters.length + farF){ c.protein -= (fighters.length + farF)*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
-      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer), r = Math.floor(Math.random()*(v.length + farF)); /* build 47.2: any fighter, near or far, by their numbers */ if (r < v.length) killAnt(s, v[r], 'nomeat'); else { let k = r - v.length; for (const d of s.daughters || []){ if (d.real) continue; for (const q in d.pop || {}){ if (CASTES[q].fight < 3) continue; if (k < d.pop[q]){ d.pop[q]--; c.deaths.nomeat = (c.deaths.nomeat || 0) + 1; k = -1; break; } k -= d.pop[q]; } if (k < 0) break; } } s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
+      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer), r = Math.floor(Math.random()*(v.length + farF)); /* build 47.2: any fighter, near or far, by their numbers */ if (r < v.length) killAnt(s, v[r], 'nomeat'); else { let k = r - v.length; for (const d of s.daughters || []){ if (d.real) continue; for (const q in d.pop || {}){ if (CASTES[q].fight < 3) continue; if (k < d.pop[q]){ d.pop[q]--; c.deaths.nomeat = (c.deaths.nomeat || 0) + 1; k = -1; break; } k -= d.pop[q]; } if (k < 0) break; } } s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need 🥩 meat.' + (roomOf(s, 'larder') ? ' Hunt, or keep the store fuller for the Egg larder.' : ' Hunt, or build an Egg larder (Trophic eggs).'); } }
       else c.pstarve = 0; }
     // Build 23: the rooms at work.
     // Fungus garden: leaves the gardeners brought in grow into food.
@@ -1333,6 +1338,10 @@ function tickColony(s, c, dt){
     // Honeypot vault III: in a famine the repletes feed the colony (half a food a second each, from a reserve refilled when food is plenty).
     const rp = roomLevel(s, 'honeypot') >= 3 ? workers(s, 'replete', 'hang', 'honeypot', 4) : 0;
     if (rp){ if (c.store > c.cap*0.6 && (c.crop || 0) < rp*40){ const put = Math.min(dt, rp*40 - (c.crop || 0)); c.crop = (c.crop || 0) + put; c.store -= put; } /* build 40: filled from the store, not from nothing */ else if (c.store < 3 && (c.crop || 0) > 0){ const g = Math.min(c.crop, rp*0.5*dt); c.crop -= g; c.store += g; } }
+    // Egg larder (build 48): food made into meat while the store is over a quarter full and the larder under 150.
+    const lr = roomCount(s, 'larder');
+    if (lr && c.store > c.cap*0.25 && c.protein < LARDER_FULL){ const lv = roomLevel(s, 'larder'), per = LARDER_RATE[lv - 1]*(1 + 0.5*(lr - 1))/60*dt, cost = per*LARDER_FOOD[lv - 1];
+      c.store -= cost; c.protein = Math.min(LARDER_FULL, c.protein + per); c.larderMade = (c.larderMade || 0) + per; }
     // Midden II: the undertakers' compost feeds the fungus garden.
     const ut = roomLevel(s, 'midden') >= 2 && roomOf(s, 'fungus') ? workers(s, 'undertaker', 'tidy', 'midden', 3) : 0;
     if (ut) c.fungus = Math.min(fungusCap(s), (c.fungus || 0) + ut*0.5/60*dt);
