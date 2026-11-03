@@ -70,3 +70,14 @@ test('the clock is saved', () => {
   const s2 = SIM.deserialize(SIM.serialize(s));
   assert.equal(s2.dayT, 4321); assert.equal(s2.nights, 3);
 });
+
+test('the night banner shows the first three nights only, and gives nothing away', () => {
+  const s = founded(); let shown = 0;
+  for (let n = 0; n < 5; n++) {
+    s.dayT = Math.floor(s.dayT / SIM.DAY) * SIM.DAY + SIM.DAY * 0.65; s.nightNow = false; s.banner = null;
+    step(s, 10);
+    if (s.banner && s.banner.title === 'Night falls') { shown++; assert.doesNotMatch(s.banner.line, /feet|bird|mower|spider|toad|robin/i); }
+    s.dayT += SIM.DAY * 0.4; step(s, 1);
+  }
+  assert.equal(shown, 3); assert.equal(s.nights, 5);
+});

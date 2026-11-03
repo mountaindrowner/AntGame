@@ -6,7 +6,7 @@ export const EXPL = {
   nest: ['The nest', 'Tap dirt by a tunnel to dig. Press Build to place a room. The yellow ant is you.'],
   surface: ['Outside', 'Tap to walk. Pick up food and bring it to the dark hole. Your path leaves a scent trail others follow.'],
   dew: ['Dew', 'Water beads, for a minute at a time. Each egg costs 1 water.'],
-  night: ['Night', 'Every ten minutes or so the yard goes dark for nearly three. No feet, birds, bug spray or mower then, and rivals don’t raid. But the spider hunts faster, toads come out, and the assassin bugs reach farther. The robin sleeps on its roost: three ants can pin it. The top bar shows how long till dawn.'],
+  night: ['Night', 'Every ten minutes or so the yard goes dark for a while; the top bar shows how long till dawn. Not everything out there keeps the same hours. Watch what sleeps, and what wakes.'],
   dawn: ['Dawn', 'A heavy dew on the grass, for a minute: fetch water while it lasts.'],
   cat: ['Caterpillar', 'Harmless, and 40 protein. Hold Recruit, lead your crew onto it, then haul the meat home.'],
   treat: ['A treat', 'Too big for one ant. Hold Recruit for a crew, lead them to it, press Lift.'],
@@ -62,7 +62,7 @@ export const HELP_PAGES = [
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging. You can build one of each per queen level; extras cost more, and every room eats a little food to run.</div>
 <div class="h"><b>New ground</b> Your nest starts in the middle. The ground either side, and the deep rock below, open a section at a time: tap it, pay, and builders break through the wall. Something is always hidden behind it. Deeper sections need curios found in the yard.</div>
 <div class="h"><b>Depth</b> Warm topsoil hatches eggs faster. Dry packed soil and clay keep more food. Cool clay and deep rock hold more water and grow more fungus. The deep never caves in. Under it all, the bedrock: slow to dig, with three prizes in it.</div>
-<div class="h"><b>Day and night</b> A day lasts about ten minutes; night about three of them (the sun or moon, top bar, says how long). At night: no feet, birds, bug spray or mower, and rivals don’t raid. But the spider hunts faster, toads come out, assassin bugs reach farther. Jumping spiders, wasps and skinks sleep. The robin sleeps on its roost, and three ants can pin it. Dawn brings heavy dew.</div>
+<div class="h"><b>Day and night</b> A day lasts about ten minutes, and a few of them are night (the sun or moon in the top bar says how long). The yard is a different place in the dark: some dangers sleep, others come out. Dawn brings dew.</div>
 <div class="h"><b>Jobs</b> The clipboard button. Each kind of ant does the first job on its list that needs doing (gather food, fetch water or stone, hunt, dig and build, tend eggs, guard the door), then helps with the next. Tap a job to put it first; ✕ turns it off.</div>
 <div class="h"><b>Resources</b> 🌾 Food: every ant eats it. 💧 Water: each egg costs 1. 🥩 Protein: for soldiers. 🪨 Stone: rooms and upgrades. 🍯 Sugar: honeydew and sweet treats, for the queen's later levels and nurses. 🪲 Chitin: dead bugs, beetle shells and boss kills, for tough bodies and fighters.</div>
 <div class="h"><b>Crews</b> Hold <b>Recruit</b> to gather ants round you; they follow until you <b>Release</b>. A crew lifts treats too big for one ant, and fights.</div>

@@ -190,7 +190,7 @@ export function createUI(app) {
   // Build 43: the sun or the moon, and how long till the light turns.
   function dayChip(s, chip) {
     const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + 'm' : Math.max(10, Math.round(u / 10) * 10) + 's';
-    return chip(night ? '🌙' : SIM.daylight(s) < 1 ? '🌅' : '☀️', left, night ? `Night: ${left} till dawn. No feet, birds or mower; the spider is faster, toads hunt, the robin sleeps.` : `Day: ${left} till night falls.`);
+    return chip(night ? '🌙' : SIM.daylight(s) < 1 ? '🌅' : '☀️', left, night ? `Night: ${left} till dawn.` : `Day: ${left} till night falls.`);
   }
   // Build 42: the nest's shut ground, a section at a time. `first`: the section tapped, shown on top.
   function groundList(s, c, first, bare) {

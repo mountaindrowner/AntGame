@@ -2,6 +2,17 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: night, quieter (build 43.1)
+
+Mark: "The nightfalls should only show up once or twice. Maybe the first two or three times and then no more. The notification also, make it more vague. Don't give away the people or the bosses."
+
+- **The "Night falls" and "Dawn" banners show for the first three nights only.** After that, the top-bar clock is enough.
+- **No spoilers.**
+  - The night banner now reads "The yard changes in the dark. Some things sleep. Others wake."
+  - The first-night tip, the Help page and the clock's tooltip no longer list who sleeps and who hunts.
+  - The player finds out by playing. The full list stays in the build 43 entry below.
+- **Tests:** one more test checks for three banners in five nights, with nothing named.
+
 ## Nov 3: day and night (build 43)
 
 Mark: "For sure day and night, which gives us a schedule. Just a day night, a day cycle and a night cycle. Gives us more room to play with concepts." He asked for it as its own build, after the nest expansion.
