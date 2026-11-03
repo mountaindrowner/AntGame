@@ -7,11 +7,13 @@ import { sfx } from '../audio/sfx.js';
 
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
-  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto' };
+  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'classic' };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { return def; }
 }
 function saveOptions(o) { try { localStorage.setItem(OPTS_KEY, JSON.stringify(o)); } catch (e) { /* blocked */ } }
 
+// UI themes (themes.css): the key on <html data-skin>, and its name.
+export const SKINS = [['classic', 'Classic'], ['leaf', 'Leaf Litter'], ['honey', 'Honeypot'], ['clay', 'Clay Mound'], ['moss', 'Mossy Pebble'], ['dew', 'Dewdrop'], ['beetle', 'Beetle Shell'], ['journal', 'Field Journal'], ['meadow', 'Meadow'], ['firefly', 'Firefly Night'], ['toadstool', 'Toadstool']];
 const btn = (act, icon, label, cls = '') => `<button class="t-btn ${cls}" data-t="${act}">${ICONS[icon]}<span>${label}</span></button>`;
 
 export class TitleMenu {
@@ -64,6 +66,7 @@ export class TitleMenu {
       + `<div class="t-row"><span>Effects</span>${pick('fx', 'off', 'Off')}${pick('fx', 'quiet', 'Quiet')}${pick('fx', 'loud', 'Loud')}</div>`
       + `<div class="t-row"><span>Graphics</span>${pick('graphics', 'auto', 'Auto')}${pick('graphics', 'sharp', 'Sharp')}${pick('graphics', 'fast', 'Fast')}</div>`
       + `<div class="t-note">Graphics: Auto starts sharp and eases off if your device struggles.</div>`
+      + `<div class="t-row t-skins"><span>Look</span>${SKINS.map(([k, n]) => pick('skin', k, n)).join('')}</div>`
       + btn('back', 'back', 'Back'));
   }
 

@@ -18,6 +18,7 @@ import { Cinematic, renderScoreWav } from './intro/cinematic.js';
 import { uiScale } from './config.js';
 import { GROUND_TINT } from './render/views/yardScenery.js';
 import './ui/ui.css';
+import './ui/themes.css'; // UI themes, picked under Options → Look
 
 const { NW, NH } = SIM;
 const STEP = 0.05; // the sim's fixed tick (20 Hz)
@@ -197,6 +198,8 @@ const title = new TitleMenu(app, {
 app.openTitle = () => title.open();
 // Graphics: Auto starts sharp and may step down; Sharp and Fast are fixed.
 function applyOptions() {
+  // The UI theme (Options → Look): none is the classic look.
+  if (app.opts.skin && app.opts.skin !== 'classic') document.documentElement.dataset.skin = app.opts.skin; else delete document.documentElement.dataset.skin;
   pipeline.setQuality(app.opts.graphics === 'fast' ? 2 : 0);
   sfx.setOn(app.opts.sound !== false);
   const V = { off: 0, quiet: 0.45, loud: 1 };

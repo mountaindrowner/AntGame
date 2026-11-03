@@ -1,0 +1,166 @@
+/* UI themes ("skins"), picked under Options → Look. Each sets the --sk-* variables below on <html data-skin>;
+   the shared layer turns them into the HUD, sheets, tips, banners and buttons. No skin: the classic look (ui.css). */
+
+/* ---- The shared layer: only with a skin on ---- */
+:root:root[data-skin] {
+  --ink: var(--sk-ink); --mute: var(--sk-mute); --paper: var(--sk-paper); --paper2: var(--sk-paper2); --line: var(--sk-line);
+  --accent: var(--sk-accent); --accent-ink: var(--sk-accent-ink); --warn: var(--sk-warn);
+  --sk-pattern: none; --sk-bw: 1px; --sk-radius: 12px; --sk-shadow: 0 2px 8px rgba(0,0,0,.25); --sk-blur: none;
+  --sk-ico-bw: 1px; --sk-ico-radius: 50%; --sk-arc-fill: #fff4dc; --sk-arc-stroke: rgba(20,12,4,.85); --sk-tile-radius: 10px;
+}
+:root[data-skin] body, :root[data-skin] button { font-family: var(--sk-font); }
+:root[data-skin] .label { font-family: var(--sk-font); }
+:root[data-skin] #stats, :root[data-skin] #msg, :root[data-skin] #vitals .vital {
+  background-color: var(--sk-paper); background-image: var(--sk-pattern); color: var(--sk-ink);
+  border: var(--sk-bw) solid var(--sk-line); border-radius: var(--sk-radius); box-shadow: var(--sk-shadow); backdrop-filter: var(--sk-blur); -webkit-backdrop-filter: var(--sk-blur); }
+:root[data-skin] #sheet, :root[data-skin] #tipcard {
+  background-color: var(--sk-paper2); background-image: var(--sk-pattern); color: var(--sk-ink);
+  border: calc(var(--sk-bw) + 1px) solid var(--sk-line); border-radius: calc(var(--sk-radius) + 4px); box-shadow: var(--sk-shadow); backdrop-filter: var(--sk-blur); -webkit-backdrop-filter: var(--sk-blur); }
+:root[data-skin] #sheet .btns button, :root[data-skin] #sheet .x, :root[data-skin] #msg .next.skip, :root[data-skin] #sheet .tabs button {
+  background: var(--sk-tile); color: var(--sk-ink); border: var(--sk-bw) solid var(--sk-line); border-radius: var(--sk-tile-radius); }
+:root[data-skin] #sheet .btns button:disabled { opacity: .5; }
+:root[data-skin] #sheet .h { border-top-color: var(--sk-line); }
+:root[data-skin] .ico {
+  background: var(--sk-ico-bg); color: var(--sk-ico-ink); border: var(--sk-ico-bw) solid var(--sk-ico-line);
+  border-radius: var(--sk-ico-radius); box-shadow: var(--sk-ico-shadow); }
+:root[data-skin] .ico.primary, :root[data-skin] #bar .ico.primary, :root[data-skin] #barn .ico.primary,
+:root[data-skin] #msg .next:not(.skip), :root[data-skin] #sheet button.primary, :root[data-skin] #sheet .tabs button.on {
+  background: var(--sk-accent-bg, var(--sk-accent)); color: var(--sk-accent-ink); border-color: var(--sk-accent-line, transparent); }
+:root[data-skin] .ico .arc text { font-family: var(--sk-font); fill: var(--sk-arc-fill); stroke: var(--sk-arc-stroke); }
+:root[data-skin] #sheet .btns button .si, :root[data-skin] #sheet .jobrow .jt .si { color: var(--sk-accent); }
+:root[data-skin] #hpbar { background: var(--sk-hp, #e4524a); }
+:root[data-skin] #hungerbar { background: var(--sk-food, #8fd36b); }
+:root[data-skin] #banner { border-color: var(--sk-banner-line, #c8a040); }
+:root[data-skin] #banner:not([class*="b-boss"]):not([class*="b-lethal"]) { background: var(--sk-banner-bg, rgba(20,10,4,.88)); color: var(--sk-banner-ink, #fff6e6); }
+:root[data-skin] #banner .bl { font-family: var(--sk-font); }
+
+/* ---- 1. Leaf Litter: parchment and leaf green, a leaf's veins in the paper ---- */
+:root:root[data-skin="leaf"] {
+  --sk-font: "Fredoka", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #24301c; --sk-mute: #5d6a4c; --sk-paper: rgba(246,241,222,.94); --sk-paper2: rgba(241,236,214,.97); --sk-line: #9db37a; --sk-warn: #b5402e;
+  --sk-accent: #3f8f3a; --sk-accent-bg: linear-gradient(180deg, #5cae4e, #357d31); --sk-accent-ink: #fff;
+  --sk-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M0 60 Q30 30 60 0 M15 45 Q14 32 22 24 M30 30 Q40 32 46 40' stroke='%2393a86a' stroke-opacity='.18' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  --sk-radius: 16px; --sk-bw: 1.5px; --sk-shadow: 0 3px 10px rgba(30,50,20,.25);
+  --sk-ico-bg: radial-gradient(circle at 35% 30%, #fffdf0, #e9e2c6); --sk-ico-ink: #2f6a2c; --sk-ico-line: #8fae6a; --sk-ico-bw: 2px; --sk-ico-shadow: 0 3px 8px rgba(30,50,20,.3);
+  --sk-tile: rgba(255,253,242,.9); --sk-tile-radius: 14px; --sk-hp: #d9503f; --sk-food: #8cc85a;
+  --sk-banner-bg: radial-gradient(ellipse at 50% 0%, rgba(54,90,34,.96), rgba(18,30,10,.94)); --sk-banner-line: #a8d07a;
+}
+
+/* ---- 2. Honeypot: amber glass and honeycomb ---- */
+:root:root[data-skin="honey"] {
+  --sk-font: "Baloo 2", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #3a2306; --sk-mute: #7a5422; --sk-paper: rgba(255,226,150,.93); --sk-paper2: rgba(255,232,170,.97); --sk-line: #d9951c; --sk-warn: #b2301e;
+  --sk-accent: #e08a0c; --sk-accent-bg: radial-gradient(circle at 35% 30%, #ffd66a, #e08a0c 70%); --sk-accent-ink: #3a2306;
+  --sk-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48'%3E%3Cpath d='M14 0 L28 8 L28 24 L14 32 L0 24 L0 8 Z M14 32 L14 48' fill='none' stroke='%23c98a1a' stroke-opacity='.22' stroke-width='1.5'/%3E%3C/svg%3E");
+  --sk-radius: 14px; --sk-bw: 2px; --sk-shadow: 0 3px 0 #b9760c, 0 6px 14px rgba(90,50,0,.3);
+  --sk-ico-bg: radial-gradient(circle at 35% 28%, #fff4c0 0 12%, #ffc23a 40%, #d98a0a 100%); --sk-ico-ink: #4a2a04; --sk-ico-line: #a8650a; --sk-ico-bw: 2px; --sk-ico-shadow: 0 3px 0 #8a5206, 0 5px 10px rgba(90,50,0,.35);
+  --sk-tile: rgba(255,244,205,.92); --sk-tile-radius: 12px; --sk-hp: #d6452e; --sk-food: #f2b52a;
+  --sk-arc-fill: #fff2c0; --sk-arc-stroke: #5a3204;
+  --sk-banner-bg: radial-gradient(ellipse at 50% 0%, rgba(150,90,10,.97), rgba(50,26,2,.95)); --sk-banner-line: #ffc23a;
+}
+
+/* ---- 3. Clay Mound: terracotta, chunky, a claymation offset shadow ---- */
+:root:root[data-skin="clay"] {
+  --sk-font: "Fredoka", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #3b1d12; --sk-mute: #7d4a35; --sk-paper: #f2d9c4; --sk-paper2: #f5e0cd; --sk-line: #3b1d12; --sk-warn: #a8261a;
+  --sk-accent: #c4572f; --sk-accent-bg: #c4572f; --sk-accent-ink: #fff3e6; --sk-accent-line: #3b1d12;
+  --sk-radius: 18px; --sk-bw: 2.5px; --sk-shadow: 4px 4px 0 #3b1d12;
+  --sk-ico-bg: #e7b08f; --sk-ico-ink: #3b1d12; --sk-ico-line: #3b1d12; --sk-ico-bw: 3px; --sk-ico-shadow: 3px 3px 0 #3b1d12;
+  --sk-tile: #fbeadb; --sk-tile-radius: 16px; --sk-hp: #c8382a; --sk-food: #e08a3a;
+  --sk-banner-bg: #8a3a1e; --sk-banner-line: #3b1d12;
+}
+
+/* ---- 4. Mossy Pebble: grey stone, moss edges, pebble-shaped buttons ---- */
+:root:root[data-skin="moss"] {
+  --sk-font: "Nunito", ui-rounded, system-ui, sans-serif;
+  --sk-ink: #1f2a22; --sk-mute: #57655a; --sk-paper: rgba(214,218,210,.94); --sk-paper2: rgba(222,226,217,.97); --sk-line: #6f9a4e; --sk-warn: #a8342a;
+  --sk-accent: #4f8a32; --sk-accent-bg: radial-gradient(circle at 40% 30%, #8fca5a, #3f7a26); --sk-accent-ink: #f4fbe8;
+  --sk-pattern: radial-gradient(circle at 20% 30%, rgba(255,255,255,.35) 0 2px, transparent 3px), radial-gradient(circle at 70% 70%, rgba(80,90,80,.14) 0 3px, transparent 4px);
+  --sk-radius: 20px 14px 22px 12px; --sk-bw: 2px; --sk-shadow: inset 0 -3px 0 rgba(0,0,0,.08), 0 3px 8px rgba(20,30,20,.3);
+  --sk-ico-bg: radial-gradient(circle at 35% 30%, #f1f2ee, #a9aea4 75%); --sk-ico-ink: #2e4a22; --sk-ico-line: #6f9a4e; --sk-ico-bw: 3px;
+  --sk-ico-radius: 46% 54% 50% 50% / 56% 46% 54% 44%; --sk-ico-shadow: 0 4px 0 #5a6056, 0 6px 10px rgba(0,0,0,.3);
+  --sk-tile: rgba(238,240,234,.95); --sk-tile-radius: 16px 10px 16px 10px; --sk-hp: #cf4b3d; --sk-food: #7fbf4a;
+  --sk-banner-bg: radial-gradient(ellipse at 50% 0%, rgba(70,82,70,.97), rgba(24,30,24,.95)); --sk-banner-line: #8fca5a;
+}
+
+/* ---- 5. Dewdrop: frosted glass bubbles ---- */
+:root:root[data-skin="dew"] {
+  --sk-font: "Fredoka", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #0e2a3a; --sk-mute: #3e6070; --sk-paper: rgba(225,245,255,.55); --sk-paper2: rgba(230,247,255,.78); --sk-line: rgba(255,255,255,.85); --sk-warn: #b8302a;
+  --sk-accent: #2a9ac8; --sk-accent-bg: radial-gradient(circle at 35% 25%, #d8f6ff 0 10%, #5cc6ee 45%, #1f7fb0); --sk-accent-ink: #fff;
+  --sk-radius: 22px; --sk-bw: 1.5px; --sk-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 18px rgba(10,40,60,.28); --sk-blur: blur(10px) saturate(1.3);
+  --sk-ico-bg: radial-gradient(circle at 32% 26%, rgba(255,255,255,.95) 0 14%, rgba(200,236,252,.65) 40%, rgba(120,190,225,.55)); --sk-ico-ink: #0e4a6a; --sk-ico-line: rgba(255,255,255,.9); --sk-ico-bw: 1.5px; --sk-ico-shadow: 0 4px 14px rgba(10,40,60,.35), inset 0 -4px 8px rgba(30,110,160,.25);
+  --sk-tile: rgba(255,255,255,.55); --sk-tile-radius: 18px; --sk-hp: #e4625a; --sk-food: #5cc6ee;
+  --sk-arc-fill: #ffffff; --sk-arc-stroke: rgba(10,50,80,.85);
+  --sk-banner-bg: radial-gradient(ellipse at 50% 0%, rgba(40,120,170,.9), rgba(8,30,50,.9)); --sk-banner-line: #bfeaff;
+}
+
+/* ---- 6. Beetle Shell: dark iridescent chitin, gold lettering ---- */
+:root:root[data-skin="beetle"] {
+  --sk-font: "Baloo 2", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #f2dc96; --sk-mute: #b7a777; --sk-paper: rgba(20,24,30,.92); --sk-paper2: rgba(22,26,34,.96); --sk-line: #8a7238; --sk-warn: #ff7a5c;
+  --sk-accent: #5ad19a; --sk-accent-bg: linear-gradient(135deg, #3fc7a0, #3a8ad6 55%, #8a52d0); --sk-accent-ink: #0a0f12;
+  --sk-pattern: linear-gradient(135deg, rgba(60,200,150,.10), rgba(90,80,210,.10) 50%, rgba(200,80,160,.08));
+  --sk-radius: 14px; --sk-bw: 1.5px; --sk-shadow: 0 4px 14px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.08);
+  --sk-ico-bg: radial-gradient(circle at 30% 25%, #5a6a7a 0 6%, #1c2632 40%, #0a0d12), linear-gradient(135deg, #1e6a52, #2a3a8a, #6a2a7a);
+  --sk-ico-ink: #f2dc96; --sk-ico-line: #b89a4a; --sk-ico-bw: 1.5px; --sk-ico-shadow: 0 0 0 2px rgba(90,210,154,.25), 0 4px 12px rgba(0,0,0,.6);
+  --sk-tile: rgba(255,255,255,.05); --sk-tile-radius: 10px; --sk-hp: #ff5a4a; --sk-food: #5ad19a;
+  --sk-arc-fill: #f2dc96; --sk-arc-stroke: #000;
+  --sk-banner-bg: linear-gradient(135deg, rgba(20,60,50,.96), rgba(24,26,60,.96) 55%, rgba(60,20,60,.96)); --sk-banner-line: #c8a050;
+}
+
+/* ---- 7. Field Journal: ruled paper, pencil and red ink, hand lettering ---- */
+:root:root[data-skin="journal"] {
+  --sk-font: "Patrick Hand", "Comic Neue", ui-rounded, system-ui, sans-serif;
+  --sk-ink: #22263a; --sk-mute: #5a5f78; --sk-paper: #fbf8ee; --sk-paper2: #fdfaf0; --sk-line: #22263a; --sk-warn: #b2362b;
+  --sk-accent: #b2362b; --sk-accent-bg: #b2362b; --sk-accent-ink: #fffaf0;
+  --sk-pattern: linear-gradient(90deg, transparent 22px, rgba(210,80,80,.35) 22px 23px, transparent 23px), repeating-linear-gradient(180deg, transparent 0 17px, rgba(90,130,200,.22) 17px 18px);
+  --sk-radius: 4px; --sk-bw: 1.5px; --sk-shadow: 2px 3px 0 rgba(34,38,58,.18), 0 1px 0 #22263a;
+  --sk-ico-bg: #fdfaf0; --sk-ico-ink: #22263a; --sk-ico-line: #22263a; --sk-ico-bw: 2px; --sk-ico-shadow: 2px 2px 0 rgba(34,38,58,.35);
+  --sk-tile: #fffdf6; --sk-tile-radius: 3px; --sk-hp: #b2362b; --sk-food: #4a7ac0;
+  --sk-arc-fill: #fffaf0; --sk-arc-stroke: #22263a;
+  --sk-banner-bg: #fbf8ee; --sk-banner-ink: #22263a; --sk-banner-line: #22263a;
+}
+:root[data-skin="journal"] body { font-size: 16px; }
+:root[data-skin="journal"] #sheet .btns button, :root[data-skin="journal"] #stats, :root[data-skin="journal"] #msg { border-style: dashed; }
+:root[data-skin="journal"] #banner .bt { color: #b2362b; text-shadow: 2px 2px 0 rgba(34,38,58,.25); }
+
+/* ---- 8. Meadow: sky and sunflower, bold cartoon outlines ---- */
+:root:root[data-skin="meadow"] {
+  --sk-font: "Fredoka", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #16294a; --sk-mute: #4a5e82; --sk-paper: #ffffff; --sk-paper2: #f4fbff; --sk-line: #16294a; --sk-warn: #d8342a;
+  --sk-accent: #ffc21a; --sk-accent-bg: radial-gradient(circle at 50% 50%, #7a4a12 0 22%, #ffc21a 24%); --sk-accent-ink: #16294a; --sk-accent-line: #16294a;
+  --sk-radius: 20px; --sk-bw: 3px; --sk-shadow: 0 4px 0 #16294a;
+  --sk-ico-bg: #8fd3ff; --sk-ico-ink: #16294a; --sk-ico-line: #16294a; --sk-ico-bw: 3px; --sk-ico-shadow: 0 4px 0 #16294a;
+  --sk-tile: #eef9ff; --sk-tile-radius: 16px; --sk-hp: #ff5a4a; --sk-food: #8ed24a;
+  --sk-arc-fill: #ffffff; --sk-arc-stroke: #16294a;
+  --sk-banner-bg: #3a8ad8; --sk-banner-line: #16294a;
+}
+:root[data-skin="meadow"] #sheet .btns button.primary, :root[data-skin="meadow"] #msg .next:not(.skip) { background: #ffc21a; }
+
+/* ---- 9. Firefly Night: deep blue, glowing yellow-green ---- */
+:root:root[data-skin="firefly"] {
+  --sk-font: "Nunito", ui-rounded, system-ui, sans-serif;
+  --sk-ink: #e6f2d8; --sk-mute: #9fb3a0; --sk-paper: rgba(12,20,38,.88); --sk-paper2: rgba(14,22,42,.94); --sk-line: rgba(200,255,110,.45); --sk-warn: #ff8a6a;
+  --sk-accent: #d8ff6a; --sk-accent-bg: radial-gradient(circle at 50% 45%, #fbffb0, #c8f04a 55%, #7ab82a); --sk-accent-ink: #0c1426;
+  --sk-radius: 14px; --sk-bw: 1px; --sk-shadow: 0 0 14px rgba(200,255,110,.18), 0 4px 14px rgba(0,0,0,.5);
+  --sk-ico-bg: radial-gradient(circle at 50% 40%, #1d2c4c, #0a1022); --sk-ico-ink: #e8ff9a; --sk-ico-line: rgba(220,255,120,.7); --sk-ico-bw: 1.5px; --sk-ico-shadow: 0 0 12px rgba(210,255,100,.45), 0 0 2px rgba(210,255,100,.9);
+  --sk-tile: rgba(255,255,255,.05); --sk-tile-radius: 12px; --sk-hp: #ff7060; --sk-food: #d8ff6a;
+  --sk-arc-fill: #eaffb0; --sk-arc-stroke: #050a16;
+  --sk-banner-bg: radial-gradient(ellipse at 50% 0%, rgba(30,46,80,.96), rgba(6,10,22,.95)); --sk-banner-line: #d8ff6a;
+}
+
+/* ---- 10. Toadstool: red caps with white spots, cream stems ---- */
+:root:root[data-skin="toadstool"] {
+  --sk-font: "Baloo 2", ui-rounded, "Nunito", system-ui, sans-serif;
+  --sk-ink: #3a1e14; --sk-mute: #7a5444; --sk-paper: rgba(250,240,222,.95); --sk-paper2: rgba(252,244,228,.98); --sk-line: #c8a888; --sk-warn: #c8241a;
+  --sk-accent: #d8322a; --sk-accent-ink: #fff6ec; --sk-accent-line: #8a1a12;
+  --sk-accent-bg: radial-gradient(circle at 30% 30%, #fff 0 9%, transparent 10%), radial-gradient(circle at 70% 55%, #fff 0 7%, transparent 8%), radial-gradient(circle at 40% 75%, #fff 0 6%, transparent 7%), #d8322a;
+  --sk-radius: 18px; --sk-bw: 2px; --sk-shadow: 0 3px 0 #c8a888, 0 6px 12px rgba(60,20,10,.25);
+  --sk-ico-bg: radial-gradient(circle at 20% 22%, #fff 0 6%, transparent 7%), radial-gradient(circle at 80% 20%, #fff 0 5%, transparent 6%), radial-gradient(circle at 86% 62%, #fff 0 4%, transparent 5%), radial-gradient(circle at 14% 70%, #fff 0 4%, transparent 5%), radial-gradient(circle at 50% 30%, #f05040, #b8221a); /* spots round the rim, clear of the icon */
+  --sk-ico-ink: #fff6ec; --sk-ico-line: #7a1610; --sk-ico-bw: 2px; --sk-ico-shadow: 0 4px 0 #e8d8c0, 0 6px 10px rgba(60,20,10,.35);
+  --sk-tile: #fff8ee; --sk-tile-radius: 16px; --sk-hp: #d8322a; --sk-food: #e8a84a;
+  --sk-arc-fill: #fff6ec; --sk-arc-stroke: #5a1008;
+  --sk-banner-bg: radial-gradient(ellipse at 50% 0%, rgba(176,34,26,.97), rgba(60,10,6,.95)); --sk-banner-line: #fff0e0;
+}
+:root[data-skin="toadstool"] .ico svg { filter: drop-shadow(0 1px 0 rgba(0,0,0,.6)); }

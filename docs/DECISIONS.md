@@ -2,6 +2,36 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: ten UI themes to choose from (build 44)
+
+Mark: "Let's work on creating a new UI theme. Can you provide me some options? Let's make like 10 different options. Something ant themed or nature themed, round themed... Do a few tests and create some options."
+
+**What's built:**
+- **Ten themes, all playable now** under Menu → Options → Look. Classic (today's look) stays the default until Mark picks one.
+- **How they work:** `src/ui/themes.css`. A shared layer restyles the top bar, the hint and tip cards, the health and hunger bars, the round buttons and their curved names, the sheets and their tiles, and banners. Each theme only sets variables (paper, ink, accent, border, radius, shadow, button fill and shape, a background pattern, font) plus a few extras of its own.
+- **Unchanged in every theme:** the 3D yard and nest, the title screen and the Evolve window. Banners keep the game's Bungee lettering.
+- **Fonts:** Fredoka, Baloo 2, Nunito and Patrick Hand from Google Fonts, with system fallbacks.
+
+| Theme | Idea |
+|---|---|
+| Leaf Litter | parchment with leaf veins, leaf-green, soft round letters |
+| Honeypot | amber honeycomb cards, glossy honey-drop buttons |
+| Clay Mound | terracotta, chunky outlines, claymation offset shadow |
+| Mossy Pebble | stone-grey cards, moss edges, pebble-shaped buttons |
+| Dewdrop | frosted glass, water-drop buttons |
+| Beetle Shell | dark iridescent chitin, gold lettering (the dark one) |
+| Field Journal | ruled notebook paper, red pencil, hand lettering |
+| Meadow | sky blue and sunflower, bold cartoon outlines |
+| Firefly Night | night blue, glowing yellow-green |
+| Toadstool | cream stems, red spotted caps |
+
+**How they were tested:**
+- Every theme was screenshotted in the real game on the same paused 90-minute colony, with the same hint and tip card, then the egg sheet in the nest. All four fonts loaded.
+- Two fixes came from it:
+  - Toadstool's spots sat on top of the button icons, so they moved to the rim.
+  - A tip card had been caught mid-fade, so the waits were lengthened.
+- **The gallery of all ten against Classic:** https://claude.ai/artifact/8ywmVRqY98WFpS9BKP3Xte
+
 ## Nov 3: night, quieter (build 43.1)
 
 Mark: "The nightfalls should only show up once or twice. Maybe the first two or three times and then no more. The notification also, make it more vague. Don't give away the people or the bosses."
