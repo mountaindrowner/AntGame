@@ -302,12 +302,27 @@ function advise(s, dt){
 // nest, slowly; when it arrives she lays her own eggs, fed from the main stores. Far away she is numbers (d.pop);
 // near you, real ants (a.dh = her key) who forage and patrol round her door.
 const DAUGHTERS = {
-  war:    { name: 'the War Camp', short: 'War Camp', icon: '⚔', branch: 'Society', soldiers: 0.65, line: 'Her soldiers hatch Seasoned.' },
-  brood:  { name: 'the Brood Hall', short: 'Brood Hall', icon: '🥚', branch: 'Bodies', soon: true },
-  watch:  { name: 'the Watch', short: 'Watch', icon: '👁', branch: 'Senses', soon: true },
-  quarry: { name: 'the Quarry', short: 'Quarry', icon: '⛏', branch: 'Nest', soon: true },
-  garden: { name: 'the Garden', short: 'Garden', icon: '🌿', branch: 'Symbiosis', soon: true },
+  // mix: what she lays, by weight (a caste that needs meat falls back to a forager when there's none; build 49).
+  war:    { name: 'the War Camp', short: 'War Camp', icon: '⚔', branch: 'Society', mix: { soldier: 0.65, forager: 0.35 }, does: 'soldiers that hatch Seasoned', line: 'Her soldiers hatch Seasoned.' },
+  brood:  { name: 'the Brood Hall', short: 'Brood Hall', icon: '🥚', branch: 'Bodies', mix: { forager: 0.45, nurse: 0.15, major: 0.3, supermajor: 0.1 }, does: 'big castes; your eggs hatch faster', line: 'She raises the big castes, and your queen’s eggs hatch 20% faster.' },
+  watch:  { name: 'the Watch', short: 'Watch', icon: '👁', branch: 'Senses', mix: { forager: 0.8, soldier: 0.2 }, does: 'scouts; sees far, warns of raids', line: 'Her scouts map the ground round her, your outposts reach a quarter further, and raiders are seen coming.' },
+  quarry: { name: 'the Quarry', short: 'Quarry', icon: '⛏', branch: 'Nest', mix: { builder: 0.4, forager: 0.5, soldier: 0.1 }, does: 'stone; your builders dig faster', line: 'She quarries 🪨 stone, a stone a minute for every 4 of her ants, and your builders dig and mend 25% faster.' },
+  garden: { name: 'the Garden', short: 'Garden', icon: '🌿', branch: 'Symbiosis', mix: { forager: 0.9, soldier: 0.1 }, does: 'honeydew; your fungus grows faster', line: 'Her herds give 🍯 sugar, one a minute for every 5 of her ants, and your fungus gardens grow 25% faster.' },
 };
+// Build 49: a daughter joined by her tunnel (her gifts to the main nest work only then).
+const joined = (s, key) => !!(s.daughters && s.daughters.length && s.daughters.some(d => d.key === key && d.state === 'ready'));
+// Build 49: the Watch sees raiders set off: every fighter at home turns out to meet them.
+function watchWarns(s){ if (!joined(s, 'watch')) return ''; const c = s.colony; raiseAlarm(s, c.ex, c.ey, 1.5);
+  let n = 0; for (const a of s.ants) if (!a.team && !a.dh && a.state === 'in' && CASTES[a.caste].fight >= 3){ exitNest(s, a, 'fight'); n++; }
+  return n ? ` The Watch saw them set off: ${n} fighter${n === 1 ? '' : 's'} turn out.` : ' The Watch saw them set off.'; }
+function daughterCaste(s, d){
+  const R = DAUGHTERS[d.key], m = R.mix || { forager: 1 }; let tot = 0; for (const k in m) tot += m[k];
+  let r = Math.random()*tot, caste = 'forager'; for (const k in m){ r -= m[k]; if (r <= 0){ caste = k; break; } }
+  if (caste === 'major' && !has(s, 'majors')) caste = 'soldier';
+  if (caste === 'supermajor' && !has(s, 'polymorphism')) caste = has(s, 'majors') ? 'major' : 'soldier';
+  if (!canPay(s.colony, eggCost(s, caste))) caste = 'forager';
+  return caste;
+}
 const FLIGHT_AT = [3, 5, 7, 9, 11], DAUGHTER_CAP = 50, DAUGHTER_MIN = 2*AREA, FLIGHT_TIME = 10;
 const daughterOf = (s, a) => a.dh && (s.daughters || []).find(d => d.key === a.dh) || null;
 function flightsAllowed(s){ if (!has(s, 'royal')) return 0; const z = zonesTaken(s); return FLIGHT_AT.filter(n => z >= n).length; }
@@ -371,6 +386,7 @@ function tickDaughters(s, dt){
       if (c.store < 5){ if (!d.starved){ d.starved = true; P.msg = `The tunnel to ${R.name} has stopped: the store is empty.`; } continue; }
       d.starved = false; c.store -= 0.25*dt; d.tunnel.progress += (1 + 0.5*Math.min(6, builders))*dt;
       if (d.tunnel.progress >= d.tunnel.need){ d.state = 'ready'; d.tunnel.progress = d.tunnel.need; d.readyT = s.t;
+        if (d.key === 'watch'){ reveal(s, d.ex, d.ey, AREA*2.5); outpostsChanged(s); } /* build 49: her scouts map the ground round her; outposts reach further */
         s.banner = { key: 'tunnel-' + d.key, t: s.t, icon: R.icon, title: R.short + ' is joined', line: `The tunnel reaches ${R.name}. Her chambers are dug and she starts laying, fed from your stores. ${R.line || ''}`, kind: 'gift' }; s.events.push('daughter');
         P.msg = `${R.short} is open: up to ${DAUGHTER_CAP} ants, fed from your stores.`; }
       continue;
@@ -382,13 +398,16 @@ function tickDaughters(s, dt){
     // Her eggs, paid from the main stores.
     d.eggT += dt;
     if (d.eggT >= 30 && daughterCount(s, d) < DAUGHTER_CAP){
-      const soldier = Math.random() < (R.soldiers || 0) && c.protein >= 2, caste = soldier ? 'soldier' : 'forager', cost = eggCost(s, caste); /* build 47.2: the same egg discounts as the main nest */
+      const caste = daughterCaste(s, d), cost = eggCost(s, caste); /* build 47.2: the same egg discounts as the main nest; build 49: her own mix */
       if (c.store > 15 && payCost(c, cost)){ d.eggT = 0; d.hatched++;
-        if (d.real){ const a = mkAnt(s, caste, 'in', d.ex, d.ey, 0); a.dh = d.key; a.rest = 1; if (soldier && d.key === 'war') a.xp = Math.max(a.xp || 0, RANKS[1].xp); }
+        if (d.real){ const a = mkAnt(s, caste, 'in', d.ex, d.ey, 0); a.dh = d.key; a.rest = 1; if (CASTES[caste].fight >= 3 && d.key === 'war') a.xp = Math.max(a.xp || 0, RANKS[1].xp); }
         else d.pop[caste] = (d.pop[caste] || 0) + 1; }
     }
     // Build 47: far away her ants starve too, when the store has been empty a while (as real ones do).
     if (!d.real && c.starve > 30){ d.starveAcc = (d.starveAcc || 0) + dt; if (d.starveAcc >= 10){ d.starveAcc = 0; const k = Object.keys(d.pop).filter(q => d.pop[q] > 0).sort((p, q) => d.pop[q] - d.pop[p])[0]; if (k){ d.pop[k]--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } }
+    // Build 49: the Quarry's stone and the Garden's honeydew, from her ants near or far.
+    if (d.key === 'quarry' || d.key === 'garden'){ const per = d.key === 'quarry' ? 4 : 5; d.giftAcc = (d.giftAcc || 0) + (d.real ? daughterAnts(s, d).length : dpop(d))/per/60*dt;
+      while (d.giftAcc >= 1){ d.giftAcc -= 1; if (d.key === 'quarry'){ c.grit += 1; c.gritTotal = (c.gritTotal || 0) + 1; } else addSugar(s, 1); } }
     // Build 47.3: far away her ants still meet the yard's dangers, at about half the rate measured near her
     // (0.1 a minute per 50 there): one ant per 1,000 ant-minutes. Conservative, not immune.
     if (!d.real){ const n = dpop(d); d.lossAcc = (d.lossAcc || 0) + n*DLOSS/60*dt;
@@ -859,6 +878,7 @@ function workOf(s, a, kind){
   if (kind === 'j' && setDone(s, 'builder')) m *= 1.25;
   if (kind === 'j' && s.colony.trophies.silk) m *= 2;
   if (kind === 'd' && picked(s, 'builder', 'excavator')) m *= 1.5;
+  if ((kind === 'd' || kind === 'r') && joined(s, 'quarry')) m *= 1.25; // build 49: the Quarry
   if (kind === 'd' && L >= 4) m *= 2; // build 40: level IV, "digs any soil 2x faster"
   if (picked(s, 'builder', 'foreman')) m *= 1.5; // build 40: Foreman
   if (has(s, 'workshop3')) m *= 1.5;
@@ -977,7 +997,7 @@ function outpostsChanged(s){
   const reach = new Uint8Array(W*H), keep = new Uint8Array(W*H), w = s.world;
   const disc = (m, cx, cy, r) => { for (let y = Math.max(0, Math.floor(cy - r)); y <= Math.min(H-1, Math.ceil(cy + r)); y++) for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(W-1, Math.ceil(cx + r)); x++) if ((x-cx)*(x-cx) + (y-cy)*(y-cy) <= r*r) m[idx(x,y)] = 1; };
   for (const o of s.outposts){ if (!o.done) continue;
-    disc(reach, o.x, o.y, OUTPOST.reach); disc(keep, o.x, o.y, OUTPOST.keep);
+    disc(reach, o.x, o.y, OUTPOST.reach*(joined(s, 'watch') ? 1.25 : 1)); disc(keep, o.x, o.y, OUTPOST.keep); /* build 49: the Watch */
     // The road home: a band along the walk from the outpost to the nest.
     let px = o.x, py = o.y;
     for (const [qx, qy] of findPath(s, o.x, o.y, w.ex, w.ey)){ const n = Math.max(1, Math.ceil(Math.hypot(qx - px, qy - py))); for (let k = 0; k <= n; k++) disc(reach, px + (qx - px)*k/n, py + (qy - py)*k/n, OUTPOST.road); px = qx; py = qy; } }
@@ -1309,7 +1329,8 @@ function tickColony(s, c, dt){
       if (heldFx(s, 'warm')) rate *= 1.15;
       if (setDone(s, 'colony')) rate *= 1.1;
       if (has(s, 'chimneys')) rate *= 1.15;
-      if (has(s, 'polygyny')) rate *= 1.3; }
+      if (has(s, 'polygyny')) rate *= 1.3;
+      if (joined(s, 'brood')) rate *= 1.2; } /* build 49: the Brood Hall */
     for (let i=c.eggs.length-1;i>=0;i--){ const e = c.eggs[i]; e.t += dt*rate; if (e.t >= e.need){ c.eggs.splice(i,1); hatch(s, c, e.caste); } }
   }
   if (!c.team){
@@ -1326,7 +1347,7 @@ function tickColony(s, c, dt){
     // Build 23: the rooms at work.
     // Fungus garden: leaves the gardeners brought in grow into food.
     const fg = roomCount(s, 'fungus');
-    if (fg && (c.fungus || 0) > 0){ const lv = roomLevel(s, 'fungus'), rate = fg*(lv >= 3 ? 0.2 : 0.1)*(1 + 0.25*inBand(s, 'fungus'))*dt, use = Math.min(c.fungus, rate); c.fungus -= use; c.store = Math.min(c.cap, c.store + use*(lv >= 3 ? 3 : lv >= 2 ? 2.25 : 1.5)); }
+    if (fg && (c.fungus || 0) > 0){ const lv = roomLevel(s, 'fungus'), rate = fg*(lv >= 3 ? 0.2 : 0.1)*(1 + 0.25*inBand(s, 'fungus'))*(joined(s, 'garden') ? 1.25 : 1)*dt, /* build 49: the Garden */ use = Math.min(c.fungus, rate); c.fungus -= use; c.store = Math.min(c.cap, c.store + use*(lv >= 3 ? 3 : lv >= 2 ? 2.25 : 1.5)); }
     // Aphid barn: each rancher at work makes half a 🍯 a minute.
     const rh = workers(s, 'rancher', 'herd', 'dairy', 4);
     if (rh){ const lv = roomLevel(s, 'dairy'), gentle = s.ants.some(a => !a.team && a.caste === 'rancher' && a.state === 'in' && promo(s, a, 'gentle')) ? 1.3 : 1; c.dairyAcc = (c.dairyAcc || 0) + rh*0.5/60*dt*(lv >= 3 ? 2 : lv >= 2 ? 1.5 : 1)*gentle; /* build 40: a Gentle rancher milks 30% more */ if (c.dairyAcc >= 1){ c.dairyAcc -= 1; addSugar(s, 1); if (lv >= 3) c.store = Math.min(c.cap, c.store + 1); } }
@@ -1412,6 +1433,7 @@ function tickInside(s, a, dt){
   if (a.dh){ // build 46: a daughter's ant, resting in her chambers (abstract, like a rival's)
     a.rest -= dt; if (a.rest > 0) return; const d = daughterOf(s, a); if (!d){ a.dh = null; a.rest = 2; return; }
     if (C.fight >= 3){ if (s.alarm[idx(d.ex, d.ey)] > 0.2) exitNest(s, a, 'fight'); else if (Math.random() < 0.35) exitNest(s, a, 'patrol'); else a.rest = 3; }
+    else if (a.caste !== 'forager'){ a.rest = 6; } /* build 49: her builders and nurses work in her chambers */
     else { a.duty = 'food'; exitNest(s, a, 'explore'); }
     return;
   }
@@ -1723,10 +1745,10 @@ function rivalBrain(s, r, dt){
   const idle = (revenge ? mine.filter(a => CASTES[a.caste].fight >= 3 || RS.swarm || RS.fierce || mine.length < 12) : soldiers).filter(a => a.state==='in' || a.state==='patrol');
   // Raids start at six minutes and grow: 3 soldiers, then one more every 2.5 minutes.
   const size = Math.min(14, 3 + Math.floor(Math.max(0, s.t - 360)/150));
-  if (revenge && !s.raidLive && idle.length >= 3 && s.queen.placed && !s.lost){ const n = Math.min(idle.length, Math.max(4, size)); for (let i = 0; i < n; i++){ const a = idle[i]; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } r.revengeAt = null; s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen, crits: s.colony.crits || 0 }; s.player.msg = `The ${RS.name.toLowerCase()} strike back! ${n} of them march on your nest.`; s.events.push('raid'); return; }
+  if (revenge && !s.raidLive && idle.length >= 3 && s.queen.placed && !s.lost){ const n = Math.min(idle.length, Math.max(4, size)); for (let i = 0; i < n; i++){ const a = idle[i]; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } r.revengeAt = null; s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen, crits: s.colony.crits || 0 }; s.player.msg = `The ${RS.name.toLowerCase()} strike back! ${n} of them march on your nest.` + watchWarns(s); s.events.push('raid'); return; }
   if (revenge && s.t > r.revengeAt + 300) r.revengeAt = null;
   if (!RS.raids) return;
-  if (s.t > (RS.raidFrom || 360) && !s.raidLive && !isNight(s) && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen, crits: s.colony.crits || 0 }; s.player.msg = `Raid! ${size} ${r.team === 1 ? 'rivals are' : RS.name.toLowerCase() + ' are'} coming.`; s.events.push('raid'); }
+  if (s.t > (RS.raidFrom || 360) && !s.raidLive && !isNight(s) && r.raidCd <= 0 && idle.length >= size && s.queen.placed && !s.lost){ r.raidCd = Math.max(90, 160 - s.t/30); let n = 0; for (const a of idle){ if (n++ >= size) break; if (a.state==='in') exitNest(s, a, 'raid'); else a.state = 'raid'; } s.raidLive = true; s.raidStart = { team: r.team, lost: deathTotal(s.colony), killed: r.deaths.war || 0, stolen: s.colony.stolen, crits: s.colony.crits || 0 }; s.player.msg = `Raid! ${size} ${r.team === 1 ? 'rivals are' : RS.name.toLowerCase() + ' are'} coming.` + watchWarns(s); s.events.push('raid'); }
 }
 
 // The spider roams the whole yard: landmark to landmark, past our nest every

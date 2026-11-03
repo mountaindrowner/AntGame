@@ -2,6 +2,21 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: the other four daughters (build 49)
+
+Mark: "build the rest of the daughter types." From the plan of record (SUPERCOLONY.md), each is now foundable, lays her role's ants, and gives the main nest a gift once joined:
+
+- **Brood Hall** 🥚: the big castes (30% majors, 10% supermajors, when evolved), nurses, foragers. Your queen's eggs hatch 20% faster.
+- **Watch** 👁: mostly scouts. Maps the ground 2½ regions round her, outposts reach a quarter further, and when raiders set off every fighter at home turns out (the message says so).
+- **Quarry** ⛏: builders and foragers. A stone a minute per 4 of her ants; your builders dig and mend 25% faster.
+- **Garden** 🌿: nearly all foragers. A sugar a minute per 5 of her ants; your fungus gardens grow 25% faster.
+
+**Why gifts by headcount:** stone and sugar come from her ants near or far alike, so the game doesn't change with where you stand (the build 47 rule).
+
+**Also:** a caste that needs meat hatches as a forager when the larder's empty; a daughter's builders and nurses stay in her chambers instead of foraging; the map card says what each one does.
+
+**Not yet:** her own nest view with the loading animation, her special rooms, and the tree's top nodes gated to her (the next daughter build).
+
 ## Nov 3: the Egg larder, meat you can build (build 48)
 
 Mark: "add a meat type of room. I like the tension of scarcity, but players need to be able to build sustainability to a certain extent."

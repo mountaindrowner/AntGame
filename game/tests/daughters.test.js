@@ -30,13 +30,13 @@ test('a winged queen comes with the Royal chamber and the 3rd, 5th, 7th, 9th and
   beat(s, 9); assert.equal(SIM.flightsAllowed(s), 4); beat(s, 13); assert.equal(SIM.flightsAllowed(s), 5);
 });
 
-test('where she may land: a finished outpost two regions from every nest; one War Camp; the rest come later', () => {
+test('where she may land: a finished outpost two regions from every nest; one of each kind', () => {
   const s = founded(); beat(s, 5); s.colony.evo.royal = true;
   const w = s.world; s.outposts.push({ id: 801, x: w.ex + 30, y: w.ey, region: 0, done: true, work: 30 });
   assert.match(SIM.daughterLock(s, s.outposts.length - 1, 'war'), /too near home/);
   const oi = farOutpost(s);
   assert.equal(SIM.daughterLock(s, oi, 'war'), '');
-  assert.match(SIM.daughterLock(s, oi, 'garden'), /later build/);
+  assert.equal(SIM.daughterLock(s, oi, 'garden'), '', 'all five can be founded (build 49)');
   assert.ok(SIM.foundDaughter(s, oi, 'war'));
   const oj = farOutpost(s, 420);
   assert.match(SIM.daughterLock(s, oj, 'war'), /already/);

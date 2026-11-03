@@ -219,9 +219,9 @@ export class MapView {
     os.forEach((o, i) => { const d = Math.hypot(o.x - wx, o.y - wy); if (d < bd) { bd = d; oi = i; } });
     if (oi < 0) return '';
     const o = os[oi], here = (s.daughters || []).find((d) => d.oid === o.id);
-    if (here) { const R = SIM.DAUGHTERS[here.key]; return `<div class="mv-found"><b>${R.icon} ${R.short}</b><div>${here.state === 'ready' ? `${SIM.daughterCount(s, here)} of ${SIM.DAUGHTER_CAP} ants, fed from your stores.` : 'Her tunnel is being dug.'}</div></div>`; }
+    if (here) { const R = SIM.DAUGHTERS[here.key]; return `<div class="mv-found"><b>${R.icon} ${R.short}</b><div>${here.state === 'ready' ? `${SIM.daughterCount(s, here)} of ${SIM.DAUGHTER_CAP} ants, fed from your stores. ${R.line || ''}` : 'Her tunnel is being dug.'}</div></div>`; }
     let h = `<div class="mv-found"><b>Outpost${o.done ? '' : ' (being built)'}</b><div>A winged queen can found a daughter colony here.</div><div class="mv-roles">`;
-    for (const [k, R] of Object.entries(SIM.DAUGHTERS)) { const lock = SIM.daughterLock(s, oi, k); h += `<button data-found="${oi}:${k}" ${lock ? 'disabled' : ''} title="${lock || 'Found ' + R.name + ' here'}">${R.icon} ${R.short}<i>${lock || 'found her here'}</i></button>`; }
+    for (const [k, R] of Object.entries(SIM.DAUGHTERS)) { const lock = SIM.daughterLock(s, oi, k); h += `<button data-found="${oi}:${k}" ${lock ? 'disabled' : ''} title="${lock || 'Found ' + R.name + ' here'}">${R.icon} ${R.short}<i>${lock || R.does}</i></button>`; }
     return h + '</div></div>';
   }
 

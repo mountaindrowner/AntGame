@@ -143,6 +143,18 @@ Mark: daughters are **support colonies with a role, not second capitals**. Some 
 | Quarry | stone, and deep and bedrock digging |
 | Garden | sugar and food, shipped home once a tunnel connects it |
 
+**As built (build 49).** Each lays her own ants and, once her tunnel joins her, gives the main nest one lasting gift:
+
+| Daughter | She lays | Gift to the main nest |
+|---|---|---|
+| War Camp | 65% soldiers (Seasoned), 35% foragers | — |
+| Brood Hall | 45% foragers, 15% nurses, 30% majors, 10% supermajors (soldiers or majors until those are evolved) | your queen's eggs hatch 20% faster |
+| Watch | 80% foragers (scouts), 20% soldiers | maps the ground 2½ regions round her; outposts reach a quarter further; when raiders set off, every fighter at home turns out |
+| Quarry | 40% builders, 50% foragers, 10% soldiers | 🪨 a stone a minute per 4 of her ants; your builders dig and mend 25% faster |
+| Garden | 90% foragers, 10% soldiers | 🍯 a sugar a minute per 5 of her ants; your fungus gardens grow 25% faster |
+
+A caste that needs meat hatches as a forager when there's none. Her builders and nurses stay in her chambers; her foragers forage round her door. Still to come: her own nest view, her special rooms, and the tree's top nodes gated to her.
+
 ### Tunnels: the big goal
 
 - **What one costs:** a lot, rising with distance.
