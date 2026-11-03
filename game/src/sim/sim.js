@@ -380,6 +380,8 @@ function tickDaughters(s, dt){
         if (d.real){ const a = mkAnt(s, caste, 'in', d.ex, d.ey, 0); a.dh = d.key; a.rest = 1; if (soldier && d.key === 'war') a.xp = Math.max(a.xp || 0, RANKS[1].xp); }
         else d.pop[caste] = (d.pop[caste] || 0) + 1; }
     }
+    // Build 47: far away her ants starve too, when the store has been empty a while (as real ones do).
+    if (!d.real && c.starve > 30){ d.starveAcc = (d.starveAcc || 0) + dt; if (d.starveAcc >= 10){ d.starveAcc = 0; const k = Object.keys(d.pop).filter(q => d.pop[q] > 0).sort((p, q) => d.pop[q] - d.pop[p])[0]; if (k){ d.pop[k]--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } }
     // Far away, her foragers' work as a rate: a load and a half a minute each, into the main store.
     if (!d.real && d.pop.forager){ c.store = Math.min(c.cap, c.store + d.pop.forager*1.5/60*dt); c.foodTotal += d.pop.forager*1.5/60*dt; }
   }
@@ -662,6 +664,9 @@ function chooseExplore(s, a, maxDist){
     if (s.world.pit[idx(nx,ny)]) wgt *= 0.03; // ants know to keep off the sand slopes
     opts.push([nx,ny,wgt]); tot += wgt;
   }
+  // Build 47: past its range with every way out further still, after a while it heads back in instead of standing frozen.
+  if (opts.length) a.stuckAt = null; else if (a.stuckAt == null) a.stuckAt = s.t;
+  if (!opts.length && s.t - a.stuckAt > 10){ for (const [dx,dy] of N8){ const nx = a.tx+dx, ny = a.ty+dy; if (walk(s,nx,ny) && okDiag(s,a,dx,dy) && home[idx(nx,ny)] < cd){ opts.push([nx,ny,1]); tot += 1; } } }
   if (!opts.length) return; const o = pickWeighted(opts, tot); a.tx = o[0]; a.ty = o[1];
 }
 function chooseReturn(s, a){
@@ -912,6 +917,9 @@ function possess(s, id){
   const P = s.player, a = s.ants.find(o => o.id === id && !o.team && o.state !== 'dead' && !o.isPlayer);
   if (!a || P.ant || !P.pending || rankOf(a) < 3) return false;
   a.isPlayer = true; a.follow = false; a.task = null; a.taskCell = null; a.goal = null; a.exitTo = null; a.carry = 0; a.hp = Math.max(a.hp, youHp(s));
+  // Build 47: a daughter's veteran becomes yours alone, and steps out of her door, not the main nest's.
+  const dd = daughterOf(s, a); a.dh = null;
+  if (dd && (a.state === 'in' || a.state === 'build')){ a.state = 'player'; a.tx = dd.ex; a.ty = dd.ey; a.x = (dd.ex + 0.5)*T; a.y = (dd.ey + 0.5)*T; }
   const inside = a.state === 'in' || a.state === 'build' || a.state === 'nest';
   P.ant = a; P.pending = false; P.hunger = 100; P.tx = null; P.ntx = null; P.inNest = inside; a.state = inside ? 'nest' : 'player';
   const qi = s.colony.eggQueue.indexOf('forager'); if (qi >= 0 && !s.colony.eggs.length) s.colony.eggQueue.splice(qi, 1);
@@ -1372,7 +1380,7 @@ function enterNest(s, a){
   if (!a.team){ a.nx = SHAFT; a.ny = 0; a.ntx = SHAFT; a.nty = 0; }
 }
 function exitNest(s, a, state){
-  const col = a.dh && daughterOf(s, a) ? daughterOf(s, a) : colonyOf(s, a); // (build 46: a daughter's ants come out of her door) a.tx = col.ex; a.ty = col.ey; a.x = (col.ex+0.5)*T; a.y = (col.ey+0.5)*T;
+  const col = a.dh && daughterOf(s, a) ? daughterOf(s, a) : colonyOf(s, a); /* (build 46: a daughter's ants come out of her door) */ a.tx = col.ex; a.ty = col.ey; a.x = (col.ex+0.5)*T; a.y = (col.ey+0.5)*T;
   const ang = Math.random()*Math.PI*2; a.dx = Math.cos(ang); a.dy = Math.sin(ang); a.state = state; a.explore = 0; a.goal = null;
   if (state === 'fight'){ chooseToward(s, a, s.spider ? s.spider.x : a.x, s.spider ? s.spider.y : a.y); }
   else if (state === 'raid'){ chooseToward(s, a, (s.colony.ex+0.5)*T, (s.colony.ey+0.5)*T); }
@@ -1421,6 +1429,7 @@ function tickInside(s, a, dt){
     return; }
   if (a.state !== 'in') return;
   if (arrived && a.goal === 'exit' && !a.exitTo) a.goal = null; /* build 41: a save from before exitTo was kept */
+  if (arrived && a.goal === 'exit' && !reachable(s, Math.floor(a.nx), Math.floor(a.ny))){ a.goal = null; a.exitTo = null; a.rest = 4; } /* build 47: walled in: wait for the builders instead of freezing */
   if (!arrived || a.goal === 'exit') return;
   a.rest -= dt; if (a.rest > 0) return;
   // What next: the first of its duties that needs doing (build 17).
@@ -1573,8 +1582,13 @@ function taskSpot(s, a, task){
   }
   const [x, y] = task.slice(1).split(',').map(Number);
   if (k === 'f') return s.nest.cells[nidx(x,y)] && reachable(s, x, y) ? (isDugNeighbor(s, x, y) || [x, y]) : null;
-  const adj = isDugNeighbor(s, x, y); // dig or repair: stand on a dug cell next to it
-  return adj && reachable(s, adj[0], adj[1]) ? adj : null;
+  // Dig or repair: stand on a dug cell next to it that the shaft can reach. (Build 47: it used to try only the
+  // first dug neighbour, so a cave-in that cut the nest in two, or a fill order, could never be mended.)
+  // A spot the builder itself can reach comes first, so one walled in on the far side digs its own way out.
+  const mine = a && a.nx != null ? nidx(Math.floor(a.nx), Math.floor(a.ny)) : -1; let fallback = null;
+  for (const [dx,dy] of N4){ const nx = x+dx, ny = y+dy; if (nx<0||ny<0||nx>=NW||ny>=NH || !s.nest.cells[nidx(nx,ny)]) continue;
+    const f = nestField(s, nx, ny); if (mine >= 0 && f[mine] < 9999) return [nx, ny]; if (!fallback && f[nidx(SHAFT,0)] < 9999) fallback = [nx, ny]; }
+  return fallback;
 }
 function taskExists(s, task){
   const k = task[0]; if (k === 'j') return s.colony.buildQueue.length > 0;
@@ -1636,20 +1650,28 @@ function tickRain(s, dt){
   if (!r.on && r.t >= r.next){ r.on = true; r.warned = false; r.t = 0; r.next = 480 + Math.random()*240; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
   else if (r.on){
     if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + 0.4*dt);
-    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && !has(s, 'chimneys') && !picked(s, 'builder', 'tunnelmaster')){ let fell = collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) fell = collapse(s, true) || fell; if (fell) note(s, 'The rain caved in a tunnel.'); } }
+    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && canCave(s) && !has(s, 'chimneys') && !picked(s, 'builder', 'tunnelmaster')){ let fell = collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) fell = collapse(s, true) || fell; if (fell) note(s, 'The rain caved in a tunnel.'); } }
   }
 }
 function buildersInside(s){ return s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build')).length; }
+/* Build 47: a young colony with no Builder yet (under 12 ants) can't be caved in; nobody could dig it out. */
+function canCave(s){ return s.ants.some(b => b.caste==='builder' && b.team===0 && !b.dh) || antCount(s) >= 12; }
+function tickRepairs(s){
+  const c = s.colony;
+  for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i], crew = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y); rep.progress += crew.reduce((t, a) => t + workOf(s, a, 'r'), 0)*(has(s, 'beetles') ? 1.5 : 1); if (rep.progress >= 8){ for (const a of crew) gainXp(s, a, 2); dig(s, rep.x, rep.y); s.repairs.splice(i,1); c.repaired++; } }
+}
 function tickMaintenance(s, dt){
-  const c = s.colony; if (!s.queen.placed || s.t < 240) return;
+  const c = s.colony; if (!s.queen.placed) return;
   c.wearT = (c.wearT || 0) + dt; if (c.wearT < 1) return; c.wearT = 0;
+  tickRepairs(s);
+  if (s.t < 240) return;
   // Steady veterans count double; Shorers and Insulation make cave-ins rarer.
   const need = Math.ceil(dugCount(s)/40), b = buildersInside(s) + s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build') && promo(s, a, 'steady')).length;
   const risk = 0.0045 * (picked(s, 'builder', 'shorer') ? 0.4 : 1) * (has(s, 'insulation') ? 0.5 : 1) * (roomLevel(s, 'midden') >= 3 && roomOf(s, 'midden') ? 0.67 : 1);
-  if (!picked(s, 'builder', 'tunnelmaster') && b < need && Math.random() < risk * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. You need more Builders inside.'); }
+  if (!picked(s, 'builder', 'tunnelmaster') && canCave(s) && b < need && Math.random() < risk * (need - b)) { if (collapse(s, false)) note(s, 'A tunnel caved in. You need more Builders inside.'); }
   // Rove beetle guests (build 24) tidy loose spoil away, a load every 20 s.
   if (has(s, 'beetles') && (s.nest.spoil || 0) > 0 && Math.random() < 0.05) s.nest.spoil--;
-  for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i], crew = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y); rep.progress += crew.reduce((t, a) => t + workOf(s, a, 'r'), 0)*(has(s, 'beetles') ? 1.5 : 1); if (rep.progress >= 8){ for (const a of crew) gainXp(s, a, 2); dig(s, rep.x, rep.y); s.repairs.splice(i,1); c.repaired++; } }
+  /* build 47: repairs moved to tickRepairs, which runs before the early-game gate */
 }
 function collapse(s, lowest){
   const n = s.nest; const cands = []; let maxy = 0;
@@ -1971,7 +1993,7 @@ function zonesTaken(s){ return ZONES.filter(z => (s.colony.zones || {})[z.key] !
 function tickZones(s, dt){
   s.zoneT = (s.zoneT || 0) + dt; if (s.zoneT < 1) return; s.zoneT = 0;
   const c = s.colony; if (!c.zones) c.zones = {};
-  c.cap = storeCap(s); // build 40: kept current every second (repletes hanging, outposts sharing the store)
+  { const was = s.capWas ?? c.cap; c.cap = s.capWas = storeCap(s); if (c.cap < was) c.store = Math.min(c.store, c.cap); } // build 40: kept current every second (repletes hanging, outposts sharing the store); build 47: a cap that shrinks (outposts lost) takes the overflow with it
   for (const z of ZONES){ if (c.zones[z.key] != null || !z.done(s)) continue;
     c.zones[z.key] = s.t; const n = zonesTaken(s);
     s.zoneTaken = { key: z.key, t: s.t, n }; s.events.push('zone');
@@ -2647,11 +2669,12 @@ function stepWasp(s, b, B, dt){
   const P = s.player;
   if (b.state === 'walk') b.state = 'fly'; // (spawned on the ground: up it goes)
   if (b.state === 'rest'){ b.restT -= dt; b.stingCd = (b.stingCd || 0) - dt;
-    const tg = huntTarget(s, b, 1.6); if (tg && b.stingCd <= 0){ b.stingCd = 1.2; hurtAnt(s, tg[0], 3, 'wasp'); spark(s, null, tg[0].x, tg[0].y, 1); b.stingAt = s.t; }
+    const tg = huntTarget(s, b, 1.6); if (tg && b.stingCd <= 0){ b.stingCd = 1.2; hurtAnt(s, tg[0], 3, 'wasp'); spark(s, null, tg[0].x, tg[0].y, 1); b.stingAt = s.t; if (tg[0].state === 'dead'){ hunterEats(s, b); return; } }
     if (b.restT <= 0){ b.state = 'fly'; b.t = 0; } return; }
   if (b.state === 'carry'){ b.t += 0; b.carryT -= dt; const a = s.ants.find(o => o.id === b.carry); bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, 50, dt);
     if (!a || a.state !== 'away'){ b.carry = null; b.state = 'fly'; return; }
-    if (b.carryT <= 0){ b.carry = null; a.state = 'return'; killAnt(s, a, 'wasp'); b.state = 'rest'; b.restT = 7; } return; }
+    if (b.carryT <= 0){ b.carry = null; a.state = 'return'; killAnt(s, a, 'wasp'); hunterEats(s, b); /* build 47: fed like the other hunters */ } return; }
+  if (b.state === 'eat'){ b.eatT -= dt; if (b.eatT <= 0){ b.state = 'rest'; b.restT = 2; } return; } /* on the ground eating: it can be bitten */
   if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.x = k.x; b.y = k.y; b.diveAt = s.t;
     const a = s.ants.find(o => !o.team && outside(o) && Math.hypot(o.x - k.x, o.y - k.y) < k.r);
     if (a){ if (a.isPlayer){ hurtAnt(s, a, 4, 'wasp'); b.state = 'rest'; b.restT = 4; } else { a.state = 'away'; a.foeId = 0; b.carry = a.id; b.carryT = 1.6; b.state = 'carry'; if (playerNear(s, b.x, b.y, 16)) P.msg = 'The wasp has an ant! Stun it before it gets away.'; } }
@@ -2894,7 +2917,7 @@ function tickBosses(s, dt){
       if (!nearAnt(s, b, 30*T)){ b.leaveT += dt; if (b.leaveT > 8){ b.mode = 'idle'; b.atk = null; b.charge = null; b.roll = null; } } else b.leaveT = 0;
     } else if (b.hp < b.maxHp) b.hp = Math.min(b.maxHp, b.hp + 2*dt); // left alone, it heals
     // Bitten by fighters, your crew and you; fighters on patrol nearby join in.
-    const reach = (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air);
+    const lpit = b.key === 'antlion' && s.world.pits[b.pit], reach = lpit ? (lpit.r*1.05 + 1.2)*T /* build 47: bitten from the rim, off the sliding sand */ : (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air);
     let onIt = 0;
     for (const a of s.ants){
       if (a.team || !outside(a)) continue;
@@ -3501,7 +3524,7 @@ function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.
 function cancelBuilds(s){
   const c = s.colony; let n = 0;
   for (const j of c.buildQueue){ const cost = j.paid || roomCost(s, j.room, roomCount(s, j.room)), k2 = j.progress > 0 ? 0.5 : 1; for (const k in cost){ const back = Math.floor(cost[k]*k2); if (k === 'food') c.store = Math.min(c.cap, c.store + back); else c[k] = (c[k] || 0) + back; } n++; }
-  c.buildQueue.length = 0; return n;
+  c.buildQueue.length = 0; c.water = Math.min(c.water, c.waterCap); return n; // (build 47: refunds never past the caps)
 }
 function queueRoom(s, room, cell){
   const c = s.colony, R = ROOMS[room]; if (!R || !s.queen.placed || !cell) return false;
@@ -3528,7 +3551,7 @@ function serialize(s){
   return JSON.stringify({ v: SAVE_VERSION, active: s.active, raidStart: s.raidStart || null, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil, open: s.nest.open || {}, breach: s.nest.breach || null }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
-    phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [],
+    phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid,
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
@@ -3558,7 +3581,7 @@ function deserialize(json){
   const d = migrate(JSON.parse(json)); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.phase1 = d.phase1 || null; s.dayT = d.dayT ?? (d.t + DAY*0.02); s.nights = d.nights || 0; s.daughters = d.daughters || []; s.nightNow = isNight(s); s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
+  s.t = d.t; s.phase1 = d.phase1 || null; s.dayT = d.dayT ?? (d.t + DAY*0.02); s.nights = d.nights || 0; s.daughters = d.daughters || []; s.flightSaid = !!d.flightSaid; s.nightNow = isNight(s); s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.nest.open = d.nest.open || {}; s.nest.breach = d.nest.breach || null; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   // A raid in progress isn't saved: its raiders walk home with what they carried (build 28). Ants held by a

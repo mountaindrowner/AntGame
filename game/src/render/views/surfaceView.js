@@ -893,7 +893,7 @@ export class SurfaceView {
         put(stab ? G.abStab : b.atk ? G.abStill : walking ? G.ab[frame] : G.abStill, b.x, 0, b.y, orient(A.yaw, b.atk ? 0.12 : 0), k, color);
       } else if (b.kind === 'wasp') {
         // Build 38: in the air (wings a blur, a shadow below); it dives at its ring; resting, wings folded.
-        const air = b.state !== 'rest', diving = b.atk && b.atk.t > b.atk.at * 0.6;
+        const air = b.state !== 'rest' && b.state !== 'eat', diving = b.atk && b.atk.t > b.atk.at * 0.6;
         let x = b.x, z = b.y, y = air ? 62 + Math.sin(t * 3 + b.id) * 6 : 0;
         if (b.atk) { const u = Math.min(1, b.atk.t / b.atk.at); x = b.x + (b.atk.x - b.x) * u; z = b.y + (b.atk.y - b.y) * u; y = diving ? 62 * (1 - (b.atk.t / b.atk.at - 0.6) / 0.4) : 62; }
         if (b.state === 'carry') y = 40;

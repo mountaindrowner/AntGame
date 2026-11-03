@@ -2,6 +2,27 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: the stress run (build 47)
+
+Mark: "put it to the wringer." Bots, a fuzzer and a numbers pass ran the game hard: 30 fuzz runs (10.7 simulated hours, 7,610 random actions, 524 save round-trips), UI abuse in the browser (no errors), a 90-minute bot playthrough, and duel, raid and progression tables.
+
+**Fixed:**
+
+1. **A tunnel cut in two was never mended.** Builders only tried the first dug cell beside a cave-in or fill, so a split nest stayed split. They now try every side, and one walled in on the far side digs its own way out.
+2. **Early cave-ins froze.** Repairs only ran after minute 4. They now run from the start.
+3. **No cave-ins before the colony can mend them.** A colony with no Builder and under 12 ants isn't caved in by rain or wear. (Before, the queen's deep entrance could collapse at the first rain with nobody to dig it out.)
+4. **Ants leaving the nest kept their old spot.** A comment swallowed the line that put them at the door.
+5. **Store over the cap.** When outposts are lost and the cap shrinks, the store shrinks with it. Cancelled builds refund no water past the cap.
+6. **Taking over a daughter's veteran** now steps you out of her door, and the ant becomes yours.
+7. **A walled-in ant heading out** waits for the builders instead of freezing.
+8. **An ant past its range** with every way out further still heads home after 10 seconds instead of standing frozen.
+9. **Far-off daughters' ants starve too** when the store has been empty a while, as near ones do.
+10. **The flight notice is saved** (it repeated after a load).
+11. **The hunting wasp** now eats after a kill and is sated for 90 s, like every other hunter. It ate nothing before, and killed 5–20× more. It eats on the ground, where it can be bitten.
+12. **The Antlion Queen could not be killed.** Biters had to stand on the sliding sand, which dragged them to the bottom. She can now be bitten from the rim once she surfaces.
+
+**Found, not changed (for Mark):** guardian fights won by raw numbers; majors making raids trivial; every run starving by minute 40; the War Camp's 45–60 food a minute; flights at about 30, 45, 55 and 70 minutes, the 5th past 2 hours. See the build-47 report.
+
 ## Nov 3: the nuptial flight and the first daughter, the War Camp (build 46)
 
 Mark: daughter queens "add ants", laying their own eggs fed from the main nest. Flights come after the 3rd, 5th, 7th, 9th and 11th guardian: "that's perfect."
