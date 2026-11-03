@@ -33,6 +33,7 @@ export class MapView {
       if (!b) return;
       if (b.dataset.close) this.close();
       else if (b.dataset.plan) { this.close(); this.onPlan(); }
+      else if (b.dataset.found) { const [oi, role] = b.dataset.found.split(':'); if (SIM.foundDaughter(this.app.s, +oi, role)) { sfx.play('evolve'); this.close(); } else this._tap(this.lastTap.x, this.lastTap.y); }
       else if (b.dataset.z) { const r = this.canvas.getBoundingClientRect(); this.zoomAt(r.width / 2, r.height / 2, +b.dataset.z); }
     });
     this._input();
@@ -180,6 +181,17 @@ export class MapView {
       if (showNames) { g.font = '700 10px ui-rounded, system-ui, sans-serif'; g.lineWidth = 3; g.strokeStyle = 'rgba(20,12,4,0.85)'; g.strokeText(c.Z.name, x, y + 22); g.fillStyle = c.done ? '#ffd34d' : '#f6eedc'; g.fillText(c.Z.name, x, y + 22); }
     }
     const sp = this.el.querySelector('.mv-sp'), txt = `Zones taken: ${SIM.zonesTaken(s)} of ${SIM.ZONES.length}`; if (sp.textContent !== txt) sp.textContent = txt;
+    // Build 46: daughter colonies, and the tunnels to them: faint where still to dig, solid where dug.
+    for (const d of s.daughters || []) {
+      const R = SIM.DAUGHTERS[d.key], [x0, y0] = at((w.ex + 0.5) * T, (w.ey + 0.5) * T), [x1, y1] = at((d.ex + 0.5) * T, (d.ey + 0.5) * T);
+      const k = d.state === 'flight' ? 0 : Math.min(1, d.tunnel.progress / d.tunnel.need);
+      g.save(); g.lineCap = 'round';
+      g.setLineDash([6, 6]); g.lineWidth = 4; g.strokeStyle = 'rgba(255, 236, 190, 0.35)'; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      g.setLineDash([]); g.lineWidth = 5; g.strokeStyle = d.state === 'ready' ? 'rgba(143, 211, 107, 0.85)' : 'rgba(255, 211, 77, 0.85)'; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x0 + (x1 - x0) * k, y0 + (y1 - y0) * k); g.stroke();
+      g.restore();
+      const label = d.state === 'flight' ? `${R.short}: the queen flies` : d.state === 'tunnel' ? `${R.short}: tunnel ${Math.floor(k * 100)}%` : `${R.icon} ${R.short} · ${SIM.daughterCount(s, d)}/${SIM.DAUGHTER_CAP}`;
+      pin((d.ex + 0.5) * T, (d.ey + 0.5) * T, d.state === 'ready' ? '#8fd36b' : '#ffd34d', label, true);
+    }
     if (s.queen.placed) pin((w.ex + 0.5) * T, (w.ey + 0.5) * T, '#8fd36b', 'Nest');
     for (const r of s.rivals) if (!r.asleep && r.queenAlive && seen(r.ex, r.ey)) pin((r.ex + 0.5) * T, (r.ey + 0.5) * T, '#e4524a', r.team === 1 ? 'Rival nest' : SIM.RIVALS[r.team - 1].name);
     for (const o of s.outposts || []) if (seen(o.x, o.y)) pin((o.x + 0.5) * T, (o.y + 0.5) * T, o.done ? '#c9b27a' : '#8a8272', s.colony.held[o.region] ? 'Held' : o.done ? 'Outpost' : 'Building');
@@ -194,10 +206,23 @@ export class MapView {
     if (wx < 0 || wy < 0 || wx >= w.W || wy >= w.H) { this.card.classList.add('hidden'); return; }
     const seen = s.seenMap[Math.floor(wy / SEE.cell) * (w.W / SEE.cell) + Math.floor(wx / SEE.cell)];
     const A = AREAS[SIM.areaOf(s, Math.floor(wx), Math.floor(wy))];
+    this.lastTap = { x, y };
     this.card.innerHTML = seen
-      ? `<strong>${A.name}</strong><div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${zoneLine(s, A.key)}</dl>`
+      ? `<strong>${A.name}</strong><div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${zoneLine(s, A.key)}</dl>` + this._outpostCard(s, wx, wy)
       : `<strong>Unexplored</strong><div>Walk your ant out here to see what's in this part of the yard.</div>`;
     this.card.classList.remove('hidden');
+  }
+
+  // Build 46: tapping near an outpost: where a winged queen can found a daughter, and as what.
+  _outpostCard(s, wx, wy) {
+    const os = s.outposts || []; let oi = -1, bd = 14;
+    os.forEach((o, i) => { const d = Math.hypot(o.x - wx, o.y - wy); if (d < bd) { bd = d; oi = i; } });
+    if (oi < 0) return '';
+    const o = os[oi], here = (s.daughters || []).find((d) => d.oid === o.id);
+    if (here) { const R = SIM.DAUGHTERS[here.key]; return `<div class="mv-found"><b>${R.icon} ${R.short}</b><div>${here.state === 'ready' ? `${SIM.daughterCount(s, here)} of ${SIM.DAUGHTER_CAP} ants, fed from your stores.` : 'Her tunnel is being dug.'}</div></div>`; }
+    let h = `<div class="mv-found"><b>Outpost${o.done ? '' : ' (being built)'}</b><div>A winged queen can found a daughter colony here.</div><div class="mv-roles">`;
+    for (const [k, R] of Object.entries(SIM.DAUGHTERS)) { const lock = SIM.daughterLock(s, oi, k); h += `<button data-found="${oi}:${k}" ${lock ? 'disabled' : ''} title="${lock || 'Found ' + R.name + ' here'}">${R.icon} ${R.short}<i>${lock || 'found her here'}</i></button>`; }
+    return h + '</div></div>';
   }
 
   _input() {

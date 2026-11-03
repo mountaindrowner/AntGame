@@ -2,6 +2,50 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: the nuptial flight and the first daughter, the War Camp (build 46)
+
+Mark: daughter queens "add ants", laying their own eggs fed from the main nest. Flights come after the 3rd, 5th, 7th, 9th and 11th guardian: "that's perfect."
+
+**How it plays:**
+
+1. **A winged queen is ready.** It needs the Royal chamber (Nest branch), and comes with the 3rd, 5th, 7th, 9th and 11th zone taken. A banner says so.
+   - At 3 guardians with no Royal chamber, a card says what's missing.
+2. **Open the map and tap a finished outpost.** Its card lists the five daughters:
+   - **War Camp** is available;
+   - Brood Hall, Watch, Quarry and Garden are shown as "comes in a later build";
+   - a daughter needs an outpost **two regions (160 tiles) from home and from every other daughter**, and there's one of each kind.
+3. **"The nuptial flight"** banner. After 10 seconds: **"She has landed".** Her mound and flag appear by the cairn.
+4. **The tunnel:**
+   - It's dug from the main nest, slowly: 4.5 work per tile of distance, about 6–9 minutes. It goes faster with up to six builders at home.
+   - It eats ¼ food a second while it digs, and stops (and says so) if the store is empty.
+   - On the map, a faint dashed line runs to her, and fills in solid gold as the tunnel comes.
+5. **"War Camp is joined":**
+   - She lays her own eggs every 30 s, up to **50 ants**, paid from your main stores.
+   - About two thirds are soldiers (Seasoned, the War Camp's gift), the rest foragers.
+   - Her ants don't count against the main queen's 100.
+   - The map pin and the top-bar chip 🏕 show her count.
+
+**Her ants:**
+- They call her door home. They rest in her chambers, patrol and forage around her, and bring food back to her door into the shared stores.
+- **Far away, she's numbers:** ants by kind, plus her foragers' food as a rate (1½ a minute each), and their eating from the main store.
+  - She turns into real ants when your ant comes within 1½ regions, and back into numbers beyond 1.8. That's always while you're at home, since she's at least two regions away.
+  - Crews following you stay real.
+
+**Saves:** daughters, and each ant's home, are saved. Saves are now **v14**.
+
+**Not yet (next builds):**
+- her own nest view and special rooms;
+- the tree's daughter-only top nodes;
+- the other four daughters;
+- raids on daughters and defending them;
+- War Camp fighters marching to your fights;
+- the great evolutions.
+
+**Tests:**
+- `tests/daughters.test.js`: flight timing; where she may land; flight → landing → tunnel → her eggs; numbers ⇄ real ants; saves.
+- 202 tests in all, and the end-to-end browser test passes.
+- Bots grow as before. They never beat guardians, so they never fly a queen. The bot founds a War Camp when it can.
+
 ## Nov 3: faster, with nothing changed (build 45)
 
 Mark: speed first, but "what does that mean for ants within my area, in my nest, or within my range of view?" Plus his lore: "at the very, very bottom, you find slightly green glowing rocks… some kind of radioactive material… that's what's prompting the growth of these ants."

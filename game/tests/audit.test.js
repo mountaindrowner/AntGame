@@ -63,7 +63,7 @@ test('on a 1-gene node, its deed halves the other costs instead', () => {
 
 test('saves are versioned: a newer one is refused, older ones step up', () => {
   const s = founded(); const d = JSON.parse(SIM.serialize(s));
-  assert.equal(d.v, 13);
+  assert.equal(d.v, 14);
   assert.throws(() => SIM.deserialize(JSON.stringify({ ...d, v: 99 })), /newer/);
   const old = SIM.deserialize(JSON.stringify(downgrade(d, 11))); assert.ok(old.t > 0);
 });

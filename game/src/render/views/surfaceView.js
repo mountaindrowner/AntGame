@@ -32,6 +32,7 @@ const TOAD = 48;
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
 const tmpC = new THREE.Color(), tmpC2 = new THREE.Color();
+const DAUGHTER_FLAG = { war: '#c8302a', brood: '#f2e6c8', watch: '#3a7ad8', quarry: '#8a8478', garden: '#4caf50' }; // build 46
 // Build 43: the colours of the day: sky and fog by day, dusk, night, the moon.
 const DAYC = { sky: "#9bc7e6", fog: "#b9cfd8", rainSky: "#6f7f8f", night: "#121a32", nightFog: "#18213a", dusk: "#e2905e", moon: "#8ea6e8", hemiNight: "#7d8cc8" };
 const tmpQ = new THREE.Quaternion();
@@ -246,11 +247,34 @@ export class SurfaceView {
       c.scale.setScalar(1.3);
     }
     for (const [id, c] of this.cairns) if (!live.has(id)) { this.cairnGroup.remove(c); this.cairns.delete(id); }
+    // Build 46: a daughter colony's door: a ring of spoil round a dark hole, and her flag (shown once she has landed).
+    this.daughterDoors = this.daughterDoors || new Map();
+    for (const d of s.daughters || []) {
+      if (d.state === 'flight') continue;
+      let m = this.daughterDoors.get(d.key);
+      if (!m) {
+        m = new THREE.Group();
+        const mound = new THREE.Mesh(new THREE.CylinderGeometry(9, 16, 3.5, 9, 1, true), psx({ color: '#6e4c2e', side: THREE.DoubleSide }));
+        mound.position.y = 1.7;
+        const hole = new THREE.Mesh(new THREE.CircleGeometry(9.4, 9).rotateX(-Math.PI / 2), psxBasic({ color: '#120a05', polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
+        hole.position.y = 1.1; hole.renderOrder = 3; mound.renderOrder = 3;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 26, 5), psx({ color: '#5a3a1e' }));
+        pole.position.set(12, 15, -4); pole.scale.y = 1.25;
+        const flag = new THREE.Mesh(new THREE.PlaneGeometry(15, 10), psx({ color: DAUGHTER_FLAG[d.key] || '#ffd34d', side: THREE.DoubleSide }));
+        flag.position.set(19.5, 26, -4); m.flag = flag;
+        m.add(mound, hole, pole, flag);
+        m.position.set((d.ex + 0.5) * T, 0, (d.ey + 0.5) * T);
+        this.cairnGroup.add(m); this.daughterDoors.set(d.key, m);
+      }
+      m.flag.rotation.y = Math.sin(t * 2.2 + d.ex) * 0.35;
+      m.scale.setScalar(d.state === 'ready' ? 1 : 0.6);
+    }
   }
 
   setState(s) {
     this.state = s;
     this.camInit = false;
+    if (this.daughterDoors){ for (const m of this.daughterDoors.values()) this.cairnGroup.remove(m); this.daughterDoors.clear(); } // (build 46: a new colony has none)
     if (this.static) {
       this.scenery.dispose();
       this.scene.remove(this.static);

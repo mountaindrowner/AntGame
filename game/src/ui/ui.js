@@ -187,6 +187,14 @@ export function createUI(app) {
     return h;
   }
   const there = (A) => A.name.replace(/^The /, 'the ');
+  // Build 46: your daughter colonies, in one chip: their ants, or how far the tunnel has come.
+  function daughterChip(s, chip) {
+    const ds = s.daughters || []; if (!ds.length) return '';
+    const n = ds.reduce((a, d) => a + (d.state === 'ready' ? SIM.daughterCount(s, d) : 0), 0);
+    const tip = ds.map((d) => { const R = SIM.DAUGHTERS[d.key]; return d.state === 'ready' ? `${R.short}: ${SIM.daughterCount(s, d)} of ${SIM.DAUGHTER_CAP}` : d.state === 'tunnel' ? `${R.short}: tunnel ${Math.floor((d.tunnel.progress / d.tunnel.need) * 100)}%` : `${R.short}: the queen is flying`; }).join(' · ');
+    const digging = ds.find((d) => d.state === 'tunnel');
+    return chip('🏕', digging && !n ? ` ${Math.floor((digging.tunnel.progress / digging.tunnel.need) * 100)}%` : n, 'Daughter colonies. ' + tip);
+  }
   // Build 43: the sun or the moon, and how long till the light turns.
   function dayChip(s, chip) {
     const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + 'm' : Math.max(10, Math.round(u / 10) * 10) + 's';
@@ -613,6 +621,7 @@ export function createUI(app) {
       + (c.found && c.found.wood ? chip('🪵', Math.floor(c.wood || 0), 'Wood: twigs and bark. For the queen’s last level and rooms’ level III') : '')
       + (SIM.roomCount(s, 'fungus') ? chip('🍃', Math.floor(c.fungus || 0), 'Leaf in the fungus garden: it grows into food') : '')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
+      + daughterChip(s, chip)
       + (c.genesTotal ? chip('🧬', c.genes, 'Genes: tap to evolve').replace('<span class="chip', '<span data-genes="1" class="chip') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
       + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
@@ -816,7 +825,7 @@ export function createUI(app) {
   });
   // A small "Saved ✓" when the game autosaves.
   function saved() { const e = $('saved'); e.classList.add('on'); clearTimeout(saved.t); saved.t = setTimeout(() => e.classList.remove('on'), 1400); }
-  return { saved, update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText, evo };
+  return { saved, update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText, evo, mapView };
 }
 
 export const GRID = { NW, NH };

@@ -489,3 +489,11 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #title .t-row.t-skins .t-opt { min-height: 34px; padding: 0 10px; font-size: 12px; }
 /* Build 44.2: on a phone the ability slots sat on top of the button dock; they go in a row above it. */
 @media (max-width: 720px) { #saved { bottom: calc(env(safe-area-inset-bottom, 0px) + 142px); } #skills { bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); left: 10px; gap: 5px; } #skills .skill { width: 40px; height: 40px; } #skills .skill .ic { font-size: 20px; line-height: 36px; } #skills .skill .secs { line-height: 36px; } }
+/* Build 46: an outpost's card on the map: found a daughter colony there. */
+#mapview .mv-found { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 4px; }
+#mapview .mv-roles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 4px; }
+#mapview .mv-roles button { text-align: left; padding: 6px 8px; min-height: 0; font-size: 13px; font-weight: 700; border-radius: 10px; }
+#mapview .mv-roles button i { display: block; font-style: normal; font-weight: 400; font-size: 11px; color: var(--mute); }
+#mapview .mv-roles button:not(:disabled) { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+#mapview .mv-roles button:not(:disabled) i { color: inherit; opacity: .85; }
+#mapview .mv-card { max-height: 62vh; overflow-y: auto; }

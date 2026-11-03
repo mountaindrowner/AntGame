@@ -170,6 +170,8 @@ function grow() {
   const qu = SIM.QUEEN_UP[s.queen.level];
   if (qu && !qu.sugar && SIM.antCount(s) >= SIM.queenCap(s.queen.level) - 3) return;
   const spare = c.cap >= 150 && c.store > c.cap * 0.6;
+  // Build 46: a winged queen ready: found the War Camp at the first outpost far enough away.
+  if (SIM.flightReady(s)) for (let i = 0; i < s.outposts.length; i++) if (!SIM.daughterLock(s, i, 'war') && SIM.foundDaughter(s, i, 'war')) { note('nuptial flight: founding the War Camp'); mile('first daughter'); break; }
   // Build 42: break into new ground, side sections first, with food to spare and a builder or two.
   if (spare && !s.nest.breach && s.ants.some((a) => a.caste === 'builder' && !a.team)) {
     for (const S of SIM.NEST_SECTIONS) { if (SIM.sectionLock(s, S.key) || !SIM.canPay(c, S.cost) || c.store - (S.cost.food || 0) < c.cap * 0.3) continue; if (SIM.startBreach(s, S.key)) { note(`breaking into ${S.name}`); mile('first new ground'); } break; }
