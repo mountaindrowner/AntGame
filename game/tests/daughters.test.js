@@ -107,3 +107,13 @@ test('build 47.2: far ants get Long-lived like near ones, and protein hunger tak
   assert.ok((c.deaths.nomeat || 0) >= 2, `want of meat (${c.deaths.nomeat})`);
   assert.ok(d.pop.soldier < 200, 'far soldiers die too');
 });
+
+test('build 47.3: far away her ants are lost now and then, about one per 1,000 ant-minutes', () => {
+  const s = founded(); beat(s, 3); s.colony.evo.royal = true; rich(s.colony);
+  const oi = farOutpost(s); SIM.foundDaughter(s, oi, 'war'); const d = s.daughters[0], c = s.colony;
+  step(s, 11); d.tunnel.progress = d.tunnel.need; step(s, 1); d.eggT = -1e9; d.pop = { forager: 25, soldier: 25 };
+  for (let m = 0; m < 40; m++) { c.store = 150; c.protein = 200; d.eggT = -1e9; step(s, 60); }
+  const lost = c.deaths.afield || 0;
+  assert.ok(lost >= 1 && lost <= 3, `50 ants for 40 min lose about 2 (${lost})`);
+  assert.equal(SIM.dpop(d), 50 - lost);
+});

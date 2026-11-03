@@ -2,6 +2,21 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: far daughters lose ants too; the supercolony re-run with roles (build 47.3)
+
+Mark: far daughters get "a steady death rate, conservative but not immune."
+
+- **Measured near the War Camp (after the wasp fix):** 0, 2 and 7 deaths in 30 minutes across three seeds, about 0.1 a minute for 50 ants.
+- **Far away, half that:** one ant per 1,000 ant-minutes (a full camp loses one every 20 minutes, all five about one every 4). Logged as "lost far afield".
+
+**The re-run, each daughter in its planned role** (approximate: only the War Camp is built; the other four as numbers with role mixes from SUPERCOLONY.md: the Brood Hall's big castes, the Watch's scouts, the Quarry's builders, the Garden's foragers):
+
+- **Food is fine.** 350 ants net +10 to +60 a minute at first, +130 to +240 later, the store full all hour.
+- **Meat is the ceiling.** Every run, 3 seeds, home or five daughters: protein is gone by minute 20–40, then fighters die for want of it until about 15 are left of 59 to 85. The daughters re-lay foragers, so their soldiers and big castes don't come back.
+- **There is no meat room.** Protein only comes from bugs and scraps foragers find, hunts, grubs in the nest and bosses: about 11–14 a minute at this size.
+
+What to do about meat is Mark's call.
+
 ## Nov 3: the late-game supercolony, checked (build 47.2)
 
 Mark: "simulate a full-blown 95% supercolony: what it consumes, is it maintainable or achievable; the math and realism first." Two passes: a ledger from the code, then a live simulation (100 main ants, every room at level III, 58 of 61 evolutions, the War Camp at 50, 60 game-minutes, 3 seeds, all threats on; and a five-daughter approximation, the four unbuilt ones on War Camp rules).

@@ -333,6 +333,7 @@ function foundDaughter(s, oi, role){
   return true;
 }
 function daughterHome(s, d){ const w = s.world; w.dhomes = w.dhomes || {}; const k = d.key + ':' + d.ex + ',' + d.ey; return w.dhomes[k] || (w.dhomes[k] = bfs(w.blocked, d.ex, d.ey)); }
+const DLOSS = 0.001; // build 47.3: a far daughter's ant lost to the yard, per ant per minute
 const DFORAGE = 2.5; // build 47: a far daughter's forager, food a minute (measured near: 2 to 3)
 const dpop = d => Object.values(d.pop || {}).reduce((a, b) => a + b, 0);
 const daughterAnts = (s, d) => s.ants.filter(a => a.dh === d.key && a.state !== 'dead');
@@ -383,6 +384,10 @@ function tickDaughters(s, dt){
     }
     // Build 47: far away her ants starve too, when the store has been empty a while (as real ones do).
     if (!d.real && c.starve > 30){ d.starveAcc = (d.starveAcc || 0) + dt; if (d.starveAcc >= 10){ d.starveAcc = 0; const k = Object.keys(d.pop).filter(q => d.pop[q] > 0).sort((p, q) => d.pop[q] - d.pop[p])[0]; if (k){ d.pop[k]--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } }
+    // Build 47.3: far away her ants still meet the yard's dangers, at about half the rate measured near her
+    // (0.1 a minute per 50 there): one ant per 1,000 ant-minutes. Conservative, not immune.
+    if (!d.real){ const n = dpop(d); d.lossAcc = (d.lossAcc || 0) + n*DLOSS/60*dt;
+      if (d.lossAcc >= 1){ d.lossAcc -= 1; let r = Math.floor(Math.random()*n); for (const k in d.pop){ if (r < d.pop[k]){ d.pop[k]--; c.deaths.afield = (c.deaths.afield || 0) + 1; break; } r -= d.pop[k]; } } }
     // Far away, her foragers' work as a rate into the main store (build 47: 2.5 a minute each, what real ones bring in).
     if (!d.real && d.pop.forager){ c.store = Math.min(c.cap, c.store + d.pop.forager*DFORAGE/60*dt); c.foodTotal += d.pop.forager*DFORAGE/60*dt; }
   }
