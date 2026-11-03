@@ -2,6 +2,26 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: Town Hall is the look (build 44.2)
+
+Mark: "Let's do town hall."
+
+**Town Hall is the default for everyone,** after Animal Crossing's notice board:
+- cream cards with a thick leafy-green stripe;
+- green leaf buttons with white rims;
+- a sunny yellow main button;
+- M PLUS Rounded lettering.
+
+**Saved options:** a saved setting only keeps another theme if the player picked it under Options → Look themselves. Anyone who only had the old default saved gets Town Hall. The other seven and Classic stay there to choose from.
+
+**Checked under Town Hall:**
+- the yard and nest HUD, the egg and Build sheets, Help, Jobs, the map, banners, and phone width;
+- 194 unit tests and the end-to-end browser test pass.
+
+**Fixed along the way:**
+- **Ability slots:** they take the theme's tiles. On phones they had sat on top of the button dock, in every theme including Classic; they now sit in a row above it, and the "Saved ✓" badge moved up out of their way.
+- **Banners:** themes recolour only the friendly ones. The orange raid banner keeps its warning colours.
+
 ## Nov 3: themes after four games (build 44.1)
 
 Mark: "Think more Stardew Valley, Animal Crossing, Graveyard Keeper, Planet Zoo."

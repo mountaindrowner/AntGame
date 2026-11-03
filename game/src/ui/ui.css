@@ -487,3 +487,5 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #title .t-row.t-skins { flex-wrap: wrap; }
 #title .t-row.t-skins span { flex-basis: 100%; }
 #title .t-row.t-skins .t-opt { min-height: 34px; padding: 0 10px; font-size: 12px; }
+/* Build 44.2: on a phone the ability slots sat on top of the button dock; they go in a row above it. */
+@media (max-width: 720px) { #saved { bottom: calc(env(safe-area-inset-bottom, 0px) + 142px); } #skills { bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); left: 10px; gap: 5px; } #skills .skill { width: 40px; height: 40px; } #skills .skill .ic { font-size: 20px; line-height: 36px; } #skills .skill .secs { line-height: 36px; } }

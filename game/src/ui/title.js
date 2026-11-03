@@ -7,8 +7,11 @@ import { sfx } from '../audio/sfx.js';
 
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
-  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'classic' };
-  try { return Object.assign(def, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { return def; }
+  // Build 44.2: Town Hall is the look (Mark's pick). A theme someone picked themselves stays; a saved default doesn't.
+  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'townhall' };
+  let o = def; try { o = Object.assign(def, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { /* blocked */ }
+  if (!o.skinPicked) o.skin = 'townhall';
+  return o;
 }
 function saveOptions(o) { try { localStorage.setItem(OPTS_KEY, JSON.stringify(o)); } catch (e) { /* blocked */ } }
 
@@ -84,6 +87,7 @@ export class TitleMenu {
     else if (a.startsWith('opt:')) {
       const [, k, v] = a.split(':');
       app.opts[k] = v === 'true' ? true : v === 'false' ? false : v;
+      if (k === 'skin') app.opts.skinPicked = true;
       saveOptions(app.opts);
       this.hooks.applyOptions();
       this._options();

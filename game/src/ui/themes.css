@@ -31,8 +31,11 @@
 :root[data-skin] #hpbar { background: var(--sk-hp, #e4524a); }
 :root[data-skin] #hungerbar { background: var(--sk-food, #8fd36b); }
 :root[data-skin] #banner { border-color: var(--sk-banner-line, #c8a040); }
-:root[data-skin] #banner:not([class*="b-boss"]):not([class*="b-lethal"]) { background: var(--sk-banner-bg, rgba(20,10,4,.88)); color: var(--sk-banner-ink, #fff6e6); }
+:root[data-skin] #banner:not([class*="b-boss"]):not([class*="b-lethal"]):not([class*="b-hard"]) { background: var(--sk-banner-bg, rgba(20,10,4,.88)); color: var(--sk-banner-ink, #fff6e6); }
 :root[data-skin] #banner .bl { font-family: var(--sk-font); }
+/* The ability slots take the theme's tiles. */
+:root[data-skin] #skills .skill { background: var(--sk-tile); border-color: var(--sk-ico-line, var(--sk-line)); border-radius: var(--sk-tile-radius); box-shadow: var(--sk-ico-shadow); }
+:root[data-skin] #skills .skill.ready { border-color: var(--sk-accent); }
 
 /* Headings inside cards (a tip's title, a sheet's name) can take their own face; a header stripe is optional. */
 :root[data-skin] #tipcard b, :root[data-skin] #sheet .row.head strong, :root[data-skin] #sheet .t { font-family: var(--sk-head, var(--sk-font)); }
