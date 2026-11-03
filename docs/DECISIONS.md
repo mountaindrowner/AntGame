@@ -2,6 +2,47 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: day and night (build 43)
+
+Mark: "For sure day and night, which gives us a schedule. Just a day night, a day cycle and a night cycle. Gives us more room to play with concepts." He asked for it as its own build, after the nest expansion.
+
+**The clock:**
+- A day lasts 10 minutes: a short dawn, about 6 minutes of day, dusk, then nearly 3 minutes of night.
+- A new colony starts in the morning.
+- A chip in the top bar shows ☀️, 🌅 or 🌙 and how long until the light turns.
+- A banner marks each change, "Night falls" and "Dawn", and a tip explains night the first time.
+- Surviving your first night pays +1 🧬.
+- The clock is saved; older saves pick it up from their game time.
+
+**What night changes.** Most of it follows real habits:
+- **People and birds are in bed:** no feet, bird strikes or bug spray.
+- **No mower.** It also waits a minute or two after dawn: the heavy dawn dew draws ants onto the lawn, and an early mower there killed far more ants.
+- **Rivals don't send raids at night.**
+- **Night hunters come out:**
+  - the wolf spider moves 20% faster;
+  - toads strike almost twice as often;
+  - assassin bugs reach 40% farther.
+- **Day hunters sleep.** Jumping spiders, hunting wasps and skinks don't hunt, and one carrying an ant drops it when night falls.
+- **The robin sleeps on its roost.**
+  - Ants nearby don't wake it; only being bitten does.
+  - While it's dark it can't fly.
+  - Three ants pin it instead of six.
+  - A night attack on the Old Robin is the clever play.
+- **Dew never forms at night. Dawn brings a heavy dew,** twice the usual amount.
+
+**The look:**
+- The sky and fog shade from day blue through orange at dusk and dawn to deep night blue.
+- The sun dims to a pale blue moonlight.
+- A soft pool of light follows your ant so you can see where you're going.
+- Fireflies blink over the grass.
+- The scent-trail overlay dims with the light, so it doesn't glow at night.
+- The sky above the nest cutaway darkens too; underground stays lamplit.
+- Birdsong fades at night and crickets sing everywhere.
+
+**Checks:**
+- **Tests:** 6 new ones in `tests/daynight.test.js`, 193 in all. The end-to-end browser test passes.
+- **Bots against an always-day copy:** the night rules aren't what slows colonies. Both versions stalled the same way because of the bot's own rule: it saved for a forager upgrade it couldn't pay for, waiting on stone that never came. The bot is fixed, and now reaches about 40 ants by minutes 10–15 on six seeds.
+
 ## Nov 2: the nest grows, a section at a time (build 42)
 
 Mark: "Lets build all the progression that doesnt require anything that isnt build already, and implement the single nest internal expansion." The plan is `SUPERCOLONY.md`. Mark left section prices to me: "appropriately costly without being restrictive". The ant cap is 100 for now, and day/night is a separate build.

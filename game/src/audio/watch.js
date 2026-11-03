@@ -157,10 +157,11 @@ export function soundWatch(app, views) {
     sfx.loop('fireants', stung ? 0.5 : 0);
     // Ambience: the yard or the nest, and the region's own flavour.
     const outside = app.view !== 'nest';
-    sfx.loop('yard', outside ? 0.8 : 0);
+    const night = SIM.isNight(s); // build 43: birdsong fades at night, crickets everywhere
+    sfx.loop('yard', outside ? (night ? 0.25 : 0.8) : 0);
     sfx.loop('nest', outside ? 0 : 0.7);
     const ground = SIM.AREAS[SIM.areaOf(s, Math.floor(views.surface.target.x / T), Math.floor(views.surface.target.z / T))]?.ground;
-    sfx.loop('crickets', outside && /lawn|long|grass|wild/.test(ground || '') ? 0.6 : 0);
+    sfx.loop('crickets', outside && (night || /lawn|long|grass|wild/.test(ground || '')) ? (night ? 0.85 : 0.6) : 0);
     sfx.loop('wet', outside && /wet|mud/.test(ground || '') ? 0.7 : 0);
     // Builders at work, heard while you watch the nest.
     const chipping = !outside && s.ants.some((o) => o.caste === 'builder' && o.atWork && o.task && o.task[0] !== 'h');

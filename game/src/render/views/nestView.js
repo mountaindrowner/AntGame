@@ -629,8 +629,10 @@ export class NestView {
     this._ground(s, t);
 
     // Weather.
-    this.scene.background.set(s.rain.on ? '#6f7f8f' : '#9bc7e6');
-    this.hemi.intensity = s.rain.on ? 0.8 : 1.1;
+    // Build 43: the sky above the cutaway follows the day; underground it's always lamplit.
+    const L = SIM.daylight(s);
+    this.scene.background.set('#121a32').lerp(this._sky || (this._sky = new THREE.Color()), 0).lerp(this._sky.set(s.rain.on ? '#6f7f8f' : '#9bc7e6'), L);
+    this.hemi.intensity = (s.rain.on ? 0.8 : 1.1) * (0.8 + 0.2 * L);
 
     // Camera: follow the player or the queen; drag pans vertically.
     const a = pa && P.inNest ? pa : null;

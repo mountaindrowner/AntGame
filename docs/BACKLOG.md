@@ -22,8 +22,8 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 **Gameplay**
 - **Slowing the whole colony:** dropped. Mark: "don't slow the colony further."
 - **Next up (Mark, Nov 2):**
-  - day and night, its own build;
-  - then daughter colonies via the nuptial flight, the tunnels between nests and the wilds tier (`SUPERCOLONY.md`);
+  - ~~day and night~~ (built in build 43);
+  - daughter colonies via the nuptial flight, the tunnels between nests and the wilds tier (`SUPERCOLONY.md`);
   - boss characters, later.
 - **Nest sections (build 42):**
   - Shut ground looks like open ground apart from its seam and label; a darker tint might read better.

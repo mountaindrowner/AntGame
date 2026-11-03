@@ -187,6 +187,11 @@ export function createUI(app) {
     return h;
   }
   const there = (A) => A.name.replace(/^The /, 'the ');
+  // Build 43: the sun or the moon, and how long till the light turns.
+  function dayChip(s, chip) {
+    const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + 'm' : Math.max(10, Math.round(u / 10) * 10) + 's';
+    return chip(night ? '🌙' : SIM.daylight(s) < 1 ? '🌅' : '☀️', left, night ? `Night: ${left} till dawn. No feet, birds or mower; the spider is faster, toads hunt, the robin sleeps.` : `Day: ${left} till night falls.`);
+  }
   // Build 42: the nest's shut ground, a section at a time. `first`: the section tapped, shown on top.
   function groundList(s, c, first, bare) {
     const open = s.nest.open || {}, B = s.nest.breach;
@@ -611,6 +616,7 @@ export function createUI(app) {
       + (c.genesTotal ? chip('🧬', c.genes, 'Genes: tap to evolve').replace('<span class="chip', '<span data-genes="1" class="chip') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
       + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
+      + dayChip(s, chip)
       + (s.rain.on ? chip('🌧', '', 'Raining: trails wash out') : '')
       + (s.repairs.length ? chip('⚠', s.repairs.length, 'Cave-ins to repair', true) : '')
       + eventChip(s, chip)

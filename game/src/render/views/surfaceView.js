@@ -31,6 +31,9 @@ const TOAD = 48;
 // toad model scale (px a unit): about six tiles nose to tail
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
+const tmpC = new THREE.Color(), tmpC2 = new THREE.Color();
+// Build 43: the colours of the day: sky and fog by day, dusk, night, the moon.
+const DAYC = { sky: "#9bc7e6", fog: "#b9cfd8", rainSky: "#6f7f8f", night: "#121a32", nightFog: "#18213a", dusk: "#e2905e", moon: "#8ea6e8", hemiNight: "#7d8cc8" };
 const tmpQ = new THREE.Quaternion();
 const Q_ID = new THREE.Quaternion();
 const _c2 = new THREE.Color();
@@ -109,6 +112,8 @@ export class SurfaceView {
     this.sun = new THREE.DirectionalLight('#fff0d8', 1.6);
     this.sun.position.set(-0.4, 1, 0.35);
     this.scene.add(this.hemi, this.sun);
+    this.night = new THREE.PointLight('#ffe2b0', 0, 260, 1.1); // build 43: light round your ant at night
+    this.scene.add(this.night);
 
     this.dyn = new THREE.Group();
     this.scene.add(this.dyn);
@@ -529,10 +534,20 @@ export class SurfaceView {
     // Weather and light.
     const raining = s.rain.on;
     this.rain.visible = raining;
-    this.hemi.intensity = raining ? 0.75 : 1.25;
-    this.sun.intensity = raining ? 0.35 : 1.6;
-    this.scene.background.set(raining ? '#6f7f8f' : '#9bc7e6');
-    this.scene.fog.color.set(raining ? '#6f7f8f' : '#b9cfd8');
+    // Build 43: day and night. L: 1 full day, 0 night; dusk and dawn go orange on the way.
+    const L = SIM.daylight(s), glow = Math.max(0, 1 - Math.abs(L - 0.45) / 0.45) * (L < 1 ? 1 : 0);
+    const skyDay = raining ? DAYC.rainSky : DAYC.sky, fogDay = raining ? DAYC.rainSky : DAYC.fog;
+    this.scene.background.copy(tmpC.set(DAYC.night).lerp(tmpC2.set(skyDay), L)).lerp(tmpC2.set(DAYC.dusk), glow * 0.55);
+    this.scene.fog.color.copy(tmpC.set(DAYC.nightFog).lerp(tmpC2.set(fogDay), L)).lerp(tmpC2.set(DAYC.dusk), glow * 0.45);
+    this.hemi.intensity = (raining ? 0.75 : 1.25) * (0.42 + 0.58 * L);
+    this.hemi.color.set(DAYC.hemiNight).lerp(tmpC2.set('#fff2dc'), L);
+    this.sun.intensity = (raining ? 0.35 : 1.6) * Math.max(0.22, L);
+    this.sun.color.set(DAYC.moon).lerp(tmpC2.set('#fff0d8'), L).lerp(tmpC2.set(DAYC.dusk), glow * 0.6);
+    // At night a soft pool of light round your ant, so you can see where you go.
+    const pa2 = P.ant && !P.inNest ? P.ant : null;
+    this.night.intensity = pa2 ? (1 - L) * 1.6 : 0;
+    if (pa2) this.night.position.set(pa2.x, 70, pa2.y);
+    if (this.scent) this.scent.material.color.setScalar(0.4 + 0.6 * L); // (the scent overlay is unlit: dim it with the light)
 
     // Camera: follow the player, or the nest entrance.
     const a = pa && !P.inNest ? pa : null;
@@ -938,6 +953,19 @@ export class SurfaceView {
   // pocking the ground all round while it rains.
   _fx(s, t, fdt) {
     const F = this.fx, cq = this.camera.quaternion;
+    // Build 43: fireflies over the grass at night, drifting and blinking.
+    const dark = 1 - SIM.daylight(s);
+    if (dark > 0.3 && !s.rain.on) for (let i = 0; i < 28; i++) {
+      const h1 = Math.sin(i * 91.7) * 4375.5, h2 = Math.sin(i * 47.3) * 2713.1, u = h1 - Math.floor(h1), v = h2 - Math.floor(h2);
+      const span = 640, cx = Math.floor(this.target.x / span) * span, cz = Math.floor(this.target.z / span) * span;
+      let x = cx + u * span + Math.sin(t * 0.3 + i) * 30, z = cz + v * span + Math.cos(t * 0.27 + i * 2) * 30;
+      if (x < this.target.x - span / 2) x += span; else if (x > this.target.x + span / 2) x -= span;
+      if (z < this.target.z - span / 2) z += span; else if (z > this.target.z + span / 2) z -= span;
+      const blink = Math.sin(t * (1.3 + u) + i * 3.1);
+      if (blink < 0.2) continue;
+      tmpV.set(x, 10 + 8 * Math.sin(t * 0.8 + i), z);
+      F.pushAt('bead', FOOD.bead, tmpV, tmpQ2.identity(), 2 + 1.6 * blink, blink > 0.7 ? '#fff27a' : '#e0c050');
+    }
     for (const h of s.hits || []) {
       const u = (s.t - h.t) / 0.35; if (u < 0 || u > 1) continue;
       const c = h.k === 2 ? '#ffffff' : h.k ? '#ff5236' : '#fff0b0', big = h.k === 2 ? 2 : 1; // build 27: a crit flashes white and big

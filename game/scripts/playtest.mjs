@@ -142,7 +142,7 @@ function eggs() {
   if (n + c.eggQueue.length + c.eggs.length >= cap) return;
   // Save up for the foragers' training once there are hands to spare.
   const fu = SIM.FORAGE[(c.forage || 0) + 1];
-  if (fu && strategy !== 'idle' && n >= 12 && !SIM.canPay(c, fu.cost) && (fu.cost.food || 0) <= c.cap) return;
+  if (fu && strategy !== 'idle' && n >= 12 && !SIM.canPay(c, fu.cost) && (fu.cost.food || 0) <= c.cap && (fu.cost.grit || 0) <= c.grit) return; // (build 43: not when stone is what's short: that stalled colonies for half an hour)
   const f = caste('forager'), b = caste('builder'), nu = caste('nurse'), so = fighters();
   let want = null;
   if (strategy === 'idle') want = f < 6 ? 'forager' : b < 1 ? 'builder' : 'forager';
@@ -250,6 +250,7 @@ const deathsBefore = {};
 for (let i = 0; i < minutes * 60 * 20; i++) {
   const before = new Map(s.ants.filter((a) => !a.team && a.state !== 'dead').map((a) => [a, [a.state, a.caste, a.follow, a.goal]]));
   const spBefore = s.spider ? { passing: s.spider.passing, x: s.spider.x, y: s.spider.y } : null;
+  if (process.env.NODAY) s.dayT = 100; // (A/B: always day)
   SIM.tick(s, 0.05);
   if (process.env.WHY && spBefore) for (const [a, st] of before) if (a.state === 'dead' && Math.hypot(a.x - spBefore.x, a.y - spBefore.y) < 2 * T) whyLog.push({ st: st.join('/'), home: Math.round(Math.hypot(a.x / T - w.ex, a.y / T - w.ey)), passing: !!spBefore.passing, t: Math.round(s.t) });
   if (P.msg && P.msg !== lastMsg) { msgs.push(`${mm(s.t)} ${P.msg}`); lastMsg = P.msg; }
