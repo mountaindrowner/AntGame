@@ -20,6 +20,9 @@ Mark: "put it to the wringer." Bots, a fuzzer and a numbers pass ran the game ha
 10. **The flight notice is saved** (it repeated after a load).
 11. **The hunting wasp** now eats after a kill and is sated for 90 s, like every other hunter. It ate nothing before, and killed 5–20× more. It eats on the ground, where it can be bitten.
 12. **The Antlion Queen could not be killed.** Biters had to stand on the sliding sand, which dragged them to the bottom. She can now be bitten from the rim once she surfaces.
+13. **A daughter far away now counts the same as near.** Her soldiers eat protein (½ a minute each, as real ones do; none before), and her foragers bring in 2.5 food a minute each (was 1.5; real ones measured 2–3). Measured: War Camp of 50, far 42.5 food a minute, near 35–44; protein 16.5 a minute either way.
+
+Mark: balance changes are his call, unless one is absolutely necessary. This one isn't tuning: the game shouldn't change with where you stand.
 
 **Found, not changed (for Mark):** guardian fights won by raw numbers; majors making raids trivial; every run starving by minute 40; the War Camp's 45–60 food a minute; flights at about 30, 45, 55 and 70 minutes, the 5th past 2 hours. See the build-47 report.
 

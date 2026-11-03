@@ -82,3 +82,15 @@ test('daughters are saved, and an older save gains none', () => {
   const old = JSON.parse(SIM.serialize(founded())); old.v = 13; delete old.daughters;
   assert.deepEqual(SIM.deserialize(JSON.stringify(old)).daughters, []);
 });
+
+test('far away her soldiers still eat protein and her foragers bring in what real ones would (build 47)', () => {
+  const s = founded(); beat(s, 3); s.colony.evo.royal = true; rich(s.colony);
+  const oi = farOutpost(s); SIM.foundDaughter(s, oi, 'war'); const d = s.daughters[0];
+  step(s, 11); d.tunnel.progress = d.tunnel.need; step(s, 1);
+  const c = s.colony, run = (pop) => { d.pop = pop; d.eggT = -1e9; c.protein = 200; const p0 = c.protein, f0 = c.foodTotal; for (let i = 0; i < 60; i++){ c.store = 100; step(s, 1); } /* fed, so no meat is eaten as food */ return [p0 - c.protein, c.foodTotal - f0]; };
+  const [p0, f0] = run({}), [p1, f1] = run({ forager: 10, soldier: 20 });
+  assert.equal(d.real, false);
+  const prot = p1 - p0, food = f1 - f0;
+  assert.ok(prot >= 9 && prot <= 12, `20 soldiers eat about 10 protein a minute (${prot.toFixed(1)})`);
+  assert.ok(food >= 24, `10 foragers bring in about 25 food a minute (${food.toFixed(1)})`);
+});

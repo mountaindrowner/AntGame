@@ -333,6 +333,7 @@ function foundDaughter(s, oi, role){
   return true;
 }
 function daughterHome(s, d){ const w = s.world; w.dhomes = w.dhomes || {}; const k = d.key + ':' + d.ex + ',' + d.ey; return w.dhomes[k] || (w.dhomes[k] = bfs(w.blocked, d.ex, d.ey)); }
+const DFORAGE = 2.5; // build 47: a far daughter's forager, food a minute (measured near: 2 to 3)
 const dpop = d => Object.values(d.pop || {}).reduce((a, b) => a + b, 0);
 const daughterAnts = (s, d) => s.ants.filter(a => a.dh === d.key && a.state !== 'dead');
 const daughterCount = (s, d) => dpop(d) + daughterAnts(s, d).length;
@@ -382,8 +383,8 @@ function tickDaughters(s, dt){
     }
     // Build 47: far away her ants starve too, when the store has been empty a while (as real ones do).
     if (!d.real && c.starve > 30){ d.starveAcc = (d.starveAcc || 0) + dt; if (d.starveAcc >= 10){ d.starveAcc = 0; const k = Object.keys(d.pop).filter(q => d.pop[q] > 0).sort((p, q) => d.pop[q] - d.pop[p])[0]; if (k){ d.pop[k]--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } }
-    // Far away, her foragers' work as a rate: a load and a half a minute each, into the main store.
-    if (!d.real && d.pop.forager){ c.store = Math.min(c.cap, c.store + d.pop.forager*1.5/60*dt); c.foodTotal += d.pop.forager*1.5/60*dt; }
+    // Far away, her foragers' work as a rate into the main store (build 47: 2.5 a minute each, what real ones bring in).
+    if (!d.real && d.pop.forager){ c.store = Math.min(c.cap, c.store + d.pop.forager*DFORAGE/60*dt); c.foodTotal += d.pop.forager*DFORAGE/60*dt; }
   }
 }
 // ---------- build 42: breaking into new ground ----------
@@ -1308,8 +1309,9 @@ function tickColony(s, c, dt){
     if (picked(s, 'nurse', 'medic') || s.ants.some(a => !a.team && a.caste !== 'forager' && FAMILY[a.caste] === 'nest' && (a.state === 'in' || a.state === 'build') && promo(s, a, 'healer')))
       for (const a of s.ants) if (!a.team && (a.state === 'in' || a.state === 'build') && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
-    if (fighters.length){ c.protein -= fighters.length*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
-      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
+    let farF = 0; for (const d of s.daughters || []) for (const k in d.pop || {}) if (CASTES[k].fight >= 3) farF += d.pop[k]; /* build 47: a far daughter's soldiers eat protein too */
+    if (fighters.length + farF){ c.protein -= (fighters.length + farF)*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
+      if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer); if (v.length) killAnt(s, v[Math.floor(Math.random()*v.length)], 'starved'); else { const d = (s.daughters || []).find(q => !q.real && q.pop && q.pop.soldier > 0); if (d){ d.pop.soldier--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need protein.'; } }
       else c.pstarve = 0; }
     // Build 23: the rooms at work.
     // Fungus garden: leaves the gardeners brought in grow into food.
