@@ -137,7 +137,7 @@ const WALLS = {
 const wallCache = new Map();
 export function roomWallMaterial(key) {
   if (!wallCache.has(key)) {
-    const draw = WALLS[key] || WALLS.workshop;
+    const draw = WALLS[key] || WALLS[DALIAS[key]] || WALLS.workshop;
     const tex = canvasTexture(32, 32, (g) => draw(g, rng(key.length * 97 + 13)));
     // Vertex colour and alpha (build 20.5): the panel darkens and fades at its edge.
     wallCache.set(key, psx({ map: tex, vertexColors: true, transparent: true }));
@@ -145,6 +145,9 @@ export function roomWallMaterial(key) {
   return wallCache.get(key);
 }
 
+// Build 50: a daughter's rooms borrow the look of the main nest's nearest kin; an empty chamber is bare earth.
+const DALIAS = { drill: 'barracks', mess: 'granary', royalnursery: 'nursery', broodcells: 'hatchery', lookout: 'store', maproom: 'store', cutting: 'workshop', cellar: 'workshop', greenhouse: 'fungus', dewvault: 'honeypot', dslot: 'bare' };
+WALLS.bare = (g, r) => { g.fillStyle = '#6a4a30'; g.fillRect(0, 0, 32, 32); for (let i = 0; i < 70; i++) { g.fillStyle = r() < 0.5 ? '#5a3e28' : '#7a5838'; g.fillRect(Math.floor(r() * 32), Math.floor(r() * 32), 1 + (r() < 0.3), 1); } };
 // ---------------------------------------------------------------- props
 // d.put(geo, [x, y, z], [sx, sy, sz], color, [rx, ry, rz]) places a prop in
 // room-local coordinates. d also carries the colony, time and room size.
@@ -362,7 +365,7 @@ function seams(d, r) {
 
 // Dress one room. put(geo, pos, scale, color, rot) receives WORLD coordinates.
 export function dressRoom(r, ctx) {
-  const fn = DRESS[r.key];
+  const fn = DRESS[r.key] || DRESS[DALIAS[r.key]];
   const T = ctx.T, w = (r.w || 4) * T, h = (r.h || 3) * T;
   const x0 = r.x0 * T, floor = -(r.y0 + (r.h || 3)) * T;
   const d = {

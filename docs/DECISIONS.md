@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 3: her nest, her rooms, travel by tunnel; the tree's top nodes gated (build 50)
+
+Mark: "Do it" (the next daughter build in SUPERCOLONY.md).
+
+- **Her nest.** Pre-dug for her, with a shaft, her queen's chamber, a hatchery and two empty chambers. It's drawn by the same nest view, given her nest, queen and eggs in place of yours. Her ants rest in her chambers, and inside her nest they're real ants.
+- **Getting there.**
+  - Walk to her door and go in.
+  - Or travel by tunnel from inside any nest: tap 🏕 in the top bar, pick her, and get about a second of dark rings (the loading moment) before you're in her nest.
+  - Leave by her door, or travel home the same way.
+- **Her two rooms.**
+  - Built from your stores while you're inside her nest: her seat first, then her specialty (table in SUPERCOLONY.md).
+  - They borrow the look of the main nest's nearest kin room, for now.
+- **The tree's top nodes** (17 of them, the plan of record's list) need the right daughter's seat. They show her icon in the tree. The Fungus garden's level III needs the Garden's Greenhouse. **Nodes a save already owns stay owned.**
+- **Fixed on the way:** a daughter's real ants resting inside used to be drawn at the main nest's shaft. The main nest now shows only its own ants.
+- **Not yet:** walking about inside her nest (you look round from her shaft), and the great evolutions that need several daughters.
+
 ## Nov 3: the other four daughters (build 49)
 
 Mark: "build the rest of the daughter types." From the plan of record (SUPERCOLONY.md), each is now foundable, lays her role's ants, and gives the main nest a gift once joined:

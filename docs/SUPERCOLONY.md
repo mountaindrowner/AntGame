@@ -153,7 +153,18 @@ Mark: daughters are **support colonies with a role, not second capitals**. Some 
 | Quarry | 40% builders, 50% foragers, 10% soldiers | 🪨 a stone a minute per 4 of her ants; your builders dig and mend 25% faster |
 | Garden | 90% foragers, 10% soldiers | 🍯 a sugar a minute per 5 of her ants; your fungus gardens grow 25% faster |
 
-A caste that needs meat hatches as a forager when there's none. Her builders and nurses stay in her chambers; her foragers forage round her door. Still to come: her own nest view, her special rooms, and the tree's top nodes gated to her.
+A caste that needs meat hatches as a forager when there's none. Her builders and nurses stay in her chambers; her foragers forage round her door. 
+**Her nest, her rooms, the tunnels (build 50).** Each daughter has her own nest: a shaft, her queen's chamber, a hatchery and two empty chambers. You go in at her door, or travel by tunnel from inside any nest (a second of dark rings, then the other nest). Inside, you build her two rooms from your stores: her seat, then her specialty. Her seat unlocks her branch's top evolutions:
+
+| Daughter | Seat (unlocks) | Specialty |
+|---|---|---|
+| War Camp | Drill yard: Colony memory, Brood raiding, Honour guard | Mess hall: her fighters eat 25% less meat |
+| Brood Hall | Royal nursery: Polymorphism, Exploders, Long-lived workers, Lineage | Brood cells: she holds 75, not 50 |
+| Watch | Lookout: Hive mind, War columns, Propaganda scent, Sun compass | Map room: your foragers range 15% further |
+| Quarry | Cutting hall: Deep halls, Thermal chimneys, Highways, Shared stores | Rock cellar: her stone doubled |
+| Garden | Greenhouse: Honey economy, Flower nectar, the Fungus garden's level III | Honeydew vault: her sugar doubled |
+
+Seats cost about 120 food plus a themed resource and take 90 s; specialties about 200 food and take 150 s (a Quarry builds half again faster). Still to come: the great evolutions that need several daughters (Supercolony, Swarm Day and the pacts).
 
 ### Tunnels: the big goal
 

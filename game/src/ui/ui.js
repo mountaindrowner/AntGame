@@ -193,7 +193,46 @@ export function createUI(app) {
     const n = ds.reduce((a, d) => a + (d.state === 'ready' ? SIM.daughterCount(s, d) : 0), 0);
     const tip = ds.map((d) => { const R = SIM.DAUGHTERS[d.key]; return d.state === 'ready' ? `${R.short}: ${SIM.daughterCount(s, d)} of ${SIM.DAUGHTER_CAP}` : d.state === 'tunnel' ? `${R.short}: tunnel ${Math.floor((d.tunnel.progress / d.tunnel.need) * 100)}%` : `${R.short}: the queen is flying`; }).join(' · ');
     const digging = ds.find((d) => d.state === 'tunnel');
-    return chip('🏕', digging && !n ? ` ${Math.floor((digging.tunnel.progress / digging.tunnel.need) * 100)}%` : n, 'Daughter colonies. ' + tip);
+    return chip('🏕', digging && !n ? ` ${Math.floor((digging.tunnel.progress / digging.tunnel.need) * 100)}%` : n, 'Daughter colonies (tap). ' + tip).replace('<span class="chip', '<span data-colonies="1" class="chip');
+  }
+  // Build 50: your daughter colonies: each one's ants, her gift, her two rooms, and the tunnels to travel by.
+  const COST_ICON = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨', sugar: '🍯', chitin: '🪲', wood: '🪵', genes: '🧬' };
+  const costText = (cost) => Object.entries(cost).map(([k, v]) => `${v}${COST_ICON[k] || ' ' + k}`).join(' ');
+  function daughterSheet(s, c) {
+    const P0 = P(), here = P0.inNest && P0.nestKey, ds = [...(s.daughters || [])].sort((a, b) => (b.key === here) - (a.key === here));
+    let h = `<div class="row head"><strong>${here ? SIM.DAUGHTERS[here].icon + ' ' + SIM.DAUGHTERS[here].short : 'Daughter colonies'}</strong><button class="x" data-close="1">Close</button></div>`;
+    if (here) h += `<div class="note">You’re in her nest. Build her rooms here, paid from your stores. Tap above ground to step out at her door, or travel home by tunnel.</div><div class="btns one"><button data-travel="home">🏠 Travel home by tunnel</button></div>`;
+    else if (P0.inNest) h += `<div class="note">From inside your nest you can travel by tunnel to any daughter whose tunnel is through.</div>`;
+    else h += `<div class="note">Go inside a nest to travel by tunnel, or walk to a daughter’s door and go in.</div>`;
+    if (!ds.length) h += `<div class="note">None yet. With the Royal chamber evolved, a winged queen comes after the 3rd, 5th, 7th, 9th and 11th guardian beaten.</div>`;
+    for (const d of ds) {
+      const R = SIM.DAUGHTERS[d.key], ready = d.state === 'ready';
+      h += `<div class="sec">${R.icon} ${R.short}</div>`;
+      h += `<div class="note">${ready ? `${SIM.daughterCount(s, d)} of ${SIM.dcap(s, d)} ants. ${R.line}` : d.state === 'tunnel' ? `Her tunnel: ${Math.floor((d.tunnel.progress / d.tunnel.need) * 100)}%.` : 'Her queen is flying.'}</div>`;
+      if (!ready) continue;
+      if (d.key !== here) { const tl = SIM.travelLock(s, d.key); h += `<div class="btns one"><button data-travel="${d.key}" ${tl ? 'disabled' : ''} title="${tl}">🕳 Travel to ${R.short} by tunnel${tl ? `<i>${tl}</i>` : ''}</button></div>`; }
+      for (const rk of SIM.DROOMS_OF[d.key]) {
+        const Rm = SIM.DROOMS[rk], i = Rm.seat ? 0 : 1, have = (d.rooms || [])[i], lock = SIM.dRoomLock(s, d.key, rk);
+        const state = have && have.done ? '✅ built' : have ? `building ${Math.floor(((have.progress || 0) / Rm.work) * 100)}%` : '';
+        h += `<div class="dr"><div><b>${Rm.name}</b>${Rm.seat ? ' <i>(her seat)</i>' : ''}<div class="note">${Rm.desc}</div></div>`
+          + (state ? `<span class="done">${state}</span>` : `<button data-droom="${d.key}:${rk}" ${lock ? 'disabled' : ''} title="${lock}">${costText(Rm.cost)}${lock ? `<i>${lock}</i>` : ''}</button>`) + '</div>';
+      }
+    }
+    return h;
+  }
+  // Through the tunnel: a moment of dark, then the other nest (build 50).
+  function goTunnel(key) {
+    const s = app.s, why = SIM.travelLock(s, key);
+    if (why) { flash('Tunnel: ' + why + '.', /^Tunnel:/, 2400); return; }
+    closeMenu();
+    let tv = document.getElementById('tunnelfx');
+    if (!tv) { tv = document.createElement('div'); tv.id = 'tunnelfx'; tv.innerHTML = '<div class="ring"></div><div class="ring r2"></div><div class="ring r3"></div><b></b>'; document.body.appendChild(tv); }
+    const R = key ? SIM.DAUGHTERS[key] : null;
+    tv.querySelector('b').textContent = R ? `To ${R.name}` : 'Home';
+    tv.classList.remove('on'); void tv.offsetWidth; tv.classList.add('on');
+    sfx.play('roomPlaced');
+    setTimeout(() => { SIM.travel(app.s, key); app.view = 'nest'; app.focus = { x: SIM.SHAFT, y: 9 }; app.panX = 0; app.panY = 0; }, 450);
+    setTimeout(() => tv.classList.remove('on'), 1100);
   }
   // Build 43: the sun or the moon, and how long till the light turns.
   function dayChip(s, chip) {
@@ -377,6 +416,8 @@ export function createUI(app) {
       h = renderReborn();
     } else if (app.menu === 'jobs') {
       h = renderJobs();
+    } else if (app.menu === 'daughters') {
+      h = daughterSheet(s, c);
     } else if (app.menu === 'ground') {
       h += `<div class="row head"><strong>New ground</strong><button class="x" data-close="1">Close</button></div>` + groundList(s, c, app.menuCell, true);
     } else if (app.menu === 'catalog') {
@@ -689,7 +730,9 @@ export function createUI(app) {
     if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', why ? 'Outpost: ' + why : 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('dim', !!why); }
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;
-    el.enter.classList.toggle('hidden', !nearHome);
+    const nearD = a && !P().inNest && (s.daughters || []).find((d) => d.state === 'ready' && Math.hypot(a.tx - d.ex, a.ty - d.ey) < 4); /* build 50 */
+    el.enter.classList.toggle('hidden', !nearHome && !nearD);
+    app.nearDaughter = nearD && !nearHome ? nearD.key : null;
     el.barS.classList.toggle('hidden', app.view !== 'surface');
     el.barN.classList.toggle('hidden', app.view !== 'nest');
     el.buildNest.classList.toggle('hidden', s.phase !== 'dig');
@@ -719,7 +762,7 @@ export function createUI(app) {
   // The map button opens the photo map; its "Whole yard" button opens the plan.
   const mapView = new MapView(app, () => openMap());
   el.map.addEventListener('click', () => { if (mapView.isOpen) mapView.close(); else { closeMenu(); mapView.open(); } });
-  el.stats.addEventListener('click', (e) => { if (e.target.closest('.more')) { if (app.menu === 'colony') closeMenu(); else openColony(); } if (e.target.closest('[data-genes]')) openEvo('bodies'); });
+  el.stats.addEventListener('click', (e) => { if (e.target.closest('.more')) { if (app.menu === 'colony') closeMenu(); else openColony(); } if (e.target.closest('[data-genes]')) openEvo('bodies'); if (e.target.closest('[data-colonies]')) { if (app.menu === 'daughters') closeMenu(); else openMenu('daughters'); } });
   el.msg.addEventListener('click', (e) => { if (e.target && e.target.id === 'intronext') introAdvance(); if (e.target && e.target.id === 'introskip') { const s = app.s; s.seen.intro = 'done'; s.seen.dig = s.seen.nest = s.seen.surface = true; } });
   el.sheet.addEventListener('click', (e) => {
     const s = app.s;
@@ -732,6 +775,8 @@ export function createUI(app) {
     if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.raid) { if (SIM.startRaid(s, b.dataset.raid)) { closeMenu(); sfx.play('raid'); } else flash('Raid: ' + SIM.raidLock(s, b.dataset.raid) + '.', /^Raid:/, 2600); return; }
+    if (b.dataset.travel) { goTunnel(b.dataset.travel === 'home' ? null : b.dataset.travel); return; }
+    if (b.dataset.droom) { const [dk, rk] = b.dataset.droom.split(':'); if (SIM.buildDRoom(s, dk, rk)) sfx.play('roomPlaced'); else flash(SIM.DROOMS[rk].name + ': ' + SIM.dRoomLock(s, dk, rk) + '.', /:/, 2600); renderSheet(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.roomup) { SIM.upgradeRoom(s, b.dataset.roomup); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
@@ -769,12 +814,14 @@ export function createUI(app) {
     const s = app.s, a = P().ant;
     if (!a) return;
     P().enterReq = true;
-    P().tx = (s.world.ex + 0.5) * T;
-    P().ty = (s.world.ey + 0.5) * T;
+    const d = app.nearDaughter && (s.daughters || []).find((q) => q.key === app.nearDaughter); /* build 50: her door */
+    P().enterKey = d ? d.key : null;
+    P().tx = ((d ? d.ex : s.world.ex) + 0.5) * T;
+    P().ty = ((d ? d.ey : s.world.ey) + 0.5) * T;
     P().holding = false;
   });
   el.buildNest.addEventListener('click', () => { if (SIM.buildNest(app.s)) closeMenu(); });
-  el.queen.addEventListener('click', () => openMenu('egg'));
+  el.queen.addEventListener('click', () => openMenu(P().inNest && P().nestKey ? 'daughters' : 'egg'));
   // The Evolution window (build 14), opened by Evolve and the 🧬 chip.
   const evo = new EvolveView(app, {
     goals: () => growGoals(app.s, app.s.colony),
@@ -785,7 +832,7 @@ export function createUI(app) {
   const openEvo = (page) => { closeMenu(); if (mapView.isOpen) mapView.close(); evo.open(page); };
   el.evolve.addEventListener('click', () => (evo.isOpen ? evo.close() : openEvo()));
   el.jobs.addEventListener('click', () => (app.menu === 'jobs' ? closeMenu() : openMenu('jobs')));
-  el.level.addEventListener('click', () => { if (app.placing) app.placing = null; else openMenu('catalog'); });
+  el.level.addEventListener('click', () => { if (app.placing) app.placing = null; else openMenu(P().inNest && P().nestKey ? 'daughters' : 'catalog'); });
   el.exitNest.addEventListener('click', () => { P().ntx = SHAFT; P().nty = 0; P().exiting = true; });
 
   let recN = 0, recTimer = null;

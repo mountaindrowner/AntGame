@@ -361,6 +361,7 @@ export class NestView {
 
   setState(s) {
     this.state = s;
+    this.knownRooms = null; this.clearing = []; // build 50: a nest you arrive in isn't a nest being built
     this.ver = -1;
     this.camInit = false;
   }
@@ -578,6 +579,7 @@ export class NestView {
     // Ants inside, then the player.
     for (const a of s.ants) {
       if (a.team || a.isPlayer || !(a.state === 'in' || a.state === 'build')) continue;
+      if ((a.dh || null) !== (s.dhKey || null)) continue; // build 50: a daughter's ants in her nest, the main nest's in yours
       this._pushAnt(a, antColor(a), rankScale(a), frameT, t);
     }
     const pa = P.ant;

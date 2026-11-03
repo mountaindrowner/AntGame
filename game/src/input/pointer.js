@@ -38,6 +38,7 @@ export function attachPointer(canvas, app, ui, views) {
 
   function nestTap(cx, cy) {
     const s = app.s;
+    if (P().inNest && P().nestKey) { if (cy < 0) P().exiting = true; else ui.openMenu('daughters'); return; } // build 50: her nest: look, build her rooms, step out
     if (s.phase === 'dig') { SIM.queenDig(s, cx, cy); return; }
     const q = s.queen;
     if (Math.abs(cx - q.x) <= 1 && Math.abs(cy - q.y) <= 1) { ui.openMenu('egg'); return; }

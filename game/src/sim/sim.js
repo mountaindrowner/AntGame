@@ -309,6 +309,79 @@ const DAUGHTERS = {
   quarry: { name: 'the Quarry', short: 'Quarry', icon: '⛏', branch: 'Nest', mix: { builder: 0.4, forager: 0.5, soldier: 0.1 }, does: 'stone; your builders dig faster', line: 'She quarries 🪨 stone, a stone a minute for every 4 of her ants, and your builders dig and mend 25% faster.' },
   garden: { name: 'the Garden', short: 'Garden', icon: '🌿', branch: 'Symbiosis', mix: { forager: 0.9, soldier: 0.1 }, does: 'honeydew; your fungus grows faster', line: 'Her herds give 🍯 sugar, one a minute for every 5 of her ants, and your fungus gardens grow 25% faster.' },
 };
+// Build 50: each daughter's own nest. Pre-dug for her: a shaft, her queen's chamber, a hatchery, and two empty
+// chambers for her two rooms, built from your stores while you're inside her nest. Her first room (her seat)
+// unlocks her branch's top evolutions; her second is her specialty.
+const DROOMS = {
+  drill:        { d: 'war',    seat: true, name: 'Drill yard',     cost: { food: 120, grit: 30, protein: 20 }, work: 90,  w: 5, h: 3, desc: 'Unlocks the War Camp’s evolutions: Colony memory, Brood raiding, Honour guard' },
+  mess:         { d: 'war',    name: 'Mess hall',                  cost: { food: 200, protein: 40, wood: 10 }, work: 150, w: 5, h: 3, desc: 'Her fighters eat 25% less 🥩 meat' },
+  royalnursery: { d: 'brood',  seat: true, name: 'Royal nursery',  cost: { food: 120, grit: 30, sugar: 20 }, work: 90,  w: 5, h: 3, desc: 'Unlocks the Brood Hall’s evolutions: Polymorphism, Exploders, Long-lived workers, Lineage' },
+  broodcells:   { d: 'brood',  name: 'Brood cells',                cost: { food: 220, water: 30, sugar: 30 }, work: 150, w: 5, h: 3, desc: 'She holds 75 ants, not 50' },
+  lookout:      { d: 'watch',  seat: true, name: 'Lookout',        cost: { food: 120, grit: 40 }, work: 90,  w: 5, h: 3, desc: 'Unlocks the Watch’s evolutions: Hive mind, War columns, Propaganda scent, Sun compass' },
+  maproom:      { d: 'watch',  name: 'Map room',                   cost: { food: 180, grit: 40, wood: 15 }, work: 150, w: 5, h: 3, desc: 'Your foragers range 15% further' },
+  cutting:      { d: 'quarry', seat: true, name: 'Cutting hall',   cost: { food: 120, grit: 30 }, work: 90,  w: 5, h: 3, desc: 'Unlocks the Quarry’s evolutions: Deep halls, Thermal chimneys, Highways, Shared stores' },
+  cellar:       { d: 'quarry', name: 'Rock cellar',                cost: { food: 180, grit: 60 }, work: 150, w: 5, h: 3, desc: 'Her stone doubled' },
+  greenhouse:   { d: 'garden', seat: true, name: 'Greenhouse',     cost: { food: 120, water: 30, sugar: 10 }, work: 90,  w: 5, h: 3, desc: 'Unlocks the Garden’s evolutions: Honey economy, Flower nectar, and the Fungus garden’s level III' },
+  dewvault:     { d: 'garden', name: 'Honeydew vault',             cost: { food: 180, sugar: 40, wood: 10 }, work: 150, w: 5, h: 3, desc: 'Her 🍯 sugar doubled' },
+};
+for (const k in DROOMS) ROOMS[k] = DROOMS[k];
+ROOMS.dslot = { name: 'Empty chamber', cost: {}, work: 0, w: 5, h: 3, desc: 'Room for one of her rooms' };
+const DROOMS_OF = {}; for (const k in DROOMS) (DROOMS_OF[DROOMS[k].d] = DROOMS_OF[DROOMS[k].d] || []).push(k); // seat first
+for (const k in DROOMS_OF) DROOMS_OF[k].sort((a, b) => (DROOMS[b].seat ? 1 : 0) - (DROOMS[a].seat ? 1 : 0));
+// The tree's top nodes, each needing a daughter's seat room (the plan of record). Nodes a save owns stay owned.
+const EVO_GATE = { polymorphism: 'royalnursery', exploders: 'royalnursery', longlived: 'royalnursery', lineage: 'royalnursery',
+  memory: 'drill', broodraid: 'drill', honourguard: 'drill', hivemind: 'lookout', warcolumns: 'lookout', propaganda: 'lookout', suncompass: 'lookout',
+  deephalls: 'cutting', chimneys: 'cutting', highways: 'cutting', shared: 'cutting', honeyeco: 'greenhouse', nectar: 'greenhouse' };
+const dRoomBuilt = (s, rkey) => { const R = DROOMS[rkey], d = R && (s.daughters || []).find(q => q.key === R.d); return !!(d && (d.rooms || []).some(r => r && r.key === rkey && r.done)); };
+const dcap = (s, d) => DAUGHTER_CAP + (d.key === 'brood' && dRoomBuilt(s, 'broodcells') ? 25 : 0);
+const DQUEEN = { key: 'queen', x0: 19, y0: 6, w: 4, h: 3 }, DHATCH = { key: 'hatchery', x0: 26, y0: 6, w: 4, h: 3 };
+const DSLOTS = [{ x0: 16, y0: 12, w: 5, h: 3 }, { x0: 28, y0: 12, w: 5, h: 3 }];
+const DOPEN = {}; for (const S of NEST_SECTIONS) DOPEN[S.key] = true;
+const dnestCache = new WeakMap();
+function daughterNest(d){
+  let n = dnestCache.get(d);
+  if (!n){ const cells = new Uint8Array(NW*NH), dig = (x, y) => { cells[y*NW + x] = 1; };
+    for (let y = 0; y <= 14; y++) dig(SHAFT, y);
+    for (const r of [DQUEEN, DHATCH, ...DSLOTS]) for (let y = r.y0; y < r.y0 + r.h; y++) for (let x = r.x0; x < r.x0 + r.w; x++) dig(x, y);
+    dig(23, 7); dig(25, 7); for (let x = 21; x < SHAFT; x++) dig(x, 13); for (let x = SHAFT + 1; x < 28; x++) dig(x, 13);
+    n = { cells, rooms: [], digOrders: [], fillOrders: [], spoil: 0, open: DOPEN, breach: null, ver: 'd:' + d.key, sig: null }; dnestCache.set(d, n); }
+  const sig = (d.rooms || []).map(r => r ? r.key + (r.done ? '+' : '-') : '_').join();
+  if (n.sig !== sig){ n.sig = sig; n.rooms = [DQUEEN, DHATCH, ...DSLOTS.map((S, i) => { const r = (d.rooms || [])[i]; return { key: r && r.done ? r.key : 'dslot', x0: S.x0, y0: S.y0, w: S.w, h: S.h }; })]; }
+  return n;
+}
+// Floor spots in her chambers, where her ants rest when you're inside.
+const DSPOTS = []; for (const r of [DQUEEN, DHATCH, ...DSLOTS]) for (let x = r.x0; x < r.x0 + r.w; x++) DSPOTS.push([x + 0.5, r.y0 + r.h - 0.5]);
+function dRoomLock(s, dkey, rkey){
+  const R = DROOMS[rkey], d = (s.daughters || []).find(q => q.key === dkey), P = s.player;
+  if (!R || R.d !== dkey || !d) return 'not hers';
+  if (d.state !== 'ready') return 'her tunnel isn’t through yet';
+  const i = R.seat ? 0 : 1, have = (d.rooms || [])[i];
+  if (have) return have.done ? 'built' : 'being built';
+  if (!R.seat && !((d.rooms || [])[0] || {}).done) return 'build her ' + DROOMS[DROOMS_OF[dkey][0]].name + ' first';
+  if (!(P.inNest && P.nestKey === dkey)) return 'go into her nest to build it';
+  if (!canPay(s.colony, R.cost)) return 'needs ' + Object.entries(R.cost).map(([k, v]) => v + ' ' + k).join(', ');
+  return '';
+}
+function buildDRoom(s, dkey, rkey){
+  if (dRoomLock(s, dkey, rkey)) return false;
+  const R = DROOMS[rkey], d = s.daughters.find(q => q.key === dkey); payCost(s.colony, R.cost);
+  d.rooms = d.rooms || [null, null]; d.rooms[R.seat ? 0 : 1] = { key: rkey, done: false, progress: 0 }; s.events.push('roomPlaced'); return true;
+}
+// Travel by tunnel (build 50): from inside one nest to inside another, home or a joined daughter.
+function travelLock(s, dkey){
+  const P = s.player; if (!P.ant || !P.inNest) return 'be inside a nest';
+  if ((P.nestKey || null) === (dkey || null)) return 'you are there';
+  if (dkey){ const d = (s.daughters || []).find(q => q.key === dkey); if (!d || d.state !== 'ready') return 'her tunnel isn’t through yet'; }
+  return '';
+}
+function travel(s, dkey){
+  if (travelLock(s, dkey)) return false;
+  const P = s.player, a = P.ant, w = s.world, d = dkey ? s.daughters.find(q => q.key === dkey) : null;
+  P.nestKey = dkey || null; P.ntx = null; P.exiting = false; P.tx = null;
+  a.nx = SHAFT + 0.5; a.ny = 0.5; a.ntx = SHAFT; a.nty = 0;
+  const ex = d ? d.ex : w.ex, ey = d ? d.ey : w.ey; a.tx = ex; a.ty = ey; a.x = (ex + 0.5)*T; a.y = (ey + 0.5)*T;
+  s.events.push('tunnel'); return true;
+}
 // Build 49: a daughter joined by her tunnel (her gifts to the main nest work only then).
 const joined = (s, key) => !!(s.daughters && s.daughters.length && s.daughters.some(d => d.key === key && d.state === 'ready'));
 // Build 49: the Watch sees raiders set off: every fighter at home turns out to meet them.
@@ -388,16 +461,16 @@ function tickDaughters(s, dt){
       if (d.tunnel.progress >= d.tunnel.need){ d.state = 'ready'; d.tunnel.progress = d.tunnel.need; d.readyT = s.t;
         if (d.key === 'watch'){ reveal(s, d.ex, d.ey, AREA*2.5); outpostsChanged(s); } /* build 49: her scouts map the ground round her; outposts reach further */
         s.banner = { key: 'tunnel-' + d.key, t: s.t, icon: R.icon, title: R.short + ' is joined', line: `The tunnel reaches ${R.name}. Her chambers are dug and she starts laying, fed from your stores. ${R.line || ''}`, kind: 'gift' }; s.events.push('daughter');
-        P.msg = `${R.short} is open: up to ${DAUGHTER_CAP} ants, fed from your stores.`; }
+        d.rooms = d.rooms || [null, null]; P.msg = `${R.short} is open: up to ${DAUGHTER_CAP} ants, fed from your stores. Travel there by tunnel from inside your nest.`; }
       continue;
     }
     // Ready: near you she is real ants, far away numbers.
-    const dist = pa ? Math.hypot(pa.x/T - d.ex, pa.y/T - d.ey) : 1e9;
+    const dist = P.inNest && P.nestKey === d.key ? 0 : pa ? Math.hypot(pa.x/T - d.ex, pa.y/T - d.ey) : 1e9; /* build 50: inside her nest counts as near */
     if (!d.real && dist < AREA*1.5) realizeDaughter(s, d);
     else if (d.real && dist > AREA*1.8) abstractDaughter(s, d); // (under the 2 regions she must be from home: at home she is always numbers)
     // Her eggs, paid from the main stores.
     d.eggT += dt;
-    if (d.eggT >= 30 && daughterCount(s, d) < DAUGHTER_CAP){
+    if (d.eggT >= 30 && daughterCount(s, d) < dcap(s, d)){
       const caste = daughterCaste(s, d), cost = eggCost(s, caste); /* build 47.2: the same egg discounts as the main nest; build 49: her own mix */
       if (c.store > 15 && payCost(c, cost)){ d.eggT = 0; d.hatched++;
         if (d.real){ const a = mkAnt(s, caste, 'in', d.ex, d.ey, 0); a.dh = d.key; a.rest = 1; if (CASTES[caste].fight >= 3 && d.key === 'war') a.xp = Math.max(a.xp || 0, RANKS[1].xp); }
@@ -405,8 +478,11 @@ function tickDaughters(s, dt){
     }
     // Build 47: far away her ants starve too, when the store has been empty a while (as real ones do).
     if (!d.real && c.starve > 30){ d.starveAcc = (d.starveAcc || 0) + dt; if (d.starveAcc >= 10){ d.starveAcc = 0; const k = Object.keys(d.pop).filter(q => d.pop[q] > 0).sort((p, q) => d.pop[q] - d.pop[p])[0]; if (k){ d.pop[k]--; c.deaths.starved = (c.deaths.starved || 0) + 1; } } }
-    // Build 49: the Quarry's stone and the Garden's honeydew, from her ants near or far.
-    if (d.key === 'quarry' || d.key === 'garden'){ const per = d.key === 'quarry' ? 4 : 5; d.giftAcc = (d.giftAcc || 0) + (d.real ? daughterAnts(s, d).length : dpop(d))/per/60*dt;
+    // Build 50: her rooms going up (a Quarry builds half again faster).
+    for (const r of d.rooms || []) if (r && !r.done){ r.progress = (r.progress || 0) + dt*(d.key === 'quarry' ? 1.5 : 1); if (r.progress >= ROOMS[r.key].work){ r.done = true; s.events.push('roomDone');
+      s.banner = { key: 'droom-' + r.key, t: s.t, icon: R.icon, title: ROOMS[r.key].name + ' built', line: `In ${R.name}: ${ROOMS[r.key].desc}.`, kind: 'gift' }; } }
+    // Build 49: the Quarry's stone and the Garden's honeydew, from her ants near or far (build 50: doubled by her Rock cellar or Honeydew vault).
+    if (d.key === 'quarry' || d.key === 'garden'){ const per = (d.key === 'quarry' ? 4 : 5)/(dRoomBuilt(s, d.key === 'quarry' ? 'cellar' : 'dewvault') ? 2 : 1); d.giftAcc = (d.giftAcc || 0) + (d.real ? daughterAnts(s, d).length : dpop(d))/per/60*dt;
       while (d.giftAcc >= 1){ d.giftAcc -= 1; if (d.key === 'quarry'){ c.grit += 1; c.gritTotal = (c.gritTotal || 0) + 1; } else addSugar(s, 1); } }
     // Build 47.3: far away her ants still meet the yard's dangers, at about half the rate measured near her
     // (0.1 a minute per 50 there): one ant per 1,000 ant-minutes. Conservative, not immune.
@@ -633,7 +709,7 @@ function spawnFood(s, ai, treats){
   return spawnInArea(s, ai, FOODS[type] && FOODS[type].protein ? 'protein' : 'food', type);
 }
 // How far foragers roam on their own: a bigger colony reaches farther.
-const forageRange = s => picked(s, 'forager', 'lonewolf') ? 400 : Math.round(FORAGE[Math.min(4, s.colony.forage || 0)].range*(has(s, 'suncompass') ? 1.25 : 1));
+const forageRange = s => picked(s, 'forager', 'lonewolf') ? 400 : Math.round(FORAGE[Math.min(4, s.colony.forage || 0)].range*(has(s, 'suncompass') ? 1.25 : 1)*(dRoomBuilt(s, 'maproom') ? 1.15 : 1)); // build 50: the Watch's Map room
 // A forager's pace, with its training.
 const fSpeed = (s, a) => paceOf(s, a, CASTES[a.caste].speed * (!a.team && a.caste === 'forager' ? FORAGE[Math.min(4, s.colony.forage || 0)].speed : 1));
 const areaOf = (s, x, y) => s.world.area[idx(Math.max(0, Math.min(W-1, x)), Math.max(0, Math.min(H-1, y)))];
@@ -929,6 +1005,7 @@ function evoLock(s, key){
   const n = EVO_BY[key], c = s.colony; if (!n) return 'unknown';
   if (c.evo[key]) return 'owned';
   if (n.soon) return 'coming in a later build';
+  if (EVO_GATE[key] && !dRoomBuilt(s, EVO_GATE[key])){ const R = DROOMS[EVO_GATE[key]]; return 'needs ' + DAUGHTERS[R.d].name + '’s ' + R.name; } // build 50
   if (n.after && !c.evo[n.after]) return 'needs ' + EVO_BY[n.after].name + ' first';
   if (n.need && !roomOf(s, n.need)) return 'needs a ' + ROOMS[n.need].name;
   return '';
@@ -952,7 +1029,7 @@ function possess(s, id){
   const dd = daughterOf(s, a); a.dh = null;
   if (dd && (a.state === 'in' || a.state === 'build')){ a.state = 'player'; a.tx = dd.ex; a.ty = dd.ey; a.x = (dd.ex + 0.5)*T; a.y = (dd.ey + 0.5)*T; }
   const inside = a.state === 'in' || a.state === 'build' || a.state === 'nest';
-  P.ant = a; P.pending = false; P.hunger = 100; P.tx = null; P.ntx = null; P.inNest = inside; a.state = inside ? 'nest' : 'player';
+  P.ant = a; P.pending = false; P.hunger = 100; P.tx = null; P.ntx = null; P.inNest = inside; P.nestKey = null; a.state = inside ? 'nest' : 'player';
   const qi = s.colony.eggQueue.indexOf('forager'); if (qi >= 0 && !s.colony.eggs.length) s.colony.eggQueue.splice(qi, 1);
   P.msg = `You are ${a.name}${a.title ? ' ' + a.title : ''}, ${RANKS[rankOf(a)].name} ${CASTES[a.caste].name}.`;
   return true;
@@ -1341,7 +1418,8 @@ function tickColony(s, c, dt){
       for (const a of s.ants) if (!a.team && (a.state === 'in' || a.state === 'build') && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
     const fighters = s.ants.filter(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3);
     let farF = 0; for (const d of s.daughters || []) for (const k in d.pop || {}) if (CASTES[k].fight >= 3) farF += d.pop[k]; /* build 47: a far daughter's soldiers eat protein too */
-    if (fighters.length + farF){ c.protein -= (fighters.length + farF)*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
+    const messK = dRoomBuilt(s, 'mess') ? 0.75 : 1, load = messK === 1 ? fighters.length + farF : fighters.length + farF - (1 - messK)*(fighters.filter(a => a.dh === 'war').length + (((s.daughters || []).find(q => q.key === 'war' && !q.real) || { pop: {} }).pop.soldier || 0)); /* build 50: the War Camp's Mess hall */
+    if (fighters.length + farF){ c.protein -= load*0.5/60*dt*Math.pow(0.75, Math.max(0, roomCount(s, 'barracks') - 1));
       if (c.protein < 0){ c.protein = 0; c.pstarve += dt; if (c.pstarve > 30 && (c.pstarve - 30) % 10 < dt){ const v = fighters.filter(a => !a.isPlayer), r = Math.floor(Math.random()*(v.length + farF)); /* build 47.2: any fighter, near or far, by their numbers */ if (r < v.length) killAnt(s, v[r], 'nomeat'); else { let k = r - v.length; for (const d of s.daughters || []){ if (d.real) continue; for (const q in d.pop || {}){ if (CASTES[q].fight < 3) continue; if (k < d.pop[q]){ d.pop[q]--; c.deaths.nomeat = (c.deaths.nomeat || 0) + 1; k = -1; break; } k -= d.pop[q]; } if (k < 0) break; } } s.events.push('soldierfood'); if (!P.msg) P.msg = 'Soldiers are starving: they need 🥩 meat.' + (roomOf(s, 'larder') ? ' Hunt, or keep the store fuller for the Egg larder.' : ' Hunt, or build an Egg larder (Trophic eggs).'); } }
       else c.pstarve = 0; }
     // Build 23: the rooms at work.
@@ -1408,7 +1486,7 @@ function hatch(s, c, caste){
     if (has(s, 'memory') || picked(s, 'nurse', 'teacher') || (has(s, 'drillhall') && CASTES[caste].fight >= 3)) a.xp = RANKS[1].xp;
     if (has(s, 'memory')) a.xp = RANKS[2].xp; // build 40: Colony memory now hatches Veterans
     for (const n of s.ants) if (n.caste === 'nurse' && !n.team && (n.state === 'in' || n.state === 'build')) gainXp(s, n, 1); const r = s.queen.room; a.nx = r.x0+1.5; a.ny = r.y0+1.5; a.ntx = r.x0+1; a.nty = r.y0+1; a.rest = 2;
-    if (s.player.pending){ a.isPlayer = true; a.hp = Math.max(youHp(s), maxHp(s, a)); s.player.rebirth = null; a.state = 'nest'; s.player.ant = a; s.player.pending = false; s.player.hunger = 100; s.player.inNest = true; s.player.tx = null; s.player.ntx = null; s.player.msg = ''; } }
+    if (s.player.pending){ s.player.nestKey = null; a.isPlayer = true; a.hp = Math.max(youHp(s), maxHp(s, a)); s.player.rebirth = null; a.state = 'nest'; s.player.ant = a; s.player.pending = false; s.player.hunger = 100; s.player.inNest = true; s.player.tx = null; s.player.ntx = null; s.player.msg = ''; } }
 }
 // How readily Cordyceps spreads (build 24): halved by glands, and by a working Midden (all but stopped at its III).
 function cordResist(s){ let k = 1; if (has(s, 'glands')) k *= 0.5; const u = roomOf(s, 'midden') ? workers(s, 'undertaker', 'tidy', 'midden', 3) : 0; if (u) k *= roomLevel(s, 'midden') >= 3 ? 0.15 : Math.max(0.3, 0.7 - 0.1*u); return k; } // build 40: each undertaker counts
@@ -1417,7 +1495,7 @@ function enterNest(s, a){
   if (!a.team){ a.nx = SHAFT; a.ny = 0; a.ntx = SHAFT; a.nty = 0; }
 }
 function exitNest(s, a, state){
-  const col = a.dh && daughterOf(s, a) ? daughterOf(s, a) : colonyOf(s, a); /* (build 46: a daughter's ants come out of her door) */ a.tx = col.ex; a.ty = col.ey; a.x = (col.ex+0.5)*T; a.y = (col.ey+0.5)*T;
+  const col = a.dh && daughterOf(s, a) ? daughterOf(s, a) : colonyOf(s, a); /* (build 46: a daughter's ants come out of her door) */ a.dhSpot = null; a.tx = col.ex; a.ty = col.ey; a.x = (col.ex+0.5)*T; a.y = (col.ey+0.5)*T;
   const ang = Math.random()*Math.PI*2; a.dx = Math.cos(ang); a.dy = Math.sin(ang); a.state = state; a.explore = 0; a.goal = null;
   if (state === 'fight'){ chooseToward(s, a, s.spider ? s.spider.x : a.x, s.spider ? s.spider.y : a.y); }
   else if (state === 'raid'){ chooseToward(s, a, (s.colony.ex+0.5)*T, (s.colony.ey+0.5)*T); }
@@ -1431,6 +1509,7 @@ function roomTarget(s, a){
 function tickInside(s, a, dt){
   const col = colonyOf(s, a), C = CASTES[a.caste];
   if (a.dh){ // build 46: a daughter's ant, resting in her chambers (abstract, like a rival's)
+    if (a.dhSpot == null){ a.dhSpot = Math.floor(Math.random()*DSPOTS.length); a.nx = DSPOTS[a.dhSpot][0]; a.ny = DSPOTS[a.dhSpot][1]; a.ntx = Math.floor(a.nx); a.nty = Math.floor(a.ny); } /* build 50 */
     a.rest -= dt; if (a.rest > 0) return; const d = daughterOf(s, a); if (!d){ a.dh = null; a.rest = 2; return; }
     if (C.fight >= 3){ if (s.alarm[idx(d.ex, d.ey)] > 0.2) exitNest(s, a, 'fight'); else if (Math.random() < 0.35) exitNest(s, a, 'patrol'); else a.rest = 3; }
     else if (a.caste !== 'forager'){ a.rest = 6; } /* build 49: her builders and nurses work in her chambers */
@@ -1887,6 +1966,12 @@ function stepCat(s, dt){
 
 function stepPlayer(s, a, dt, enemiesNear){
   const P = s.player, w = s.world, C = CASTES[a.caste];
+  if (P.inNest && P.nestKey){
+    // Build 50: inside a daughter's nest you look round from her shaft; leaving puts you out at her door.
+    const d = (s.daughters || []).find(q => q.key === P.nestKey);
+    if (!d || d.state !== 'ready' || P.exiting){ P.exiting = false; P.ntx = null; P.inNest = false; P.nestKey = null; const ex = d ? d.ex : w.ex, ey = d ? d.ey : w.ey; a.tx = ex; a.ty = ey; a.x = (ex+0.5)*T; a.y = (ey+0.5)*T; a.state = 'player'; P.tx = null; return; }
+    a.nx = SHAFT + 0.5; a.ny = 0.5; P.ntx = null; P.hunger = Math.min(100, P.hunger + 10*dt); return;
+  }
   if (P.inNest){
     // walk inside the nest
     if (P.ntx != null){ a.ntx = P.ntx; a.nty = P.nty; }
@@ -1935,7 +2020,10 @@ function stepPlayer(s, a, dt, enemiesNear){
   const en = enemiesNear(a, 1); if (en.length){ const o = en.find(q => q.id === a.foeId) || en[0]; a.foeId = o.id; a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT = 0.6; swing(s, a, o, 2*yb); } } else { a.foeId = 0; if (a.hp < pm) a.hp = Math.min(pm, a.hp + 1*dt); }
   if (a.burnT > 0){ a.burnT -= dt; a.hp -= dt/3*0.6; if (a.hp <= 0){ killAnt(s, a, 'fireants'); return; } }
   if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH){ const dmg = bite(s, a, 'cat')*yb*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); }
-  if (P.enterReq && nearHome){ P.enterReq = false; P.inNest = true; P.tx = null; a.nx = SHAFT+0.5; a.ny = 0.5; a.ntx = SHAFT; a.nty = 0; P.ntx = null; a.state = 'nest'; }
+  if (P.enterReq && P.enterKey){ const d = (s.daughters || []).find(q => q.key === P.enterKey); /* build 50: in at her door */
+    if (!d || d.state !== 'ready'){ P.enterReq = false; P.enterKey = null; }
+    else if (Math.hypot(a.tx - d.ex, a.ty - d.ey) < 3){ P.enterReq = false; P.enterKey = null; P.inNest = true; P.nestKey = d.key; P.tx = null; a.nx = SHAFT+0.5; a.ny = 0.5; a.ntx = SHAFT; a.nty = 0; P.ntx = null; a.state = 'nest'; } }
+  if (P.enterReq && !P.enterKey && nearHome){ P.enterReq = false; P.nestKey = null; P.inNest = true; P.tx = null; a.nx = SHAFT+0.5; a.ny = 0.5; a.ntx = SHAFT; a.nty = 0; P.ntx = null; a.state = 'nest'; }
 }
 
 // ---------- player / UI actions ----------
@@ -3556,7 +3644,7 @@ function roomLock(s, room){
 }
 // Room levels (build 23): why this room kind can't go up a level now, or ''.
 function pickLineage(s, k){ const c = s.colony; if (!has(s, 'lineage') || c.lineage || !['acid', 'trapjaw', 'bullet'].includes(k)) return false; c.lineage = k; s.player.msg = 'Your line is ' + { acid: 'Acid', trapjaw: 'Trap-jaw', bullet: 'Bullet' }[k] + ', for good.'; return true; }
-function roomUpLock(s, key){ const R = ROOMS[key], n = roomLevel(s, key); if (!R.lv) return 'no levels'; if (!roomCount(s, key)) return 'build one first'; if (n > R.lv.length) return 'top level'; return ''; }
+function roomUpLock(s, key){ const R = ROOMS[key], n = roomLevel(s, key); if (!R.lv) return 'no levels'; if (!roomCount(s, key)) return 'build one first'; if (key === 'fungus' && n === 2 && !dRoomBuilt(s, 'greenhouse')) return 'needs the Garden’s Greenhouse'; /* build 50 */ if (n > R.lv.length) return 'top level'; return ''; }
 function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; roomsChanged(s); s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone'); return true; }
 // Build 40: cancel every room still waiting to be built. Not started, all its cost back; started, half.
 function cancelBuilds(s){
@@ -3590,7 +3678,7 @@ function serialize(s){
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil, open: s.nest.open || {}, breach: s.nest.breach || null }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
     phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid,
-    player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, rebirth: s.player.rebirth || null }, nextId: s.nextId,
+    player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, nestKey: s.player.nestKey || null, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
 }
@@ -3636,7 +3724,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

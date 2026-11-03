@@ -497,3 +497,21 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #mapview .mv-roles button:not(:disabled) { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 #mapview .mv-roles button:not(:disabled) i { color: inherit; opacity: .85; }
 #mapview .mv-card { max-height: 62vh; overflow-y: auto; }
+/* Build 50: the daughter colonies sheet, and the trip through a tunnel. */
+#sheet .sec { font-weight: 800; font-size: 15px; margin: 12px 0 2px; padding-top: 8px; border-top: 1px solid var(--line); }
+#sheet .dr { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 6px 0; }
+#sheet .dr .note { margin: 2px 0 0; }
+#sheet .dr button { text-align: right; padding: 8px 10px; white-space: nowrap; }
+#sheet .dr button i { display: block; font-style: normal; font-size: 11px; color: var(--mute); white-space: normal; max-width: 160px; }
+#sheet .dr .done { font-size: 13px; font-weight: 700; color: var(--accent, #3e7a2a); }
+#tunnelfx { position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0; background: radial-gradient(circle at 50% 50%, #3a2414 0%, #1a0f08 45%, #050302 100%); display: grid; place-items: center; }
+#tunnelfx.on { animation: tunnelfade 1.1s ease-in-out forwards; }
+#tunnelfx .ring { position: absolute; width: 30vmin; height: 30vmin; border-radius: 50%; border: 6px solid #6a4428; box-shadow: inset 0 0 18px #000; opacity: 0; }
+#tunnelfx.on .ring { animation: tunnelring 1.1s linear forwards; }
+#tunnelfx.on .ring.r2 { animation-delay: .18s; }
+#tunnelfx.on .ring.r3 { animation-delay: .36s; }
+#tunnelfx b { position: relative; color: #f2e2c4; font: 400 clamp(18px, 4vw, 28px) var(--display, "Bungee", sans-serif); letter-spacing: .02em; text-shadow: 0 2px 0 #000; }
+@keyframes tunnelfade { 0% { opacity: 0; } 30% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes tunnelring { 0% { transform: scale(.2); opacity: 0; } 20% { opacity: .9; } 100% { transform: scale(4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #tunnelfx.on .ring { animation: none; } }
+#evo .evo-legend .dgate::before { display: none; }

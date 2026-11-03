@@ -257,6 +257,26 @@ const nameV = new THREE.Vector3();
 let last = performance.now(), acc = 0, hudT = 0, saveT = 0, frames = 0, fpsT = 0, clock = 0;
 let wasInNest = app.s.player.inNest;
 
+// Build 50: a daughter's nest as the nest view sees it: the game state with her nest, queen and eggs in place
+// of the main ones (everything else reads through). One per daughter, kept while the save is the same.
+const dviews = new Map();
+function daughterApp(app, s, key) {
+  const d = (s.daughters || []).find((q) => q.key === key); if (!d) return app;
+  let v = dviews.get(key);
+  if (!v || v.s !== s || v.d !== d) {
+    const f = Object.create(s), col = Object.create(s.colony);
+    Object.defineProperty(f, 'nest', { get: () => SIM.daughterNest(d) });
+    f.dhKey = key; f.phase = 'daughter'; f.repairs = []; f.colony = col;
+    f.queen = { placed: true, level: 1, hp: 100, x: 20, y: 8, get room() { return SIM.daughterNest(d).rooms[0]; } };
+    const slots = () => SIM.daughterNest(d).rooms.slice(2);
+    Object.defineProperty(col, 'buildQueue', { get: () => (d.rooms || []).map((r, i) => (r && !r.done ? { ...slots()[i], room: r.key, progress: r.progress || 0 } : null)).filter(Boolean) });
+    Object.defineProperty(col, 'eggs', { get: () => (SIM.daughterCount(s, d) < SIM.dcap(s, d) ? [{ caste: 'forager', t: Math.max(0, Math.min(30, d.eggT)), need: 30 }] : []) });
+    const a2 = Object.create(app); a2.s = f; a2.placing = null;
+    v = { s, d, app: a2 }; dviews.set(key, v);
+  }
+  return v.app;
+}
+
 function frame(now) {
   let dt = (now - last) / 1000;
   last = now;
@@ -295,9 +315,11 @@ function frame(now) {
     app.surfaceFocus = { x: (w.ex + 0.5 + Math.sin(k * 0.05) * 60) * SIM.T, y: (w.ey + 0.5 + Math.sin(k * 0.037) * 40) * SIM.T };
   }
   const view = app.view === 'nest' && !app.titleOpen ? views.nest : views.surface;
+  // Build 50: inside a daughter's nest the nest view draws hers: her chambers, her queen, her ants.
+  const dkey = view === views.nest && s.player.inNest && s.player.nestKey, vapp = dkey ? daughterApp(app, s, dkey) : app;
   // Draw creatures part way between the last two sim steps, then put them back.
   const restore = blend(s, app.paused ? 1 : acc / STEP);
-  view.update(app, clock, pipeline.aspect);
+  view.update(vapp, clock, pipeline.aspect);
   pipeline.render(view.scene, view.camera);
   restore();
   if (!app.titleOpen) hear(s, newEvents);

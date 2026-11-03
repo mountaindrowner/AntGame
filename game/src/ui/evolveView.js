@@ -79,10 +79,10 @@ export class EvolveView {
     const node = (n) => {
       const lock = SIM.evoLock(s, n.key), pay = SIM.canPay(s.colony, evoCost(s, n));
       const cls = lock === 'owned' ? 'owned' : n.soon ? 'soon' : !lock && pay ? 'ready' : 'locked';
-      const k = kids(n.key);
-      return `<li><button class="enode ${cls}${n.big ? ' big' : ''}${this.pick === n.key ? ' pick' : ''}" data-node="${n.key}"><b>${n.name}</b><i>${lock === 'owned' ? 'evolved' : n.soon ? 'later' : '🧬' + evoCost(s, n).genes}</i></button>${k.length ? `<ul>${k.map(node).join('')}</ul>` : ''}</li>`;
+      const k = kids(n.key), G = SIM.EVO_GATE[n.key], gate = G && !SIM.dRoomBuilt(s, G) ? SIM.DAUGHTERS[SIM.DROOMS[G].d].icon : ''; /* build 50: needs a daughter's room */
+      return `<li><button class="enode ${cls}${n.big ? ' big' : ''}${this.pick === n.key ? ' pick' : ''}" data-node="${n.key}"><b>${n.name}</b><i>${lock === 'owned' ? 'evolved' : n.soon ? 'later' : (gate ? gate + ' ' : '') + '🧬' + evoCost(s, n).genes}</i></button>${k.length ? `<ul>${k.map(node).join('')}</ul>` : ''}</li>`;
     };
-    return `<div class="evo-tree"><ul>${kids(null).map(node).join('')}</ul></div><div class="evo-legend"><span class="owned">evolved</span><span class="ready">ready</span><span class="locked">not yet</span><span class="soon">later build</span></div>`;
+    return `<div class="evo-tree"><ul>${kids(null).map(node).join('')}</ul></div><div class="evo-legend"><span class="owned">evolved</span><span class="ready">ready</span><span class="locked">not yet</span><span class="soon">later build</span><span class="dgate">⚔🥚👁⛏🌿 needs a daughter’s room</span></div>`;
   }
 
   // The picked node's card, with its Evolve button.
