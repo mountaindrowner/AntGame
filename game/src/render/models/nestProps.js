@@ -5,11 +5,10 @@
 //
 // Each model's origin and size are noted; room dressing scales them.
 import * as THREE from 'three';
-import { paint, blob, strut, bake, hash } from './bugs.js';
+import { V, paint, blob, strut, bake, hash } from './kit.js';
 import { antGeometry, outfitGeometry, FOOT } from './creatures.js';
 import { COLORS } from '../../config.js';
 
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // An ant egg: a glossy oval, a little pointed at one end, pale with a
 // highlight on top and the yolk showing through. Centred, about 2.4 × 1.7.

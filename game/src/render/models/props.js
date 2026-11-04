@@ -1,5 +1,6 @@
 // Small low-poly props shared by both views. Unit-sized; scale per use.
 import * as THREE from 'three';
+import { hash as h } from './kit.js';
 
 // White, so the instance colour tints it; fn (x, y, z, face) → a grey per
 // face adds shading that survives any tint (layer 5: seams, speckles, ribs).
@@ -14,7 +15,6 @@ function colored(g, k = 1) {
   g.computeVertexNormals();
   return g;
 }
-const h = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
 export const PROPS = {
   crumb: colored(new THREE.IcosahedronGeometry(1, 1).scale(1, 0.75, 0.9), (x, y, z, f) => (h(f) < 0.25 ? 0.72 : y > 0.4 ? 1.08 : 0.94)),

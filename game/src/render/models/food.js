@@ -4,34 +4,14 @@
 //
 // Every geometry rests on y = 0 and spans roughly -1..1, scaled by `r`.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { paint, bake, hash } from './kit.js';
 import { PROPS } from './props.js';
 import { alateGeometry } from './bosses.js';
 const ALATE = alateGeometry();
 
-const col = new THREE.Color();
 const UP = new THREE.Vector3(0, 1, 0);
-const hash = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 
-function paint(geo, fn) {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  const p = g.attributes.position, c = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i += 3) {
-    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3;
-    const y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3;
-    const z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col.set(typeof fn === 'function' ? fn(x, y, z, i / 3) : fn);
-    for (let k = 0; k < 3; k++) c.set([col.r, col.g, col.b], (i + k) * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  return g;
-}
 const at = (g, x, y, z, sx = 1, sy = sx, sz = sx, ry = 0) => g.scale(sx, sy, sz).rotateY(ry).translate(x, y, z);
-function bake(parts) {
-  const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
-  g.computeVertexNormals();
-  return g;
-}
 // Nudge vertices so shapes look torn or lumpy rather than machined.
 function lumpy(g, amt, seed) {
   g = g.index ? g.toNonIndexed() : g;

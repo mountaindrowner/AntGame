@@ -10,22 +10,10 @@
 // house's back wall faces the yard at Z = front; the house runs back to
 // Z = front - depth. Sizes are in px (S = the yard's scale, T = px a tile).
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { paint as paintFaces, bake as merge } from './kit.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture } from '../ps1/textures.js';
 
-const col = new THREE.Color();
-function paint(geo, fn) {
-  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, c = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i += 3) {
-    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col.set(typeof fn === 'function' ? fn(x, y, z, i / 3) : fn);
-    for (let k = 0; k < 3; k++) c.set([col.r, col.g, col.b], (i + k) * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  if (g.attributes.uv) g.deleteAttribute('uv');
-  return g;
-}
 const box = (w, h, d, x, y, z, color) => paint(new THREE.BoxGeometry(w, h, d).translate(x, y, z), color);
 // UVs from world position, projected along each face's main axis, so one
 // texture tiles evenly over every wall, opening reveal and gable.
@@ -46,7 +34,7 @@ function worldUV(geo, scale) {
   g.computeVertexNormals();
   return g;
 }
-const merge = (parts) => { const g = mergeGeometries(parts.map((q) => (q.index ? q.toNonIndexed() : q))); g.computeVertexNormals(); return g; };
+const paint = (geo, fn) => paintFaces(geo, fn, { dropUV: true }); // (vertex-coloured: the walls' textures don't need UVs)
 
 // The layout the interior will share. wall: the yard's 'wall' landmark (the
 // house's back wall along the top of the yard); steps: the back steps.

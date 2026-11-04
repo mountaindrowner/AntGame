@@ -6,12 +6,11 @@
 // Local frame: +X forward, +Y up, +Z to the ant's left. Origin at the body
 // centre; feet rest at y = -FOOT.
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { V, paint as paintC, bake } from './kit.js';
 
 export const FOOT = 2.8;
 export const WALK_FRAMES = 3;
 
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 function tint(geo, k) {
   const n = geo.attributes.position.count;
@@ -182,9 +181,7 @@ function buildAnt(planName, frame) {
       parts.push(ellipsoid([tc[0] - 0.4, tc[1] + tr[1] * 0.9, side * 0.55], [0.45, 0.18, 0.3], 3.2, [4, 2]));
     }
   }
-  const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
-  g.computeVertexNormals();
-  return g;
+  return bake(parts);
 }
 
 const cache = new Map();
@@ -209,16 +206,6 @@ export function planFor(caste) {
 //   soldier: an olive army helmet with a brim and chin strap
 //   venom: a black bandana with a white skull, its knot trailing
 //   queen: a gold crown with red jewels
-const col2 = new THREE.Color();
-function paintC(geo, fn) {
-  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, c = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i += 3) {
-    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col2.set(typeof fn === 'function' ? fn(x, y, z) : fn); for (let k = 0; k < 3; k++) c.set([col2.r, col2.g, col2.b], (i + k) * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  return g;
-}
 // A band round a body part: a ring about the X axis, ry by rz across.
 const band = (x, y, ry, rz, w, color) => paintC(new THREE.CylinderGeometry(1, 1, w, 14, 1, true).rotateZ(Math.PI / 2).scale(1, ry, rz).translate(x, y, 0), color);
 const box = (w, h, d, x, y, z, color, ry = 0) => paintC(new THREE.BoxGeometry(w, h, d).rotateY(ry).translate(x, y, z), color);
@@ -343,9 +330,7 @@ function outfit(kind) {
     const [tc, tr] = W.thorax;
     parts.push(paintC(new THREE.SphereGeometry(1, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(tr[0] * 1.5, tr[1] * 0.9, tr[2] * 1.3).translate(tc[0] - 0.4, tc[1] + tr[1] * 0.4, 0), '#5a5a62'));
   }
-  const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p)));
-  g.computeVertexNormals();
-  return g;
+  return bake(parts);
 }
 const OUTFIT_OF = { builder: 'belt', forager: 'apron', nurse: 'cap', soldier: 'helmet', venom: 'bandana', queen: 'crown', gardener: 'straw', rancher: 'stetson', medic: 'medic', harvester: 'sack', major: 'helmet', supermajor: 'helmet', exploder: 'fuse', replete: 'honey', undertaker: 'hood' };
 const outfits = new Map();

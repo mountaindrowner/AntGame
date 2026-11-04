@@ -13,9 +13,9 @@ import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/texture
 import { houseLayout, buildHouse } from '../models/house.js';
 import { cavedPitGeometry, pitGlow } from '../models/wildBosses.js';
 import { disposeTree } from '../dispose.js';
+import { paint as paintFaces } from '../models/kit.js';
 
 const T = 16;
-const col = new THREE.Color();
 
 // ---------- ground ----------
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -200,18 +200,7 @@ function textureFrom(canvas) {
 
 // ---------- vertex-coloured parts ----------
 // Colour a geometry per face, with a little random shading so facets read.
-function paint(geo, fn, seed = 1) {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  const p = g.attributes.position, c = new Float32Array(p.count * 3), r = rng(seed);
-  for (let i = 0; i < p.count; i += 3) {
-    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col.set(typeof fn === 'function' ? fn(x, y, z) : fn).multiplyScalar(0.92 + r() * 0.16);
-    for (let k = 0; k < 3; k++) c.set([col.r, col.g, col.b], (i + k) * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  if (g.attributes.uv) g.deleteAttribute('uv');
-  return g;
-}
+const paint = (geo, fn, seed = 1) => paintFaces(geo, fn, { dropUV: true, jitter: 0.92, span: 0.16, rng: rng(seed) });
 const at = (g, x, y, z) => g.translate(x, y, z);
 // Nudge vertices so a shape looks lumpy rather than machined.
 function lumpy(geo, amt, seed) {

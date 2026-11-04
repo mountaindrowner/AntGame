@@ -13,11 +13,10 @@
 //   sinkholeGeometry(R): the slumped, split ground on the pit's lip where the fight is.
 // Local frame: +X forward, +Y up, +Z left.
 import * as THREE from 'three';
-import { paint, blob, strut, bake, hash } from './bugs.js';
+import { V, paint, blob, strut, bake, hash } from './kit.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { FOOT, WALK_FRAMES } from './creatures.js';
 
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // ---------- Nevermore, the raven ----------
 const RV = { body: '#18181f', body2: '#1e1f29', sheen: '#2b3352', sheen2: '#352a4c', belly: '#121216', bill: '#22222a', bill2: '#33333d', leg: '#151515', claw: '#0b0b0b', edge: '#2a3048' };

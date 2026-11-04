@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { antGeometry, FOOT, WALK_FRAMES } from '../render/models/creatures.js';
 import { SPIDER_FOOT } from '../render/models/bugs.js';
+import { V } from '../render/models/kit.js';
 import { FOOD } from '../render/models/food.js';
 import { psx, psxBasic } from '../render/ps1/materials.js';
 import { COLORS, ANT_SCALE } from '../config.js';
@@ -25,7 +26,6 @@ const END = 60;                                  // the title waits for a tap un
 
 const ease = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
 const lerp = (a, b, u) => a + (b - a) * u;
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // Shots: camera position and look-at target, eased from the first pair to the second.
 const SHOTS = [

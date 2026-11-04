@@ -2,6 +2,18 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the audit's leftovers (build 61)
+
+Mark: "Sure, let's try it", on the three items build 60 left for later. All three are organisation; the game plays and looks the same.
+- **Each boss has its own drawing file.** `surfaceView.js`'s 400-line boss function is now 13 files in `render/views/bosses/`, drawn in the same order. A script moved each block, and the shared helpers went to `views/surfaceKit.js`.
+  - Screenshots of all 13 bosses, before and after, match.
+  - Two clashes caught on the way and fixed: a local `v` that hid the view (it would have broken the antlion's sand trail), and a local `k` (a size) that hid the shared slots for the health bars.
+- **One shared toolkit for the models.** The vertex-colouring, merging, `hash` and `V` helpers had 10, 6, 5 and 8 copies. Now there is one of each, in `render/models/kit.js`, with options for the few real differences (recompute normals, drop texture coordinates, a seeded brightness jitter).
+  - A fingerprint of every model's geometry (383 of them) is byte-identical before and after.
+  - The 116 `.glb` exports regenerated to identical files.
+- **The gallery and exports are up to date.** It now shows every model in the game, 137 in all, up from 116. New are the hunters (jumping spider, assassin bug, hunting wasp, skink), the mantis, widow and centipede, and a new Wild bosses page: Nevermore, the Cordyceps Colony, an infected ant, the Hornet Queen, Old Blind and the Sinkhole. Each is also a `.glb` in `game/assets/models/`.
+- **Still open:** whether the Cordyceps outbreak's spores should infect rival ants (they do now).
+
 ## Nov 4: the code audit (build 60)
 
 Mark: "Do a thorough look at all our project code… confirm everything is where it should be and clean and organized… further perfect our project from a code aspect." An automated lint pass, then three read-throughs (simulation, rendering, UI and repo layout), each finding checked before it was fixed. There are no balance changes; every fix is a bug or a mismatch between near and far play.

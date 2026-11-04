@@ -41,12 +41,32 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Creatures | Millipede | `creatures-millipede.glb` |
 | Creatures | Robin | `creatures-robin.glb` |
 | Creatures | Toad | `creatures-toad.glb` |
+| Creatures | Jumping spider | `creatures-jumping-spider.glb` |
+| Creatures | Jumping spider: crouched | `creatures-jumping-spider-crouched.glb` |
+| Creatures | Assassin bug | `creatures-assassin-bug.glb` |
+| Creatures | Assassin bug: stabbing | `creatures-assassin-bug-stabbing.glb` |
+| Creatures | Hunting wasp | `creatures-hunting-wasp.glb` |
+| Creatures | Hunting wasp: flying | `creatures-hunting-wasp-flying.glb` |
+| Creatures | Skink | `creatures-skink.glb` |
+| Creatures | Skink: tail dropped | `creatures-skink-tail-dropped.glb` |
 | Bosses | The Hornworm | `bosses-the-hornworm.glb` |
 | Bosses | The Ground Beetle | `bosses-the-ground-beetle.glb` |
 | Bosses | The Ground Beetle: charging | `bosses-the-ground-beetle-charging.glb` |
 | Bosses | The Ground Beetle: dazed | `bosses-the-ground-beetle-dazed.glb` |
 | Bosses | The Antlion Queen | `bosses-the-antlion-queen.glb` |
 | Bosses | The Antlion Queen: snapping | `bosses-the-antlion-queen-snapping.glb` |
+| Bosses | The Praying Mantis | `bosses-the-praying-mantis.glb` |
+| Bosses | The Praying Mantis: striking | `bosses-the-praying-mantis-striking.glb` |
+| Bosses | The Praying Mantis: eating | `bosses-the-praying-mantis-eating.glb` |
+| Bosses | The Black Widow | `bosses-the-black-widow.glb` |
+| Bosses | The Black Widow: biting | `bosses-the-black-widow-biting.glb` |
+| Bosses | The Giant Centipede | `bosses-the-giant-centipede.glb` |
+| Wild bosses | Nevermore | `wild-bosses-nevermore.glb` |
+| Wild bosses | The Cordyceps Colony | `wild-bosses-the-cordyceps-colony.glb` |
+| Wild bosses | Infected ant | `wild-bosses-infected-ant.glb` |
+| Wild bosses | The Hornet Queen | `wild-bosses-the-hornet-queen.glb` |
+| Wild bosses | Old Blind | `wild-bosses-old-blind.glb` |
+| Wild bosses | The Sinkhole | `wild-bosses-the-sinkhole.glb` |
 | Events | Cordyceps stalk | `events-cordyceps-stalk.glb` |
 | Events | Winged queen | `events-winged-queen.glb` |
 | Curios | Marble | `curios-marble.glb` |
@@ -73,6 +93,7 @@ Every model in the game as a standalone binary glTF (`.glb`), written by `node s
 | Food | hotdog | `food-hotdog.glb` |
 | Food | chip | `food-chip.glb` |
 | Food | acorn | `food-acorn.glb` |
+| Food | cap | `food-cap.glb` |
 | Food | slug | `food-slug.glb` |
 | Food | bug | `food-bug.glb` |
 | Food | shell | `food-shell.glb` |

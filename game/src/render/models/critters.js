@@ -7,9 +7,8 @@
 // Local frame: +X forward, +Y up, +Z to the left. Origin on the ground under
 // the body, so a model stands where it is put.
 import * as THREE from 'three';
-import { paint, blob, strut, bake } from './bugs.js';
+import { V, paint, blob, strut, bake } from './kit.js';
 
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
 // A leg from hip to foot, the knee lifted above both: two struts.
 function leg(hip, foot, up, r0, r1, c0, c1) {

@@ -13,19 +13,12 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, rng, noise2 } from '../ps1/textures.js';
 import { CURIO_GEO } from './curios.js';
+import { paint as paintFaces } from './kit.js';
 
 const col = new THREE.Color();
-function paint(geo, fn, seed = 1) {
-  const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, c = new Float32Array(p.count * 3), r = rng(seed * 977 + 3);
-  for (let i = 0; i < p.count; i += 3) {
-    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col.set(typeof fn === 'function' ? fn(x, y, z) : fn).multiplyScalar(0.9 + r() * 0.2);
-    for (let k = 0; k < 3; k++) c.set([col.r, col.g, col.b], (i + k) * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  if (g.attributes.uv) g.deleteAttribute('uv');
-  return g;
-}
+// Painted with a little brightness jitter per face, seeded, and no UVs.
+const paint = (geo, fn, seed = 1) => paintFaces(geo, fn, { dropUV: true, jitter: 0.9, span: 0.2, rng: rng(seed * 977 + 3) });
+
 const UP = new THREE.Vector3(0, 1, 0);
 function rod(a, b, r0, r1, color, sides = 5) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), len = Math.max(0.01, A.distanceTo(B));

@@ -3,6 +3,7 @@
 // at Z = 0 and tunnels run back to a wall at Z = -DEPTH. The soil mesh is
 // rebuilt whenever the sim bumps nest.ver.
 import * as THREE from 'three';
+import { hash } from '../models/kit.js';
 import SIM from '../../sim/sim.js';
 import { CAMERA, COLORS, RENDER, ANT_SCALE, fitWide } from '../../config.js';
 import { psx, psxBasic } from '../ps1/materials.js';
@@ -222,7 +223,6 @@ const whiten = (g) => { g.setAttribute('color', new THREE.BufferAttribute(new Fl
 const PUFF = whiten(new THREE.IcosahedronGeometry(1, 1));
 const CLOD = whiten(new THREE.BoxGeometry(1, 1, 1));
 const DUST = ['#e8dcc4', '#d9c7a6', '#f2e9d8'];
-const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
 
 const tmpCol = new THREE.Color(), GLOW = new THREE.Color('#6aff8a');
 export class NestView {

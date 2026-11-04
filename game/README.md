@@ -35,13 +35,15 @@ game/
 │   ├── render/
 │   │   ├── ps1/             pipeline.js (low-res framebuffer, colour quantising, dither), materials.js
 │   │   │                    (vertex snapping), textures.js (procedural textures, the palette)
-│   │   ├── views/           surfaceView.js (the yard: creatures, items, bosses, weather), yardScenery.js
-│   │   │                    (each region's ground and landmarks, built as you come near), nestView.js
-│   │   │                    (the cutaway: tunnels, rooms, orders, the queen)
+│   │   ├── views/           surfaceView.js (the yard: creatures, items, weather), bosses/ (one file per
+│   │   │                    boss: how it's drawn each frame), surfaceKit.js (helpers they share),
+│   │   │                    yardScenery.js (each region's ground and landmarks, built as you come near),
+│   │   │                    nestView.js (the cutaway: tunnels, rooms, orders, the queen)
 │   │   ├── models/          low-poly geometry, one file per family: creatures (ants), bugs (spider,
 │   │   │                    caterpillar), critters, bird, toad, bosses (guardians), wildBosses (the wild
 │   │   │                    bosses, the Sinkhole pit), food, props, nestProps, roomDecor, underground,
-│   │   │                    house, sneaker, curios, shadows, crowd (instanced batches)
+│   │   │                    house, sneaker, curios, shadows, crowd (instanced batches); kit.js holds the
+│   │   │                    tools they're all built with (paint, blob, strut, bake, hash)
 │   │   ├── geometry/contour.js   marching squares: a field → smooth outlines → THREE.Shapes
 │   │   ├── motion.js        moving vs still creatures (idle breathing, scraping, biting)
 │   │   └── dispose.js       freeing a subtree's GPU memory
@@ -96,6 +98,7 @@ game/
 - **The sim never imports the renderer, the UI or the DOM.** Views read sim state and never write it. Input and the UI change state only through `SIM`'s functions (`queueEgg`, `toggleDigOrder`, `queueRoom`, …) or the player fields (`tx/ty`, `ntx/nty`, `mark`).
 - **`core.js` stays pure data:** it must not import another sim module. Other modules can call each other freely, because their top-level code only declares things.
 - **Anything new on an ant or the colony that must survive a reload** goes in `saveload.js` (`serialize`'s field lists). `tests/saveload.test.js` and `tests/regressions-code-audit.test.js` show how to check it.
+- **Adding a model:** build it with `render/models/kit.js`, and add it to `src/gallery.js` so it shows in the gallery and `npm run models` exports it. **A boss's look** goes in its own `render/views/bosses/<name>.js`, listed in `BOSS_VIEWS` in `surfaceView.js`.
 - **Adding a room or caste:** add it to `ROOMS` or `CASTES` in `sim/core.js` (and its effects where they apply), and its text in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js`; castes get a colour in `config.js` (`COLORS`).
 - **Before committing:** `npm run lint` and `npm test` both clean; `npm run test:e2e` after UI changes.
 - **Tuning the look** is in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (wobble), `colorLevels` and `dither` (grain), `animFps`, plus the camera and creature-scale settings.

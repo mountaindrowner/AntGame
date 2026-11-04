@@ -3,29 +3,15 @@
 // own mesh along +X from the mouth, scaled to reach.
 import * as THREE from 'three';
 import { psx } from '../ps1/materials.js';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { paint as paintFaces, bake as bakeParts, hash as hsh } from './kit.js';
 
-const col = new THREE.Color();
-function paint(geo, fn) {
-  const g = geo.index ? geo.toNonIndexed() : geo;
-  const p = g.attributes.position, c = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i += 3) {
-    const x = (p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, y = (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, z = (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3;
-    col.set(typeof fn === 'function' ? fn(x, y, z, i / 3) : fn);
-    for (let k = 0; k < 3; k++) c.set([col.r, col.g, col.b], (i + k) * 3);
-  }
-  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
-  g.computeVertexNormals();
-  return g;
-}
-function bakeParts(parts) { const g = mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p))); g.computeVertexNormals(); return g; }
+const paint = (geo, fn) => paintFaces(geo, fn, { normals: true });
 // Model pass, layer 3: an American toad. A squat olive-brown body with
 // dark blotches, each ringing a cluster of warts; the kidney-shaped glands
 // behind the eyes; gold eyes with a black bar pupil under a bony brow; the
 // round eardrum; a pale speckled belly and a throat that swells; splayed
 // toes on all four feet. Built along +X (mouth forward), sitting on y = 0,
 // about 2 units long. The tongue is its own mesh along +X from the mouth.
-const hsh = (i) => { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
 const blotch = (x, z) => Math.sin(x * 7.3 + z * 2.1) * Math.cos(z * 6.1 - x * 1.7);
 const skin = (x, y, z) => {
   if (y < 0.16) return Math.sin(x * 23) * Math.sin(z * 19) > 0.7 ? '#a89a72' : '#d8caa0';

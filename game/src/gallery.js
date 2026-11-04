@@ -7,8 +7,9 @@ import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { antGeometry, WALK_FRAMES, outfitGeometry } from './render/models/creatures.js';
 import { COLORS } from './config.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT } from './render/models/bugs.js';
-import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, MILLI } from './render/models/critters.js';
-import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, antlionGeometry, stalkGeometry, alateGeometry } from './render/models/bosses.js';
+import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, MILLI, jumperGeometry, assassinGeometry, waspGeometry, skinkGeometry } from './render/models/critters.js';
+import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry, widowGeometry, centipedeGeometry, CENTI_FRAMES } from './render/models/bosses.js';
+import { raven, zombieAntGeometry, cordycepsHeart, mole, cavedPitGeometry } from './render/models/wildBosses.js';
 import { CURIO_GEO } from './render/models/curios.js';
 import { FOOD } from './render/models/food.js';
 import { PROPS } from './render/models/props.js';
@@ -49,6 +50,15 @@ add('Creatures', 'Cricket: leaping', 'Legs thrown back', one(cricketGeometry('le
 add('Creatures', 'Millipede', 'Curls up armoured', chain(Array.from({ length: MILLI.n }, (_, i) => (i === 0 ? 'head' : i >= MILLI.n - 2 ? 'tail' : 'body')), (k, i) => millipedeSegment(k, i % 4), 2.3, 1));
 add('Creatures', 'Robin', 'Hunts the nearest ant', () => robin().group);
 add('Creatures', 'Toad', 'Its tongue reaches five tiles', () => toad().group);
+// Hunters (build 37): the tier between bugs and bosses.
+add('Creatures', 'Jumping spider', 'Leaps up to five tiles onto an ant', one(jumperGeometry(-1)));
+add('Creatures', 'Jumping spider: crouched', 'The tell before the leap', one(jumperGeometry(-1, 'crouch')));
+add('Creatures', 'Assassin bug', 'Stalks, then drains an ant', one(assassinGeometry(-1)));
+add('Creatures', 'Assassin bug: stabbing', 'Its beak goes in', one(assassinGeometry(-1, 'stab')));
+add('Creatures', 'Hunting wasp', 'Resting: the only time it can be bitten', one(waspGeometry('rest')));
+add('Creatures', 'Hunting wasp: flying', 'Out of reach', one(waspGeometry('fly0')));
+add('Creatures', 'Skink', 'Dashes down a lane, biting', one(skinkGeometry(-1)));
+add('Creatures', 'Skink: tail dropped', 'The tail wriggles on: 40 protein', one(skinkGeometry(-1, false)));
 // Bosses.
 add('Bosses', 'The Hornworm', 'Glutton of the Tomato Rows', chain(['head', ...Array(HORN_SEGMENTS - 2).fill('body'), 'tail'], (k) => hornwormSegment(k), 1.4, 1));
 add('Bosses', 'The Ground Beetle', 'Armoured Hunter of the Rock Garden', one(beetleGeometry('walk', 1)));
@@ -56,6 +66,19 @@ add('Bosses', 'The Ground Beetle: charging', 'Head down, legs driving', one(beet
 add('Bosses', 'The Ground Beetle: dazed', 'Legs kicking: bite now', one(beetleGeometry('dazed', 1)));
 add('Bosses', 'The Antlion Queen', 'Terror of the Sandbox (jaws open)', one(antlionGeometry(true)));
 add('Bosses', 'The Antlion Queen: snapping', 'Jaws shut', one(antlionGeometry(false)));
+add('Bosses', 'The Praying Mantis', 'Ghost of the Hedge Row', one(mantisGeometry('stand')));
+add('Bosses', 'The Praying Mantis: striking', 'Forelegs flung out', one(mantisGeometry('strike')));
+add('Bosses', 'The Praying Mantis: eating', 'Prey clutched to its jaws', one(mantisGeometry('eat')));
+add('Bosses', 'The Black Widow', 'Queen of the Shed, hanging in her web', one(widowGeometry('hang')));
+add('Bosses', 'The Black Widow: biting', 'Fangs down', one(widowGeometry('bite')));
+add('Bosses', 'The Giant Centipede', 'Terror of the Rot', chain(['head', ...Array(10).fill('seg'), 'tail'], (k, i) => centipedeGeometry(k, i % CENTI_FRAMES), 2, 1));
+// The wild bosses (builds 54-59). The Duke is Old Warty's toad, bigger and mud-green; the Hornet Queen a gold wasp.
+add('Wild bosses', 'Nevermore', 'The Raven of the Bramble Lot', () => raven().group);
+add('Wild bosses', 'The Cordyceps Colony', 'The Dead Nest in the Hedge', () => cordycepsHeart().group);
+add('Wild bosses', 'Infected ant', 'The Cordyceps Colony\u2019s waves, and your own ants once turned', one(zombieAntGeometry(-1)));
+add('Wild bosses', 'The Hornet Queen', 'Lady of the Oak\u2019s Crown', () => new THREE.Mesh(waspGeometry('rest'), new THREE.MeshLambertMaterial({ vertexColors: true, color: '#ffd080' })));
+add('Wild bosses', 'Old Blind', 'The Thing Under the Mound', () => mole().group);
+add('Wild bosses', 'The Sinkhole', 'The fire ants\u2019 mound, caved in', () => new THREE.Mesh(cavedPitGeometry(224), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
 add('Events', 'Cordyceps stalk', 'Grows from a dead ant, then bursts', one(stalkGeometry()));
 add('Events', 'Winged queen', 'Swarm day', one(alateGeometry()));
 // Curios.

@@ -11,9 +11,8 @@
 //   alate: a winged queen ant fallen on the ground (Swarm day).
 // Local frame: +X forward, +Y up, +Z left; origin on the ground.
 import * as THREE from 'three';
-import { paint, blob, strut, bake, hash } from './bugs.js';
+import { V, paint, blob, strut, bake, hash } from './kit.js';
 
-const V = (x, y, z) => new THREE.Vector3(x, y, z);
 function leg(hip, foot, up, r0, r1, c0, c1) {
   const knee = hip.clone().lerp(foot, 0.42);
   knee.y = Math.max(hip.y, foot.y) + up;

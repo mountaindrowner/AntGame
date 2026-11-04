@@ -10,11 +10,11 @@ import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
 import { disposeTree } from '../dispose.js';
-import { raven, zombieAntGeometry, cordycepsHeart, mole, sinkholeGeometry } from '../models/wildBosses.js';
+import { zombieAntGeometry, sinkholeGeometry } from '../models/wildBosses.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI, jumperGeometry, assassinGeometry, waspGeometry, skinkGeometry } from '../models/critters.js';
 import { CURIO_GEO, CURIO_SIZE } from '../models/curios.js';
-import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry, mantisGeometry, widowGeometry, centipedeGeometry, CENTI_FRAMES } from '../models/bosses.js';
+import { hornwormSegment, HORN_SEGMENTS, beetleGeometry, BEETLE_FRAMES, antlionGeometry, stalkGeometry, alateGeometry } from '../models/bosses.js';
 import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
@@ -24,6 +24,20 @@ import { sneaker } from '../models/sneaker.js';
 import { robin } from '../models/bird.js';
 import { toad, fallingAcorn } from '../models/toad.js';
 import { SHADOW_DISC, SHADOW_SOLE, SHADOW_BIRD } from '../models/shadows.js';
+import { HIT, flashed, wrapAngle } from './surfaceKit.js';
+import { drawHornworm } from './bosses/hornworm.js';
+import { drawBeetle } from './bosses/beetle.js';
+import { drawAntlion } from './bosses/antlion.js';
+import { drawRobin } from './bosses/robin.js';
+import { drawNevermore } from './bosses/nevermore.js';
+import { drawWarty } from './bosses/warty.js';
+import { drawOldBlind } from './bosses/oldBlind.js';
+import { drawHornets } from './bosses/hornets.js';
+import { drawCordyceps } from './bosses/cordyceps.js';
+import { drawDuke } from './bosses/duke.js';
+import { drawMantis } from './bosses/mantis.js';
+import { drawWidow } from './bosses/widow.js';
+import { drawCentipede } from './bosses/centipede.js';
 
 const { W, H, T, CASTES, DROP, HUNT } = SIM;
 // The scent overlay covers a window this many tiles a side round the camera.
@@ -36,6 +50,8 @@ const tmpV = new THREE.Vector3();
 const tmpC = new THREE.Color(), tmpC2 = new THREE.Color();
 const DAUGHTER_FLAG = { war: '#c8302a', brood: '#f2e6c8', watch: '#3a7ad8', quarry: '#8a8478', garden: '#4caf50' }; // build 46
 // Build 43: the colours of the day: sky and fog by day, dusk, night, the moon.
+const BOSS_VIEWS = [drawHornworm, drawBeetle, drawAntlion, drawRobin, drawNevermore, drawWarty, drawOldBlind, drawHornets, drawCordyceps, drawDuke, drawMantis, drawWidow, drawCentipede];
+
 const DAYC = { sky: "#9bc7e6", fog: "#b9cfd8", rainSky: "#6f7f8f", night: "#121a32", nightFog: "#18213a", dusk: "#e2905e", moon: "#8ea6e8", hemiNight: "#7d8cc8" };
 const tmpQ = new THREE.Quaternion();
 const _c2 = new THREE.Color();
@@ -57,15 +73,11 @@ const BUG = {
   skink: { k: 2.4, stride: 16, bar: 16, back: 2.4 },
   zombie: { k: 1, stride: 8, bar: 12, back: 2 },        // build 56: an infected ant (build 59: its own model, zombieAntGeometry)
 };
-const HIT = '#ff7a6a';   // the flash on whatever a bite lands on
-// Under attack it flickers, so a long fight doesn't just turn it red.
-const flashed = (s, o) => s.t - (o.hitT ?? -9) < 0.12 && (s.t * 9) % 1 < 0.5;
 const SPIDER_SCALE = 2.6;
 // Caterpillar: segment size and spacing (px), and the crawl wave.
 const CAT = { r: 5.6, head: 5.2, gap: 7, lift: 2.6, waveLen: 12 };
 const CAT_KIND = ['head', 'black', 'black', 'rust', 'rust', 'rust', 'rust', 'rust', 'black', 'black'];
 const CAT_LEGS = [null, 'true', 'true', 'true', null, null, 'pro', 'pro', 'pro', 'pro'];
-const wrapAngle = (a) => a - Math.PI * 2 * Math.floor((a + Math.PI) / (Math.PI * 2));
 
 // Fraction of the screen height to move the camera so the subject sits in
 // the middle of the area between the top HUD and the bottom bar.
@@ -1155,378 +1167,9 @@ export class SurfaceView {
       const d = b.atkDone; if (d && d.x != null && s.t - d.t < 0.35 && (d.kind === 'ring' || d.kind === 'spit' || d.kind === 'grab' || d.kind === 'toss')) this._decal(di++, { kind: 'ring', x: d.x, y: d.y, r: d.kind === 'ring' ? 3.6 * T : d.kind === 'spit' ? 2.4 * T : 1.4 * T, t: 1, at: 1 }, t, '#fff', (s.t - d.t) / 0.35);
       if (d && (d.kind === 'slam' || d.kind === 'ring' || d.kind === 'surface') && s.t - d.t < 0.05 && !d.shook) { d.shook = true; if (Math.hypot(b.x - this.target.x, b.y - this.target.z) < 30 * T) this.shake = Math.max(this.shake, d.kind === 'slam' ? 0.5 : 0.3); }
     };
-    // Hornworm.
-    const hw = B.hornworm;
-    const showHw = hw && (!hw.dead || s.t - hw.deadT < 14);
-    this.horn.forEach((m) => (m.visible = !!showHw));
-    if (showHw) {
-      tele(hw);
-      const gap = 13, n = HORN_SEGMENTS, path = this.hornPath, R = 9.5;
-      if (!path.length || Math.hypot(path[0][0] - hw.x, path[0][1] - hw.y) > 80) { path.length = 0; for (let i = 0; i <= n + 2; i++) path.push([hw.x - (hw.dx || 1) * i * gap, hw.y - (hw.dy || 0) * i * gap]); }
-      else if (Math.hypot(path[0][0] - hw.x, path[0][1] - hw.y) > 1) { path.unshift([hw.x, hw.y]); this.hornPhase = (this.hornPhase || 0) + 0.06; this.hornMoved = t; }
-      const pts = [[hw.x, hw.y]]; let acc = 0, want = gap, prev = path[0];
-      for (let i = 1; i < path.length && pts.length < n; i++) { const cur = path[i], l = Math.hypot(cur[0] - prev[0], cur[1] - prev[1]); while (pts.length < n && acc + l >= want) { const u = (want - acc) / l; pts.push([prev[0] + (cur[0] - prev[0]) * u, prev[1] + (cur[1] - prev[1]) * u]); want += gap; } acc += l; prev = cur; if (acc > gap * (n + 4)) { path.length = i + 1; break; } }
-      while (pts.length < n) { const p = pts[pts.length - 1]; pts.push([p[0] - gap, p[1]]); }
-      const crawl = t - (this.hornMoved || -9) < 0.4, dead = hw.dead ? Math.min(1, (s.t - hw.deadT) / 0.8) : 0, sink = hw.dead ? Math.max(0, (s.t - hw.deadT - 10) / 4) : 0;
-      // Rearing: the front rises as the thrash winds up.
-      const rear = hw.atk && hw.atk.kind === 'ring' ? Math.sin(Math.min(1, hw.atk.t / hw.atk.at) * Math.PI * 0.5) : 0;
-      const flash = !hw.dead && flashed(s, hw);
-      this.bossMat.color.set(flash ? HIT : '#ffffff');
-      this.horn.forEach((m, i) => {
-        const a = pts[Math.max(0, i - 1)], c = pts[Math.min(n - 1, i + 1)], yaw = Math.atan2(-(a[1] - c[1]), a[0] - c[0]);
-        const r = R * (i === 0 ? 0.9 : i > n - 4 ? 1 - (i - (n - 4)) * 0.07 : 1), wave = crawl ? Math.max(0, Math.sin((this.hornPhase || 0) * (hw.phase === 2 ? 9 : 6) + i * 0.7)) * 3 : 0;
-        const up = rear * Math.max(0, 5 - i) * 11 + wave;
-        m.position.set(pts[i][0], r * (1 - dead * 0.5) + up - sink * 10, pts[i][1]);
-        m.rotation.set(dead * (i % 2 ? 0.3 : -0.3), yaw || 0, i < 5 ? rear * 0.7 : 0);
-        m.scale.set(r * (1 + dead * 0.2), r * (1 - dead * 0.45), r * (1 + dead * 0.15));
-      });
-      if (!hw.dead && hw.hp < hw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], hw.x, hw.y, 40, hw.hp / hw.maxHp, '#b04ad0');
-    }
-    // Ground beetle.
-    const gb = B.beetle, BA = this.beetleAnim;
-    const showGb = gb && (!gb.dead || s.t - gb.deadT < 14);
-    this.beetle.visible = !!showGb;
-    if (showGb) {
-      tele(gb);
-      const d = Math.hypot(gb.x - BA.x, gb.y - BA.y);
-      if (d > 0.05 && d < 100) { BA.phase += d / (gb.charge ? 18 : 10); BA.moved = t; }
-      BA.x = gb.x; BA.y = gb.y;
-      const aim = Math.atan2(-(gb.dy || 0), gb.dx || 1); BA.yaw += wrapAngle(aim - BA.yaw) * Math.min(1, fdt * (gb.charge ? 20 : 6));
-      const fr = Math.floor(BA.phase * BEETLE_FRAMES) % BEETLE_FRAMES, k = 4.2;
-      let geo = this.beetleGeo.stand, roll = 0, pitch = 0, y = 0, shiver = 0;
-      if (gb.dead) { geo = this.beetleGeo.dazed[Math.floor(t * 3) % 2 && s.t - gb.deadT < 3 ? 1 : 0]; roll = Math.PI * Math.min(1, (s.t - gb.deadT) / 0.5); y = 5 * k * Math.min(1, (s.t - gb.deadT) / 0.5) - Math.max(0, (s.t - gb.deadT - 10) / 4) * 20; }
-      else if (gb.dazeT > 0) { geo = this.beetleGeo.dazed[Math.floor(t * 8) % 2]; roll = Math.sin(t * 5) * 0.25;
-        // Stars round its head while it's dazed.
-        for (let j = 0; j < 3; j++) { const a = t * 4 + j * 2.1; tmpV.set(gb.x + Math.cos(a) * 18, 38 + Math.sin(t * 6 + j) * 3, gb.y + Math.sin(a) * 18); F.pushAt('star', FOOD.star, tmpV, this.camera.quaternion, 9, '#ffe060'); } }
-      else if (gb.charge) { geo = this.beetleGeo.charge[fr]; pitch = -0.08; }
-      else if (gb.atk) { geo = this.beetleGeo.charge[0]; pitch = -0.12; shiver = Math.sin(t * 50) * 1.2; }
-      else geo = t - BA.moved < 0.2 ? this.beetleGeo.walk[fr] : this.beetleGeo.stand;
-      this.beetle.geometry = geo;
-      this.beetle.position.set(gb.x + shiver, y, gb.y);
-      this.beetle.rotation.set(roll, BA.yaw, pitch);
-      this.beetle.scale.setScalar(k);
-      if (!gb.dead && !flashed(s, hw || {})) this.bossMat.color.set(flashed(s, gb) ? HIT : '#ffffff');
-      if (!gb.dead && gb.hp < gb.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], gb.x, gb.y, 44, gb.hp / gb.maxHp, '#b04ad0');
-      // Dust kicked up as it paws the ground and charges.
-      if (gb.charge || gb.atk) for (let j = 0; j < 3; j++) { const a = t * 13 + j * 2; tmpV.set(gb.x - (gb.dx || 1) * 26 + Math.cos(a) * 8, 3 + (t * 20 + j * 3) % 8, gb.y - (gb.dy || 0) * 26 + Math.sin(a) * 8); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.4, '#a89070'); }
-    }
-    // The antlion queen.
-    const al = B.antlion, AA = this.antlionAnim;
-    const showAl = al && (!al.dead || s.t - al.deadT < 14);
-    this.antlion.visible = !!showAl;
-    if (showAl) {
-      tele(al);
-      AA.up += ((al.dead ? 1 : al.under || al.move ? 0 : 1) - AA.up) * Math.min(1, fdt * (al.under ? 4 : 10));
-      const tg = (al.atk && al.atk.x != null) ? al.atk : this.target ? { x: this.target.x, y: this.target.z } : null;
-      if (tg) { const aim = Math.atan2(-(tg.y - al.y), tg.x - al.x); AA.yaw += wrapAngle(aim - AA.yaw) * Math.min(1, fdt * 3); }
-      const k = 6, snap = s.t - (al.snapAt ?? -9) < 0.25 || (al.atkDone && al.atkDone.kind === 'grab' && s.t - al.atkDone.t < 0.3);
-      this.antlion.geometry = this.antlionGeo[snap || (al.atk && al.atk.kind !== 'grab') ? 0 : 1];
-      this.antlion.position.set(al.x, -k * 3.6 * (1 - AA.up) + 5 * AA.up + (al.dead ? -Math.max(0, (s.t - al.deadT - 10) / 4) * 20 : 0), al.y);
-      this.antlion.rotation.set(al.dead ? 1.2 : 0, AA.yaw, al.dead ? 0 : 0.15 + 0.3 * AA.up);
-      this.antlion.scale.setScalar(k);
-      if (!al.dead && !flashed(s, hw || {}) && !flashed(s, gb || {})) this.bossMat.color.set(flashed(s, al) ? HIT : '#ffffff');
-      // Sand: a swirl over her while she waits, a burst when she surfaces, a trail when she tunnels.
-      if (!al.dead && al.under && !al.move) for (let j = 0; j < 6; j++) { const a = t * 1.5 + j * 1.05, r = 14 + (j % 3) * 6; tmpV.set(al.x + Math.cos(a) * r, 1.5, al.y + Math.sin(a) * r); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.2, '#d8c090'); }
-      if (al.atkDone && al.atkDone.kind === 'surface' && s.t - al.atkDone.t < 0.8 || (!al.under && AA.up < 0.9)) for (let j = 0; j < 8; j++) { const a = j * 0.8 + t, u = (t * 2) % 1; tmpV.set(al.x + Math.cos(a) * u * 40, Math.sin(u * Math.PI) * 30, al.y + Math.sin(a) * u * 40); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 3, '#e0cc98'); }
-      if (al.move) { const w = s.world, p0 = w.pits[al.move.from], p1 = w.pits[al.move.to], u = Math.min(1, al.move.t / 2); for (let j = 0; j < 5; j++) { const v = Math.max(0, u - j * 0.05); tmpV.set((p0.x + (p1.x - p0.x) * v) * T, 2 + Math.sin(t * 20 + j) * 2, (p0.y + (p1.y - p0.y) * v) * T); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 3.5, '#c8a870'); } }
-      if (!al.dead && !al.under && al.hp < al.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], al.x, al.y, 46, al.hp / al.maxHp, '#b04ad0');
-    }
-    // The Old Robin (build 30): hops and pecks on the lawn; in its second phase it circles overhead
-    // (its shadow on the grass) and swoops down a lane. It flies off for good when beaten.
-    const rb = B.robin;
-    if (rb && !this.oldRobin) {
-      this.oldRobin = robin(); this.oldRobin.group.scale.setScalar(130); this.dyn.add(this.oldRobin.group);
-      this.oldRobinMats = []; this.oldRobin.group.traverse((o) => { if (o.material && !this.oldRobinMats.includes(o.material)) this.oldRobinMats.push(o.material); });
-      this.oldRobinShadow = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), psxBasic({ color: '#000000', transparent: true, opacity: 0.3, depthWrite: false }));
-      this.dyn.add(this.oldRobinShadow); this.robinAnim = { yaw: 0, y: 0 };
-    }
-    if (this.oldRobin) {
-      const R = this.oldRobin, RA = this.robinAnim, showRb = rb && (!rb.dead || s.t - rb.deadT < 4);
-      R.group.visible = !!showRb; this.oldRobinShadow.visible = false;
-      if (showRb) {
-        tele(rb);
-        const aim = Math.atan2(rb.dy || 0, rb.dx || 1); RA.yaw += wrapAngle(aim - RA.yaw) * Math.min(1, fdt * 6);
-        let y = 0;
-        if (rb.dead) y = (s.t - rb.deadT) * 220;
-        else if (rb.swoop) y = 100 * (1 - Math.min(1, rb.swoop.t / 0.6));
-        else if (rb.air) y = 100;
-        else if (rb.hop) y = Math.sin(Math.PI * Math.min(1, rb.hop.t / 0.35)) * 34;
-        RA.y += (y - RA.y) * (rb.swoop || rb.hop || rb.dead ? 1 : Math.min(1, fdt * 5));
-        R.group.position.set(rb.x, RA.y, rb.y); R.group.rotation.set(0, -RA.yaw, 0);
-        const peck = rb.peckAt != null && s.t - rb.peckAt < 0.35 ? Math.sin(Math.PI * (s.t - rb.peckAt) / 0.35) : rb.atk && rb.atk.what === 'peck' ? 0.25 : 0;
-        R.body.rotation.z = -0.75 * peck; R.head.rotation.z = -0.4 * peck;
-        const flap = RA.y > 4 || rb.dead || (rb.beatAt != null && s.t - rb.beatAt < 0.6) || (rb.atk && rb.atk.what === 'beat');
-        for (const w of R.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 28) * 0.9) : w.s * (rb.pinned ? 0.35 + 0.15 * Math.sin(t * 20) : 0.05);
-        const col = !rb.dead && flashed(s, rb) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : rb.pinned ? '#ffe2a0' : '#ffffff';
-        for (const m of this.oldRobinMats) m.color.set(col);
-        if (RA.y > 6) { const near = 1 - Math.min(1, RA.y / 300); this.oldRobinShadow.visible = true; this.oldRobinShadow.position.set(rb.x, 0.8, rb.y); this.oldRobinShadow.scale.setScalar(70 * (0.7 + 0.3 * near)); this.oldRobinShadow.material.opacity = 0.15 + 0.3 * near; }
-        if (!rb.dead && rb.hp < rb.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], rb.x, rb.y, 70 + RA.y, rb.hp / rb.maxHp, '#b04ad0');
-      }
-    }
-    // Nevermore (build 55; build 59: his own raven model). Aloft he circles high
-    // with his shadow below; a snatched ant dangles; on the ground he struts and pecks like the Old Robin.
-    const cw = B.crow;
-    if (cw && !this.oldBlack) {
-      this.oldBlack = raven(); this.oldBlack.group.scale.setScalar(165); this.dyn.add(this.oldBlack.group);
-      this.oldBlackMats = []; this.oldBlack.group.traverse((o) => { if (o.material && o.material.vertexColors) { o.material = o.material.clone(); this.oldBlackMats.push(o.material); } });
-      this.oldBlackShadow = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), psxBasic({ color: '#000000', transparent: true, opacity: 0.3, depthWrite: false }));
-      this.dyn.add(this.oldBlackShadow); this.crowAnim = { yaw: 0, y: 0 };
-    }
-    if (this.oldBlack) {
-      const R = this.oldBlack, RA = this.crowAnim, show = cw && (!cw.dead || s.t - cw.deadT < 6);
-      R.group.visible = !!show; this.oldBlackShadow.visible = false;
-      if (show) {
-        tele(cw);
-        const aim = cw.air ? Math.atan2(Math.cos(cw.ang || 0), -Math.sin(cw.ang || 0)) : Math.atan2(cw.dy || 0, cw.dx || 1); RA.yaw += wrapAngle(aim - RA.yaw) * Math.min(1, fdt * 6);
-        let y = 0; if (cw.dead) y = 0; else if (cw.air && cw.mode === 'fight') y = 85; else if (cw.hop) y = Math.sin(Math.PI * Math.min(1, cw.hop.t / 0.35)) * 40;
-        RA.y += (y - RA.y) * (cw.hop ? 1 : Math.min(1, fdt * 3));
-        R.group.position.set(cw.x, RA.y, cw.y); R.group.rotation.set(cw.dead ? 1.4 : 0, -RA.yaw, 0);
-        const peck = cw.peckAt != null && s.t - cw.peckAt < 0.35 ? Math.sin(Math.PI * (s.t - cw.peckAt) / 0.35) : cw.atk && cw.atk.what === 'peck' ? 0.25 : 0;
-        R.body.rotation.z = -0.75 * peck; R.head.rotation.z = -0.4 * peck;
-        const flap = RA.y > 4 || (cw.beatAt != null && s.t - cw.beatAt < 0.6) || (cw.atk && cw.atk.what === 'beat');
-        for (const w of R.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 22) * 0.9) : w.s * (cw.pinned ? 0.35 + 0.15 * Math.sin(t * 20) : 0.05);
-        const col = !cw.dead && flashed(s, cw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : cw.pinned ? '#d8d0b0' : '#ffffff'; R.glint.visible = Math.sin(t * 3) > -0.6;
-        for (const m of this.oldBlackMats) m.color.set(col);
-        if (RA.y > 6) { this.oldBlackShadow.visible = true; this.oldBlackShadow.position.set(cw.x, 0.8, cw.y); this.oldBlackShadow.scale.setScalar(150); this.oldBlackShadow.material.opacity = 0.3; }
-        if (!cw.dead && cw.hp < cw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], cw.x, cw.y, 80 + RA.y, cw.hp / cw.maxHp, '#3a3a5a');
-      }
-    }
-    // Old Warty (build 31): the strike toad's model, twice the size, darker. It turns to face, lashes its
-    // tongue down the lane, leaps in an arc, puffs up in its second phase; a swallowed ant bulges its throat.
-    const tw = B.toad, WK = 96;
-    if (tw && !this.warty) {
-      this.warty = toad(); this.warty.group.scale.setScalar(WK); this.dyn.add(this.warty.group);
-      this.wartyMats = []; this.warty.group.traverse((o) => { if (o.material && !this.wartyMats.includes(o.material)) this.wartyMats.push(o.material); });
-      this.wartyAnim = { yaw: 0 };
-    }
-    if (this.warty) {
-      const W2 = this.warty, WA = this.wartyAnim, show = tw && (!tw.dead || s.t - tw.deadT < 14);
-      W2.group.visible = !!show;
-      if (show) {
-        tele(tw);
-        const aim = Math.atan2(tw.dy || 0, tw.dx ?? 1); WA.yaw += wrapAngle(aim - WA.yaw) * Math.min(1, fdt * 8);
-        let y = 0; if (tw.leap) y = Math.sin(Math.PI * Math.min(1, tw.leap.t / 0.5)) * 70; if (tw.dead) y = -Math.max(0, (s.t - tw.deadT - 10) / 4) * 30;
-        W2.group.position.set(tw.x, y, tw.y); W2.group.rotation.set(tw.dead ? Math.PI : 0, -WA.yaw, 0);
-        const lash = tw.lashAt != null && s.t - tw.lashAt < 0.35 ? Math.sin(Math.PI * (s.t - tw.lashAt) / 0.35) : 0;
-        W2.tongue.visible = lash > 0; if (lash > 0) W2.tongue.scale.set(Math.max(0.4, (tw.lashLen || 2 * T) / WK - 1.05) * lash, 1, 1);
-        const puff = tw.puffT > 0 ? 1.28 : 1, gulp = tw.held ? 1.5 + 0.15 * Math.sin(t * 9) : 1 + 0.4 * Math.max(0, Math.sin(t * 5));
-        W2.body.scale.set(puff, puff * (1 + 0.02 * Math.sin(t * 2)), puff); W2.throat.scale.set(1, gulp, 0.6 + 0.4 * gulp);
-        const col = !tw.dead && flashed(s, tw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : tw.puffT > 0 ? '#e8d890' : '#b8c0a8'; // bitten all the time: a flicker, not solid red
-        for (const m of this.wartyMats) m.color.set(col);
-        if (!tw.dead && tw.hp < tw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], tw.x, tw.y, 70 + y, tw.hp / tw.maxHp, '#b04ad0');
-      }
-    }
-    // Old Blind (build 58): a huge velvet-dark mole, pink star nose, pale shovel claws, eyes a pinprick of green.
-    // Under the earth, only a ridge of dirt moving toward your ants.
-    const ob = B.blind;
-    if (ob && !this.mole) { // build 59: the real mole, a heaving ridge and a trail of turned earth, clods flung when it erupts
-      const M = mole(); M.group.scale.setScalar(0.8); M.mats = []; M.group.traverse((o) => { if (o.material && o.material.vertexColors && !M.mats.includes(o.material)) M.mats.push(o.material); });
-      const dirt = psx({ vertexColors: true }), ridgeGeo = new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(70, 22, 46);
-      { const c = new Float32Array(ridgeGeo.attributes.position.count * 3); for (let k = 0; k < c.length; k += 3) { const v = 0.32 + ((k * 7919) % 13) / 60; c[k] = v * 1.1; c[k + 1] = v * 0.78; c[k + 2] = v * 0.52; } ridgeGeo.setAttribute('color', new THREE.BufferAttribute(c, 3)); }
-      M.ridge = new THREE.Mesh(ridgeGeo, dirt);
-      M.trail = Array.from({ length: 18 }, () => { const m = new THREE.Mesh(new THREE.SphereGeometry(1, 7, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(16, 7, 13), psx({ color: '#5a3e26' })); m.visible = false; this.dyn.add(m); return m; });
-      M.clods = Array.from({ length: 22 }, (_, i) => { const m = new THREE.Mesh(new THREE.BoxGeometry(7, 6, 7), psx({ color: i % 3 ? '#6a4a2e' : '#4a3220' })); m.visible = false; this.dyn.add(m); return m; });
-      M.hist = []; M.histT = 0; this.mole = M; this.dyn.add(M.group, M.ridge); this.moleAnim = { yaw: 0 };
-    }
-    if (this.mole) {
-      const M = this.mole, MA = this.moleAnim, show = ob && (!ob.dead || s.t - ob.deadT < 12), under = show && ob.under && !ob.dead && ob.mode === 'fight';
-      M.group.visible = !!show && (!ob.under || ob.dead); M.ridge.visible = under;
-      if (show) {
-        tele(ob);
-        const aim = Math.atan2(ob.dy || 0, ob.dx ?? 1); MA.yaw += wrapAngle(aim - MA.yaw) * Math.min(1, fdt * 5);
-        const rise = ob.landAt != null ? Math.min(1, (s.t - ob.landAt) / 0.4) : 1;
-        M.group.position.set(ob.x, ob.dead ? -Math.max(0, s.t - ob.deadT - 6) * 14 : -90 * (1 - rise), ob.y); M.group.rotation.set(0, -MA.yaw, ob.dead ? Math.PI / 2 : 0);
-        M.ridge.position.set(ob.x, 0, ob.y); M.ridge.rotation.y = -MA.yaw; M.ridge.scale.y = 1 + 0.25 * Math.sin(t * 11);
-        // The trail of turned earth behind the ridge, fading.
-        M.histT += fdt; if (under && M.histT > 0.25) { M.histT = 0; M.hist.unshift({ x: ob.x, y: ob.y, t }); M.hist.length = Math.min(M.hist.length, M.trail.length); }
-        M.trail.forEach((m, i) => { const h = M.hist[i]; m.visible = !!h && t - h.t < 6; if (h) { m.position.set(h.x, 0, h.y); m.scale.setScalar(1 - (t - h.t) / 6); } });
-        // Eruption: clods flung out in arcs.
-        const e = ob.landAt != null ? s.t - ob.landAt : 9;
-        M.clods.forEach((m, i) => { m.visible = e < 1.1; if (m.visible) { const a = i * 2.4, sp = 90 + (i % 5) * 30; m.position.set(ob.x + Math.cos(a) * sp * e, Math.max(0, 160 * e - 260 * e * e), ob.y + Math.sin(a) * sp * e); m.rotation.set(e * 9 + i, e * 7, 0); } });
-        const sw = ob.swipeAt != null && s.t - ob.swipeAt < 0.3 ? Math.sin(Math.PI * (s.t - ob.swipeAt) / 0.3) : ob.atk && ob.atk.kind === 'lane' ? -0.3 : 0;
-        M.claws.forEach((c, i) => { c.position.x = c.userData.bx + sw * 34; c.rotation.y = (i ? 1 : -1) * (0.35 - sw * 0.5); });
-        M.veins.color.setRGB(0.35 + 0.3 * Math.sin(t * 3), 1, 0.35 + 0.25 * Math.sin(t * 3));
-        M.nose.rotation.x = t * 2.5; M.nose.scale.setScalar(1 + 0.15 * Math.sin(t * 16));
-        M.eye.visible = Math.sin(t * 2.2) > -0.7;
-        const hit = !ob.dead && flashed(s, ob) && Math.sin(t * 40) > 0.3; for (const m of M.mats) m.color.set(hit ? '#ffc8b8' : '#ffffff');
-        if (!ob.dead && ob.hp < ob.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], ob.x, ob.y, 150, ob.hp / ob.maxHp, '#7dff6a');
-      }
-    }
-    // The Hornet Queen (build 57): her grey paper nest hanging high on the Oak's south face, hornets wheeling
-    // round it, the queen on its flank; a diving hornet streaks to the climber it picked (a ring flashes there).
-    const hq = B.hornets;
-    if (hq && !this.paper && this.oakL) {
-      const L = this.oakL, R = L.r * T * (1.1 - 0.28 * SIM.CROWN / 1800);
-      this.paper = new THREE.Group(); this.paper.position.set(L.x * T, SIM.CROWN + 20, L.y * T + R + 26);
-      const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10).scale(34, 46, 30), psx({ color: '#b8b0a0' }));
-      for (let k = 0; k < 5; k++) { const band = new THREE.Mesh(new THREE.TorusGeometry(31 - Math.abs(k - 2) * 7, 2.2, 5, 18).rotateX(Math.PI / 2), psx({ color: '#8a8070' })); band.position.y = (k - 2) * 15; this.paper.add(band); }
-      const hole = new THREE.Mesh(new THREE.CircleGeometry(8, 10).rotateX(Math.PI / 2), psxBasic({ color: '#120c08' })); hole.position.y = -46;
-      this.paper.add(ball, hole); this.dyn.add(this.paper);
-      this.hornetMat = psx({ vertexColors: true });
-      this.hornets = Array.from({ length: 7 }, () => { const m = new THREE.Mesh(this.bugGeo.wsFly[0], this.hornetMat); m.scale.setScalar(3.4); this.dyn.add(m); return m; });
-      this.hornetQ = new THREE.Mesh(this.bugGeo.wsRest, psx({ vertexColors: true, color: '#ffd080' })); this.hornetQ.scale.setScalar(9); this.dyn.add(this.hornetQ);
-    }
-    if (this.paper) {
-      const show = hq && (!hq.dead || s.t - hq.deadT < 6); this.paper.visible = this.hornetQ.visible = !!show; for (const m of this.hornets) m.visible = !!show && !hq.dead;
-      if (show) {
-        const P0 = this.paper.position, awake = hq.mode === 'fight';
-        this.hornetQ.position.set(P0.x + 30, P0.y + 10 + Math.sin(t * 3) * 3, P0.z + 12); this.hornetQ.rotation.set(0, -Math.PI / 2, hq.dead ? Math.PI : 0);
-        this.hornetQ.material.color.set(!hq.dead && flashed(s, hq) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : '#ffd080');
-        const diver = hq.dive && s.ants.find((o) => o.id === hq.dive.id);
-        this.hornets.forEach((m, i) => {
-          m.geometry = this.bugGeo.wsFly[Math.floor(t * 30 + i) % 2];
-          if (i === 0 && diver && diver.climb != null && this.oakL) { const u = Math.min(1, hq.dive.t / hq.dive.at), L = this.oakL, R = L.r * T * (1.1 - 0.28 * diver.climb / 1800); m.position.set(P0.x + (diver.x - P0.x) * u, P0.y + (diver.climb - P0.y) * u, P0.z + (L.y * T + R + 6 - P0.z) * u); return; }
-          const a = t * (awake ? 2.2 : 0.9) + (i / 7) * Math.PI * 2, r = (awake ? 70 : 50) + 12 * Math.sin(t * 1.3 + i);
-          m.position.set(P0.x + Math.cos(a) * r, P0.y + Math.sin(t * 2 + i) * 30, P0.z + 20 + Math.sin(a) * r * 0.5); m.rotation.set(0, -a, 0);
-        });
-        if (diver && this.oakL) { this._decal(di++, { kind: 'ring', x: diver.x, y: diver.y, r: 0.8 * T, t: hq.dive.t, at: hq.dive.at }, t, '#ff7a20'); this.hornets[0].visible = true; }
-        if (!hq.dead && hq.hp < hq.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], P0.x, P0.z - 40, P0.y + 70, hq.hp / hq.maxHp, '#e0a020');
-      }
-    }
-    // The Cordyceps Colony (build 56): a great pale fungal stalk on a grey mound of dead ants, pulsing; a spore
-    // cloud's ring shows where it will burst.
-    const hz = B.hollow;
-    if (hz && !this.heart) { this.heart = cordycepsHeart(); this.heart.mats = []; this.heart.group.traverse((o) => { if (o.material && o.material.vertexColors) this.heart.mats.push(o.material); }); this.dyn.add(this.heart.group); } // build 59
-    if (this.heart) {
-      const H = this.heart, show = hz && (!hz.dead || s.t - hz.deadT < 8); H.group.visible = !!show;
-      if (show) {
-        tele(hz);
-        const rage = hz.phase === 2, wilt = hz.dead ? Math.min(1, (s.t - hz.deadT) / 8) : 0, beat = 1 + 0.05 * Math.sin(t * (rage ? 7 : 4));
-        H.group.position.set(hz.x, -wilt * 40, hz.y); H.group.scale.set(1, (1 - wilt * 0.5) * beat, 1);
-        const burst = hz.sporeAt != null && s.t - hz.sporeAt < 0.6 ? 1 - (s.t - hz.sporeAt) / 0.6 : 0;
-        H.haze.scale.set(70 + burst * 60, 55 + burst * 40, 70 + burst * 60); H.haze.material.opacity = hz.dead ? 0 : 0.12 + 0.06 * Math.sin(t * 2) + burst * 0.25;
-        H.pustules.forEach((m, i) => { const k = 1 + 0.35 * Math.sin(t * (rage ? 9 : 5) + i * 1.7); m.scale.setScalar(hz.dead ? 0.4 : k); m.visible = !hz.dead || Math.sin(t * 20 + i) > 0; });
-        const col = !hz.dead && flashed(s, hz) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : (hz.guards || 0) >= 6 ? '#b8b4a0' : '#ffffff';
-        for (const m of H.mats) m.color.set(col);
-        if (!hz.dead && hz.hp < hz.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], hz.x, hz.y, 220, hz.hp / hz.maxHp, '#8a9470');
-      }
-    }
-    // The Duke (build 54): Old Warty's model, half again bigger and darker, mud-green. He sinks out of sight when
-    // he dives (the ring shows where he'll come up), and a gulped crew swells his throat.
-    const dk = B.duke, DK = 150;
-    if (dk && !this.duke) {
-      this.duke = toad(); this.duke.group.scale.setScalar(DK); this.dyn.add(this.duke.group);
-      this.dukeMats = []; this.duke.group.traverse((o) => { if (o.material) { o.material = o.material.clone(); this.dukeMats.push(o.material); } });
-      this.dukeAnim = { yaw: 0, sink: 0 };
-    }
-    if (this.duke) {
-      const D2 = this.duke, DA = this.dukeAnim, show = dk && (!dk.dead || s.t - dk.deadT < 14);
-      D2.group.visible = !!show;
-      if (show) {
-        tele(dk);
-        const aim = Math.atan2(dk.dy || 0, dk.dx ?? 1); DA.yaw += wrapAngle(aim - DA.yaw) * Math.min(1, fdt * 6);
-        DA.sink += ((dk.under ? 1 : 0) - DA.sink) * Math.min(1, fdt * (dk.under ? 4 : 10));
-        let y = -DA.sink * 110; if (dk.dead) y = -Math.max(0, (s.t - dk.deadT - 10) / 4) * 40;
-        D2.group.position.set(dk.x, y, dk.y); D2.group.rotation.set(dk.dead ? Math.PI : 0, -DA.yaw, 0);
-        const lash = dk.lashAt != null && s.t - dk.lashAt < 0.35 ? Math.sin(Math.PI * (s.t - dk.lashAt) / 0.35) : 0;
-        D2.tongue.visible = lash > 0; if (lash > 0) D2.tongue.scale.set(Math.max(0.4, (dk.lashLen || 2 * T) / DK - 1.05) * lash, 1, 1);
-        const gulp = dk.belly ? 1.7 + 0.2 * Math.sin(t * 9) : 1 + 0.4 * Math.max(0, Math.sin(t * 4));
-        D2.body.scale.set(1, 1 + 0.02 * Math.sin(t * 2), 1); D2.throat.scale.set(1, gulp, 0.6 + 0.4 * gulp);
-        const col = !dk.dead && flashed(s, dk) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : dk.pinned ? '#c8b890' : '#7a8a58';
-        for (const m of this.dukeMats) m.color.set(col);
-        if (!dk.dead && dk.hp < dk.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], dk.x, dk.y, 100 + Math.max(0, y), dk.hp / dk.maxHp, '#2a8a4a');
-      }
-    }
-    // The praying mantis (build 34): nearly invisible in the hedge until you're close; it sways before it
-    // strikes, flings its forelegs out, and eats with them clutched to its jaws.
-    const mt = B.mantis;
-    if (mt && !this.mantis) {
-      this.mantisGeo = { stand: mantisGeometry('stand'), strike: mantisGeometry('strike'), eat: mantisGeometry('eat') };
-      this.mantisMat = psx({ vertexColors: true, transparent: true, opacity: 1 });
-      this.mantis = new THREE.Mesh(this.mantisGeo.stand, this.mantisMat); this.mantis.rotation.order = 'YZX'; this.dyn.add(this.mantis); this.mantisAnim = { yaw: 0, see: 0 };
-    }
-    if (this.mantis) {
-      const M = this.mantis, MA = this.mantisAnim, show = mt && (!mt.dead || s.t - mt.deadT < 14);
-      M.visible = !!show;
-      if (show) {
-        tele(mt);
-        const aim = Math.atan2(mt.dy || 0, mt.dx ?? 1); MA.yaw += wrapAngle(aim - MA.yaw) * Math.min(1, fdt * 6);
-        MA.see += ((mt.hidden && !mt.dead ? 0.12 : 1) - MA.see) * Math.min(1, fdt * 3);
-        const striking = mt.strikeAt != null && s.t - mt.strikeAt < 0.3;
-        M.geometry = mt.eat ? this.mantisGeo.eat : striking ? this.mantisGeo.strike : this.mantisGeo.stand;
-        const sway = mt.atk ? Math.sin(t * 14) * 0.18 - 0.12 : mt.hidden ? Math.sin(t * 1.3) * 0.04 : 0;
-        let y = 0; if (mt.hop) y = Math.sin(Math.PI * Math.min(1, mt.hop.t / 0.45)) * 40;
-        M.position.set(mt.x, y, mt.y); M.rotation.set(mt.dead ? 1.3 : 0, MA.yaw, mt.dead ? 0 : sway); M.scale.setScalar(5);
-        this.mantisMat.opacity = MA.see; this.mantisMat.depthWrite = MA.see > 0.9;
-        this.mantisMat.color.set(!mt.dead && flashed(s, mt) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : mt.eat ? '#fff0b0' : '#ffffff');
-        if (!mt.dead && !mt.hidden && mt.hp < mt.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], mt.x, mt.y, 60 + y, mt.hp / mt.maxHp, '#b04ad0');
-      }
-    }
-    // The black widow (build 35): hangs in her web over the ground; the web is silver lines from the
-    // middle to its four anchors and three rings between; cut anchors leave loose threads. On the floor
-    // she crawls. Ants stuck in silk wear a white ring.
-    const wd = B.widow;
-    if (wd && !this.widow) {
-      this.widowGeo = { hang: widowGeometry('hang'), bite: widowGeometry('bite') };
-      this.widow = new THREE.Mesh(this.widowGeo.hang, psx({ vertexColors: true })); this.widow.rotation.order = 'YZX'; this.dyn.add(this.widow);
-      this.webLines = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: '#e8eef4', transparent: true, opacity: 0.75 })); this.dyn.add(this.webLines);
-      this.widowAnim = { yaw: 0, y: 30, key: '' };
-    }
-    if (this.widow) {
-      const M = this.widow, WA = this.widowAnim, show = wd && (!wd.dead || s.t - wd.deadT < 14);
-      M.visible = !!show; this.webLines.visible = !!(show && wd.web && !wd.grounded && !wd.dead);
-      if (show) {
-        tele(wd);
-        const aim = Math.atan2(wd.dy || 0, wd.dx ?? 1); WA.yaw += wrapAngle(aim - WA.yaw) * Math.min(1, fdt * 6);
-        const up = !wd.grounded && !wd.dead ? 30 : 0; WA.y += (up - WA.y) * Math.min(1, fdt * (up ? 2 : 10));
-        let y = WA.y; if (wd.atk && wd.atk.what === 'drop') y += Math.min(1, wd.atk.t / wd.atk.at) * 60;
-        const biting = (wd.biteAt != null && s.t - wd.biteAt < 0.3) || (wd.atk && wd.atk.what === 'bite');
-        M.geometry = biting ? this.widowGeo.bite : this.widowGeo.hang;
-        M.position.set(wd.x, y, wd.y); M.rotation.set(wd.dead ? Math.PI : 0, WA.yaw, 0); M.scale.setScalar(4.2);
-        M.material.color.set(!wd.dead && flashed(s, wd) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : '#ffffff');
-        // The web, rebuilt when its middle or its anchors change.
-        if (wd.web && !wd.grounded) {
-          const Wb = wd.web, key = Math.round(Wb.x) + ',' + Math.round(Wb.y) + ':' + Wb.anchors.map((a) => (a.hp > 0 ? 1 : 0)).join('');
-          if (WA.key !== key) {
-            WA.key = key; const pts = [], h = 26, cx = Wb.x, cz = Wb.y;
-            const rim = (k) => { const out = []; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + 0.4, an = Wb.anchors[Math.floor(i / 2)], rr = (i % 2 ? 0.8 : 1) * Math.hypot(an.x - cx, an.y - cz) * k; out.push([cx + Math.cos(a) * rr, h * (1 - k * 0.7), cz + Math.sin(a) * rr]); } return out; };
-            for (const k of [0.35, 0.65, 0.95]) { const R = rim(k); for (let i = 0; i < 8; i++) pts.push(...R[i], ...R[(i + 1) % 8]); }
-            for (const an of Wb.anchors) { if (an.hp > 0) pts.push(cx, h, cz, an.x, 1, an.y); else pts.push(cx, h, cz, cx + (an.x - cx) * 0.4, h * 0.4, cz + (an.y - cz) * 0.4); }
-            for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4 + 0.4 + Math.PI / 8, rr = Wb.r * 0.9; pts.push(cx, h, cz, cx + Math.cos(a) * rr, h * 0.25, cz + Math.sin(a) * rr); }
-            this.webLines.geometry.dispose(); this.webLines.geometry = new THREE.BufferGeometry(); this.webLines.geometry.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
-          }
-          // The anchors: white knots, pulsing when bitten.
-          for (const an of Wb.anchors) if (an.hp > 0) { tmpV.set(an.x, 3, an.y); this.fx.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 4 + 2 * (an.hp / an.max) + (s.t - (an.hitT ?? -9) < 0.2 ? 1.5 : 0), an.hitT && s.t - an.hitT < 0.2 ? '#ffd0c0' : '#f4f4f0'); }
-        }
-        // Stuck ants: a white ring.
-        for (const a of s.ants) if (a.webT > s.t && a.state !== 'dead' && a.state !== 'away') { tmpV.set(a.x, 0.9, a.y); this.fx.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), 6, '#f0f0f0'); }
-        if (!wd.dead && wd.hp < wd.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], wd.x, wd.y, 50 + y, wd.hp / wd.maxHp, '#b04ad0');
-      }
-    }
-    // The giant centipede (build 36): the head where it is, the rest of its segments laid back along the
-    // path its head took; their legs ripple. It curls round itself when it coils.
-    const cp = B.centipede;
-    if (cp && !this.centi) {
-      const mat = psx({ vertexColors: true });
-      this.centiGeo = { head: centipedeGeometry('head'), seg: Array.from({ length: CENTI_FRAMES }, (_, f) => centipedeGeometry('seg', f)), tail: centipedeGeometry('tail') };
-      // Two plates for each of its six segments, plus the head.
-      this.centi = Array.from({ length: 13 }, (_, i) => { const m = new THREE.Mesh(i ? this.centiGeo.seg[0] : this.centiGeo.head, mat); m.visible = false; this.dyn.add(m); return m; });
-      this.centiMat = mat;
-    }
-    if (this.centi) {
-      const show = cp && (!cp.dead || s.t - cp.deadT < 14), K = 10, gap = 20;
-      for (const m of this.centi) m.visible = false;
-      if (show) {
-        tele(cp);
-        const n = 1 + 2 * (cp.dead ? 6 : Math.max(1, cp.segs ?? 6)), coil = cp.atk && cp.atk.kind === 'ring';
-        const path = (cp.path || []).slice().reverse(); const pts = [[cp.x, cp.y]];
-        // Walk back along the path, one segment every gap pixels.
-        let acc = 0, prev = [cp.x, cp.y];
-        for (const p of path) { const d = Math.hypot(p[0] - prev[0], p[1] - prev[1]); acc += d; prev = p; if (acc >= gap) { pts.push(p); acc = 0; if (pts.length >= n) break; } }
-        while (pts.length < n) { const l = pts[pts.length - 1], a = Math.atan2(-(cp.dy || 0), -(cp.dx ?? 1)) + (coil ? pts.length * 0.9 : 0); pts.push([l[0] + Math.cos(a) * gap, l[1] + Math.sin(a) * gap]); }
-        if (coil) for (let i = 1; i < pts.length; i++) { const a = Math.atan2(-(cp.dy || 0), -(cp.dx ?? 1)) + i * 0.62, rr = 12 + i * 2.4; pts[i] = [cp.x + Math.cos(a) * rr, cp.y + Math.sin(a) * rr]; }
-        const col = !cp.dead && flashed(s, cp) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : coil ? '#fff0c0' : '#ffffff';
-        this.centiMat.color.set(col);
-        for (let i = 0; i < n && i < 13; i++) {
-          const m = this.centi[i], [x, z] = pts[i], ahead = i ? pts[i - 1] : [cp.x + (cp.dx ?? 1) * 10, cp.y + (cp.dy || 0) * 10];
-          m.visible = true;
-          if (i) m.geometry = i === n - 1 && n > 1 ? this.centiGeo.tail : this.centiGeo.seg[(Math.floor(t * 14) + i) % CENTI_FRAMES]; // a wave of legs running back
-          m.position.set(x, cp.dead ? -Math.max(0, (s.t - cp.deadT - 10) / 4) * 10 : 0, z);
-          m.rotation.set(cp.dead ? Math.PI : 0, -Math.atan2(ahead[1] - z, ahead[0] - x), 0); m.scale.setScalar(K);
-        }
-        if (!cp.dead && cp.hp < cp.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], cp.x, cp.y, 40, cp.hp / cp.maxHp, '#b04ad0');
-      }
-    }
+    // Each boss draws itself (views/bosses/), in this order: the first two hurt ones get the health bars.
+    const k = { s, t, fdt, B, F, tele, decal: (spec, color, done) => this._decal(di++, spec, t, color, done), bar: (x, y, h, frac, color) => { if (bi < 2) this._placeBar(this.bossBars[bi++], x, y, h, frac, color); } };
+    for (const draw of BOSS_VIEWS) draw(this, k);
     // Hornworm goo.
     for (const g of s.goo || []) { const u = Math.min(1, (s.t - g.t) / 0.4), fade = Math.max(0, Math.min(1, (g.end - s.t) / 1.5)); tmpV.set(g.x, 0.8, g.y); F.pushAt('disk', this.diskGeo, tmpV, tmpQ2.identity(), g.r * u * (0.6 + 0.4 * fade), fade > 0.5 ? '#7ad040' : '#5a9a30'); }
     // Cordyceps stalks, growing, swelling before they burst; spores when they do.
