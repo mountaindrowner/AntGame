@@ -157,7 +157,7 @@ body.cine-on #top, body.cine-on #bar, body.cine-on #bar2, body.cine-on #barn, bo
 /* The docks: a row of round icon buttons, centred at the bottom. */
 #bar.dock, #barn.dock { display: flex; justify-content: center; gap: 16px; grid-template-columns: none; padding: 18px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); }
 /* A button's name curved over its top (bottom bar only). */
-.ico .arc { position: absolute; left: -12px; top: -12px; width: 70px; height: 70px; pointer-events: none; overflow: visible; }
+.ico .arc { position: absolute; left: 50%; top: 50%; width: 70px; height: 70px; transform: translate(-50%, -50%); pointer-events: none; overflow: visible; } /* centred on the button whatever its border (build 63) */
 .ico .arc text { font: 800 9.5px ui-rounded, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; fill: #fff4dc; stroke: rgba(20, 12, 4, 0.85); stroke-width: 2.6px; paint-order: stroke; }
 .ico:disabled .arc text { fill: rgba(255, 244, 220, 0.55); }
 .ico { position: relative; width: 46px; height: 46px; min-height: 0; padding: 0; border-radius: 50%; display: inline-grid; place-items: center;
@@ -279,7 +279,6 @@ body.title-on .card-tip, body.cine-on .card-tip { display: none !important; }
 #sheet .died { font: 400 26px "Bungee", Impact, sans-serif; color: #c8302a; letter-spacing: 0.03em; }
 /* Names round the side buttons too (build 14), so Nest, Map and Evolve are obvious. */
 #bar2 { gap: 17px; padding-top: 9px; }
-#bar2 .ico .arc { left: -16px; top: -16px; }
 #bar2 .ico .arc text { font-size: 9px; }
 
 /* ---- The Evolution window (build 14) ---- */
@@ -389,8 +388,8 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #msg[data-kind="good"] { background: #e2f4d8; border-left: 5px solid #2f7a3a; color: #10260f; }
 #msg[data-kind="news"] { background: #fbf0cc; border-left: 5px solid #d09a1a; }
 #msg[data-kind="report"] { background: #e6ecf6; border-left: 5px solid #3a5a9a; }
-/* Bigger, bolder button badges. */
-.ico .badge { top: -7px; right: -9px; min-width: 20px; padding: 2px 5px; font: 800 12px/15px ui-rounded, system-ui, sans-serif; border: 2px solid #1d1710; box-shadow: 0 2px 0 #1d1710; }
+/* Bigger, bolder button badges: a pill centred under the button, clear of its icon and of the name curved over its top (build 63). */
+.ico .badge { top: auto; right: auto; bottom: -11px; left: 50%; transform: translateX(-50%); z-index: 1; white-space: nowrap; min-width: 20px; padding: 2px 5px; font: 800 12px/15px ui-rounded, system-ui, sans-serif; border: 2px solid #1d1710; box-shadow: 0 2px 0 #1d1710; }
 /* "Saved" */
 #saved { position: fixed; left: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 92px); z-index: 20; font: 700 11px ui-rounded, system-ui, sans-serif; color: #fff4dc; background: rgba(20, 12, 4, 0.6); padding: 3px 8px; border-radius: 8px; opacity: 0; transition: opacity 0.4s; pointer-events: none; }
 #saved.on { opacity: 1; }

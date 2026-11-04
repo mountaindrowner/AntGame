@@ -27,7 +27,8 @@ export function createUI(app) {
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
   const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', raid: 'Raid', hold: 'Hold', split: 'Split', follow: 'Follow', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
-  const arc = (b, text) => `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M7,35 A28,28 0 0 1 63,35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`;
+  // A button's name curved over its top, hugging it: the curve's radius follows the button's size (build 63).
+  const arc = (b, text) => { const r = b.closest('#bar2') ? 23.5 : 29.5; return `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M${35 - r},35 A${r},${r} 0 0 1 ${35 + r},35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`; };
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
     const key = icon + '|' + (badge ?? '') + '|' + name;
@@ -576,7 +577,7 @@ export function createUI(app) {
       return 'Remove: tap a room to tear it out. Cancel to stop.';
     }
     if (s.lost) return 'The queen is dead. The colony is lost. Choose New colony on the main menu to found another.';
-    if (s.won) return 'The rival queen is dead. Keep growing, or Reset for a fresh yard.';
+    if (s.won) return 'The rival queen is dead. Keep growing, or choose New colony on the main menu for a fresh yard.';
     if (app.areaBanner && app.areaBanner.until > performance.now()) return app.areaBanner.text;
     if (s.phase === 'dig') return q.energy > 0 ? `You are the queen. Tap the dirt next to her to dig (${q.energy} digs left). Two down, then Build nest.` : 'Out of energy. Tap Build nest.';
     if (!a) return 'Waiting for the next hatchling.';

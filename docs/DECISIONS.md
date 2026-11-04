@@ -2,6 +2,14 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: button labels and badges placed properly (build 63)
+
+Mark: "The sidebar text is a little high and not centred with the buttons; the bottom-layer buttons have text clipping with the buttons and aren't centred; and the notification bubbles clip under the text."
+- **Labels centred.** Each button's curved name was placed from inside the button's white border, so it sat about 3px right and low; on the bottom row that pushed it into the rim. It is now centred on the button, whatever its border.
+- **Each curve fits its own button.** The side buttons are smaller than the bottom ones, but their names used the same curve, so they floated high. The bottom names now ride just clear of the rim, and the side names hug their buttons.
+- **Badges moved.** The counts on buttons (your crew "6/20", Release "6") are now a pill centred under the button, clear of the name curved over its top.
+- **One more stale hint fixed:** after beating the rival, it now names New colony on the main menu instead of a Reset button that no longer exists.
+
 ## Nov 4: buttons and materials appear when they matter (build 62)
 
 Mark: "Let's hide buttons on the UI until they become available," then: "same with any materials or resources until we need them or we've been exposed to them."
