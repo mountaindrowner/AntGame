@@ -27,6 +27,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 - War Camp soldiers marching to your guardian fights, as well as your crew (the Army of the March does the crew).
 
 **Known gaps**
+- **Rooms from `ROOMS.md` not built:** Gatehouse (Doorkeepers), Silk loom (Weavers), Brood vault, Solarium, Beetle lodge. The nodes behind them do something smaller (build 24).
 - Odorous house ants don't steal from your trails.
 - Nest sections: shut ground could read darker; builders break in from where they stand.
 - From the build 40 audit, left as is: heat tolerance and social stomach are situational; granary and store overlap; surplus ranchers, medics, repletes and undertakers idle; falls of feet and birds in progress aren't saved; room levels live in two places.
