@@ -2,6 +2,28 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, step 6: the Sinkhole, Old Blind, and the Takeover (build 58)
+
+Mark: "Sure, let's do it." The finale of the yard.
+
+- **The Sinkhole.**
+  - When the fire ants' queen falls (once the edges have stirred), their mound caves in. Banner: "The ground gives way."
+  - It's a dark crater with green cracks, an open seam four tiles across that burns ants who linger. The fire ants had nested on it, which is why they were so fierce.
+- **Old Blind, the Thing Under the Mound**, 4,200 health: a velvet-dark mole with a pink star nose, pale shovel claws and pinprick green eyes.
+  - Only the Supercolony evolved **and** a muster of five colonies wakes it.
+  - **Under the earth** it can't be bitten. A ridge of dirt swims toward your thickest crowd, then a ring shows where it will **erupt** (7, and everything flung).
+  - **Up** for 7 seconds (5 when it rages), it swipes a claw lane (6), and bites land; then it dives again.
+- **Beaten:**
+  - Old Blind's claw: the Sinkhole's seam gives a glowrock every 5 minutes;
+  - the south edge quiets; two glowrock;
+  - a banner, "The glow is yours", points to the last evolution.
+- **The Takeover:** the last great evolution (after the Supercolony; 3 glowrock, 20 genes, 300 food, 100 meat). Evolving it shows the ending:
+  - "The yard is yours, to the very edges";
+  - your colony's record (nests, ants in the supercolony, zones, wild bosses, glowrock);
+  - "Behind you, the back door of the house swings open… Phase 2, the house, is the next chapter."
+- **The 13-zone ending changed:** it no longer opens the door. It says something is still waking at the edges, and the house will wait for a colony that can face it.
+- **The wilds are complete:** all six steps of `WILDS.md`.
+
 ## Nov 4: the wilds, step 5: the Oak's Crown and the Hornet Queen (build 57)
 
 Mark: "keep going." The first height in the game: you climb the Oak.

@@ -282,6 +282,9 @@ export class SurfaceView {
         }
         const haze = new THREE.Mesh(new THREE.CircleGeometry(16, 12).rotateX(-Math.PI / 2), psxBasic({ color: '#5aff5a', transparent: true, opacity: 0.18, depthWrite: false }));
         haze.position.y = 0.4; haze.renderOrder = 4; m.add(haze); m.haze = haze;
+        if (sm.sink) { const pit = new THREE.Mesh(new THREE.CircleGeometry(11, 18).rotateX(-Math.PI / 2), psxBasic({ color: '#0e0a06', polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 })); pit.position.y = 0.2; pit.renderOrder = 3; m.add(pit);
+          const lip = new THREE.Mesh(new THREE.TorusGeometry(12, 2.6, 5, 18).rotateX(Math.PI / 2), psx({ color: '#5a3a22' })); lip.position.y = 0.6; m.add(lip); }
+        m.scale.setScalar((sm.r || 1.6) / 1.6);
         m.position.set((sm.x + 0.5) * T, 0, (sm.y + 0.5) * T); this.cairnGroup.add(m); this.seams.set(key, m);
       }
       const p = 0.5 + 0.5 * Math.sin(t * 1.7 + sm.x);
@@ -1302,6 +1305,37 @@ export class SurfaceView {
         const col = !tw.dead && flashed(s, tw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : tw.puffT > 0 ? '#e8d890' : '#b8c0a8'; // bitten all the time: a flicker, not solid red
         for (const m of this.wartyMats) m.color.set(col);
         if (!tw.dead && tw.hp < tw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], tw.x, tw.y, 70 + y, tw.hp / tw.maxHp, '#b04ad0');
+      }
+    }
+    // Old Blind (build 58): a huge velvet-dark mole, pink star nose, pale shovel claws, eyes a pinprick of green.
+    // Under the earth, only a ridge of dirt moving toward your ants.
+    const ob = B.blind;
+    if (ob && !this.mole) {
+      const g = new THREE.Group(), fur = psx({ color: '#3a3430' });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10).scale(46, 26, 30), fur); body.position.y = 22; g.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8).scale(20, 16, 18), fur); head.position.set(44, 20, 0); g.add(head);
+      const nose = new THREE.Group(); nose.position.set(64, 20, 0); g.add(nose);
+      for (let k = 0; k < 11; k++) { const a = (k / 11) * Math.PI * 2, tent = new THREE.Mesh(new THREE.ConeGeometry(1.6, 7, 5).rotateZ(-Math.PI / 2), psx({ color: '#e890a0' })); tent.position.set(2, Math.sin(a) * 4, Math.cos(a) * 4); tent.rotation.set(0, Math.cos(a) * 0.5, -Math.sin(a) * 0.5); nose.add(tent); }
+      const claws = []; for (const sd of [-1, 1]) { const c = new THREE.Mesh(new THREE.BoxGeometry(18, 4, 16), psx({ color: '#e8dcc0' })); c.position.set(32, 8, sd * 30); c.rotation.y = sd * 0.4; g.add(c); claws.push(c); }
+      for (const sd of [-1, 1]) { const e = new THREE.Mesh(new THREE.SphereGeometry(1.4, 6, 4), psxBasic({ color: '#7dff6a' })); e.position.set(58, 26, sd * 7); g.add(e); }
+      const ridge = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(30, 10, 22), psx({ color: '#5a3e26' }));
+      this.mole = { g, claws, nose, ridge }; this.dyn.add(g, ridge); this.moleAnim = { yaw: 0, y: 0 };
+    }
+    if (this.mole) {
+      const M = this.mole, MA = this.moleAnim, show = ob && (!ob.dead || s.t - ob.deadT < 10);
+      M.g.visible = !!show && (!ob.under || ob.dead); M.ridge.visible = !!show && ob.under && !ob.dead && ob.mode === 'fight';
+      if (show) {
+        tele(ob);
+        const aim = Math.atan2(ob.dy || 0, ob.dx ?? 1); MA.yaw += wrapAngle(aim - MA.yaw) * Math.min(1, fdt * 5);
+        const rise = ob.landAt != null ? Math.min(1, (s.t - ob.landAt) / 0.35) : 1;
+        M.g.position.set(ob.x, ob.dead ? -Math.max(0, s.t - ob.deadT - 6) * 12 : -30 * (1 - rise), ob.y); M.g.rotation.set(0, -MA.yaw, ob.dead ? Math.PI / 2 : 0);
+        M.ridge.position.set(ob.x, 0, ob.y); M.ridge.rotation.y = -MA.yaw; M.ridge.scale.y = 1 + 0.2 * Math.sin(t * 10);
+        const sw = ob.swipeAt != null && s.t - ob.swipeAt < 0.3 ? Math.sin(Math.PI * (s.t - ob.swipeAt) / 0.3) : 0;
+        M.claws.forEach((c, i) => { c.position.x = 32 + sw * 16; c.rotation.z = (i ? -1 : 1) * sw * 0.4; });
+        M.nose.rotation.x = t * 3; M.nose.scale.setScalar(1 + 0.12 * Math.sin(t * 14));
+        M.g.traverse((o) => { if (o.material && o.material.color && o.material.userData.base == null) o.material.userData.base = o.material.color.getHexString(); });
+        const hit = !ob.dead && flashed(s, ob) && Math.sin(t * 40) > 0.3; M.g.children[0].material.color.set(hit ? '#ffc8b8' : '#3a3430');
+        if (!ob.dead && ob.hp < ob.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], ob.x, ob.y, 80, ob.hp / ob.maxHp, '#7dff6a');
       }
     }
     // The Hornet Queen (build 57): her grey paper nest hanging high on the Oak's south face, hornets wheeling

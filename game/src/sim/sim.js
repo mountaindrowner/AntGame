@@ -378,14 +378,20 @@ function tickWild(s, dt){
   const W0 = s.wild || (s.wild = { stirred: false, at: null, beaten: {}, seams: [] });
   tickClimb(s, dt); // build 57
   if (!W0.stirred){ W0.chk = (W0.chk || 0) + dt; if (W0.chk < 2) return; W0.chk = 0; if (coloniesJoined(s) >= WILD_STIR) stirWild(s); return; }
+  // Build 58: with the fire ants' queen dead, their mound caves in: the Sinkhole, an open seam (4 tiles).
+  if (!W0.sinkhole && (s.colony.zones || {}).fire != null){ const team = RIVALS.findIndex(r => r.key === 'fire') + 1, n = s.world.rnests && s.world.rnests[team];
+    if (n){ let x = n.x, y = n.y; for (let k = 0; k < 30 && !walk(s, x, y); k++){ x = n.x + Math.round((Math.random() - 0.5)*8); y = n.y + Math.round((Math.random() - 0.5)*8); }
+      W0.sinkhole = { x, y, t: s.t }; W0.seams.push({ x, y, side: 'south', r: 4, sink: true }); s.active[REGION.firemound] = true;
+      s.banner = { key: 'sinkhole', t: s.t, icon: '🕳', title: 'The ground gives way', line: 'Where the fire ants nested, their mound has caved in. At the bottom, the green seam lies open, and something huge stirs under it. That is why they were so fierce.', kind: 'hard' }; s.events.push('sinkhole'); } }
+  if (W0.sinkhole && s.colony.trophies.blindclaw){ W0.sinkT = (W0.sinkT || 0) + dt; if (W0.sinkT >= 300){ W0.sinkT = 0; gainGlow(s, 1, 'quarry'); } }
   // Build 55: Old Black's lure, a bottle cap by his roost while he lives (back after a minute if it goes).
   const cr = s.bosses && s.bosses.crow; if (cr && !cr.dead){ W0.capT = (W0.capT || 0) + dt; if (W0.capT >= 3){ W0.capT = 0;
     const has = s.items.some(f => f.type === 'cap' && f.amt > 0) || (s.player.big && s.player.big.type === 'cap');
     if (!has){ W0.capGone = (W0.capGone || 0) + 3; if (!W0.capPut || W0.capGone >= 60){ W0.capGone = 0; W0.capPut = true; for (let k = 0; k < 40; k++){ const x = Math.floor(cr.hx/T) + 6 + Math.floor(Math.random()*6), y = Math.floor(cr.hy/T) + Math.floor(Math.random()*7) - 3; if (walk(s, x, y) && !itemAt(s, x, y)){ s.items.push({ x, y, kind: 'food', type: 'cap', amt: 1 }); break; } } } } } }
   tickSpores(s, dt); // build 56
   // Glow sickness: an open seam burns the ants who stand on it.
-  for (const m of W0.seams){ for (const a of s.ants){ if (a.team || !outside(a) || Math.abs(a.x/T - m.x) > 2 || Math.abs(a.y/T - m.y) > 2) continue;
-    if (Math.hypot(a.x/T - (m.x + 0.5), a.y/T - (m.y + 0.5)) < 1.6){ hurtAnt(s, a, 0.25*dt, 'glow'); if (a.isPlayer && !W0.toldSeam){ W0.toldSeam = true; s.player.msg = '🟢 The ground here is warm and wrong. It burns. Don’t linger on the green.'; } } } }
+  for (const m of W0.seams){ const mr = (m.r || 1.6) + 0.5; for (const a of s.ants){ if (a.team || !outside(a) || a.climb || Math.abs(a.x/T - m.x) > mr || Math.abs(a.y/T - m.y) > mr) continue;
+    if (Math.hypot(a.x/T - (m.x + 0.5), a.y/T - (m.y + 0.5)) < (m.r || 1.6)){ hurtAnt(s, a, 0.25*dt, 'glow'); if (a.isPlayer && !W0.toldSeam){ W0.toldSeam = true; s.player.msg = '🟢 The ground here is warm and wrong. It burns. Don’t linger on the green.'; } } } }
 }
 function stirWild(s){
   const W0 = s.wild, w = s.world; W0.stirred = true; W0.at = s.t;
@@ -1088,6 +1094,7 @@ function evoLock(s, key){
   if (c.evo[key]) return 'owned';
   if (n.soon) return 'coming in a later build';
   if (n.dneed){ const miss = n.dneed.find(k => !dRoomBuilt(s, DROOMS_OF[k][1])); if (miss) return 'needs ' + DAUGHTERS[miss].name + '’s ' + DROOMS[DROOMS_OF[miss][1]].name; } // build 51: great evolutions
+  if (key === 'takeover' && !(s.colony.kills || {}).blind) return 'beat Old Blind in the Sinkhole first'; // build 58
   if (n.djoin){ if (!has(s, 'royal')) return 'needs the Royal chamber'; const j = (s.daughters || []).filter(d => d.state === 'ready').length; if (j < n.djoin) return `needs ${n.djoin} daughters joined (${j} so far)`; }
   if (EVO_GATE[key] && !dRoomBuilt(s, EVO_GATE[key])){ const R = DROOMS[EVO_GATE[key]]; return 'needs ' + DAUGHTERS[R.d].name + '’s ' + R.name; } // build 50
   if (n.after && !c.evo[n.after]) return 'needs ' + EVO_BY[n.after].name + ' first';
@@ -1098,7 +1105,8 @@ function buyEvo(s, key){
   if (evoLock(s, key)) return false; const c = s.colony;
   if (!payCost(c, evoCost(s, EVO_BY[key]))) return false;
   c.evo[key] = true; c.cap = storeCap(s); c.hatchCap = hatchCapOf(s);
-  if (EVO_BY[key].branch === 'great'){ s.events.push('great'); s.banner = key === 'supercolony'
+  if (key === 'takeover'){ s.phase2 = { t: s.t }; s.events.push('phase2'); } // build 58: the house
+  if (EVO_BY[key].branch === 'great'){ s.events.push('great'); s.banner = key === 'takeover' ? null : key === 'supercolony'
     ? { key: 'great-supercolony', t: s.t, icon: '🌍', title: 'The Supercolony', line: 'Six nests, one colony. Every daughter holds 100, their gifts double, and beyond the fence the wilds are waiting.', kind: 'gift' }
     : { key: 'great-' + key, t: s.t, icon: '✨', title: EVO_BY[key].name, line: EVO_BY[key].fx + '.', kind: 'gift' }; } // build 51
   if (key === 'waypoints'){ s.player.msg = 'Outposts unlocked! Walk far from the nest and press Outpost on the bottom bar.'; s.events.push('waypoints'); }
@@ -3103,6 +3111,9 @@ const BOSSES = {
   // Build 57: the fourth wild boss, high on the Oak's trunk. Needs four colonies; you climb to her.
   hornets: { name: 'The Hornet Queen', title: 'Lady of the Oak’s Crown', region: 'oak', hp: 2600, r: 3, aggro: 14, meat: 260, chitin: 30, trophy: 'comb', phase2: 0.5, slayer: 'Comb-breaker', wild: 'oak', need: 4,
     tip: 'Her paper nest hangs high on the Oak’s trunk. A muster of four colonies at the Oak’s foot wakes her. Then climb: stand by the trunk and press Climb, and your crew climbs with you. Only ants up at her nest can bite her. Her hornets dive at climbers (a ring flashes on the ant they pick) and knock them off the bark; hunting wasps harry the ground below. When she rages, a swarm sweeps the upper trunk, unless a dozen of you hold together at the top.', rage: 'The Hornet Queen rages: her swarm sweeps the bark!' },
+  // Build 58: the last wild boss, in the Sinkhole where the fire ants' mound caved in. Needs the Supercolony.
+  blind: { name: 'Old Blind', title: 'The Thing Under the Mound', region: 'firemound', hp: 4200, r: 3.6, aggro: 14, meat: 400, chitin: 0, trophy: 'blindclaw', phase2: 0.5, slayer: 'Mole-ender', wild: 'south', need: 5, needEvo: 'supercolony',
+    tip: 'A mole that has eaten glow-fed grubs for years: huge, half-blind, and wrong. Only the Supercolony, mustered five colonies strong, can face it. It swims under the earth (watch the ridge of dirt), then erupts where the ring shows, flinging everything. Up, it swipes with its great claws. Bite it while it’s up. Don’t linger on the green: the open seam burns.', rage: 'Old Blind thrashes: it erupts again and again!' },
 };
 const ROT_ZONE = new Set(['leaves', 'leaves2', 'compost']);
 const SIDE_ZONE = new Set(['shed', 'side2', 'side3', 'side4']);
@@ -3118,6 +3129,7 @@ const TROPHY = {
   fang2: { name: 'The centipede’s fang', fx: 'Venom ants stun what they bite for a second; no toads in the leaves, and the Rot can be held' },
   widowsilk: { name: 'The widow’s silk', fx: 'a web at your door: raiders stick in it for 3 seconds, and no bug spray in the shed' },
   claw: { name: 'The mantis’s claw', fx: 'each of your fighters’ first bite on a foe always lands, for double; the hedge is safe, and your ants run through it half again faster' },
+  blindclaw: { name: 'Old Blind’s claw', fx: 'the glow is yours: the Sinkhole’s open seam gives a glowrock every 5 minutes. And the Takeover can be evolved' },
   comb: { name: 'The hornets’ comb', fx: 'hornet larvae: 3 🥩 meat a minute, for good' },
   sporeheart: { name: 'The spore heart', fx: 'your colony is immune to the fungus for good: no outbreaks, no spores' },
   blackfeather: { name: 'Old Black’s feather', fx: 'the Bramble Lot is yours: no birds strike anywhere on the west side, and your outposts there can’t be knocked flat' },
@@ -3131,7 +3143,8 @@ function ensureBoss(s, key){
   if (B.wild && !(s.wild && s.wild.stirred)) return null; // build 54: wild bosses wake with the edges
   const w = s.world, b0 = areaBounds(ai), cl = clearOf(s);
   let x = null, y = null, pit = -1;
-  if (key === 'hornets'){ const oak = w.landmarks.find(l => l.kind === 'oak'); if (!oak) return null; x = oak.x; y = oak.y + oak.r + 2.5; } // build 57: at the Oak's foot, on its south face
+  if (key === 'blind'){ const sk = s.wild && s.wild.sinkhole; if (!sk) return null; x = sk.x + 0.5; y = sk.y + 0.5; } // build 58: in the Sinkhole
+  else if (key === 'hornets'){ const oak = w.landmarks.find(l => l.kind === 'oak'); if (!oak) return null; x = oak.x; y = oak.y + oak.r + 2.5; } // build 57: at the Oak's foot, on its south face
   else if (key === 'antlion'){
     // The deepest pit: the one farthest from your nest.
     let bd = -1; w.pits.forEach((p, i) => { const d = Math.hypot(p.x - w.ex, p.y - w.ey); if (d > bd){ bd = d; pit = i; } });
@@ -3173,7 +3186,7 @@ function tickBosses(s, dt){
       if (!nearAnt(s, b, 30*T)){ b.leaveT += dt; if (b.leaveT > 8){ b.mode = 'idle'; b.atk = null; b.charge = null; b.roll = null; } } else b.leaveT = 0;
     } else if (b.hp < b.maxHp) b.hp = Math.min(b.maxHp, b.hp + 2*dt); // left alone, it heals
     // Bitten by fighters, your crew and you; fighters on patrol nearby join in.
-    const lpit = b.key === 'antlion' && s.world.pits[b.pit], reach = lpit ? (lpit.r*1.05 + 1.2)*T /* build 47: bitten from the rim, off the sliding sand */ : (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air) || (b.key === 'duke' && b.under) || (b.key === 'crow' && b.air) || !wildOk;
+    const lpit = b.key === 'antlion' && s.world.pits[b.pit], reach = lpit ? (lpit.r*1.05 + 1.2)*T /* build 47: bitten from the rim, off the sliding sand */ : (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air) || (b.key === 'duke' && b.under) || (b.key === 'crow' && b.air) || (b.key === 'blind' && b.under) || !wildOk;
     let onIt = 0;
     for (const a of s.ants){
       if (a.team || !outside(a)) continue;
@@ -3205,6 +3218,7 @@ function tickBosses(s, dt){
     else if (key === 'crow') stepCrow(s, b, B, dt);
     else if (key === 'hollow') stepHollow(s, b, B, dt);
     else if (key === 'hornets') stepHornets(s, b, B, dt);
+    else if (key === 'blind') stepBlind(s, b, B, dt);
     else if (key === 'mantis') stepMantis(s, b, B, dt);
     else if (key === 'widow') stepWidow(s, b, B, dt);
     else if (key === 'centipede') stepCentipede(s, b, B, dt);
@@ -3221,6 +3235,7 @@ function bossDies(s, b, B){
   if (b.held){ const H = b.held, a = s.ants.find(o => o.id === H.id); b.held = null; if (a && a.state === 'away'){ a.state = H.state || 'return'; a.x = b.x; a.y = b.y; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } }
   if (b.eat) mantisDrops(s, b, null);
   if (b.belly) dukeRetch(s, b);
+  if (b.key === 'blind'){ b.under = false; b.burrow = null; s.takeoverReady = { t: s.t }; s.events.push('takeoverready'); } // build 58
   if (b.key === 'hornets'){ for (const a of s.ants) if (a.climb){ a.climb = 0; if (a.state === 'climb') a.state = a.isPlayer ? 'player' : 'follow'; } s.player.climb = null; } // build 57: everyone comes down
   if (b.key === 'hollow'){ for (const z of s.critters) if (z.kind === 'zombie') z.gone = true; for (const a of s.ants) a.hspore = null; } // build 56: the infected fall with the heart
   if (b.key === 'crow'){ crowDrops(s, b); if (b.loot){ s.colony.glow += b.loot; b.loot = 0; } b.air = false; } // build 55: what he stole comes back
@@ -3330,6 +3345,34 @@ function stepRobin(s, b, B, dt){
 // Old Warty (build 31). It turns slowly to face what it hunts. Tongue: a thin lane, then the first ant
 // in it is swallowed; bite the toad hard within 3 seconds and it spits the ant back out alive. Leap:
 // a ring where it will land. Phase 2: two tongues in a row, and it puffs up (bites half) now and then.
+// Build 58: Old Blind. Under the earth it swims toward the thickest crowd (a ridge of dirt shows where); a ring
+// shows where it will erupt, and everything in it is hurt and flung. Up for 7 seconds (5 when it rages), it
+// swipes a claw lane at the nearest; bites land only while it's up. Then it dives again.
+function stepBlind(s, b, B, dt){
+  const P = s.player, fast = b.phase === 2, say = (m) => { if (playerNear(s, b.x, b.y, 34)) P.msg = m; };
+  if (b.mode === 'idle'){ b.under = true; return; }
+  if (b.upT == null){ b.under = true; b.upT = 0; b.burrowT = 2; }
+  if (b.under){
+    b.burrowT -= dt;
+    // Swim toward the thickest crowd of yours within 20 tiles.
+    let best = null, bn = 0; for (const a of s.ants){ if (a.team || !outside(a) || a.climb) continue; if (Math.hypot(a.x - b.hx, a.y - b.hy) > 20*T) continue; let n = 0; for (const o of s.ants) if (!o.team && outside(o) && Math.abs(o.x - a.x) < 3*T && Math.abs(o.y - a.y) < 3*T) n++; if (n > bn){ bn = n; best = a; } }
+    if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.under = false; b.x = k.x; b.y = k.y; b.atkDone = { kind: 'ring', x: k.x, y: k.y, r: k.r, t: s.t }; b.landAt = s.t; b.upT = fast ? 5 : 7; s.events.push('erupt');
+      for (const a of s.ants){ if (a.team || !outside(a) || Math.hypot(a.x - b.x, a.y - b.y) > k.r) continue; hurtAnt(s, a, 7, 'blind'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, b.x, b.y, 4); }
+      if (!b.saidUp){ b.saidUp = true; say('Old Blind erupts! Bite it now, while it’s up!'); } return; }
+    if (best){ const gx = best.x, gy = best.y, d = Math.hypot(gx - b.x, gy - b.y); if (d > 1){ const m = Math.min(d, 46*SURF*dt); b.x += (gx - b.x)/d*m; b.y += (gy - b.y)/d*m; b.dx = (gx - b.x)/d; b.dy = (gy - b.y)/d; } }
+    if (b.burrowT <= 0 && best){ b.atk = { kind: 'ring', x: best.x, y: best.y, r: 3.6*T, t: 0, at: fast ? 0.9 : 1.2 }; b.burrowT = 99; }
+    else if (b.burrowT <= 0 && !best){ b.burrowT = 1; }
+    return; }
+  // Up.
+  b.upT -= dt;
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.atkDone = { kind: k.kind, x: k.x, y: k.y, r: k.r, t: s.t, len: k.len, dx: k.dx, dy: k.dy }; b.swipeAt = s.t;
+    for (const a of s.ants){ if (a.team || !outside(a) || !inAtk(k, a.x, a.y)) continue; hurtAnt(s, a, 6, 'blind'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, b.x, b.y, 2.5); }
+    b.cd = fast ? 1.1 : 1.6; return; }
+  if (b.upT <= 0){ b.under = true; b.burrowT = fast ? 2 : 3.5; b.diveAt = s.t; return; }
+  b.cd = (b.cd || 0) - dt;
+  const tg = bossTarget(s, b, 10); if (!tg) return; const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
+  if (b.cd <= 0) b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: Math.min(9*T, d + 3*T), w: 2.4*T, t: 0, at: fast ? 0.6 : 0.8 };
+}
 // Build 57: the Oak's Crown. Climbing: you (and your crew) go up the trunk's south face from the boss's spot at
 // its foot; a.climb is height in px. The queen's nest hangs at CROWN.
 const CROWN = 420, CLIMB_UP = 48, CLIMB_DOWN = 110;
@@ -3446,7 +3489,7 @@ function stepCrow(s, b, B, dt){
   }
 }
 // Build 54: is a big enough muster at this wild boss's lair?
-function musterHere(s, b, B){ const M = s.muster; return !!(M && Object.keys(M.from || {}).length >= (B.need || 1) && Math.hypot((M.x + 0.5)*T - b.hx, (M.y + 0.5)*T - b.hy) < 30*T); }
+function musterHere(s, b, B){ const M = s.muster; if (B.needEvo && !has(s, B.needEvo)) return false; return !!(M && Object.keys(M.from || {}).length >= (B.need || 1) && Math.hypot((M.x + 0.5)*T - b.hx, (M.y + 0.5)*T - b.hy) < 30*T); }
 function dukeRetch(s, b){ const H = b.belly; b.belly = null; if (!H) return 0; let n = 0;
   for (const id of H.ids){ const a = s.ants.find(o => o.id === id); if (!a || a.state !== 'away') continue; a.state = H.states[id] || 'return'; const ang = Math.random()*Math.PI*2; a.x = b.x + Math.cos(ang)*3*T; a.y = b.y + Math.sin(ang)*3*T; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); shove(s, a, b.x, b.y, 2); n++; }
   b.retchAt = s.t; return n; }
@@ -3980,7 +4023,7 @@ function serialize(s){
   return JSON.stringify({ v: SAVE_VERSION, active: s.active, raidStart: s.raidStart || null, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil, open: s.nest.open || {}, breach: s.nest.breach || null }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ infect:a.infect, hspore:a.hspore, climb:a.climb, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
-    phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid, wild: s.wild || null, muster: s.muster || null,
+    phase1: s.phase1 || null, phase2: s.phase2 || null, takeoverReady: s.takeoverReady || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid, wild: s.wild || null, muster: s.muster || null,
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, nestKey: s.player.nestKey || null, climb: s.player.climb || null, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
@@ -4010,7 +4053,7 @@ function deserialize(json){
   const d = migrate(JSON.parse(json)); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.phase1 = d.phase1 || null; s.dayT = d.dayT ?? (d.t + DAY*0.02); s.nights = d.nights || 0; s.daughters = d.daughters || []; s.flightSaid = !!d.flightSaid; s.wild = d.wild || null; s.muster = d.muster || null; s.nightNow = isNight(s); s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
+  s.t = d.t; s.phase1 = d.phase1 || null; s.phase2 = d.phase2 || null; s.takeoverReady = d.takeoverReady || null; s.dayT = d.dayT ?? (d.t + DAY*0.02); s.nights = d.nights || 0; s.daughters = d.daughters || []; s.flightSaid = !!d.flightSaid; s.wild = d.wild || null; s.muster = d.muster || null; s.nightNow = isNight(s); s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.nest.open = d.nest.open || {}; s.nest.breach = d.nest.breach || null; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   // A raid in progress isn't saved: its raiders walk home with what they carried (build 28). Ants held by a

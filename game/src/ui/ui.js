@@ -542,11 +542,25 @@ export function createUI(app) {
     el2.innerHTML = `<div class="p1"><h1>The yard is yours</h1><div class="sub">Every zone taken, every guardian fallen.</div>
       <div class="crests">${SIM.ZONES.map((z) => `<div><b>★</b>${z.name}</div>`).join('')}</div>
       <div class="rec">${rec.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
-      <div class="door">Behind you, the back door of the house creaks open. Warm light, a crumb-strewn floor, a world a thousand times bigger.<br><i>Phase 2, the house, is coming.</i></div>
+      <div class="door">But out at the yard's edges, something is still waking, and under the fire ants' old mound the ground is warm. The house will wait for a colony that can face them.</div>
       <button data-p1="1">Keep playing the yard</button></div>`;
     el2.classList.remove('hidden'); app.paused = true; sfx.play('cheer');
     const prevZoom = app.zoomMul; app.zoomMul = 0.5; // the camera rises over the yard
     el2.querySelectorAll('.crests div').forEach((d, i) => setTimeout(() => { d.classList.add('on'); sfx.play('twinkle'); }, 500 + i * 260));
+    el2.querySelector('[data-p1]').addEventListener('click', () => { el2.classList.add('hidden'); app.paused = false; app.zoomMul = prevZoom; });
+  }
+  // Build 58: the Takeover. Old Blind is dead; the colony turns from the yard to the house.
+  function showPhase2(s) {
+    let el2 = document.getElementById('phase1'); if (!el2) { el2 = document.createElement('div'); el2.id = 'phase1'; document.body.appendChild(el2); }
+    const c = s.colony, hrs = Math.floor(s.t / 3600), mins = Math.floor((s.t % 3600) / 60), wildN = ['duke', 'crow', 'hollow', 'hornets', 'blind'].filter((k) => (c.kills[k] || 0)).length;
+    const nAll = SIM.antCount(s) + (s.daughters || []).reduce((n, d) => n + (d.state === 'ready' ? SIM.daughterCount(s, d) : 0), 0);
+    const rec = [['Time', hrs ? `${hrs} h ${mins} min` : `${mins} min`], ['Nests', 1 + (s.daughters || []).filter((d) => d.state === 'ready').length], ['Ants in the supercolony', nAll], ['Ants raised', c.hatched || 0], ['Zones taken', SIM.zonesTaken(s)], ['Wild bosses', wildN], ['Glowrock found', c.glowTotal || 0], ['Legends', (c.fallen || []).filter((f) => f.title).length]];
+    el2.innerHTML = `<div class="p1"><h1>The Takeover</h1><div class="sub">The yard is yours, to the very edges. The glow runs in your colony now.</div>
+      <div class="rec">${rec.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
+      <div class="door">Behind you, the back door of the house swings open. Warm light, a crumb-strewn floor, a world a thousand times bigger. Your scouts are already at the threshold.<br><i>Phase 2, the house, is the next chapter.</i></div>
+      <button data-p1="1">Keep playing the yard</button></div>`;
+    el2.classList.remove('hidden'); app.paused = true; sfx.play('cheer');
+    const prevZoom = app.zoomMul; app.zoomMul = 0.4;
     el2.querySelector('[data-p1]').addEventListener('click', () => { el2.classList.add('hidden'); app.paused = false; app.zoomMul = prevZoom; });
   }
   function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.dataset.h = ''; el.sheet.classList.remove('hidden'); renderSheet(); }
@@ -622,6 +636,7 @@ export function createUI(app) {
     toad: (b) => (b.held ? '★ AN ANT IS IN ITS MOUTH: BITE IT, NOW! ★' : b.leap ? 'LEAPING!' : b.atk && b.atk.kind === 'lane' ? 'Tongue: get out of the thin lane!' : b.atk ? 'About to leap: get out of the ring!' : b.puffT > 0 ? 'Puffed up: bites do half' : b.phase === 2 ? 'Furious: two tongues at a time' : 'Bite it from behind: it only looks ahead'),
     hollow: (b) => (b.mode === 'idle' ? 'Silent in the hedge: only a muster of four colonies dares it' : (b.guards || 0) >= 6 ? `Shielded by ${b.guards} infected: cut them down first!` : b.atk ? 'Spores gathering: get out of the ring!' : '★ THE HEART IS OPEN: STRIKE IT! ★'), // build 56
     crow: (b) => (b.carry ? '★ HE HAS AN ANT: GET THE BOTTLE CAP UNDER HIM! ★' : b.air && b.mode === 'fight' ? (b.atk ? 'Diving to snatch: move off the ring!' : `Circling out of reach: carry the bottle cap under him${b.loot ? ` (he has ${b.loot} of your glowrock)` : ''}`) : b.mode === 'idle' ? 'Strutting by his roost: only a muster of three colonies brings him to fight' : b.pinned ? '★ PINNED: HE CAN’T FLY! ★' : `★ DOWN: SWARM HIM! ★ ${Math.max(0, Math.ceil(b.groundT || 0))}s`), // build 55
+    blind: (b) => (b.mode === 'idle' ? 'Something huge sleeps under the Sinkhole: only the Supercolony, mustered five colonies strong, can wake it' : b.under ? (b.atk ? 'The ground heaves: get out of the ring!' : 'Under the earth: watch the ridge of dirt') : b.atk ? 'Claws raised: get out of the lane!' : `★ IT’S UP: BITE IT! ★ ${Math.max(0, Math.ceil(b.upT || 0))}s`), // build 58
     hornets: (b) => (b.mode === 'idle' ? 'Quiet in her paper nest: only a muster of four colonies at the Oak’s foot wakes her' : b.dive ? 'A hornet dives: the ant it picked is about to be knocked off!' : b.phase === 2 ? 'Raging: her swarm sweeps the bark. Hold the top a dozen strong!' : P().climb ? (P().ant && P().ant.climb >= SIM.CROWN - 40 ? '★ AT HER NEST: BITE! ★' : 'Climbing…') : 'Climb the trunk: only ants at her nest can bite her'), // build 57
     duke: (b) => (b.belly ? `★ ${b.belly.ids.length} ANT${b.belly.ids.length === 1 ? '' : 'S'} IN HIS GULLET: BITE HIM HARD, NOW! ★` : b.under ? 'Dived: watch where the water stirs!' : b.pinned ? '★ PINNED: HE CAN’T DIVE! ★' : b.atk && b.atk.kind === 'grab' ? 'About to gulp: get out of the ring!' : b.atk ? 'Tongue: get out of the lane!' : b.mode === 'idle' ? 'Lazing in the ditch: only a muster of three colonies rouses him' : b.phase === 2 ? 'Furious: gulps faster, dives more' : 'Thirty ants on him pin him'), // build 54
     robin: (b) => (b.pinned ? '★ PINNED BY THE FEET: BITE NOW! ★' : b.swoop ? 'SWOOPING!' : b.air ? (b.atk ? 'Diving: get out of the lane!' : 'Circling overhead, out of reach') : b.atk && b.atk.what === 'peck' ? 'Pecking at the red dot: move!' : b.atk ? 'Wings up: get out of the ring!' : b.phase === 2 ? 'It will take off again: pin it!' : 'Hopping after your ants'),
@@ -636,10 +651,12 @@ export function createUI(app) {
   }
   function bossUi(s) {
     const B = s.bosses || {}, pa = P().ant, fx = pa && !P().inNest ? pa.x : (s.world.ex + 0.5) * T, fy = pa && !P().inNest ? pa.y : (s.world.ey + 0.5) * T;
-    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'crow' ? '🐦‍⬛' : s.bossIntro.key === 'hollow' ? '🍄' : s.bossIntro.key === 'hornets' ? '🐝' : s.bossIntro.key === 'toad' || s.bossIntro.key === 'duke' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : s.bossIntro.key === 'widow' ? '🕷' : s.bossIntro.key === 'centipede' ? '🐛' : '🌀', D.name, D.tip, D.title); }
+    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'crow' ? '🐦‍⬛' : s.bossIntro.key === 'hollow' ? '🍄' : s.bossIntro.key === 'hornets' ? '🐝' : s.bossIntro.key === 'blind' ? '🕳' : s.bossIntro.key === 'toad' || s.bossIntro.key === 'duke' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : s.bossIntro.key === 'widow' ? '🕷' : s.bossIntro.key === 'centipede' ? '🐛' : '🌀', D.name, D.tip, D.title); }
     // Build 39: a zone taken; and once all 13 are, the end of Phase 1.
     if (s.zoneTaken && s.zoneTaken.t !== app.zoneSeen) { app.zoneSeen = s.zoneTaken.t; const Z = SIM.ZONES.find((z) => z.key === s.zoneTaken.key); if (Z) showBanner('win', '★', `Zone taken: ${Z.name}`, `${s.zoneTaken.n} of ${SIM.ZONES.length} zones. Open the map to see what’s left.`); }
     if (s.phase1 && !s.seen.phase1Shown) { s.seen.phase1Shown = true; showPhase1(s); }
+    if (s.phase2 && !s.seen.phase2Shown) { s.seen.phase2Shown = true; showPhase2(s); } // build 58
+    if (s.takeoverReady && !s.seen.takeoverSaid) { s.seen.takeoverSaid = true; showBanner('gift', '🟢', 'The glow is yours', 'Old Blind is dead, and the seam it guarded is open to you. One evolution is left: the Takeover (Evolve, Great evolutions). The house is waiting.', 'The yard, to its very edges'); }
     if (s.bossDown && s.bossDown.t !== downSeen) { downSeen = s.bossDown.t; const D = SIM.BOSSES[s.bossDown.key], Tr = SIM.TROPHY[D.trophy]; showBanner('win', '🏆', `${D.name} ${D.flees ? "flies off for good" : "is dead"}!`, `${Tr.name}: ${Tr.fx}. +4 🧬 and its chitin.`, 'Victory'); }
     if (s.banner && s.banner.t !== bannerSeen) { bannerSeen = s.banner.t; showBanner(s.banner.kind, s.banner.icon, s.banner.title, s.banner.line); }
     let pick = null, pd = 34 * T;

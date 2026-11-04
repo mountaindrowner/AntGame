@@ -7,7 +7,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 ## Still open (Nov 4, after build 52)
 
 **Proposed, waiting on Mark**
-- **The outer wasteland ("the wilds")**: drafted in `WILDS.md` (Nov 4); five questions for Mark at its end.
+- **Phase 2, the house:** the Takeover (build 58) opens its back door. Needs a design document (the grand arc, the "radioactive waste").
 - **Balance levers from the stress run (build 47), Mark's call:**
   - meat is the late-game ceiling (the Egg larder and the Blue Butterfly Pact help, by design not fully);
   - forager return about 2.5× upkeep (real ants 4–9×), so about 40% of a colony must forage;
