@@ -6,11 +6,12 @@ What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full
 
 Mark, on `WILDS.md`: "All good but the drum. The ore was already underground. Maybe this is another thing affected, and when we beat it, it prompts the house takeover, and the evolution prompting the second takeover, Phase 2."
 
+Then: "This is still in the fence, but it's the farthest edges before hitting the fences… the furthest regions in the same square space, the 3 farthest sides from the house."
+
 **What stands:**
-- A ring of wild ground round the yard.
+- The wilds are the yard's own outer ring (west column, east column, south row), inside the fence. No new ground; the edges "stir" and turn wild once you have three colonies. The yard's guardians there stay as Phase 1.
 - Four wild zones and bosses: the Ditch (the Duke), the Bramble Lot (Old Black), the Hollow (the Cordyceps Colony), and the Oak's climbable Crown (the Hornet Queen).
 - Musters and standing orders as the macro layer.
-- The fence gap opens at the third daughter.
 
 **The change:**
 - **No drum.** The glow was always underground; past the fence its seams break the surface.
