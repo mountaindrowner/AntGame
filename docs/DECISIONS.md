@@ -2,6 +2,24 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, step 1: the edges stir; musters and standing orders (build 53)
+
+Mark: "step 1" of `WILDS.md`.
+
+- **The wild ring:** the yard's 21 outermost regions on the three sides farthest from the house (the west column below the trash cans, the east column, the south row).
+- **The stir.** When the third daughter is joined, a banner: "Something stirs at the yard's edges." From then on, until that side's wild boss falls (steps 2 to 6):
+  - scent fades four times as fast there (outposts still hold trails);
+  - hazards there strike half again as often;
+  - two open **green seams** a side: cracks that pulse green with a haze over them, shown on the map too. They burn any ant standing on them (¼ health a second; "burned by the glow").
+  - On the map the wild ring is tinted, a region card says it's wild, and a 🌑 chip sits in the top bar.
+- **Standing orders.** Each colony has one, set in the 🏕 sheet: **Ready** (all its fighters answer a muster), **Guard** (half; the default), **Gather** (none, and a daughter on Gather lays only foragers). The War Camp starts Ready.
+- **Musters.**
+  - Tap a spot on the map, then "Call N fighters". Needs a daughter joined; one muster at a time.
+  - Each colony sends its share. A far daughter's soldiers come out of her door as real ants.
+  - They march there on their own and hold the spot like a held crew. Walk up and call your crew to you, and they follow.
+  - A ⚑ chip shows how many have arrived. "Send them home" disbands them, and a daughter's ants fold back into her numbers when they reach her door.
+- **Not yet:** the wild bosses themselves (steps 2–6), and their rule that they only wake for a muster of enough colonies.
+
 ## Nov 4: the wilds, agreed in outline (design, not built)
 
 Mark, on `WILDS.md`: "All good but the drum. The ore was already underground. Maybe this is another thing affected, and when we beat it, it prompts the house takeover, and the evolution prompting the second takeover, Phase 2."

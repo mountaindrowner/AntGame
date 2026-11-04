@@ -1,6 +1,6 @@
 # Underfoot: the wilds (design draft, Nov 4)
 
-**Status:** agreed in outline (Nov 4). Mark: "All good but the drum," then: "this is still in the fence… the furthest regions in the same square space, the 3 farthest sides from the house." So the wilds are the yard's own outer ring, not new ground. Nothing is built yet.
+**Status:** agreed in outline (Nov 4). Mark: "All good but the drum," then: "this is still in the fence… the furthest regions in the same square space, the 3 farthest sides from the house." So the wilds are the yard's own outer ring, not new ground. Step 1 (the edges stir, musters, standing orders) is built: build 53.
 
 ## Where this comes from
 
@@ -16,7 +16,7 @@ Also already promised in the game: the Supercolony's banner ("beyond the fence t
 
 ## 1. The shape of it
 
-**The wilds are the yard's outermost regions, inside the fence:** the three sides farthest from the house. The yard is a 10 × 8 grid with the house along the top. The wilds are its west column, east column and south row (about 22 regions), the last ground before the fence:
+**The wilds are the yard's outermost regions, inside the fence:** the three sides farthest from the house. The yard is a 10 × 8 grid with the house along the top. The wilds are its west column, east column and south row (21 regions), the last ground before the fence:
 
 | Side | Regions now | Zone and guardian now |
 |---|---|---|

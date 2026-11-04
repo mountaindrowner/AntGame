@@ -205,6 +205,13 @@ export function createUI(app) {
     else if (P0.inNest) h += `<div class="note">From inside your nest you can travel by tunnel to any daughter whose tunnel is through.</div>`;
     else h += `<div class="note">Go inside a nest to travel by tunnel, or walk to a daughter’s door and go in.</div>`;
     if (s.colony.evo.swarmcall) { const sl = SIM.swarmCallLock(s); h += `<div class="btns one"><button data-swarm="1" ${sl ? 'disabled' : ''}>🪽 Call a Swarm day${sl ? `<i>${sl}</i>` : '<i>winged queens rain down: free 🥩 meat</i>'}</button></div>`; } /* build 51 */
+    // Build 53: standing orders (how much of each colony's army answers a muster), and the muster itself.
+    if (ds.some((d) => d.state === 'ready')) {
+      const seg = (key) => `<span class="seg">${SIM.ORDERS.map((o) => `<button data-order="${key}:${o}" class="${SIM.orderOf(s, key) === o ? 'on' : ''}">${o[0].toUpperCase() + o.slice(1)}</button>`).join('')}</span>`;
+      h += `<div class="sec">⚑ Standing orders</div><div class="note">Who answers a muster: Ready sends every fighter, Guard half, Gather none (and a daughter on Gather lays only foragers). Call a muster from the map: tap a spot.</div>`;
+      h += `<div class="orders"><span>🏠 Your nest</span>${seg('main')}</div>` + ds.filter((d) => d.state === 'ready').map((d) => `<div class="orders"><span>${SIM.DAUGHTERS[d.key].icon} ${SIM.DAUGHTERS[d.key].short}</span>${seg(d.key)}</div>`).join('');
+      if (s.muster) h += `<div class="note">⚑ A muster is out: ${s.muster.arrived || 0} of ${s.muster.sent} have arrived.</div><div class="btns one"><button data-unmuster="1">Send the muster home</button></div>`;
+    }
     if (!ds.length) h += `<div class="note">None yet. With the Royal chamber evolved, a winged queen comes after the 3rd, 5th, 7th, 9th and 11th guardian beaten.</div>`;
     for (const d of ds) {
       const R = SIM.DAUGHTERS[d.key], ready = d.state === 'ready';
@@ -338,7 +345,7 @@ export function createUI(app) {
     h += `<div class="t" style="margin-top:10px">Named ants</div>`;
     h += named.length ? named.map((a) => `<div class="named"><b>${a.name}${a.title ? ' ' + a.title : ''}</b>${a.isPlayer ? ' (you)' : ''} · ${RANKS[rankOf(a)].name} ${CASTES[a.caste].name} · ${Math.floor(a.xp || 0)} xp</div>`).join('') : `<div class="note">None yet. Elites get names.</div>`;
     h += `<div class="t" style="margin-top:10px">The fallen</div>`;
-    h += c.fallen.length ? c.fallen.map((f) => `<div class="named">${f.name}${f.title ? ' ' + f.title : ''}${f.you ? ' (you)' : ''} · ${RANKS[f.rank].name} ${CASTES[f.caste].name} · ${({ spider: 'the spider', rival: 'a rival', war: 'in battle', antlion: 'an antlion', mower: 'the mower', foot: 'a foot', bird: 'a robin', toad: 'the toad', acorn: 'an acorn', spray: 'bug spray', fireants: 'fire ants', starved: 'starved', hunger: 'starved', nomeat: 'for want of meat', afield: 'lost far afield' }[f.cause] || f.cause)}</div>`).join('') : `<div class="note">No named ant has died.</div>`;
+    h += c.fallen.length ? c.fallen.map((f) => `<div class="named">${f.name}${f.title ? ' ' + f.title : ''}${f.you ? ' (you)' : ''} · ${RANKS[f.rank].name} ${CASTES[f.caste].name} · ${({ spider: 'the spider', rival: 'a rival', war: 'in battle', antlion: 'an antlion', mower: 'the mower', foot: 'a foot', bird: 'a robin', toad: 'the toad', acorn: 'an acorn', spray: 'bug spray', fireants: 'fire ants', starved: 'starved', hunger: 'starved', nomeat: 'for want of meat', afield: 'lost far afield', glow: 'burned by the glow' }[f.cause] || f.cause)}</div>`).join('') : `<div class="note">No named ant has died.</div>`;
     return h;
   }
   // Your ant died: come back as one of your named ants, or wait for an egg.
@@ -665,6 +672,8 @@ export function createUI(app) {
       + (SIM.roomCount(s, 'fungus') ? chip('🍃', Math.floor(c.fungus || 0), 'Leaf in the fungus garden: it grows into food') : '')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
       + daughterChip(s, chip)
+      + (s.muster ? chip('⚑', `${s.muster.arrived || 0}/${s.muster.sent}`, 'A muster is out (tap the 🏕 chip to send it home)') : '')
+      + (s.wild && s.wild.stirred ? chip('🌑', '', 'The yard’s edges are wild: scent fades fast there, hazards strike harder, green seams burn') : '')
       + (c.genesTotal ? chip('🧬', c.genes, 'Genes: tap to evolve').replace('<span class="chip', '<span data-genes="1" class="chip') : '')
       + (s.queen.placed && s.queen.hp < 99.5 ? chip('👑', Math.ceil(s.queen.hp), 'Your queen’s health', true) : '')
       + (s.rival.queenAlive && s.rival.qhp < 999 ? chip('⚔', Math.ceil(s.rival.qhp / 10) + '%', 'The rival queen’s health') : '')
@@ -778,6 +787,8 @@ export function createUI(app) {
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.raid) { if (SIM.startRaid(s, b.dataset.raid)) { closeMenu(); sfx.play('raid'); } else flash('Raid: ' + SIM.raidLock(s, b.dataset.raid) + '.', /^Raid:/, 2600); return; }
     if (b.dataset.swarm) { if (SIM.callSwarm(s)) { closeMenu(); sfx.play('evolve'); } else renderSheet(); return; }
+    if (b.dataset.order) { const [k, o] = b.dataset.order.split(':'); SIM.setOrder(s, k, o); renderSheet(); return; }
+    if (b.dataset.unmuster) { SIM.endMuster(s); renderSheet(); return; }
     if (b.dataset.travel) { goTunnel(b.dataset.travel === 'home' ? null : b.dataset.travel); return; }
     if (b.dataset.droom) { const [dk, rk] = b.dataset.droom.split(':'); if (SIM.buildDRoom(s, dk, rk)) sfx.play('roomPlaced'); else flash(SIM.DROOMS[rk].name + ': ' + SIM.dRoomLock(s, dk, rk) + '.', /:/, 2600); renderSheet(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }

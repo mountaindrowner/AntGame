@@ -34,6 +34,8 @@ export class MapView {
       if (b.dataset.close) this.close();
       else if (b.dataset.plan) { this.close(); this.onPlan(); }
       else if (b.dataset.found) { const [oi, role] = b.dataset.found.split(':'); if (SIM.foundDaughter(this.app.s, +oi, role)) { sfx.play('evolve'); this.close(); } else this._tap(this.lastTap.x, this.lastTap.y); }
+      else if (b.dataset.muster) { const [mx, my] = b.dataset.muster.split(',').map(Number); if (SIM.callMuster(this.app.s, mx, my)) { sfx.play('evolve'); this.draw(); } this._tap(this.lastTap.x, this.lastTap.y); } // build 53
+      else if (b.dataset.unmuster) { SIM.endMuster(this.app.s); this.draw(); this._tap(this.lastTap.x, this.lastTap.y); }
       else if (b.dataset.z) { const r = this.canvas.getBoundingClientRect(); this.zoomAt(r.width / 2, r.height / 2, +b.dataset.z); }
     });
     this._input();
@@ -124,6 +126,11 @@ export class MapView {
     g.drawImage(this.photo, 0, 0);
     g.imageSmoothingEnabled = true;
     g.drawImage(this.fog, 0, 0);
+    // Build 53: the stirred edges, tinted; their green seams.
+    if (s.wild && s.wild.stirred) {
+      g.fillStyle = 'rgba(40, 70, 40, 0.28)';
+      AREAS.forEach((A, i) => { if (!SIM.WILD_SIDE[i] || (s.wild.beaten || {})[SIM.WILD_SIDE[i]]) return; const b = SIM.areaBounds(i); g.fillRect(b.x0 * T * K, b.y0 * T * K, (b.x1 - b.x0 + 1) * T * K, (b.y1 - b.y0 + 1) * T * K); });
+    }
     g.restore();
     // Markers stay the same size at any zoom.
     const at = (x, y) => [this.ox + x * K * this.z, this.oy + y * K * this.z];
@@ -192,6 +199,8 @@ export class MapView {
       const label = d.state === 'flight' ? `${R.short}: the queen flies` : d.state === 'tunnel' ? `${R.short}: tunnel ${Math.floor(k * 100)}%` : `${R.icon} ${R.short} · ${SIM.daughterCount(s, d)}/${SIM.DAUGHTER_CAP}`;
       pin((d.ex + 0.5) * T, (d.ey + 0.5) * T, d.state === 'ready' ? '#8fd36b' : '#ffd34d', label, true);
     }
+    if (s.wild && s.wild.stirred) for (const m of s.wild.seams || []) { const [px, py] = at((m.x + 0.5) * T, (m.y + 0.5) * T); g.beginPath(); g.arc(px, py, 5, 0, Math.PI * 2); g.fillStyle = '#7dff6a'; g.shadowColor = '#7dff6a'; g.shadowBlur = 10; g.fill(); g.shadowBlur = 0; }
+    if (s.muster) pin((s.muster.x + 0.5) * T, (s.muster.y + 0.5) * T, '#ff9d3a', `⚑ Muster ${s.muster.arrived || 0}/${s.muster.sent}`);
     if (s.queen.placed) pin((w.ex + 0.5) * T, (w.ey + 0.5) * T, '#8fd36b', 'Nest');
     for (const r of s.rivals) if (!r.asleep && r.queenAlive && seen(r.ex, r.ey)) pin((r.ex + 0.5) * T, (r.ey + 0.5) * T, '#e4524a', r.team === 1 ? 'Rival nest' : SIM.RIVALS[r.team - 1].name);
     for (const o of s.outposts || []) if (seen(o.x, o.y)) pin((o.x + 0.5) * T, (o.y + 0.5) * T, o.done ? '#c9b27a' : '#8a8272', s.colony.held[o.region] ? 'Held' : o.done ? 'Outpost' : 'Building');
@@ -208,9 +217,24 @@ export class MapView {
     const A = AREAS[SIM.areaOf(s, Math.floor(wx), Math.floor(wy))];
     this.lastTap = { x, y };
     this.card.innerHTML = seen
-      ? `<strong>${A.name}</strong><div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${zoneLine(s, A.key)}</dl>` + this._outpostCard(s, wx, wy)
+      ? `<strong>${A.name}</strong><div>${A.blurb}</div><dl><dt>Danger</dt><dd>${A.challenge}</dd><dt>Find</dt><dd>${A.resource}</dd><dt>Prize</dt><dd>${A.reward}</dd>${zoneLine(s, A.key)}</dl>` + this._wildLine(s, wx, wy) + this._outpostCard(s, wx, wy) + this._musterCard(s, wx, wy)
       : `<strong>Unexplored</strong><div>Walk your ant out here to see what's in this part of the yard.</div>`;
     this.card.classList.remove('hidden');
+  }
+
+  // Build 53: the stirred edges, and musters.
+  _wildLine(s, wx, wy) {
+    const side = SIM.WILD_SIDE[SIM.areaOf(s, Math.floor(wx), Math.floor(wy))];
+    if (!side || !(s.wild && s.wild.stirred)) return '';
+    return `<div class="mv-wild">🌑 <b>The wild ${side} edge.</b> Scent fades fast here, hazards strike harder, and green seams burn. Things are waking out here.</div>`;
+  }
+  _musterCard(s, wx, wy) {
+    if (!SIM.coloniesJoined(s)) return '';
+    const M = s.muster;
+    if (M) return `<div class="mv-found"><b>⚑ Muster</b><div>${M.arrived || 0} of ${M.sent} have arrived. Walk there and they join your crew.</div><div class="mv-roles"><button data-unmuster="1">Send them home<i>the muster disbands</i></button></div></div>`;
+    const roll = SIM.musterRoll(s), lock = SIM.musterLock(s), n = roll.reduce((t, r) => t + r.send, 0);
+    const who = roll.filter((r) => r.have).map((r) => `${r.name} ${r.send}/${r.have} (${r.order})`).join(' · ');
+    return `<div class="mv-found"><b>⚑ Muster here</b><div>Call fighters from your colonies, by their standing orders (set them in the 🏕 sheet): ${who || 'no fighters yet'}.</div><div class="mv-roles"><button data-muster="${Math.floor(wx)},${Math.floor(wy)}" ${lock ? 'disabled' : ''}>⚑ Call ${n} fighters<i>${lock || 'they march here and hold it'}</i></button></div></div>`;
   }
 
   // Build 46: tapping near an outpost: where a winged queen can found a daughter, and as what.

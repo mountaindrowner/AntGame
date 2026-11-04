@@ -269,12 +269,31 @@ export class SurfaceView {
       m.flag.rotation.y = Math.sin(t * 2.2 + d.ex) * 0.35;
       m.scale.setScalar(d.state === 'ready' ? 1 : 0.6);
     }
+    // Build 53: the wild edges' open seams: green cracks in the ground that pulse, and a haze over them.
+    this.seams = this.seams || new Map();
+    for (const sm of (s.wild && s.wild.stirred && s.wild.seams) || []) {
+      const key = sm.x + ',' + sm.y; let m = this.seams.get(key);
+      if (!m) {
+        m = new THREE.Group(); m.cracks = [];
+        for (let k = 0; k < 6; k++) {
+          const len = 10 + ((k * 37 + sm.x) % 13), crack = new THREE.Mesh(new THREE.PlaneGeometry(len, 2.2).rotateX(-Math.PI / 2), psxBasic({ color: '#7dff6a', transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
+          crack.rotation.y = k * 1.05 + (sm.y % 7) * 0.3; crack.position.set(Math.cos(k * 1.05) * len * 0.4, 0.25, Math.sin(k * 1.05) * len * 0.4); crack.renderOrder = 4; m.add(crack); m.cracks.push(crack);
+        }
+        const haze = new THREE.Mesh(new THREE.CircleGeometry(16, 12).rotateX(-Math.PI / 2), psxBasic({ color: '#5aff5a', transparent: true, opacity: 0.18, depthWrite: false }));
+        haze.position.y = 0.4; haze.renderOrder = 4; m.add(haze); m.haze = haze;
+        m.position.set((sm.x + 0.5) * T, 0, (sm.y + 0.5) * T); this.cairnGroup.add(m); this.seams.set(key, m);
+      }
+      const p = 0.5 + 0.5 * Math.sin(t * 1.7 + sm.x);
+      for (const c of m.cracks) c.material.opacity = 0.55 + 0.4 * p;
+      m.haze.material.opacity = 0.1 + 0.12 * p;
+    }
   }
 
   setState(s) {
     this.state = s;
     this.camInit = false;
     if (this.daughterDoors){ for (const m of this.daughterDoors.values()) this.cairnGroup.remove(m); this.daughterDoors.clear(); } // (build 46: a new colony has none)
+    if (this.seams){ for (const m of this.seams.values()) this.cairnGroup.remove(m); this.seams.clear(); } // (build 53)
     if (this.static) {
       this.scenery.dispose();
       this.scene.remove(this.static);

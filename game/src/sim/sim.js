@@ -367,6 +367,53 @@ function buildDRoom(s, dkey, rkey){
   const R = DROOMS[rkey], d = s.daughters.find(q => q.key === dkey); payCost(s.colony, R.cost);
   d.rooms = d.rooms || [null, null]; d.rooms[R.seat ? 0 : 1] = { key: rkey, done: false, progress: 0 }; s.events.push('roomPlaced'); return true;
 }
+// ---------- build 53: the wilds (WILDS.md): the yard's outer ring stirs; musters; standing orders ----------
+// The three sides farthest from the house: the west column (below the trash cans), the east column, the south row.
+const WILD_SIDE = AREAS.map(A => { const [c, r] = A.at; return r === 7 ? 'south' : c === 0 && r >= 2 ? 'west' : c === 9 ? 'east' : null; });
+const WILD_STIR = 3; // joined daughters: with the main nest, four colonies (Mark: "amass at least three colonies" for the edges)
+const coloniesJoined = s => (s.daughters || []).filter(d => d.state === 'ready').length;
+function tickWild(s, dt){
+  const W0 = s.wild || (s.wild = { stirred: false, at: null, beaten: {}, seams: [] });
+  if (!W0.stirred){ W0.chk = (W0.chk || 0) + dt; if (W0.chk < 2) return; W0.chk = 0; if (coloniesJoined(s) >= WILD_STIR) stirWild(s); return; }
+  // Glow sickness: an open seam burns the ants who stand on it.
+  for (const m of W0.seams){ for (const a of s.ants){ if (a.team || !outside(a) || Math.abs(a.x/T - m.x) > 2 || Math.abs(a.y/T - m.y) > 2) continue;
+    if (Math.hypot(a.x/T - (m.x + 0.5), a.y/T - (m.y + 0.5)) < 1.6){ hurtAnt(s, a, 0.25*dt, 'glow'); if (a.isPlayer && !W0.toldSeam){ W0.toldSeam = true; s.player.msg = '🟢 The ground here is warm and wrong. It burns. Don’t linger on the green.'; } } } }
+}
+function stirWild(s){
+  const W0 = s.wild, w = s.world; W0.stirred = true; W0.at = s.t;
+  // Two open seams a side, on open ground.
+  for (const side of ['west', 'south', 'east']){ const regs = AREAS.map((A, i) => i).filter(i => WILD_SIDE[i] === side);
+    for (let k = 0, tries = 0; k < 2 && tries < 200; tries++){ const ri = regs[Math.floor(Math.random()*regs.length)], b = areaBounds(ri);
+      const x = b.x0 + 8 + Math.floor(Math.random()*(AREA - 16)), y = b.y0 + 8 + Math.floor(Math.random()*(AREA - 16));
+      if (!walk(s, x, y) || w.pit[idx(x, y)] || W0.seams.some(m => Math.hypot(m.x - x, m.y - y) < AREA)) continue; W0.seams.push({ x, y, side }); k++; } }
+  s.banner = { key: 'wild-stir', t: s.t, icon: '🌑', title: 'Something stirs at the yard’s edges', line: 'Out by the fence, the ground cracks green. The edges are wild now: scent fades fast, the hazards come harder, and things are waking. Three colonies are needed out there: call a muster from the map.', kind: 'hard' };
+  s.events.push('wildstir'); s.player.msg = '🌑 Something stirs at the yard’s edges.';
+}
+// Standing orders: how much of a colony's army answers a muster. Gather: none (and a daughter lays only foragers);
+// Guard: half; Ready: all.
+const ORDERS = ['gather', 'guard', 'ready'], ORDER_SHARE = { gather: 0, guard: 0.5, ready: 1 };
+const orderOf = (s, key) => key === 'main' ? (s.colony.order || 'guard') : (((s.daughters || []).find(d => d.key === key) || {}).order || (key === 'war' ? 'ready' : 'guard'));
+function setOrder(s, key, order){ if (!ORDERS.includes(order)) return false; if (key === 'main'){ s.colony.order = order; return true; } const d = (s.daughters || []).find(q => q.key === key); if (!d) return false; d.order = order; return true; }
+// Who would answer a muster now: per colony, how many fighters.
+function musterRoll(s){
+  const out = [], isF = a => CASTES[a.caste].fight >= 3;
+  const main = s.ants.filter(a => !a.team && !a.dh && !a.isPlayer && !a.follow && isF(a) && (a.state === 'in' || a.state === 'patrol' || a.state === 'fight' || a.state === 'explore' || a.state === 'return'));
+  out.push({ key: 'main', name: 'Your nest', order: orderOf(s, 'main'), have: main.length, send: Math.floor(main.length*ORDER_SHARE[orderOf(s, 'main')]), ants: main });
+  for (const d of s.daughters || []){ if (d.state !== 'ready') continue; const real = daughterAnts(s, d).filter(a => !a.follow && isF(a) && a.state !== 'muster'), abs = Object.entries(d.pop || {}).filter(([k]) => CASTES[k].fight >= 3).reduce((t, [, n]) => t + n, 0);
+    const have = real.length + abs, o = orderOf(s, d.key); out.push({ key: d.key, name: DAUGHTERS[d.key].short, order: o, have, send: Math.floor(have*ORDER_SHARE[o]), ants: real, d }); }
+  return out;
+}
+function musterLock(s){ if (!coloniesJoined(s)) return 'needs a daughter joined by her tunnel'; if (s.muster) return 'one muster at a time: release this one first'; if (!musterRoll(s).some(r => r.send > 0)) return 'no colony has fighters to send: set one to Ready or Guard'; return ''; }
+function callMuster(s, x, y){
+  if (musterLock(s) || !walk(s, x, y)) return false;
+  const M = s.muster = { x, y, t0: s.t, sent: 0, from: {}, arrived: 0 };
+  for (const r of musterRoll(s)){ let left = r.send; if (!left) continue; M.from[r.key] = left;
+    for (const a of r.ants){ if (!left) break; left--; a.muster = true; a.foeId = 0; a.goal = null; if (a.state === 'in' || a.state === 'build') exitNest(s, a, 'muster'); else a.state = 'muster'; M.sent++; }
+    if (left && r.d){ for (const k of Object.keys(r.d.pop)){ while (left > 0 && r.d.pop[k] > 0 && CASTES[k].fight >= 3){ r.d.pop[k]--; left--; const a = mkAnt(s, k, 'in', r.d.ex, r.d.ey, 0); a.dh = r.d.key; a.muster = true; if (r.d.key === 'war') a.xp = Math.max(a.xp || 0, RANKS[1].xp); exitNest(s, a, 'muster'); M.sent++; } } } }
+  s.events.push('rally'); s.player.msg = `⚑ Muster called: ${M.sent} fighter${M.sent === 1 ? '' : 's'} march from ${Object.keys(M.from).length} colon${Object.keys(M.from).length === 1 ? 'y' : 'ies'}.`;
+  return true;
+}
+function endMuster(s){ if (!s.muster) return 0; let n = 0; for (const a of s.ants) if (a.muster && a.state !== 'dead'){ a.muster = false; a.follow = false; a.state = 'return'; a.holdX = null; n++; } s.muster = null; s.player.msg = n ? `The muster disbands: ${n} march home.` : 'The muster is over.'; return n; }
 // Build 51: Swarm Day, called by you once every 20 minutes.
 function swarmCallLock(s){ if (!has(s, 'swarmcall')) return 'evolve Swarm Day first'; if (s.event) return 'something is already happening'; const left = (s.colony.swarmCallAt ?? -1e9) + 1200 - s.t; if (left > 0) return `ready in ${Math.ceil(left/60)} min`; return ''; }
 function callSwarm(s){ if (swarmCallLock(s)) return false; s.colony.swarmCallAt = s.t; startEvent(s, 'swarm'); return true; }
@@ -392,6 +439,7 @@ function watchWarns(s){ if (!joined(s, 'watch')) return ''; const c = s.colony; 
   let n = 0; for (const a of s.ants) if (!a.team && !a.dh && a.state === 'in' && CASTES[a.caste].fight >= 3){ exitNest(s, a, 'fight'); n++; }
   return n ? ` The Watch saw them set off: ${n} fighter${n === 1 ? '' : 's'} turn out.` : ' The Watch saw them set off.'; }
 function daughterCaste(s, d){
+  if (d.order === 'gather') return 'forager'; /* build 53: her standing order */
   const R = DAUGHTERS[d.key], m = R.mix || { forager: 1 }; let tot = 0; for (const k in m) tot += m[k];
   let r = Math.random()*tot, caste = 'forager'; for (const k in m){ r -= m[k]; if (r <= 0){ caste = k; break; } }
   if (caste === 'major' && !has(s, 'majors')) caste = 'soldier';
@@ -441,7 +489,7 @@ function realizeDaughter(s, d){
 }
 function abstractDaughter(s, d){
   const c = s.colony;
-  for (const a of daughterAnts(s, d)){ if (a.follow || a.isPlayer || a.state === 'away') continue;
+  for (const a of daughterAnts(s, d)){ if (a.follow || a.isPlayer || a.state === 'away' || a.state === 'muster') continue;
     if (a.carry && a.kind === 'food') c.store = Math.min(c.cap, c.store + a.carry);
     d.pop[a.caste] = (d.pop[a.caste] || 0) + 1; a.state = 'dead'; a.folded = true; }
   s.ants = s.ants.filter(a => a.state !== 'dead'); d.real = false;
@@ -1182,9 +1230,9 @@ function tick(s, dt){
   if (s.catCorpse && s.t - s.catCorpse.t > 3) s.catCorpse = null;
   const td = Math.pow(0.5, dt/(s.rain && wet(s) ? 4 : has(s, 'scent') ? 180 : 90)), ad = Math.pow(0.5, dt/8); const tr = s.trail, al = s.alarm;
   // Only tiles with scent on them decay (s.hot); the yard is too big to sweep.
-  const keep = s.keepMask; for (const i of s.hot){ if (keep[i] && !(s.rain && wet(s))){ if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; continue; } if (tr[i] > 0.001) tr[i] *= td; else tr[i] = 0; if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; if (!tr[i] && !al[i]) s.hot.delete(i); }
+  const keep = s.keepMask, wa = s.wild && s.wild.stirred ? s.world.area : null, tdW = Math.pow(0.5, dt/22); for (const i of s.hot){ if (keep[i] && !(s.rain && wet(s))){ if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; continue; } if (tr[i] > 0.001) tr[i] *= wa && WILD_SIDE[wa[i]] ? tdW : td; else tr[i] = 0; /* build 53: the wilds scatter scent four times as fast */ if (al[i] > 0.001) al[i] *= ad; else al[i] = 0; if (!tr[i] && !al[i]) s.hot.delete(i); }
   for (const col of [c, ...s.rivals]) if (!col.asleep) tickColony(s, col, dt);
-  if (s.queen.placed) tickDaughters(s, dt);
+  if (s.queen.placed){ tickDaughters(s, dt); tickWild(s, dt); }
   // A rival colony moves in at its time, or once you've done what brings it (build 25; see RIVALS).
   for (const r of s.rivals) if (r.asleep && s.queen.placed && RIVALS[r.team - 1].arrive(s)) wakeRival(s, r, true);
   // dew
@@ -1298,6 +1346,14 @@ function tick(s, dt){
       if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, gx, gy);
       continue;
     }
+    if (a.state === 'muster'){ // build 53: marching to a muster
+      const M = s.muster; if (!M){ a.state = 'return'; a.follow = false; continue; }
+      const gx = (M.x + 0.5)*T, gy = (M.y + 0.5)*T;
+      if (Math.hypot(a.x - gx, a.y - gy) < 2*T){ const k = (M.arrived = (M.arrived || 0) + 1), ang = k*2.4, rr = Math.min(3, 0.6 + Math.sqrt(k)*0.45)*T;
+        a.state = 'hold'; a.follow = true; a.holdX = gx + Math.cos(ang)*rr; a.holdY = gy + Math.sin(ang)*rr; a.holdCX = gx; a.holdCY = gy; a.foeId = 0; a.goal = null; continue; }
+      if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed + 10), dt)) chooseToward(s, a, gx, gy);
+      continue;
+    }
     if (a.state === 'hold'){ // build 29: guarding a spot
       if (a.holdX == null){ a.state = 'follow'; continue; }
       const hx = a.holdX, hy = a.holdY, ht = Math.floor(hx/T), hty = Math.floor(hy/T);
@@ -1353,7 +1409,7 @@ function tick(s, dt){
       if (a.carry > 0 && !a.team){ const i = idx(a.tx,a.ty); s.trail[i] = Math.min(5, s.trail[i] + 1.2*dt*(a.caste === 'forager' && picked(s, 'forager', 'trailblazer') ? 2 : 1)); s.hot.add(i); }
       { const door = a.dh && daughterOf(s, a) ? daughterOf(s, a) : col; // (build 46: home is her door)
       if (a.tx === door.ex && a.ty === door.ey && Math.hypot(a.x-(door.ex+0.5)*T, a.y-(door.ey+0.5)*T) < 2){
-        if (a.carry) deposit(s, a); enterNest(s, a); continue; } }
+        if (a.carry) deposit(s, a); enterNest(s, a); if (a.dh && door !== col && !door.real){ door.pop[a.caste] = (door.pop[a.caste] || 0) + 1; a.state = 'dead'; a.folded = true; } /* build 53: home to a daughter who is numbers */ continue; } }
       if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt)) chooseReturn(s, a);
       continue;
     }
@@ -2279,7 +2335,7 @@ function tickStrikes(s, dt){
     if (st.kind === 'toad' && s.colony.kills.centipede && ROT_ZONE.has(AREAS[i].key)) continue; // build 36: the centipede beaten // build 35: the widow beaten // build 31: Old Warty beaten // build 30: the Old Robin driven off, no robins over the lawn
     if (isNight(s) && (st.kind === 'foot' || st.kind === 'bird' || st.kind === 'spray')) continue; // build 43: people and birds are in bed
     const here = out.get(i); if (!here) continue;
-    s.strikeT[i] -= dt*(st.kind === 'toad' && isNight(s) ? 1.8 : 1); /* (toads hunt at night) */ if (s.strikeT[i] > 0) continue;
+    s.strikeT[i] -= dt*(st.kind === 'toad' && isNight(s) ? 1.8 : 1)*(s.wild && s.wild.stirred && WILD_SIDE[i] && !s.wild.beaten[WILD_SIDE[i]] ? 1.5 : 1); /* build 53: a stirred edge strikes half again as often */ /* (toads hunt at night) */ if (s.strikeT[i] > 0) continue;
     s.strikeT[i] = (st.every[0] + Math.random()*(st.every[1] - st.every[0]))*(prizeFx(s, i) === 'calm' ? 2 : 1);
     const t = here[Math.floor(Math.random()*here.length)], b = areaBounds(i);
     const x = Math.max(b.x0 + 3, Math.min(b.x1 - 3, t.x/T + (Math.random()-0.5)*4)), y = Math.max(b.y0 + 3, Math.min(b.y1 - 3, t.y/T + (Math.random()-0.5)*4));
@@ -3716,7 +3772,7 @@ function serialize(s){
   return JSON.stringify({ v: SAVE_VERSION, active: s.active, raidStart: s.raidStart || null, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil, open: s.nest.open || {}, breach: s.nest.breach || null }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
     ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
-    phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid,
+    phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid, wild: s.wild || null, muster: s.muster || null,
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, nestKey: s.player.nestKey || null, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
@@ -3746,7 +3802,7 @@ function deserialize(json){
   const d = migrate(JSON.parse(json)); const s = create(d.seed);
   // Saves from before build 12 have no growth fields: start them at zero.
   const fill = c => { const g = growthState(); for (const k in g) if (!(k in c)) c[k] = g[k]; return c; };
-  s.t = d.t; s.phase1 = d.phase1 || null; s.dayT = d.dayT ?? (d.t + DAY*0.02); s.nights = d.nights || 0; s.daughters = d.daughters || []; s.flightSaid = !!d.flightSaid; s.nightNow = isNight(s); s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
+  s.t = d.t; s.phase1 = d.phase1 || null; s.dayT = d.dayT ?? (d.t + DAY*0.02); s.nights = d.nights || 0; s.daughters = d.daughters || []; s.flightSaid = !!d.flightSaid; s.wild = d.wild || null; s.muster = d.muster || null; s.nightNow = isNight(s); s.raidStart = d.raidStart || null; if (d.cds) s.player.cds = d.cds; s.colony = fill(d.colony); s.rival = fill(d.rival); s.rival.key = 'pavement'; s.rivals = [s.rival, ...RIVALS.slice(1).map((R, i) => (d.rivals && d.rivals[i]) ? fill(d.rivals[i]) : sleepingRival(s.world, i + 2))]; s.raidLive = !!d.raidLive; s.patioDeadAt = d.patioDeadAt ?? (d.rival && d.rival.queenAlive === false ? d.t : undefined); s.items = d.items; s.spider = d.spider; s.spiderRespawn = d.spiderRespawn; s.spiderAway = d.spiderAway || null; s.cat = d.cat; s.catRespawn = d.catRespawn; s.critters = d.critters || s.critters; s.bugGone = d.bugGone || {}; s.bosses = d.bosses || {}; if (d.director) s.director = d.director; s.event = d.event || null; s.goo = d.goo || []; s.stalks = d.stalks || []; s.nextId = d.nextId;
   s.nest.cells.set(d.nest.cells); s.nest.rooms = d.nest.rooms || []; s.nest.digOrders = d.nest.digOrders || []; s.nest.fillOrders = d.nest.fillOrders || []; s.nest.spoil = d.nest.spoil || 0; s.nest.open = d.nest.open || {}; s.nest.breach = d.nest.breach || null; s.spoilPile = d.spoilPile || 0; s.nest.ver++; s.queen = d.queen; s.phase = d.phase; s.won = d.won; s.dew = d.dew; s.dewTimer = d.dewTimer; s.rain = d.rain || s.rain; s.repairs = d.repairs || []; s.seen = d.seen && typeof d.seen === 'object' ? d.seen : {};
   s.ants = d.ants.map(a => Object.assign({ dx:0, dy:-1, rest:0, explore:0, flee:0, exitTo:null }, a));
   // A raid in progress isn't saved: its raiders walk home with what they carried (build 28). Ants held by a
@@ -3763,7 +3819,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { WILD_SIDE, tickWild, stirWild, coloniesJoined, ORDERS, orderOf, setOrder, musterRoll, musterLock, callMuster, endMuster, GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();
