@@ -12,7 +12,7 @@ Mark: "Sure, let's try it", on the three items build 60 left for later. All thre
   - A fingerprint of every model's geometry (383 of them) is byte-identical before and after.
   - The 116 `.glb` exports regenerated to identical files.
 - **The gallery and exports are up to date.** It now shows every model in the game, 137 in all, up from 116. New are the hunters (jumping spider, assassin bug, hunting wasp, skink), the mantis, widow and centipede, and a new Wild bosses page: Nevermore, the Cordyceps Colony, an infected ant, the Hornet Queen, Old Blind and the Sinkhole. Each is also a `.glb` in `game/assets/models/`.
-- **Still open:** whether the Cordyceps outbreak's spores should infect rival ants (they do now).
+- **Decided (Mark, Nov 4): the Cordyceps outbreak keeps infecting rival ants too.** "Let's try it out and see as is." Their zombies count toward the event; to revisit after playing it.
 
 ## Nov 4: the code audit (build 60)
 
@@ -55,7 +55,7 @@ Mark: "Do a thorough look at all our project code… confirm everything is where
 - **Duplicated helpers in the renderer.** It has about 10 copies of the small colouring helper and 6 of the merge helper; they could share one file.
 - **`surfaceView.js` could split up.** It draws all 12 bosses in one long function; each could get its own file, as the sim now has.
 - **The model gallery and the `.glb` exports are behind.** They don't have the newer creatures and the wild bosses.
-- **One design question:** the Cordyceps outbreak's spores also infect rival ants, and their zombies count toward the event. Is that intended?
+- **One design question:** the Cordyceps outbreak's spores also infect rival ants, and their zombies count toward the event. (Build 61: Mark keeps it as is, to see in play.)
 
 ## Nov 4: the wild bosses' new look; Old Black becomes Nevermore (build 59)
 
