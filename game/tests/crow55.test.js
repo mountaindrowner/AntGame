@@ -1,4 +1,4 @@
-// Build 55: Old Black, the second wild boss. Out of reach in the air; the bottle cap brings him down.
+// Build 55: Nevermore, the second wild boss. Out of reach in the air; the bottle cap brings him down.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
@@ -23,7 +23,7 @@ const keep = (s, out, b) => () => { s.colony.store = 150; s.colony.protein = 200
 const muster = (s, b) => { s.muster = { x: Math.floor(b.hx / T), y: Math.floor(b.hy / T), t0: s.t, sent: 9, from: { main: 3, war: 3, garden: 3 }, arrived: 0 }; };
 const fed = (s) => () => { s.colony.store = 150; s.colony.protein = 200; };
 
-test('Old Black roosts on the west side once the edges stir, with a bottle cap nearby', () => {
+test('Nevermore roosts on the west side once the edges stir, with a bottle cap nearby', () => {
   const s = wild(), b = s.bosses.crow; assert.ok(b);
   assert.equal(SIM.WILD_SIDE[SIM.areaOf(s, Math.floor(b.hx / T), Math.floor(b.hy / T))], 'west');
   step(s, 4); assert.ok(s.items.some((f) => f.type === 'cap'), 'his lure lies by the roost');

@@ -2,6 +2,38 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wild bosses' new look; Old Black becomes Nevermore (build 59)
+
+Mark: "Old Black is a bad name, and should be more raven-esque / Cordyceps should be a different ant design, more zombie-esque / the crater reads as a mound, not a hole / let's vastly improve the visual look of these." Each now has its own model (`render/models/wildBosses.js`).
+
+- **Nevermore, the Raven of the Bramble Lot** (was Old Black). Only the name changed in play; the sim's key is still `crow`, so saves keep working. The new model:
+  - a heavy, shaggy raven: throat hackles, a wedge tail, a massive arched bill, and fingered primaries with two missing from one wing;
+  - black with a blue-purple sheen;
+  - one eye milked white and scarred, the other glinting green.
+  - It flies lower (85, was 160), so it stays on screen.
+- **The Cordyceps zombies** have their own ant model, used both for the Hollow's zombie waves and for your own ants once they turn:
+  - hunched, the head drooping, jaws agape, milky eyes;
+  - mottled grey, white fungus bursting from the joints, one leg broken at the knee;
+  - a swollen gaster with glowing pustules;
+  - the fungus's stalk growing out of the back of the head.
+- **The Cordyceps Colony's heart:**
+  - a lumpy dead mound crusted with pale fungus, with gaping dark doorways;
+  - six twisted fruiting stalks with swollen pored heads, and husks curled round its foot;
+  - white mycelium threads creeping out over the ground;
+  - glowing pustules, and a drifting cloud of spores (it bursts when the heart spores).
+- **The Sinkhole is a real hole now.** The old crater sat beside the fire ants' great mound, which still stood, so the place read as a mound.
+  - When the Sinkhole opens, the mound is replaced by a deep pit. The ground under the mound is always cut open (the standing mound hides the cut), so the pit truly falls below the yard.
+  - The pit has a broken red rim, slumped low toward the seam, and the fire ants' old galleries open in walls that darken stratum by stratum. Roots hang into it and rubble lies on the floor.
+  - At the bottom, the seam glows through a jagged split, with a faint green shaft rising out.
+  - The fight ground on the pit's lip, the old seam, is a low torn dish of scorched earth. The fire ants' nest door there is gone.
+  - No rules changed: the pit stands on the mound's own blocked tiles.
+- **Old Blind** is remodelled:
+  - a humped velvet barrel with no neck, bald mangy patches, and **glowing green veins branching over its back** (they pulse);
+  - huge pink spade hands thrust out at the shoulders, with five long nails each;
+  - a wide pink star nose of 22 rays;
+  - one milky eye and one green.
+  - Under the earth: a heaving ridge with a trail of turned earth behind it. When it erupts, clods fly.
+
 ## Nov 4: the wilds, step 6: the Sinkhole, Old Blind, and the Takeover (build 58)
 
 Mark: "Sure, let's do it." The finale of the yard.

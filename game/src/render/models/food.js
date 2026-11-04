@@ -173,7 +173,7 @@ function acorn() {
   parts.push(at(paint(new THREE.CylinderGeometry(0.06, 0.07, 0.35, 4).rotateZ(Math.PI / 2), '#4a3824'), -1.5, 0.72, 0));
   return bake(parts);
 }
-// Build 55: a bottle cap, Old Black's lure: a crimped red-and-silver disc, shiny side up.
+// Build 55: a bottle cap, Nevermore's lure: a crimped red-and-silver disc, shiny side up.
 function bottlecap() {
   const parts = [paint(new THREE.CylinderGeometry(1, 1.06, 0.32, 14), (x, y, z, f) => (y > 0.1 ? (hash(f) < 0.5 ? '#e8e8f0' : '#c8ccd8') : '#c8282a'))];
   for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; parts.push(paint(new THREE.BoxGeometry(0.16, 0.34, 0.1).rotateY(-a).translate(Math.cos(a) * 1.07, 0, Math.sin(a) * 1.07), '#a82020')); }

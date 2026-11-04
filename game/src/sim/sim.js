@@ -149,7 +149,7 @@ const FOODS = {
   gummy:    {name:'gummy bear', amt:[50,50], treat:true, crew:8, sweet:true},
   chip:     {name:'potato chip', amt:[30,30], treat:true, crew:4},
   acorn:    {name:'acorn', amt:[30,30], treat:true, crew:4},
-  // Build 55: Old Black's lure. Shiny, worth nothing to eat.
+  // Build 55: Nevermore's lure. Shiny, worth nothing to eat.
   cap:      {name:'bottle cap', amt:[1,1], treat:true, crew:4, shiny:true},
   slug:     {name:'slug', amt:[20,26], protein:true},
   // Build 18: a beetle's cast-off shell, all chitin.
@@ -384,7 +384,7 @@ function tickWild(s, dt){
       W0.sinkhole = { x, y, t: s.t }; W0.seams.push({ x, y, side: 'south', r: 4, sink: true }); s.active[REGION.firemound] = true;
       s.banner = { key: 'sinkhole', t: s.t, icon: '🕳', title: 'The ground gives way', line: 'Where the fire ants nested, their mound has caved in. At the bottom, the green seam lies open, and something huge stirs under it. That is why they were so fierce.', kind: 'hard' }; s.events.push('sinkhole'); } }
   if (W0.sinkhole && s.colony.trophies.blindclaw){ W0.sinkT = (W0.sinkT || 0) + dt; if (W0.sinkT >= 300){ W0.sinkT = 0; gainGlow(s, 1, 'quarry'); } }
-  // Build 55: Old Black's lure, a bottle cap by his roost while he lives (back after a minute if it goes).
+  // Build 55: Nevermore's lure, a bottle cap by his roost while he lives (back after a minute if it goes).
   const cr = s.bosses && s.bosses.crow; if (cr && !cr.dead){ W0.capT = (W0.capT || 0) + dt; if (W0.capT >= 3){ W0.capT = 0;
     const has = s.items.some(f => f.type === 'cap' && f.amt > 0) || (s.player.big && s.player.big.type === 'cap');
     if (!has){ W0.capGone = (W0.capGone || 0) + 3; if (!W0.capPut || W0.capGone >= 60){ W0.capGone = 0; W0.capPut = true; for (let k = 0; k < 40; k++){ const x = Math.floor(cr.hx/T) + 6 + Math.floor(Math.random()*6), y = Math.floor(cr.hy/T) + Math.floor(Math.random()*7) - 3; if (walk(s, x, y) && !itemAt(s, x, y)){ s.items.push({ x, y, kind: 'food', type: 'cap', amt: 1 }); break; } } } } } }
@@ -3103,8 +3103,8 @@ const BOSSES = {
   duke: { name: 'The Duke', title: 'Lord of the Ditch', region: 'drain', hp: 2600, r: 3.4, aggro: 10, meat: 320, chitin: 0, trophy: 'croak', phase2: 0.5, slayer: 'Duke-drowner', wild: 'south', need: 3,
     tip: 'A bullfrog three times Old Warty, fat on what seeps from the green seams. He ignores a crew: only a muster of three colonies rouses him (tap the map, call a muster here). He gulps whole crews where the orange ring shows: bite him hard, fast, and he retches them up. He dives and surfaces where the water stirs. Thirty ants on him and he can’t dive.', rage: 'The Duke is furious: he gulps faster and dives more often!' },
   // Build 55: the second wild boss, over the Bramble Lot (the west side).
-  crow: { name: 'Old Black', title: 'Thief of the Bramble Lot', region: 'side3', hp: 2200, r: 2.6, aggro: 12, meat: 220, chitin: 0, trophy: 'blackfeather', phase2: 0.5, slayer: 'Crow-grounder', wild: 'west', need: 3,
-    tip: 'A crow the glow has made huge and bold. Only a muster of three colonies draws him down to fight at all. He circles out of reach, snatches ants, and steals glowrock. He loves shiny things: lift the bottle cap by his roost with a crew and carry it under him, and down he comes to take it. Then swarm him: twenty ants on him keep him grounded.', rage: 'Old Black is enraged: he snatches faster and won’t stay down as long!' },
+  crow: { name: 'Nevermore', title: 'the Raven of the Bramble Lot', region: 'side3', hp: 2200, r: 2.6, aggro: 12, meat: 220, chitin: 0, trophy: 'blackfeather', phase2: 0.5, slayer: 'Raven-grounder', wild: 'west', need: 3,
+    tip: 'A raven the glow has made huge, old and cruel: one eye milked white by an old fight, the other glinting green. Only a muster of three colonies draws him down to fight at all. He circles out of reach, snatches ants, and steals glowrock. He can’t resist a shiny thing: lift the bottle cap by his roost with a crew and carry it under him, and down he comes. Then swarm him: twenty ants on him keep him grounded.', rage: 'Nevermore shrieks: he snatches faster and won’t stay down as long!' },
   // Build 56: the third wild boss, deep in the hedge on the east side. Needs four colonies.
   hollow: { name: 'The Cordyceps Colony', title: 'The Dead Nest in the Hedge', region: 'hedge5', hp: 2800, r: 2.8, aggro: 12, meat: 0, chitin: 40, trophy: 'sporeheart', phase2: 0.5, slayer: 'Heart-breaker', wild: 'east', need: 4,
     tip: 'A whole ant colony the fungus has taken. At its heart, a great fungal stalk; only a muster of four colonies dares it. Infected ants pour out in waves and their bites carry spores; green clouds burst where the ring shows. Spored ants die in 25 seconds unless a medic reaches them, or they get home to the nurses. While six or more infected guard the heart, it shrugs off bites: cut them down, then strike.', rage: 'The heart pulses faster: the waves come thicker!' },
@@ -3132,7 +3132,7 @@ const TROPHY = {
   blindclaw: { name: 'Old Blind’s claw', fx: 'the glow is yours: the Sinkhole’s open seam gives a glowrock every 5 minutes. And the Takeover can be evolved' },
   comb: { name: 'The hornets’ comb', fx: 'hornet larvae: 3 🥩 meat a minute, for good' },
   sporeheart: { name: 'The spore heart', fx: 'your colony is immune to the fungus for good: no outbreaks, no spores' },
-  blackfeather: { name: 'Old Black’s feather', fx: 'the Bramble Lot is yours: no birds strike anywhere on the west side, and your outposts there can’t be knocked flat' },
+  blackfeather: { name: 'Nevermore’s feather', fx: 'the Bramble Lot is yours: no birds strike anywhere on the west side, and your outposts there can’t be knocked flat' },
   croak: { name: 'The Duke’s croak', fx: 'the Ditch is yours: water never runs short, and builders mend cave-ins four times as fast' },
   poison: { name: 'Old Warty’s poison', fx: 'your ants taste bitter: toads, birds and spiders spit out half the ants they catch, and no toads hunt the Wet Edge' },
 };
@@ -3444,7 +3444,7 @@ function tickSpores(s, dt){
     if (inside || s.ants.some(m => m.caste === 'medic' && !m.team && outside(m) && Math.abs(m.x - a.x) < 4*T && Math.abs(m.y - a.y) < 4*T)){ if (Math.random() < dt*(inside ? 0.5 : 0.8)){ a.hspore = null; s.colony.sporeCured = (s.colony.sporeCured || 0) + 1; } continue; }
     if (a.hspore >= 25){ const x = a.x, y = a.y, out = outside(a); a.hspore = null; killAnt(s, a, 'cordyceps'); if (out && a.state === 'dead') spawnZbug(s, x, y); } }
 }
-// Build 55: Old Black. Aloft he circles his roost out of reach; a ring on an ant, and he snatches it (gone in
+// Build 55: Nevermore. Aloft he circles his roost out of reach; a ring on an ant, and he snatches it (gone in
 // 5 seconds unless he's brought down first). Now and then he steals a glowrock. A crew carrying the bottle cap
 // under him lures him down for 10 seconds (7 when enraged); twenty ants on him keep him grounded. On the ground
 // he pecks, beats his wings at a crowd, and hops, like the Old Robin, but bigger.
@@ -3459,19 +3459,19 @@ function stepCrow(s, b, B, dt){
   if (b.air){
     // Shiny: a crew carrying the cap under him brings him down.
     const cap = P.big && P.big.type === 'cap' && P.ant ? P.ant : null;
-    if (cap && b.lureCd <= 0 && Math.hypot(cap.x - b.x, cap.y - b.y) < 12*T){ b.air = false; b.atk = null; b.x = cap.x + 2*T; b.y = cap.y; b.groundT = fast ? 7 : 10; b.landAt = s.t; crowDrops(s, b); say('Old Black can’t resist the bottle cap: he’s down! Swarm him!'); return; }
+    if (cap && b.lureCd <= 0 && Math.hypot(cap.x - b.x, cap.y - b.y) < 12*T){ b.air = false; b.atk = null; b.x = cap.x + 2*T; b.y = cap.y; b.groundT = fast ? 7 : 10; b.landAt = s.t; crowDrops(s, b); say('Nevermore can’t resist the bottle cap: he’s down! Swarm him!'); return; }
     // Glowrock: he steals one now and then while he's up.
-    b.stealT = (b.stealT || 20) - dt; if (b.stealT <= 0){ b.stealT = 90; if ((c.glow || 0) > 0){ c.glow--; b.loot = (b.loot || 0) + 1; say('Old Black snatches a glowrock from your stores! Bring him down to get it back.'); } }
+    b.stealT = (b.stealT || 20) - dt; if (b.stealT <= 0){ b.stealT = 90; if ((c.glow || 0) > 0){ c.glow--; b.loot = (b.loot || 0) + 1; say('Nevermore snatches a glowrock from your stores! Bring him down to get it back.'); } }
     b.ang = (b.ang || 0) + dt*0.9; const gx = b.hx + Math.cos(b.ang)*7*T, gy = b.hy + Math.sin(b.ang)*7*T; b.x += (gx - b.x)*Math.min(1, dt*2); b.y += (gy - b.y)*Math.min(1, dt*2);
     if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.atkDone = { kind: 'grab', x: k.x, y: k.y, r: k.r, t: s.t }; b.snatchAt = s.t;
-      if (!b.carry) for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; if (a.isPlayer){ hurtAnt(s, a, 6, 'crow'); continue; } b.carry = { id: a.id, t: 5, state: a.state === 'away' ? 'return' : a.state }; a.state = 'away'; a.foeId = 0; say('Old Black has one of your ants! Get the bottle cap under him, quick!'); break; }
+      if (!b.carry) for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; if (a.isPlayer){ hurtAnt(s, a, 6, 'crow'); continue; } b.carry = { id: a.id, t: 5, state: a.state === 'away' ? 'return' : a.state }; a.state = 'away'; a.foeId = 0; say('Nevermore has one of your ants! Get the bottle cap under him, quick!'); break; }
       b.snatchCd = fast ? 3 : 5; return; }
     b.snatchCd = (b.snatchCd || 0) - dt;
     if (b.snatchCd <= 0 && !b.carry){ const tg = bossTarget(s, b, 18); if (tg){ const [a] = tg; b.atk = { kind: 'grab', x: a.x, y: a.y, r: 1.4*T, t: 0, at: fast ? 0.8 : 1.1 }; } }
     return; }
   // On the ground.
   if (!b.pinned) b.groundT -= dt;
-  if (b.groundT <= 0 && !b.atk && !b.hop){ b.air = true; b.lureCd = 8; b.upAt = s.t; say('Old Black takes to the air again.'); return; }
+  if (b.groundT <= 0 && !b.atk && !b.hop){ b.air = true; b.lureCd = 8; b.upAt = s.t; say('Nevermore takes to the air again.'); return; }
   if (b.hop){ const H = b.hop; H.t += dt; const u = Math.min(1, H.t/0.35); b.x = H.x0 + (H.x1 - H.x0)*u; b.y = H.y0 + (H.y1 - H.y0)*u; if (u >= 1) b.hop = null; return; }
   if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return;
     b.atk = null; b.atkDone = { kind: k.kind, x: k.x, y: k.y, r: k.r, t: s.t };

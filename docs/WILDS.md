@@ -1,6 +1,6 @@
 # Underfoot: the wilds (design draft, Nov 4)
 
-**Status:** agreed in outline (Nov 4). Mark: "All good but the drum," then: "this is still in the fence… the furthest regions in the same square space, the 3 farthest sides from the house." So the wilds are the yard's own outer ring, not new ground. Step 1 (the edges stir, musters, standing orders) is built: build 53. Step 2 (the Ditch and the Duke): build 54. Step 3 (the Bramble Lot and Old Black): build 55. Step 4 (the Hollow and the Cordyceps Colony): build 56. Step 5 (the Oak's Crown and the Hornet Queen): build 57. Step 6 (the Sinkhole, Old Blind and the Takeover): build 58. **All six steps are built.**
+**Status:** agreed in outline (Nov 4). Mark: "All good but the drum," then: "this is still in the fence… the furthest regions in the same square space, the 3 farthest sides from the house." So the wilds are the yard's own outer ring, not new ground. Step 1 (the edges stir, musters, standing orders) is built: build 53. Step 2 (the Ditch and the Duke): build 54. Step 3 (the Bramble Lot and Old Black, renamed Nevermore in build 59): build 55. Step 4 (the Hollow and the Cordyceps Colony): build 56. Step 5 (the Oak's Crown and the Hornet Queen): build 57. Step 6 (the Sinkhole, Old Blind and the Takeover): build 58. **All six steps are built.** Build 59 gave the wild bosses their own models.
 
 ## Where this comes from
 
@@ -40,7 +40,7 @@ Each wild zone has a **wild boss** that a single colony can't beat. The ladder i
 | # | Zone | Where | Wild boss | Needs | The fight |
 |---|---|---|---|---|---|
 | 1 | **The Ditch** | the south row's west half: the wet edge, drain and mudflat | **The Duke**, a bullfrog three times Old Warty | 3 colonies | Swallows whole crews (up to 6 in one gulp); dives and resurfaces somewhere else in the ditch; its tongue sweeps a lane. Pin it with 30 biters and it can't dive. |
-| 2 | **The Bramble Lot** | the west column: brambles over the side yard and round the shed | **Old Black**, a crow | 3 colonies | Lands, struts, and steals: it carries ants off, and glowrock from outposts. Out of reach in the air. A **shiny decoy** (a crew carrying a bottle cap) brings it down; then it's a brawl. |
+| 2 | **The Bramble Lot** | the west column: brambles over the side yard and round the shed | **Nevermore** (was Old Black), a raven | 3 colonies | Lands, struts, and steals: it carries ants off, and glowrock from outposts. Out of reach in the air. A **shiny decoy** (a crew carrying a bottle cap) brings it down; then it's a brawl. |
 | 3 | **The Hollow** | the east column: deep in the hedge row | **The Cordyceps Colony** | 4 colonies | A dead ant colony the fungus has taken: zombie ants pour out in waves, and spore clouds infect the living. At its heart, a fungal stalk. Medics cure the infected; you need waves of fighters to reach the heart. |
 | 4 | **The Oak's Crown** | up the Oak's trunk | **The Hornet Queen** | 4 colonies | Her paper nest in the Oak's hollow. Hornets dive at anything on the bark. Crews climb the trunk in columns. Win, and her comb is full of larvae: the meat jackpot. |
 | 5 | **The Sinkhole** | the far south-east corner: once the fire ants' queen falls, the ground by their old mound caves in | **Old Blind**, a mole the glow has changed (final) | the Supercolony | Where the ground caved in, the glowing seam lies open (the fire ants nested on it: that's why they were so fierce). A mole has been eating the grubs that feed on it for years, and grown huge, half-blind and wrong. It tunnels under the fight and erupts beneath crews; the open seam burns ants who linger. The last fight of the yard tier. |
@@ -86,7 +86,7 @@ This keeps the game hands-on (you still fight in person) but lets you think in c
 |---|---|
 | The edges turning wild (the stir, the outer ring's rules, green seam cracks, a wild tint on the map) | medium: the regions already exist |
 | The Oak's Crown (climbing the trunk, the hollow) | large: the first vertical ground in the game |
-| Five wild bosses with characters (Duke, Old Black, the Cordyceps Colony, the Hornet Queen, Old Blind) | one build each, like the guardians |
+| Five wild bosses with characters (Duke, Nevermore, the Cordyceps Colony, the Hornet Queen, Old Blind) | one build each, like the guardians |
 | Musters and standing orders | medium: map UI, columns marching |
 | Wild rules (fast-fading trails, glow sickness, supply) | small |
 | Saves | small: the yard doesn't change; only new state (stirred, lairs, musters) |
@@ -94,7 +94,7 @@ This keeps the game hands-on (you still fight in person) but lets you think in c
 **A suggested order:**
 1. The edges stir, and musters (one build: the wild rules need something to fight with).
 2. The Ditch and the Duke (the first wild boss, proving the muster).
-3. The Bramble Lot and Old Black.
+3. The Bramble Lot and Nevermore.
 4. The Hollow.
 5. The Oak's Crown.
 6. The Sinkhole, Old Blind and the Takeover (the hand-off to Phase 2).
@@ -103,6 +103,6 @@ This keeps the game hands-on (you still fight in person) but lets you think in c
 
 1. **The yard's own outer ring:** the west column, east column and south row, inside the fence. No new ground; the edges turn wild once you have three colonies.
 2. **Musters and standing orders** as the macro layer.
-3. **The bosses:** the Duke, Old Black, the Cordyceps Colony, the Hornet Queen; **Old Blind** replaces the Thing in the Drum.
+3. **The bosses:** the Duke, Nevermore (first called Old Black), the Cordyceps Colony, the Hornet Queen; **Old Blind** replaces the Thing in the Drum.
 4. **The Oak's Crown** is climbable.
 5. **The order:** the wilds come before the house. Beating Old Blind offers the Takeover evolution, which opens Phase 2.

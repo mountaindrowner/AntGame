@@ -11,6 +11,7 @@ import { AREA, AREAS, SCALE as S, areaBounds } from '../../sim/yard.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 import { houseLayout, buildHouse } from '../models/house.js';
+import { cavedPitGeometry, pitGlow } from '../models/wildBosses.js';
 
 const T = 16;
 const col = new THREE.Color();
@@ -1125,9 +1126,11 @@ function meshLandmark(l, w, ctx) {
         // A fire-ant mound: crumbly red earth, entry holes, and its ants.
         const x = l.x * T, z = l.y * T, R = l.r * T;
         const g2 = lumpy(new THREE.SphereGeometry(R, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, l.big ? 0.5 : 0.4, 1), R * 0.06, l.x);
-        parts.push(paint(at(g2, x, 0, z), (px, py) => (py > R * 0.3 ? '#9a5232' : '#7a4028'), 77));
+        const mp = l.big ? [] : parts; // build 59: the big one is its own mesh, swapped for the caved-in pit once the Sinkhole opens
+        mp.push(paint(at(g2, x, 0, z), (px, py) => (py > R * 0.3 ? '#9a5232' : '#7a4028'), 77));
         const holes = l.big ? 7 : 2;
-        for (let k = 0; k < holes; k++) { const a = k * 2.4, d = R * (0.2 + (k % 3) * 0.2); parts.push(paint(at(new THREE.CircleGeometry(4 * S, 8).rotateX(-Math.PI / 2), x + Math.cos(a) * d, R * (l.big ? 0.5 : 0.4) * Math.sqrt(Math.max(0.05, 1 - (d / R) ** 2)) + 0.5 * S, z + Math.sin(a) * d), '#1a0e08')); }
+        for (let k = 0; k < holes; k++) { const a = k * 2.4, d = R * (0.2 + (k % 3) * 0.2); mp.push(paint(at(new THREE.CircleGeometry(4 * S, 8).rotateX(-Math.PI / 2), x + Math.cos(a) * d, R * (l.big ? 0.5 : 0.4) * Math.sqrt(Math.max(0.05, 1 - (d / R) ** 2)) + 0.5 * S, z + Math.sin(a) * d), '#1a0e08')); }
+        if (l.big) ctx.swaps.push({ l, mound: mp });
         break;
       }
       default: break;
@@ -1181,7 +1184,12 @@ export class YardScenery {
       decal: psx({ vertexColors: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }),
       rock: psx({ map: rampTexture(21, PALETTE.rock, { size: 16, repeat: [0.08, 0.08] }) }, { see: true }),
       grass: psx({ map: grassTex(), alphaTest: 0.5, side: THREE.DoubleSide }),
+      pit: psx({ vertexColors: true, side: THREE.DoubleSide }),
     };
+    // Build 59: the ground is cut open under the fire ants' great mound (the mound hides the cut), so
+    // once it caves in (setSunk) the pit beneath falls far below the yard instead of faking it.
+    this.holes = w.landmarks.filter((l) => l.kind === 'firemound' && l.big).map((l) => ({ x: l.x, y: l.y, r: l.r * 0.94 }));
+    this.sunk = false;
     // Lists the ground fields read, worked out once for the whole yard.
     const pts = (kind) => w.landmarks.filter((l) => l.kind === kind);
     this.L = {
@@ -1246,6 +1254,12 @@ export class YardScenery {
   // How far (tiles) a region is from a point: 0 inside it.
   _dist(R, tx, ty) { const b = R.b; return Math.max(0, b.x0 - tx, tx - b.x1 - 1, b.y0 - ty, ty - b.y1 - 1); }
 
+  // Build 59: the fire ants' mound has caved in (the Sinkhole): show the pit instead.
+  setSunk(on) { on = !!on; if (on === this.sunk) return; this.sunk = on; for (const R of this.regions) this._sink(R); }
+  _sink(R) { for (const sw of R.swaps || []) { sw.mound.visible = !this.sunk; sw.pit.visible = this.sunk; } }
+  // The pit's glow, breathing (t: seconds).
+  pulse(t) { if (!this.sunk) return; const p = 0.5 + 0.5 * Math.sin(t * 1.3); for (const R of this.regions) for (const sw of R.swaps || []) { const G = sw.pit.userData.glow; G.shaft.material.opacity = 0.04 + 0.05 * p; G.crack.color.setRGB(0.45 + 0.2 * p, 1, 0.42 + 0.15 * p); } }
+
   get loaded() { return this.regions.filter((R) => R.near).map((R) => R.i); }
   get busy() { return this.regions.some((R) => R.job); }
 
@@ -1278,7 +1292,7 @@ export class YardScenery {
     if (R.near) {
       this.group.remove(R.near);
       R.near.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && o.userData.own) { o.material.map.dispose(); o.material.dispose(); } });
-      R.near = null;
+      R.near = null; R.swaps = null;
     }
     R.far.visible = true;
   }
@@ -1291,7 +1305,16 @@ export class YardScenery {
     const F = out.F;
     yield* paintGround(w, F, b, out);
     const tex = textureFrom(out.canvas);
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(AREA * T, AREA * T, AREA, AREA).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T), psx({ map: tex }));
+    const gg = new THREE.PlaneGeometry(AREA * T, AREA * T, AREA, AREA).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T);
+    const cut = this.holes.filter((h) => h.x + h.r > b.x0 && h.x - h.r < b.x0 + AREA && h.y + h.r > b.y0 && h.y - h.r < b.y0 + AREA);
+    if (cut.length) { // drop the cells wholly inside a hole (cell ix, iy is tile b.x0 + ix, b.y0 + iy)
+      const idx = gg.index.array, keep = [], inside = (x, y) => cut.some((h) => Math.hypot(x - h.x, y - h.y) <= h.r);
+      for (let iy = 0; iy < AREA; iy++) for (let ix = 0; ix < AREA; ix++) { const tx = b.x0 + ix, ty = b.y0 + iy;
+        if (inside(tx, ty) && inside(tx + 1, ty) && inside(tx, ty + 1) && inside(tx + 1, ty + 1)) continue;
+        for (let k = 0; k < 6; k++) keep.push(idx[(iy * AREA + ix) * 6 + k]); }
+      gg.setIndex(keep);
+    }
+    const ground = new THREE.Mesh(gg, psx({ map: tex }));
     ground.userData.own = true;
     g.add(ground);
     // Keep a small copy of the painting for when this region is far away.
@@ -1302,8 +1325,16 @@ export class YardScenery {
     }
     yield;
     // Landmarks, merged by material.
-    const ctx = { parts: [], decals: [], stoneParts: [], extra: [], r };
+    const ctx = { parts: [], decals: [], stoneParts: [], extra: [], swaps: [], r };
     for (let k = 0; k < R.lms.length; k++) { meshLandmark(R.lms[k], w, ctx); if (k % 8 === 7) yield; }
+    R.swaps = [];
+    for (const sw of ctx.swaps) { // the great mound, and the pit it falls into
+      const geo = mergeGeometries(sw.mound.map((p) => { p = p.index ? p.toNonIndexed() : p; if (p.attributes.normal) p.deleteAttribute('normal'); return p; })); geo.computeVertexNormals();
+      const mound = new THREE.Mesh(geo, this.mats.part), Rp = sw.l.r * T, pit = new THREE.Group(), glow = pitGlow(Rp);
+      pit.add(new THREE.Mesh(cavedPitGeometry(Rp), this.mats.pit), glow.group); pit.position.set(sw.l.x * T, 0, sw.l.y * T); pit.userData.glow = glow;
+      g.add(mound, pit); R.swaps.push({ mound, pit });
+    }
+    this._sink(R);
     yield;
     // Plain rocks on any blocked tile no landmark stands on.
     for (let y = Math.max(1, b.y0); y <= Math.min(w.H - 3, b.y1); y++) for (let x = Math.max(2, b.x0); x <= Math.min(W - 3, b.x1); x++) {
