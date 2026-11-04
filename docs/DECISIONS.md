@@ -2,6 +2,31 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: buttons and materials appear when they matter (build 62)
+
+Mark: "Let's hide buttons on the UI until they become available," then: "same with any materials or resources until we need them or we've been exposed to them."
+- **Buttons show only when they'd work.**
+  - **Bottom row:**
+    - Pick up appears when there's something to pick up or set down.
+    - Release appears when you have a crew.
+    - Raid appears at a rival's door once your crew is big enough.
+    - Outpost appears (after Waypoints) only where one can go.
+  - **Abilities:** each of the four slots appears once it's learned; the bar shows once there's one.
+  - **Build nest** appears when the queen is deep enough.
+  - **Top right:**
+    - Nest and Map appear once the nest is founded.
+    - Evolve appears with your first gene.
+    - Jobs appears with your first ant besides yourself.
+    - Menu, Zoom and Help always show.
+  - A top button, once shown, stays (a new colony starts over).
+- **Materials show once the colony has met them, or needs them.**
+  - Food, water and ants show from the start: eggs need them.
+  - Meat shows with the first catch, or as soon as you have fighters, since they eat it. It turns red while they're starving.
+  - Stone shows with the first pebble.
+  - Sugar, chitin, wood and glowrock already showed only once found; they now use the same rule.
+  - Once shown, a material stays, even at zero (`SIM.resSeen`; saved with the colony). Colony details follows the same rule.
+- **The tutorial's abilities tip** now says they appear bottom left once learned.
+
 ## Nov 4: the audit's leftovers (build 61)
 
 Mark: "Sure, let's try it", on the three items build 60 left for later. All three are organisation; the game plays and looks the same.

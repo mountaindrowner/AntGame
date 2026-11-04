@@ -49,6 +49,7 @@ const app = {
     clearSave();
     this.mapFresh = true; // a new colony starts with an empty map
     mapSaved = 0; // and its photo is saved afresh
+    this.shownBtns = {}; // and the top buttons appear again as they come to mean something (build 62)
     this.s = SIM.create(NEW_GAME_SEED);
     this.s.seen.film = true; // the film plays once per player, not on every reset
     this.placing = null;

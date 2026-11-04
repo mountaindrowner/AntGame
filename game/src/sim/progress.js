@@ -229,6 +229,18 @@ export function trailHome(s, x, y){
 // Paralytic venom: stung prey slows to half speed for a while.
 export function stingSlow(s, a, prey){ if (prey && !a.team && ((a.caste === 'venom' && picked(s, 'venom', 'paralytic')) || (s.colony.lineage === 'bullet' && CASTES[a.caste].fight >= 3))) prey.slowT = 2; }
 // ---------- the goals board ----------
+// Build 62: the materials the colony has come across, or needs, so the HUD shows only those. Once seen,
+// a material stays shown. Meat shows as soon as you have fighters (they eat it), even before any is caught.
+const SEEN_RULES = {
+  protein: (s, c) => c.protein > 0 || s.ants.some(a => !a.team && a.state !== 'dead' && CASTES[a.caste].fight >= 3),
+  grit: (s, c) => c.grit > 0,
+  sugar: (s, c) => c.sugarTotal > 0,
+  chitin: (s, c) => c.chitinTotal > 0,
+  wood: (s, c) => !!(c.found && c.found.wood) || c.wood > 0,
+  glow: (s, c) => c.glowTotal > 0,
+};
+export function tickSeen(s){ const c = s.colony, m = c.seenRes || (c.seenRes = {}); for (const k in SEEN_RULES) if (!m[k] && SEEN_RULES[k](s, c)) m[k] = true; }
+export const resSeen = (s, k) => !!(s.colony.seenRes || {})[k];
 export function tickGoals(s, dt){
   s.goalT = (s.goalT || 0) + dt; if (s.goalT < 1 || !s.queen.placed) return; s.goalT = 0;
   const c = s.colony, G = c.goals;

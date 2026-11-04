@@ -100,6 +100,7 @@ game/
 - **Anything new on an ant or the colony that must survive a reload** goes in `saveload.js` (`serialize`'s field lists). `tests/saveload.test.js` and `tests/regressions-code-audit.test.js` show how to check it.
 - **Adding a model:** build it with `render/models/kit.js`, and add it to `src/gallery.js` so it shows in the gallery and `npm run models` exports it. **A boss's look** goes in its own `render/views/bosses/<name>.js`, listed in `BOSS_VIEWS` in `surfaceView.js`.
 - **Adding a room or caste:** add it to `ROOMS` or `CASTES` in `sim/core.js` (and its effects where they apply), and its text in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js`; castes get a colour in `config.js` (`COLORS`).
+- **The HUD shows only what's usable or known (build 62):** a button appears when it would work; a material chip once `SIM.resSeen` says the colony has met it or needs it (rules in `sim/progress.js`, `SEEN_RULES`). New buttons and materials should follow suit.
 - **Before committing:** `npm run lint` and `npm test` both clean; `npm run test:e2e` after UI changes.
 - **Tuning the look** is in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (wobble), `colorLevels` and `dither` (grain), `animFps`, plus the camera and creature-scale settings.
 

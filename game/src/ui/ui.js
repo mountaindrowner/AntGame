@@ -551,7 +551,7 @@ export function createUI(app) {
   function renderColony() {
     const s = app.s, c = s.colony, st = SIM.stats(s);
     const h = `<div class="row head"><strong>Colony</strong><button class="x" data-close="1">Close</button></div>`
-      + `<div class="h">Food ${Math.floor(c.store)} of ${c.cap} · water ${Math.floor(c.water)} of ${c.waterCap} · protein ${Math.floor(c.protein)} · stone ${Math.floor(c.grit)}</div>`
+      + `<div class="h">${[`Food ${Math.floor(c.store)} of ${c.cap}`, `water ${Math.floor(c.water)} of ${c.waterCap}`, SIM.resSeen(s, 'protein') && `protein ${Math.floor(c.protein)}`, SIM.resSeen(s, 'grit') && `stone ${Math.floor(c.grit)}`].filter(Boolean).join(' · ')}</div>`
       + `<div class="h">${app.statsLine || ''}</div>`
       + `<div class="h">Ants by kind: ${Object.entries(st.byCaste).map(([k, n]) => `${CASTES[k].name} ${n}`).join(' · ') || 'none yet'}</div>`;
     setHtml(el.sheet, h);
@@ -658,15 +658,16 @@ export function createUI(app) {
     const st = SIM.stats(s);
     const cap = SIM.queenCap(s.queen.level, s), nAnts = SIM.antCount(s);
     // One compact row of chips; each says what it is when touched or hovered.
-    const chip = (icon, val, tip, warn) => `<span class="chip${warn ? ' warn' : ''}" data-tip="${tip}">${icon}${val}</span>`;
+    const chip = (icon, val, tip, warn) => `<span class="chip${warn ? ' warn' : ''}" data-tip="${tip}">${icon}${val}</span>`, seen = (k) => SIM.resSeen(s, k);
     const statsHtml = chip('🌾', `${Math.floor(c.store)}<i>/${c.cap}</i>`, `Food ${Math.floor(c.store)} of ${c.cap}`, c.store < 3)
       + chip('💧', `${Math.floor(c.water)}<i>/${c.waterCap}</i>`, `Water ${Math.floor(c.water)} of ${c.waterCap}. Each egg costs 1`, c.water < 2)
-      + chip('🥩', Math.floor(c.protein), 'Protein: for soldiers and the queen')
-      + chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen')
-      + (c.sugarTotal ? chip('🍯', Math.floor(c.sugar), 'Sugar: from honeydew and sweet treats. For the queen’s later levels, nurses and evolutions') : '')
-      + (c.chitinTotal ? chip('🪲', Math.floor(c.chitin), 'Chitin: from dead bugs, beetle shells and boss kills. For tough bodies and fighters') : '')
-      + (c.found && c.found.wood ? chip('🪵', Math.floor(c.wood || 0), 'Wood: twigs and bark. For the queen’s last level and rooms’ level III') : '')
-      + (c.glowTotal ? chip('🟢', c.glow || 0, 'Glowrock: rare and warm, from the bedrock, the last guardians and the Quarry. The great evolutions need it') : '')
+      // Build 62: a material shows once the colony has come across it, or needs it (SIM.resSeen).
+      + (seen('protein') ? chip('🥩', Math.floor(c.protein), 'Protein: for soldiers and the queen', c.pstarve > 0) : '')
+      + (seen('grit') ? chip('🪨', Math.floor(c.grit), 'Stone: for rooms and the queen') : '')
+      + (seen('sugar') ? chip('🍯', Math.floor(c.sugar), 'Sugar: from honeydew and sweet treats. For the queen’s later levels, nurses and evolutions') : '')
+      + (seen('chitin') ? chip('🪲', Math.floor(c.chitin), 'Chitin: from dead bugs, beetle shells and boss kills. For tough bodies and fighters') : '')
+      + (seen('wood') ? chip('🪵', Math.floor(c.wood || 0), 'Wood: twigs and bark. For the queen’s last level and rooms’ level III') : '')
+      + (seen('glow') ? chip('🟢', c.glow || 0, 'Glowrock: rare and warm, from the bedrock, the last guardians and the Quarry. The great evolutions need it') : '')
       + (SIM.roomCount(s, 'fungus') ? chip('🍃', Math.floor(c.fungus || 0), 'Leaf in the fungus garden: it grows into food') : '')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
       + daughterChip(s, chip)
@@ -714,11 +715,11 @@ export function createUI(app) {
     const lbl = SIM.actionLabel(s) || 'Pick up';
     const lift = /^Lift (\d+\/\d+)/.exec(lbl);
     setIcon(el.act, /^(Drop|Set down)/.test(lbl) ? 'drop' : 'pick', lbl, lift ? lift[1] : '');
-    el.act.disabled = !SIM.actionLabel(s);
+    el.act.disabled = !SIM.actionLabel(s); el.act.classList.toggle('hidden', el.act.disabled); // build 62: buttons show only when they'd work
     setIcon(el.release, 'release', st.followers ? `Release ${st.followers}` : 'Release', st.followers || '');
     // Recruit shows your crew against the cap (build 15), when it isn't being held.
     if (!app.recruiting) { const capN = SIM.crewCap(s); setIcon(el.recruit, 'recruit', `Recruit (hold for more): crew ${st.followers} of ${capN}. They follow you up to 16 tiles away. Point at an enemy to send them at it.`, st.followers ? `${st.followers}/${capN}` : ''); }
-    el.release.disabled = !st.followers;
+    el.release.disabled = !st.followers; el.release.classList.toggle('hidden', !st.followers);
     el.mark.classList.toggle('on', !!P().mark);
     // Outpost: once Waypoints is evolved, while you're out in the yard.
     const showOut = SIM.has(s, 'waypoints') && P().ant && !P().inNest;
@@ -728,15 +729,15 @@ export function createUI(app) {
       if (outside && n > 0) setIcon(el.hold, 'hold', `Hold: your crew of ${n} stands guard here, ${SIM.HOLD_R} tiles round. Right-click the ground to send them there instead.`);
       if (outside && n >= 2) setIcon(el.split, 'split', `Split: ${Math.ceil(n / 2)} hold here, ${Math.floor(n / 2)} stay with you`);
       if (outside && held > 0) setIcon(el.follow, 'follow', `Follow: call your ${held} holding ant${held === 1 ? '' : 's'} back to you`, held); }
-    const rt = SIM.raidTarget(s); el.raid.classList.toggle('hidden', !rt);
+    const rt = SIM.raidTarget(s); el.raid.classList.toggle('hidden', !rt || SIM.crewSize(s) < SIM.RAID.minCrew);
     if (rt) { const n = SIM.crewSize(s); setIcon(el.raid, 'raid', n >= SIM.RAID.minCrew ? `Raid the ${SIM.RIVALS[rt.team - 1].name} with your crew of ${n}` : `Raid: recruit a crew first (${n} of ${SIM.RAID.minCrew})`); el.raid.classList.toggle('dim', n < SIM.RAID.minCrew); }
     renderRaidCard();
-    { const outside = P().ant && !P().inNest && app.view === 'surface'; el.skills.classList.toggle('hidden', !outside);
+    { const outside = P().ant && !P().inNest && app.view === 'surface', learnedAny = SIM.ABILITY_KEYS.some((k) => !SIM.ABILITIES[k].evo || s.colony.evo[SIM.ABILITIES[k].evo]); el.skills.classList.toggle('hidden', !outside || !learnedAny); // build 62: an ability shows once learned
       if (outside) for (const b of el.skills.querySelectorAll('[data-skill]')) { const k = b.dataset.skill, A = SIM.ABILITIES[k], left = Math.max(0, ((P().cds || {})[k] || 0) - s.t);
-        const learned = !A.evo || s.colony.evo[A.evo], L = SIM.abil(s, k); b.classList.toggle('locked', !learned); b.classList.toggle('lv2', L.level === 2); const ic = b.querySelector('.ic'), want = learned ? A.icon : '🔒'; if (ic.textContent !== want) ic.textContent = want; b.dataset.tip = learned ? `${A.name}${L.level === 2 ? ' II' : ''} (key ${SIM.ABILITY_KEYS.indexOf(k) + 1}): ${A.line}${L.level === 2 ? ' Level II: ' + EVO_BY[SIM.ABILITY_II[k].evo].fx.replace(/^\S+ [^:]+: /, '') + '.' : ` (Level II: evolve ${EVO_BY[SIM.ABILITY_II[k].evo].name}.)`} Cooldown ${L.cd} s.` : `${A.name}: evolve ${EVO_BY[A.evo].name} to learn it. ${A.line}`;
+        const learned = !A.evo || s.colony.evo[A.evo], L = SIM.abil(s, k); b.classList.toggle('locked', !learned); b.classList.toggle('hidden', !learned); b.classList.toggle('lv2', L.level === 2); const ic = b.querySelector('.ic'), want = learned ? A.icon : '🔒'; if (ic.textContent !== want) ic.textContent = want; b.dataset.tip = learned ? `${A.name}${L.level === 2 ? ' II' : ''} (key ${SIM.ABILITY_KEYS.indexOf(k) + 1}): ${A.line}${L.level === 2 ? ' Level II: ' + EVO_BY[SIM.ABILITY_II[k].evo].fx.replace(/^\S+ [^:]+: /, '') + '.' : ` (Level II: evolve ${EVO_BY[SIM.ABILITY_II[k].evo].name}.)`} Cooldown ${L.cd} s.` : `${A.name}: evolve ${EVO_BY[A.evo].name} to learn it. ${A.line}`;
         const pct = left > 0 ? Math.round((left / L.cd) * 100) : 0; const cd = b.querySelector('.cd'); if (cd.dataset.p !== String(pct)) { cd.dataset.p = String(pct); cd.style.height = pct + '%'; }
         const secs = left > 0 ? String(Math.ceil(left)) : ''; const se = b.querySelector('.secs'); if (se.textContent !== secs) se.textContent = secs; b.classList.toggle('ready', !left && learned); } }
-    if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', why ? 'Outpost: ' + why : 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('dim', !!why); }
+    if (showOut) { const why = SIM.outpostLock(s); setIcon(el.outpost, 'outpost', 'Raise an outpost here (10 stone)'); el.outpost.classList.toggle('hidden', !!why); }
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;
     const nearD = a && !P().inNest && (s.daughters || []).find((d) => d.state === 'ready' && Math.hypot(a.tx - d.ex, a.ty - d.ey) < 4); /* build 50 */
@@ -748,10 +749,16 @@ export function createUI(app) {
     el.barS.classList.toggle('hidden', app.view !== 'surface');
     el.barN.classList.toggle('hidden', app.view !== 'nest');
     el.buildNest.classList.toggle('hidden', s.phase !== 'dig');
-    el.buildNest.disabled = s.queen.y < 2;
+    el.buildNest.disabled = s.queen.y < 2; if (s.phase === 'dig') el.buildNest.classList.toggle('hidden', el.buildNest.disabled);
     el.queen.classList.toggle('hidden', s.phase === 'dig');
     el.level.classList.toggle('hidden', s.phase === 'dig');
     el.exitNest.classList.toggle('hidden', !(a && P().inNest));
+    // Build 62: the top buttons appear as they come to mean something, and stay once they have.
+    { const on = app.shownBtns || (app.shownBtns = {}), mine = s.ants.some((o) => !o.team && !o.isPlayer && o.state !== 'dead');
+      if (s.queen.placed) on.view = on.map = true;
+      if (c.genesTotal > 0) on.evolve = true;
+      if (mine) on.jobs = true;
+      el.view.classList.toggle('hidden', !on.view); el.map.classList.toggle('hidden', !on.map); el.evolve.classList.toggle('hidden', !on.evolve); el.jobs.classList.toggle('hidden', !on.jobs); }
     setIcon(el.level, app.placing ? 'cancel' : 'build', app.placing ? 'Cancel' : 'Build rooms');
     el.level.classList.toggle('on', !!app.placing);
     if (nAnts >= cap && s.queen.placed) showExplainer('cap');

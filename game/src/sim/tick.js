@@ -4,7 +4,7 @@ import { CASTES, FOODS, LEAF_GROUND, RIVALS, SHELL_GROUND, SURF, T, W, WOOD_GROU
 import { deposit, enterNest, killAnt, tickColony, tickInside } from './colony.js';
 import { SEE, chooseExplore, chooseReturn, chooseToward, colonyOf, fSpeed, forageRange, homeOf, itemAt, nearestItem, raiseAlarm, reveal, spawnCat, spawnFood, spawnInArea, spawnNear, stepTo, walk, wanted } from './world.js';
 import { roomOf, tickMaintenance, tickRain, wet } from './nest.js';
-import { bite, carryCap, chewsTreats, gainGenes, gainXp, has, makeLegend, paceOf, picked, qtrait, reachOf, sightOf, stingSlow, tickGoals, trailHome } from './progress.js';
+import { bite, carryCap, chewsTreats, gainGenes, gainXp, has, makeLegend, paceOf, picked, qtrait, reachOf, sightOf, stingSlow, tickGoals, tickSeen, trailHome } from './progress.js';
 import { daughterOf, tickDaughters } from './daughters.js';
 import { WILD_SIDE, tickWild } from './wilds.js';
 import { wakeRival } from './state.js';
@@ -80,7 +80,7 @@ export function tick(s, dt){
   // The Picnic Blanket held: a treat lands there every few minutes.
   for (const i in s.colony.held) if (prizeFx(s, i) === 'picnic'){ s.picnicT = (s.picnicT || 0) + dt; if (s.picnicT > 150 && !s.items.some(f => heavy(f) && w.area[idx(f.x,f.y)] === +i)){ s.picnicT = 0; const A = AREAS[i]; const it = spawnInArea(s, +i, 'food', A.treats ? A.treats[Math.floor(Math.random()*A.treats.length)] : 'cookie'); if (it && !P.msg) P.msg = `A ${FOODS[it.type].name} landed on the Picnic Blanket.`; } }
   s.items = s.items.filter(f => f.amt > 0 || f.max);
-  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickAttack(s); tickZones(s, dt); tickOutposts(s, dt); tickGoals(s, dt);
+  tickMower(s, dt); tickPits(s, dt); tickStrikes(s, dt); tickStings(s, dt); tickAttack(s); tickZones(s, dt); tickOutposts(s, dt); tickGoals(s, dt); tickSeen(s);
   s.seenT += dt; if (s.seenT > 0.4){ s.seenT = 0; const pa = P.ant; if (pa && !P.inNest){ reveal(s, pa.x/T, pa.y/T, SEE.player); tickCurios(s, pa);
     // Walking into a dormant region wakes it: its food appears and starts to grow.
     const ai = w.area[idx(pa.tx, pa.ty)]; if (!s.active[ai]){ s.active[ai] = true; for (let k=0;k<AREAS[ai].start;k++) spawnFood(s, ai, false); populateBugs(s, ai); }

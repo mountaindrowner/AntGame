@@ -119,7 +119,7 @@ export const INTRO = [
   { text: 'Lay Foragers: they bring food in on their own while you explore.', done: s => s.ants.filter(a => a.caste === 'forager' && !a.team && !a.isPlayer).length >= 3, skip: true },
   { text: 'Outside, hold Recruit by the nest to call a crew. Lead them to a treat or a caterpillar.', done: s => followers(s) >= 3 || (s.colony.treats || 0) > 0, skip: true },
   { text: 'With a crew, rest the mouse on a bug or a rival ant: your crew attacks it.', done: s => !!s.seen.attacked, skip: true },
-  { text: 'Your ant\'s abilities sit bottom left (keys 1–4). Each is learned in the evolution tree: Strong mandibles, Formic spray, Danger scent, Playing dead.', done: s => !!s.seen.ability, skip: true },
+  { text: 'Your ant can learn four abilities in the evolution tree: Strong mandibles, Formic spray, Danger scent, Playing dead. Each appears bottom left once learned (keys 1–4).', done: s => !!s.seen.ability, skip: true },
   { text: 'Far from home, press Trail as you walk back: foragers follow your scent out to far food.', done: s => !!s.seen.marked, skip: true },
   { text: 'You earn 🧬 Genes by playing. Tap Evolve (top right) to spend them.', done: s => !!s.seen.evolveOpened, skip: true },
   { text: 'That’s the basics. Grow, explore, and take the yard.', btn: 'Done' },
