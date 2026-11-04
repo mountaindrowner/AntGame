@@ -451,6 +451,8 @@ function tickDaughters(s, dt){
   // A winged queen ready: say so once each time.
   const ready = flightReady(s); if (ready && !s.flightSaid){ s.flightSaid = true; s.banner = { key: 'flightready' + (s.daughters || []).length, t: s.t, icon: '🪽', title: 'A winged queen is ready', line: 'Open the map and tap a finished outpost at least two regions from home: she will found a daughter colony there.', kind: 'gift' }; s.events.push('flight'); }
   if (!ready) s.flightSaid = false;
+  // Build 52: the 9th, 10th and 11th guardian each leave a glowrock.
+  c.glowZT = (c.glowZT || 0) + dt; if (c.glowZT >= 2){ c.glowZT = 0; const z = zonesTaken(s); c.glowZones = c.glowZones || {}; for (const n of GLOW_ZONES) if (z >= n && !c.glowZones[n]){ c.glowZones[n] = true; gainGlow(s, 1, 'guardian'); } }
   if (!s.daughters || !s.daughters.length) return;
   const pa = P.ant && !P.inNest ? P.ant : null;
   const builders = s.ants.filter(a => !a.team && !a.dh && a.caste === 'builder').length;
@@ -486,6 +488,8 @@ function tickDaughters(s, dt){
       if (d.marchT >= 180 && pa && !d.real && (d.pop.soldier || 0) > 0 && !s.lost){ d.marchT = 0; const n = Math.min(8, d.pop.soldier); d.pop.soldier -= n;
         for (let i = 0; i < n; i++){ const a = mkAnt(s, 'soldier', 'follow', pa.tx, pa.ty, 0); a.dh = 'war'; a.follow = true; a.state = 'follow'; a.xp = Math.max(a.xp || 0, RANKS[1].xp); a.x = pa.x + (Math.random() - 0.5)*3*T; a.y = pa.y + (Math.random() - 0.5)*3*T; }
         P.msg = `⚔ A column of ${n} from the War Camp marches up and joins your crew.`; s.events.push('rally'); } }
+    // Build 52: the Quarry's deep seam, a glowrock every 20 minutes once her Cutting hall stands.
+    if (d.key === 'quarry' && dRoomBuilt(s, 'cutting')){ d.glowT = (d.glowT || 0) + dt; if (d.glowT >= GLOW_QUARRY){ d.glowT = 0; gainGlow(s, 1, 'quarry'); } }
     // Build 50: her rooms going up (a Quarry builds half again faster).
     for (const r of d.rooms || []) if (r && !r.done){ r.progress = (r.progress || 0) + dt*(d.key === 'quarry' ? 1.5 : 1); if (r.progress >= ROOMS[r.key].work){ r.done = true; s.events.push('roomDone');
       s.banner = { key: 'droom-' + r.key, t: s.t, icon: R.icon, title: ROOMS[r.key].name + ' built', line: `In ${R.name}: ${ROOMS[r.key].desc}.`, kind: 'gift' }; } }
@@ -556,6 +560,16 @@ function carveMole(s, S){
 // Build 45 (Mark's lore): the bedrock glows, very faintly green. The first block dug down there says so, quietly:
 // something below is why these ants grow. (The glowing rocks themselves are drawn by the nest view: GLOW_ROCKS.)
 const GLOW_ROCKS = [[3, 61], [6, 63], [11, 60], [15, 62], [19, 63], [27, 61], [31, 63], [35, 60], [38, 62], [44, 61], [46, 63]];
+// Build 52: glowrock 🟢, the great evolutions' rare ingredient. Eleven in the bedrock (25 minutes' digging each),
+// one each from the 9th, 10th and 11th guardian, and a slow seam the Quarry mines once her Cutting hall stands.
+const GLOW_NEED = 1500, GLOW_QUARRY = 1200, GLOW_ZONES = [9, 10, 11];
+const isGlowRock = (x, y) => GLOW_ROCKS.some(([gx, gy]) => gx === x && gy === y);
+function gainGlow(s, n, why){
+  const c = s.colony, first = !c.glowTotal; c.glow = (c.glow || 0) + n; c.glowTotal = (c.glowTotal || 0) + n; s.events.push('glow');
+  const line = why === 'dug' ? 'Your builders prise out a glowing rock.' : why === 'quarry' ? 'The Quarry sends up a glowing rock from her deep seam.' : 'Where the guardian fell, the ground glows: a rock of it, warm to the touch.';
+  s.player.msg = `🟢 ${line} ${first ? 'Is this why we grow? It is what the great evolutions need.' : `You have ${c.glow}.`}`;
+  if (first) s.banner = { key: 'glow-first', t: s.t, icon: '🟢', title: 'Glowrock', line: 'Warm, faintly green, and rare. The great evolutions are made from it.', kind: 'gift' };
+}
 function bedrockGlow(s, y){ const c = s.colony; if (y < BEDROCK_Y || c.glowSeen) return; c.glowSeen = true; s.player.msg = 'The rock down here is warm, and it glows a faint green. Is this why we grow?'; s.events.push('glow'); }
 // The bedrock's three prizes: dug out, they're found.
 function bedrockPrize(s, x, y){
@@ -578,7 +592,9 @@ function toggleDigOrder(s, x, y){
   if (n.cells[nidx(x,y)]) return 'dug'; let adj = isDugNeighbor(s, x, y);
   if (!adj){ const o = n.digOrders.find(o => Math.abs(o.x-x)+Math.abs(o.y-y) === 1); if (o) adj = [o.x, o.y]; } if (!adj) return 'not adjacent';
   const why = digAllowed(s, y, x); if (why) return why; if (n.digOrders.length >= 16) return 'too many';
-  n.digOrders.push({ x, y, ax: adj[0], ay: adj[1], progress: 0, need: SOIL[soilTier(y)].work }); return 'added';
+  const glow = isGlowRock(x, y); /* build 52: a glowing rock: 25 minutes' work, however many dig */
+  if (glow) s.player.msg = '🟢 A glowing rock. Prising it out takes about 25 minutes, however many builders work it.';
+  n.digOrders.push({ x, y, ax: adj[0], ay: adj[1], progress: 0, need: glow ? GLOW_NEED : SOIL[soilTier(y)].work, ...(glow ? { glow: true } : {}) }); return 'added';
 }
 
 // ---------- state ----------
@@ -601,7 +617,7 @@ function wakeRival(s, r, say){ const R = RIVALS[r.team - 1]; r.asleep = false;
 function growthState(){
   return { genes: 0, genesTotal: 0, up: {}, picks: {}, evo: {}, doctrine: {}, qtraits: {}, found: {}, scouted: {},
     hatched: 0, treats: 0, foodTotal: 0, storePeak: 0, repaired: 0, raidsBeaten: 0, fallen: [], named: 0,
-    held: {}, goals: { done: {}, sets: {} }, dug: 0, sugar: 0, chitin: 0, sugarTotal: 0, chitinTotal: 0, wood: 0, fungus: 0, roomLv: {} };
+    held: {}, goals: { done: {}, sets: {} }, dug: 0, sugar: 0, chitin: 0, sugarTotal: 0, chitinTotal: 0, wood: 0, fungus: 0, roomLv: {}, glow: 0, glowTotal: 0 };
 }
 function create(seed){
   const w = makeWorld(seed || 7);
@@ -1485,7 +1501,7 @@ function tickColony(s, c, dt){
       if (job.progress >= R.work){ for (const a of crewOf('j')) gainXp(s, a, 3); c.buildQueue.shift(); finishRoom(s, job); } }
     for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; if (s.nest.cells[nidx(o.x,o.y)] === 2){ s.nest.fillOrders.splice(i, 1); continue; } /* never into a room */ const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
     const full = (s.nest.spoil||0) >= SPOIL_MAX; // dirt waiting to go out: digging stops
-    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); bedrockGlow(s, o.y); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
+    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += o.glow ? Math.min(b*ws, 1)*(joined(s, 'quarry') ? 1.25 : 1)*dt : b*ws*dt; /* build 52: glowrock comes out at its own pace */ if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); bedrockGlow(s, o.y); if (o.glow) gainGlow(s, 1, 'dug'); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
   }
 }
 function finishRoom(s, job){
@@ -3747,7 +3763,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

@@ -196,7 +196,7 @@ export function createUI(app) {
     return chip('🏕', digging && !n ? ` ${Math.floor((digging.tunnel.progress / digging.tunnel.need) * 100)}%` : n, 'Daughter colonies (tap). ' + tip).replace('<span class="chip', '<span data-colonies="1" class="chip');
   }
   // Build 50: your daughter colonies: each one's ants, her gift, her two rooms, and the tunnels to travel by.
-  const COST_ICON = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨', sugar: '🍯', chitin: '🪲', wood: '🪵', genes: '🧬' };
+  const COST_ICON = { food: '🌾', water: '💧', protein: '🥩', grit: '🪨', sugar: '🍯', chitin: '🪲', wood: '🪵', genes: '🧬', glow: '🟢' };
   const costText = (cost) => Object.entries(cost).map(([k, v]) => `${v}${COST_ICON[k] || ' ' + k}`).join(' ');
   function daughterSheet(s, c) {
     const P0 = P(), here = P0.inNest && P0.nestKey, ds = [...(s.daughters || [])].sort((a, b) => (b.key === here) - (a.key === here));
@@ -661,6 +661,7 @@ export function createUI(app) {
       + (c.sugarTotal ? chip('🍯', Math.floor(c.sugar), 'Sugar: from honeydew and sweet treats. For the queen’s later levels, nurses and evolutions') : '')
       + (c.chitinTotal ? chip('🪲', Math.floor(c.chitin), 'Chitin: from dead bugs, beetle shells and boss kills. For tough bodies and fighters') : '')
       + (c.found && c.found.wood ? chip('🪵', Math.floor(c.wood || 0), 'Wood: twigs and bark. For the queen’s last level and rooms’ level III') : '')
+      + (c.glowTotal ? chip('🟢', c.glow || 0, 'Glowrock: rare and warm, from the bedrock, the last guardians and the Quarry. The great evolutions need it') : '')
       + (SIM.roomCount(s, 'fungus') ? chip('🍃', Math.floor(c.fungus || 0), 'Leaf in the fungus garden: it grows into food') : '')
       + chip('🐜', `${nAnts}<i>/${cap}</i>`, `Ants ${nAnts} (${st.out} out). The queen holds ${cap}`)
       + daughterChip(s, chip)

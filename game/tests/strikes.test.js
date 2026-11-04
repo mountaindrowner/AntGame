@@ -4,6 +4,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 
+// Build 52: a fixed seed, so the robin's pecks land the same way every run (it was flaky, 1 run in 20 or so).
+let seed = 12345; Math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+
 function setup(key) {
   const s = SIM.create(7), T = SIM.T, b = SIM.areaBounds(SIM.REGION[key]);
   s.queen.placed = true; s.phase = 'play'; s.queen.room = { x0: 10, y0: 3, w: 4, h: 3 };

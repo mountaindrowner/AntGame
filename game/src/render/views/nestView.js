@@ -507,6 +507,7 @@ export class NestView {
     }
     // Dig orders: the tunnel itself grows into the cell (see tunnelBoxes).
     for (const o of n.digOrders) this._outline(o.x * T + 2, o.y * T + 2, T - 4, T - 4, '#ffdc78');
+    for (const o of n.digOrders) if (o.glow) this.labels.push({ text: '🟢 ' + Math.floor(Math.min(1, o.progress / o.need) * 100) + '%', x: (o.x + 0.5) * T, y: -o.y * T - 2, z: 0, kind: 'room' }); // build 52: a glowrock's long dig
     for (const o of n.fillOrders) {
       const k = Math.min(1, o.progress / o.need);
       this._fill(o.x * T + 2, o.y * T + 2, T - 4, T - 4, k > 0.5 ? '#8a6040' : '#5a3e28', -DEPTH * 0.2);

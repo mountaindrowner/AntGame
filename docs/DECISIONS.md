@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: glowrock, the great evolutions' rare ingredient (build 52)
+
+Mark: the great evolutions should need "some really costly rare ingredient… maybe some of that suspicious green rock", taking "20 to 30 minutes" to dig out.
+
+- **Glowrock 🟢.** A new resource; its chip shows once you have some. The first piece found shows a banner tying it to the lore ("Is this why we grow?").
+- **Where it comes from:**
+  - **The 11 glowing rocks in the bedrock** (they were scenery since build 45). Ordering one dug says it takes about 25 minutes, and it does: builders chip at most one unit of work a second, however many there are (20 minutes with the Quarry joined). A 🟢 % label shows how far it's come. Each gives one, and they're gone for good.
+  - **The 9th, 10th and 11th guardians** each leave one (a save already past them gets them on load).
+  - **The Quarry's deep seam:** one every 20 minutes once her Cutting hall stands. The only steady source.
+- **What it costs:** 1 for the five root great evolutions, 2 for the six after them, 5 for the Supercolony; 22 in all against 14 found plus the Quarry. So you choose your path, and the Quarry matters.
+- **Left out for now:** stored glowrock being dangerous (Mark's call: with the wilds).
+- **Also:** the robin test, flaky about 1 run in 20, now runs on a fixed random seed.
+
 ## Nov 3: the great evolutions (build 51)
 
 Mark: "do great evos." The twelve names reserved in the tree since build 24 are now real, on a sixth Evolve page. The table is in SUPERCOLONY.md; Mark can veto any.

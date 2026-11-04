@@ -92,7 +92,7 @@ test('Army of the March: far from her, a column of War Camp soldiers joins your 
 });
 
 test('the Supercolony: daughters hold 100 and their gifts double; a banner says so', () => {
-  const s = founded(), c = s.colony; c.genes = 200; Object.assign(c, { store: 900, cap: 900, protein: 300, sugar: 300, grit: 300, wood: 100 });
+  const s = founded(), c = s.colony; c.genes = 200; Object.assign(c, { store: 900, cap: 900, protein: 300, sugar: 300, grit: 300, wood: 100, glow: 5 });
   s.daughters = ['war', 'brood', 'watch', 'quarry', 'garden'].map((k, i) => { const [r1, r2] = SIM.DROOMS_OF[k]; return { key: k, oid: 0, region: 0, ex: s.world.ex + 200 + i, ey: s.world.ey, state: 'ready', tunnel: { progress: 1, need: 1 }, pop: {}, real: false, eggT: -1e9, hatched: 0, rooms: [{ key: r1, done: true }, { key: r2, done: true }] }; });
   c.evo.swarmcall = true;
   assert.equal(SIM.evoLock(s, 'supercolony'), '');

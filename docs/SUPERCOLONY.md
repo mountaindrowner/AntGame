@@ -165,6 +165,8 @@ A caste that needs meat hatches as a forager when there's none. Her builders and
 | Garden | Greenhouse: Honey economy, Flower nectar, the Fungus garden's level III | Honeydew vault: her sugar doubled |
 
 Seats cost about 120 food plus a themed resource and take 90 s; specialties about 200 food and take 150 s (a Quarry builds half again faster). 
+**Glowrock 🟢 (build 52).** Every great evolution also costs glowrock: 1 for the five roots, 2 for the six after them, 5 for the Supercolony (22 in all). Sources: the 11 glowing rocks in the main nest's bedrock (about 25 minutes' digging each, whatever the crew; 20 with the Quarry joined), one each from the 9th, 10th and 11th guardians, and the Quarry's deep seam (one every 20 minutes once her Cutting hall stands).
+
 **The great evolutions (build 51).** A sixth page in Evolve. Each needs the named daughters' specialty rooms (their second room) built:
 
 | Great evolution | Needs | Genes | What it does |
