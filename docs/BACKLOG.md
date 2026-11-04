@@ -4,56 +4,40 @@ Mark's wish list after build 11 (Oct 28). Grouped by area, in his words where th
 
 Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
-## Still open (Nov 2, after build 28)
+## Still open (Nov 4, after build 52)
 
-**Waiting on Mark's word**
-- **The itch page's text and screenshots** date from Oct 30 (around build 18). They need refreshing for builds 19–28.
-- **The house's inside.** Mark: "later". The outside is built for it (`models/house.js`).
-- **The grand arc** (yard → house → neighbourhood → city → world → space). This needs a design document first.
-- **Combat plan (`COMBAT.md`):** crew attack (26), duels (27) and raids (28) are built. Still to build:
-  - the zone frame: built (build 39). There's a crest per zone on the map, "Zones taken", and the Phase 1 end screen. Hazards ease per guardian (builds 30–36).
-  - the new guardians: the Old Robin (built, build 30), Old Warty (build 31), the praying mantis (build 34), the black widow (build 35) and the giant centipede (build 36). All done; the yellowjackets are optional.
-  - Crew orders: built (build 29). Formations were left out.
-- **Sit-downs Mark asked for:**
-  - the War camp and the other rooms left
-  - The robin and the Phase 1 cap now have proposals in `COMBAT.md`: the robin becomes the Great Lawn's guardian, and Phase 1 ends when all 13 zone guardians fall.
-- **Phase 2 scaling** (Mark's "radioactive waste" in the house) and the great evolutions: later phases.
+**Proposed, waiting on Mark**
+- **The outer wasteland ("the wilds")**: past the fence, the hardest bosses needing three colonies, the cordyceps colony, the Oak. The Supercolony's banner promises it. Needs a design pass first.
+- **Balance levers from the stress run (build 47), Mark's call:**
+  - meat is the late-game ceiling (the Egg larder and the Blue Butterfly Pact help, by design not fully);
+  - forager return about 2.5× upkeep (real ants 4–9×), so about 40% of a colony must forage;
+  - sugar only feeds the colony in a famine (real supercolonies run on honeydew);
+  - guardian fights won by sheer numbers (a biter cap of about 10–12 was suggested);
+  - majors trivialise raids; fire ants collapsed;
+  - early starvation in every run by minute 40.
+- **Stored glowrock being dangerous** (left out of build 52; with the wilds).
+- **The grand arc** (yard → house → neighbourhood → city → world → space) and **Phase 2** (the "radioactive waste" in the house): needs a design document.
+- **The house's inside:** "later".
+- **Boss characters** (names, looks, the eye-patch robin): "later".
+- **The itch page's text and screenshots** date from build 18.
 
-**Gameplay**
-- **Slowing the whole colony:** dropped. Mark: "don't slow the colony further."
-- **Next up (Mark, Nov 2):**
-  - ~~day and night~~ (built in build 43);
-  - daughter colonies via the nuptial flight, the tunnels between nests and the wilds tier (`SUPERCOLONY.md`);
-  - boss characters, later.
-- **Nest sections (build 42):**
-  - Shut ground looks like open ground apart from its seam and label; a darker tint might read better.
-  - Builders break in from where they stand: they don't walk to the wall.
-- **The economy is tight** (build 41). The colony now eats meat before starving, and starvation is slower, so colonies no longer collapse. But food still sits under 20% of the cap through much of the middle game, and a colony down to just you can only rebuild by your own foraging. Look at forager income against upkeep at 15–30 ants.
-- **The long game starves** (bot campaigns, build 25.1). At 40 to 60 ants, upkeep runs past what the yard near the nest regrows. Starvation deaths reach 200 to 300 over 200 minutes. Part of this is the bot, part is the economy. For the combat and economy sit-down.
-- **Rooms not built yet** (`ROOMS.md`):
-  - War camp (a room with Raiders)
-  - Gatehouse (Doorkeepers)
-  - Silk loom (Weavers)
-  - Brood vault
-  - Solarium
-  - Beetle lodge
-  - Royal chamber with winged queens and real satellite nests
+**Daughters, still to do**
+- Walking about inside a daughter's nest (you look round from her shaft).
+- Her rooms' own looks (they borrow the main nest's nearest kin).
+- War Camp soldiers marching to your guardian fights, as well as your crew (the Army of the March does the crew).
 
-  The nodes behind them already do something smaller (build 24).
-- **Great evolutions:** three a colony, from the list in `growth.js` (Living Bridges, Raft Colony, Supercolony…). The list exists, but nothing uses it.
-- **A rival trait not built:** odorous house ants stealing from your trails. They are now a swarm (build 25.1), but they don't steal.
-
-**From the build 40 audit, left as is**
-- Heat tolerance and Social stomach stay situational.
-- Granary and Store overlap: both mainly raise the food cap.
-- Surplus ranchers, medics, repletes and undertakers sit idle inside.
-- Falls of feet and birds in progress aren't saved.
-- Room levels live in two places: the Build list for the new rooms, the evolution tree for Hatchery, Store and Workshop.
+**Known gaps**
+- Odorous house ants don't steal from your trails.
+- Nest sections: shut ground could read darker; builders break in from where they stand.
+- From the build 40 audit, left as is: heat tolerance and social stomach are situational; granary and store overlap; surplus ranchers, medics, repletes and undertakers idle; falls of feet and birds in progress aren't saved; room levels live in two places.
 
 **Testing**
-- **Bots still don't save up for the evolved rooms:** they build them once established (build 25.1), but rarely get there. `CAMPAIGN=1` runs the long game.
-- **Flaky tests,** which pass when run alone: the robin test, "a room only builds with a builder inside it" (about 1 run in 6), and, rarely, the duel test "a fight on the ground" (it depends on the dice), "medics heal the wounded", and "pointing at a rival ant: the crew kills it" (about 1 run in 5 inside the full suite, never alone).
+- **The bot can't reach the late game** (stalls at queen level 2), so time-to-daughters and time-to-Supercolony are estimates (about 2.5–3 hours to five daughters, 4–6 hours for the tree).
+- **Frame rate on a real phone** is unmeasured (the browser test machine was too loaded).
+- **Flaky tests** that pass alone: "a room only builds with a builder inside it" (about 1 in 6), the duel "a fight on the ground", "medics heal the wounded", "pointing at a rival ant: the crew kills it". The robin test is fixed (build 52).
 
 **Later, by Mark's call**
-- **A phone pass in Phase 3 or 4** (Mark).
-- **Camera tilt near the house:** no. Mark: keep it close up.
+- **A phone pass in Phase 3 or 4.**
+- **Camera tilt near the house:** no. Keep it close up.
+
+**Done since build 28** (details in `DECISIONS.md`): crew orders (29), the five guardians (30–36), your ant's abilities (32), zones and the Phase 1 ending (39), the audit (40), nest expansion with sections, bedrock and the 100 cap (42), day and night (43), UI themes with Town Hall (44), speed (45), the nuptial flight and all five daughters (46, 49), the stress run and fixes (47), the Egg larder (48), daughters' nests, rooms and tunnels with the tree gated (50), the great evolutions (51) and glowrock (52). The War Camp, Royal chamber with winged queens, and satellite nests from the rooms list are done as daughters.
