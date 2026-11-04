@@ -1,6 +1,6 @@
 # Underfoot: the wilds (design draft, Nov 4)
 
-**Status:** agreed in outline (Nov 4). Mark: "All good but the drum," then: "this is still in the fence… the furthest regions in the same square space, the 3 farthest sides from the house." So the wilds are the yard's own outer ring, not new ground. Step 1 (the edges stir, musters, standing orders) is built: build 53. Step 2 (the Ditch and the Duke): build 54. Step 3 (the Bramble Lot and Old Black): build 55. Step 4 (the Hollow and the Cordyceps Colony): build 56.
+**Status:** agreed in outline (Nov 4). Mark: "All good but the drum," then: "this is still in the fence… the furthest regions in the same square space, the 3 farthest sides from the house." So the wilds are the yard's own outer ring, not new ground. Step 1 (the edges stir, musters, standing orders) is built: build 53. Step 2 (the Ditch and the Duke): build 54. Step 3 (the Bramble Lot and Old Black): build 55. Step 4 (the Hollow and the Cordyceps Colony): build 56. Step 5 (the Oak's Crown and the Hornet Queen): build 57.
 
 ## Where this comes from
 

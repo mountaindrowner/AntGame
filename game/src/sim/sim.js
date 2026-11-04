@@ -376,6 +376,7 @@ const WILD_STIR = 3; // joined daughters: with the main nest, four colonies (Mar
 const coloniesJoined = s => (s.daughters || []).filter(d => d.state === 'ready').length;
 function tickWild(s, dt){
   const W0 = s.wild || (s.wild = { stirred: false, at: null, beaten: {}, seams: [] });
+  tickClimb(s, dt); // build 57
   if (!W0.stirred){ W0.chk = (W0.chk || 0) + dt; if (W0.chk < 2) return; W0.chk = 0; if (coloniesJoined(s) >= WILD_STIR) stirWild(s); return; }
   // Build 55: Old Black's lure, a bottle cap by his roost while he lives (back after a minute if it goes).
   const cr = s.bosses && s.bosses.crow; if (cr && !cr.dead){ W0.capT = (W0.capT || 0) + dt; if (W0.capT >= 3){ W0.capT = 0;
@@ -1290,6 +1291,7 @@ function tick(s, dt){
     if (a.knockT > 0){ knock(s, a, dt); continue; }
     if (a.slowT > 0) a.slowT -= dt;
     if (a.state === 'zombie'){ stepZombie(s, a, dt); continue; }
+    if (a.state === 'climb') continue; // build 57: on the Oak's bark (tickClimb moves it)
     if (a.flee > 0) a.flee -= dt; else a.fleeFrom = null;
     const aggressive = C.fight >= 3 || a.follow || a.state === 'raid' || (a.team && (rspec(a).swarm || (rspec(a).fierce && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 20)));
     // spider / enemies
@@ -1534,6 +1536,7 @@ function tickColony(s, c, dt){
     // Build 51: Fungus Empire (2 food a minute a garden, leaves or not), Blue Butterfly Pact (4 sugar, 2 meat a minute),
     // Weaver Canopy (your ants heal beside an outpost).
     if (has(s, 'fungusempire') && fg) c.store = Math.min(c.cap, c.store + fg*2/60*dt);
+    if (c.trophies.comb) c.protein += 3/60*dt; // build 57: hornet larvae
     if (c.trophies.croak) c.water = Math.min(c.waterCap, c.water + 0.5*dt); // build 54: the Ditch is yours, water never runs short
     if (has(s, 'butterfly')){ c.bflyAcc = (c.bflyAcc || 0) + dt/15; while (c.bflyAcc >= 1){ c.bflyAcc -= 1; addSugar(s, 1); if (c.bflyN = ((c.bflyN || 0) + 1) % 2) c.protein += 1; } }
     if (has(s, 'weaver') && s.keepMask) for (const a of s.ants) if (!a.team && outside(a) && s.keepMask[idx(a.tx, a.ty)] && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
@@ -2083,6 +2086,7 @@ function stepPlayer(s, a, dt, enemiesNear){
     P.hunger = Math.min(100, P.hunger + 10*dt);
     return;
   }
+  if (P.climb){ P.hunger = Math.max(0, P.hunger); return; } // build 57: on the trunk (tickClimb moves you)
   if (a.knockT > 0){ knock(s, a, dt); P.pathKey = -1; return; }
   let moving = false;
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
@@ -3096,6 +3100,9 @@ const BOSSES = {
   // Build 56: the third wild boss, deep in the hedge on the east side. Needs four colonies.
   hollow: { name: 'The Cordyceps Colony', title: 'The Dead Nest in the Hedge', region: 'hedge5', hp: 2800, r: 2.8, aggro: 12, meat: 0, chitin: 40, trophy: 'sporeheart', phase2: 0.5, slayer: 'Heart-breaker', wild: 'east', need: 4,
     tip: 'A whole ant colony the fungus has taken. At its heart, a great fungal stalk; only a muster of four colonies dares it. Infected ants pour out in waves and their bites carry spores; green clouds burst where the ring shows. Spored ants die in 25 seconds unless a medic reaches them, or they get home to the nurses. While six or more infected guard the heart, it shrugs off bites: cut them down, then strike.', rage: 'The heart pulses faster: the waves come thicker!' },
+  // Build 57: the fourth wild boss, high on the Oak's trunk. Needs four colonies; you climb to her.
+  hornets: { name: 'The Hornet Queen', title: 'Lady of the Oak’s Crown', region: 'oak', hp: 2600, r: 3, aggro: 14, meat: 260, chitin: 30, trophy: 'comb', phase2: 0.5, slayer: 'Comb-breaker', wild: 'oak', need: 4,
+    tip: 'Her paper nest hangs high on the Oak’s trunk. A muster of four colonies at the Oak’s foot wakes her. Then climb: stand by the trunk and press Climb, and your crew climbs with you. Only ants up at her nest can bite her. Her hornets dive at climbers (a ring flashes on the ant they pick) and knock them off the bark; hunting wasps harry the ground below. When she rages, a swarm sweeps the upper trunk, unless a dozen of you hold together at the top.', rage: 'The Hornet Queen rages: her swarm sweeps the bark!' },
 };
 const ROT_ZONE = new Set(['leaves', 'leaves2', 'compost']);
 const SIDE_ZONE = new Set(['shed', 'side2', 'side3', 'side4']);
@@ -3111,6 +3118,7 @@ const TROPHY = {
   fang2: { name: 'The centipede’s fang', fx: 'Venom ants stun what they bite for a second; no toads in the leaves, and the Rot can be held' },
   widowsilk: { name: 'The widow’s silk', fx: 'a web at your door: raiders stick in it for 3 seconds, and no bug spray in the shed' },
   claw: { name: 'The mantis’s claw', fx: 'each of your fighters’ first bite on a foe always lands, for double; the hedge is safe, and your ants run through it half again faster' },
+  comb: { name: 'The hornets’ comb', fx: 'hornet larvae: 3 🥩 meat a minute, for good' },
   sporeheart: { name: 'The spore heart', fx: 'your colony is immune to the fungus for good: no outbreaks, no spores' },
   blackfeather: { name: 'Old Black’s feather', fx: 'the Bramble Lot is yours: no birds strike anywhere on the west side, and your outposts there can’t be knocked flat' },
   croak: { name: 'The Duke’s croak', fx: 'the Ditch is yours: water never runs short, and builders mend cave-ins four times as fast' },
@@ -3123,7 +3131,8 @@ function ensureBoss(s, key){
   if (B.wild && !(s.wild && s.wild.stirred)) return null; // build 54: wild bosses wake with the edges
   const w = s.world, b0 = areaBounds(ai), cl = clearOf(s);
   let x = null, y = null, pit = -1;
-  if (key === 'antlion'){
+  if (key === 'hornets'){ const oak = w.landmarks.find(l => l.kind === 'oak'); if (!oak) return null; x = oak.x; y = oak.y + oak.r + 2.5; } // build 57: at the Oak's foot, on its south face
+  else if (key === 'antlion'){
     // The deepest pit: the one farthest from your nest.
     let bd = -1; w.pits.forEach((p, i) => { const d = Math.hypot(p.x - w.ex, p.y - w.ey); if (d > bd){ bd = d; pit = i; } });
     if (pit < 0) return null; x = w.pits[pit].x; y = w.pits[pit].y;
@@ -3169,7 +3178,7 @@ function tickBosses(s, dt){
     for (const a of s.ants){
       if (a.team || !outside(a)) continue;
       const fighter = CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer, d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (fighter && !arm0 && d < reach*reachOf(s, a)){
+      if (fighter && !arm0 && d < reach*reachOf(s, a) && (key !== 'hornets' || (a.climb || 0) >= CROWN - 40)){ // (build 57: the Hornet Queen only from the top of the climb)
         onIt++;
         // Old Warty's skin is poison to bite, unless a medic is close by.
         if (key === 'toad' && !s.ants.some(m => m.caste === 'medic' && !m.team && outside(m) && Math.hypot(m.x - a.x, m.y - a.y) < 5*T)) hurtAnt(s, a, 0.35*dt, 'toad');
@@ -3195,6 +3204,7 @@ function tickBosses(s, dt){
     else if (key === 'duke') stepDuke(s, b, B, dt);
     else if (key === 'crow') stepCrow(s, b, B, dt);
     else if (key === 'hollow') stepHollow(s, b, B, dt);
+    else if (key === 'hornets') stepHornets(s, b, B, dt);
     else if (key === 'mantis') stepMantis(s, b, B, dt);
     else if (key === 'widow') stepWidow(s, b, B, dt);
     else if (key === 'centipede') stepCentipede(s, b, B, dt);
@@ -3211,6 +3221,7 @@ function bossDies(s, b, B){
   if (b.held){ const H = b.held, a = s.ants.find(o => o.id === H.id); b.held = null; if (a && a.state === 'away'){ a.state = H.state || 'return'; a.x = b.x; a.y = b.y; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } }
   if (b.eat) mantisDrops(s, b, null);
   if (b.belly) dukeRetch(s, b);
+  if (b.key === 'hornets'){ for (const a of s.ants) if (a.climb){ a.climb = 0; if (a.state === 'climb') a.state = a.isPlayer ? 'player' : 'follow'; } s.player.climb = null; } // build 57: everyone comes down
   if (b.key === 'hollow'){ for (const z of s.critters) if (z.kind === 'zombie') z.gone = true; for (const a of s.ants) a.hspore = null; } // build 56: the infected fall with the heart
   if (b.key === 'crow'){ crowDrops(s, b); if (b.loot){ s.colony.glow += b.loot; b.loot = 0; } b.air = false; } // build 55: what he stole comes back
   if (B.wild){ s.wild.beaten[B.wild] = true; gainGlow(s, 2, 'guardian'); } // build 54: a wild boss's side goes quiet; it was glow-fed
@@ -3319,6 +3330,39 @@ function stepRobin(s, b, B, dt){
 // Old Warty (build 31). It turns slowly to face what it hunts. Tongue: a thin lane, then the first ant
 // in it is swallowed; bite the toad hard within 3 seconds and it spits the ant back out alive. Leap:
 // a ring where it will land. Phase 2: two tongues in a row, and it puffs up (bites half) now and then.
+// Build 57: the Oak's Crown. Climbing: you (and your crew) go up the trunk's south face from the boss's spot at
+// its foot; a.climb is height in px. The queen's nest hangs at CROWN.
+const CROWN = 420, CLIMB_UP = 48, CLIMB_DOWN = 110;
+function climbLock(s){ const P = s.player, a = P.ant, b = s.bosses && s.bosses.hornets; if (!a || P.inNest) return 'be outside'; if (!b || b.dead) return 'nothing to climb to'; if (Math.hypot(a.x - b.x, a.y - b.y) > 5*T) return 'go to the Oak’s foot'; if (P.climb) return 'climbing already'; return ''; }
+function climb(s){ if (climbLock(s)) return false; const P = s.player; P.climb = 'up'; P.tx = null; P.attack = null; for (const o of s.ants) if (o.follow && (o.state === 'follow' || o.state === 'hold') && Math.hypot(o.x - P.ant.x, o.y - P.ant.y) < 12*T){ o.state = 'climb'; o.climb = o.climb || 0; o.x = P.ant.x + (Math.random() - 0.5)*5*T; o.y = P.ant.y; } return true; }
+function climbDown(s){ const P = s.player; if (!P.climb) return false; P.climb = 'down'; return true; }
+function tickClimb(s, dt){
+  const P = s.player, me = P.ant;
+  if (P.climb && me){ me.state = 'climb'; me.climb = me.climb || 0;
+    if (P.climb === 'up') me.climb = Math.min(CROWN, me.climb + CLIMB_UP*dt); else { me.climb = Math.max(0, me.climb - CLIMB_DOWN*dt); if (!me.climb){ P.climb = null; me.state = 'player'; } } }
+  for (const a of s.ants){ if (a.state !== 'climb' || a.isPlayer) continue;
+    const want = P.climb === 'up' && me ? me.climb : 0; // the crew climbs with you, a little behind
+    if (a.climb < want - 6) a.climb = Math.min(want, a.climb + CLIMB_UP*1.05*dt); else if (a.climb > want) a.climb = Math.max(want, a.climb - CLIMB_DOWN*dt);
+    if (!a.climb && (!P.climb || P.climb === 'down')){ a.climb = 0; a.state = 'follow'; } }
+}
+// The Hornet Queen. Hornets dive at a climber (a ring flashes on it, then it's stung and knocked off the bark if
+// it's high), every 2.5 seconds (1.6 enraged); hunting wasps come for the ground below; enraged, every 12
+// seconds a swarm sweeps the upper trunk unless a dozen hold the top.
+function stepHornets(s, b, B, dt){
+  const P = s.player, fast = b.phase === 2, say = (m) => { if (playerNear(s, b.x, b.y, 30)) P.msg = m; };
+  if (b.mode === 'idle') return;
+  const climbers = s.ants.filter(a => !a.team && a.state === 'climb' && a.climb > 20);
+  if (b.dive){ const D = b.dive; D.t += dt; if (D.t >= D.at){ b.dive = null; b.stingAt = s.t; const a = s.ants.find(o => o.id === D.id);
+      if (a && a.state === 'climb'){ const high = a.climb > 120; hurtAnt(s, a, a.isPlayer ? 3 : 4, 'hornet'); if (high && a.state !== 'dead'){ a.climb = 0; a.knockT = 0.3; a.kx = 0; a.ky = 40; if (a.isPlayer){ P.climb = null; a.state = 'player'; say('A hornet knocked you off the bark!'); } else a.state = 'follow'; } } }
+    return; }
+  b.cd = (b.cd ?? 2) - dt;
+  if (b.cd <= 0 && climbers.length){ const a = climbers[Math.floor(Math.random()*climbers.length)]; b.dive = { id: a.id, t: 0, at: 0.8 }; b.cd = fast ? 1.6 : 2.5; }
+  b.waspT = (b.waspT ?? 10) - dt;
+  if (b.waspT <= 0){ b.waspT = 30; const B2 = BUGS.wasp, a = Math.random()*Math.PI*2, x = b.x + Math.cos(a)*10*T, y = b.y + Math.sin(a)*10*T + 8*T;
+    if (walk(s, Math.floor(x/T), Math.floor(y/T)) && s.critters.filter(c => c.kind === 'wasp').length < 4) s.critters.push({ id: s.nextId++, kind: 'wasp', region: null, hx: Math.floor(x/T), hy: Math.floor(y/T), x, y, dx: 1, dy: 0, hp: B2.hp, maxHp: B2.hp, state: 'fly', t: 0, life: 0 }); }
+  if (fast){ b.swarmT = (b.swarmT ?? 12) - dt; if (b.swarmT <= 0){ b.swarmT = 12; b.swarmAt = s.t; const top = climbers.filter(a => a.climb >= CROWN - 40).length;
+    if (top >= 12) say('Your ants ball together at the top: the swarm can’t break them!'); else { for (const a of climbers) if (a.climb > CROWN/2) hurtAnt(s, a, 2, 'hornet'); say('The swarm sweeps the bark! Hold the top together: a dozen can stand it.'); } } }
+}
 // Build 56: the Cordyceps Colony. The heart doesn't move. Waves of infected ants pour out (8, or 12 when it
 // rages), every 20 seconds (14); spore clouds burst where a green ring shows. Six infected near the heart
 // shield it (bites do 30%).
@@ -3935,9 +3979,9 @@ function stats(s){
 function serialize(s){
   return JSON.stringify({ v: SAVE_VERSION, active: s.active, raidStart: s.raidStart || null, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil, open: s.nest.open || {}, breach: s.nest.breach || null }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
-    ants: s.ants.map(a => ({ infect:a.infect, hspore:a.hspore, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
+    ants: s.ants.map(a => ({ infect:a.infect, hspore:a.hspore, climb:a.climb, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
     phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid, wild: s.wild || null, muster: s.muster || null,
-    player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, nestKey: s.player.nestKey || null, rebirth: s.player.rebirth || null }, nextId: s.nextId,
+    player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, nestKey: s.player.nestKey || null, climb: s.player.climb || null, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
     trail: [...s.hot].filter(i => s.trail[i] > 0.04).flatMap(i => [i, Math.round(s.trail[i]*100)/100]) });
 }
@@ -3983,7 +4027,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { spawnZbug, sporeAnt, WILD_SIDE, tickWild, stirWild, coloniesJoined, ORDERS, orderOf, setOrder, musterRoll, musterLock, callMuster, endMuster, GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { CROWN, climbLock, climb, climbDown, spawnZbug, sporeAnt, WILD_SIDE, tickWild, stirWild, coloniesJoined, ORDERS, orderOf, setOrder, musterRoll, musterLock, callMuster, endMuster, GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

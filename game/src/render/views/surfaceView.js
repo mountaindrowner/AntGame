@@ -458,6 +458,7 @@ export class SurfaceView {
     // Ants, the things they carry, and items on the ground.
     this.crowd.begin();
     this.marks.begin();
+    if (this.oakFor !== s) { this.oakFor = s; this.oakL = s.world.landmarks.find((l) => l.kind === 'oak') || null; }
     const ant = (a, color, scaleMul) => {
       const C = CASTES[a.caste];
       const k = (C.r / 2.2) * (scaleMul || 1) * ANT_SCALE.surface;
@@ -468,6 +469,8 @@ export class SurfaceView {
       const plan = planFor(a.caste);
       tmpQ.setFromAxisAngle(UP, Math.atan2(-a.dy, a.dx));
       tmpV.set(a.x, FOOT * k, a.y);
+      // Build 57: on the Oak's bark, head up, belly to the trunk's south face.
+      if (a.climb > 0 && this.oakL) { const L = this.oakL, R = L.r * T * (1.1 - 0.28 * a.climb / 1800); tmpV.set(Math.max(L.x * T - R * 0.6, Math.min(L.x * T + R * 0.6, a.x)), a.climb + 4, L.y * T + R + 1.5); tmpQ.setFromAxisAngle(UP, Math.PI / 2).multiply(tmpQ3.setFromAxisAngle(ZAX, Math.PI / 2)); }
       // Bitten: a red flash. Knocked by a raindrop: it tumbles (build 16).
       if (flashed(s, a)) color = HIT;
       // Build 19: Cordyceps. The infected go a little grey; turned, they go
@@ -606,11 +609,12 @@ export class SurfaceView {
     const viewH = (across / aspect) / Math.sin(CAMERA.surfacePitch);
     const shift = hudShift(app) * viewH;
     const jump = !this.camInit;
-    this.target.lerp(tmpV.set(fx, 0, fy - shift), this.camInit ? 0.18 : 1);
+    const climbY = a && a.climb > 0 && this.oakL ? a.climb : 0, climbZ = climbY ? this.oakL.y * T + this.oakL.r * T * 1.05 : fy; // build 57: up the Oak with you
+    this.target.lerp(tmpV.set(fx, climbY, climbZ - shift), this.camInit ? 0.18 : 1);
     this.camInit = true;
     const pitch = CAMERA.surfacePitch;
     this.camera.aspect = aspect;
-    this.camera.position.set(this.target.x, Math.sin(pitch) * dist, this.target.z + Math.cos(pitch) * dist);
+    this.camera.position.set(this.target.x, this.target.y + Math.sin(pitch) * dist, this.target.z + Math.cos(pitch) * dist);
     this.camera.lookAt(this.target);
     // A stomp nearby shakes the view.
     if (this.shake > 0) { this.shake = Math.max(0, this.shake - fdt); const k = this.shake * 14; this.camera.position.x += (Math.random() - 0.5) * k; this.camera.position.y += (Math.random() - 0.5) * k; }
@@ -1298,6 +1302,37 @@ export class SurfaceView {
         const col = !tw.dead && flashed(s, tw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : tw.puffT > 0 ? '#e8d890' : '#b8c0a8'; // bitten all the time: a flicker, not solid red
         for (const m of this.wartyMats) m.color.set(col);
         if (!tw.dead && tw.hp < tw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], tw.x, tw.y, 70 + y, tw.hp / tw.maxHp, '#b04ad0');
+      }
+    }
+    // The Hornet Queen (build 57): her grey paper nest hanging high on the Oak's south face, hornets wheeling
+    // round it, the queen on its flank; a diving hornet streaks to the climber it picked (a ring flashes there).
+    const hq = B.hornets;
+    if (hq && !this.paper && this.oakL) {
+      const L = this.oakL, R = L.r * T * (1.1 - 0.28 * SIM.CROWN / 1800);
+      this.paper = new THREE.Group(); this.paper.position.set(L.x * T, SIM.CROWN + 20, L.y * T + R + 26);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(1, 14, 10).scale(34, 46, 30), psx({ color: '#b8b0a0' }));
+      for (let k = 0; k < 5; k++) { const band = new THREE.Mesh(new THREE.TorusGeometry(31 - Math.abs(k - 2) * 7, 2.2, 5, 18).rotateX(Math.PI / 2), psx({ color: '#8a8070' })); band.position.y = (k - 2) * 15; this.paper.add(band); }
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(8, 10).rotateX(Math.PI / 2), psxBasic({ color: '#120c08' })); hole.position.y = -46;
+      this.paper.add(ball, hole); this.dyn.add(this.paper);
+      this.hornetMat = psx({ vertexColors: true });
+      this.hornets = Array.from({ length: 7 }, () => { const m = new THREE.Mesh(this.bugGeo.wsFly[0], this.hornetMat); m.scale.setScalar(3.4); this.dyn.add(m); return m; });
+      this.hornetQ = new THREE.Mesh(this.bugGeo.wsRest, psx({ vertexColors: true, color: '#ffd080' })); this.hornetQ.scale.setScalar(9); this.dyn.add(this.hornetQ);
+    }
+    if (this.paper) {
+      const show = hq && (!hq.dead || s.t - hq.deadT < 6); this.paper.visible = this.hornetQ.visible = !!show; for (const m of this.hornets) m.visible = !!show && !hq.dead;
+      if (show) {
+        const P0 = this.paper.position, awake = hq.mode === 'fight';
+        this.hornetQ.position.set(P0.x + 30, P0.y + 10 + Math.sin(t * 3) * 3, P0.z + 12); this.hornetQ.rotation.set(0, -Math.PI / 2, hq.dead ? Math.PI : 0);
+        this.hornetQ.material.color.set(!hq.dead && flashed(s, hq) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : '#ffd080');
+        const diver = hq.dive && s.ants.find((o) => o.id === hq.dive.id);
+        this.hornets.forEach((m, i) => {
+          m.geometry = this.bugGeo.wsFly[Math.floor(t * 30 + i) % 2];
+          if (i === 0 && diver && diver.climb != null && this.oakL) { const u = Math.min(1, hq.dive.t / hq.dive.at), L = this.oakL, R = L.r * T * (1.1 - 0.28 * diver.climb / 1800); m.position.set(P0.x + (diver.x - P0.x) * u, P0.y + (diver.climb - P0.y) * u, P0.z + (L.y * T + R + 6 - P0.z) * u); return; }
+          const a = t * (awake ? 2.2 : 0.9) + (i / 7) * Math.PI * 2, r = (awake ? 70 : 50) + 12 * Math.sin(t * 1.3 + i);
+          m.position.set(P0.x + Math.cos(a) * r, P0.y + Math.sin(t * 2 + i) * 30, P0.z + 20 + Math.sin(a) * r * 0.5); m.rotation.set(0, -a, 0);
+        });
+        if (diver && this.oakL) { const L = this.oakL, R = L.r * T * (1.1 - 0.28 * diver.climb / 1800); this._decal(di++, { kind: 'ring', x: diver.x, y: diver.y, r: 0.8 * T }, t, '#ff7a20'); this.hornets[0].visible = true; void R; }
+        if (!hq.dead && hq.hp < hq.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], P0.x, P0.z - 40, P0.y + 70, hq.hp / hq.maxHp, '#e0a020');
       }
     }
     // The Cordyceps Colony (build 56): a great pale fungal stalk on a grey mound of dead ants, pulsing; a spore

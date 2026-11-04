@@ -622,6 +622,7 @@ export function createUI(app) {
     toad: (b) => (b.held ? '★ AN ANT IS IN ITS MOUTH: BITE IT, NOW! ★' : b.leap ? 'LEAPING!' : b.atk && b.atk.kind === 'lane' ? 'Tongue: get out of the thin lane!' : b.atk ? 'About to leap: get out of the ring!' : b.puffT > 0 ? 'Puffed up: bites do half' : b.phase === 2 ? 'Furious: two tongues at a time' : 'Bite it from behind: it only looks ahead'),
     hollow: (b) => (b.mode === 'idle' ? 'Silent in the hedge: only a muster of four colonies dares it' : (b.guards || 0) >= 6 ? `Shielded by ${b.guards} infected: cut them down first!` : b.atk ? 'Spores gathering: get out of the ring!' : '★ THE HEART IS OPEN: STRIKE IT! ★'), // build 56
     crow: (b) => (b.carry ? '★ HE HAS AN ANT: GET THE BOTTLE CAP UNDER HIM! ★' : b.air && b.mode === 'fight' ? (b.atk ? 'Diving to snatch: move off the ring!' : `Circling out of reach: carry the bottle cap under him${b.loot ? ` (he has ${b.loot} of your glowrock)` : ''}`) : b.mode === 'idle' ? 'Strutting by his roost: only a muster of three colonies brings him to fight' : b.pinned ? '★ PINNED: HE CAN’T FLY! ★' : `★ DOWN: SWARM HIM! ★ ${Math.max(0, Math.ceil(b.groundT || 0))}s`), // build 55
+    hornets: (b) => (b.mode === 'idle' ? 'Quiet in her paper nest: only a muster of four colonies at the Oak’s foot wakes her' : b.dive ? 'A hornet dives: the ant it picked is about to be knocked off!' : b.phase === 2 ? 'Raging: her swarm sweeps the bark. Hold the top a dozen strong!' : P().climb ? (P().ant && P().ant.climb >= SIM.CROWN - 40 ? '★ AT HER NEST: BITE! ★' : 'Climbing…') : 'Climb the trunk: only ants at her nest can bite her'), // build 57
     duke: (b) => (b.belly ? `★ ${b.belly.ids.length} ANT${b.belly.ids.length === 1 ? '' : 'S'} IN HIS GULLET: BITE HIM HARD, NOW! ★` : b.under ? 'Dived: watch where the water stirs!' : b.pinned ? '★ PINNED: HE CAN’T DIVE! ★' : b.atk && b.atk.kind === 'grab' ? 'About to gulp: get out of the ring!' : b.atk ? 'Tongue: get out of the lane!' : b.mode === 'idle' ? 'Lazing in the ditch: only a muster of three colonies rouses him' : b.phase === 2 ? 'Furious: gulps faster, dives more' : 'Thirty ants on him pin him'), // build 54
     robin: (b) => (b.pinned ? '★ PINNED BY THE FEET: BITE NOW! ★' : b.swoop ? 'SWOOPING!' : b.air ? (b.atk ? 'Diving: get out of the lane!' : 'Circling overhead, out of reach') : b.atk && b.atk.what === 'peck' ? 'Pecking at the red dot: move!' : b.atk ? 'Wings up: get out of the ring!' : b.phase === 2 ? 'It will take off again: pin it!' : 'Hopping after your ants'),
   };
@@ -635,7 +636,7 @@ export function createUI(app) {
   }
   function bossUi(s) {
     const B = s.bosses || {}, pa = P().ant, fx = pa && !P().inNest ? pa.x : (s.world.ex + 0.5) * T, fy = pa && !P().inNest ? pa.y : (s.world.ey + 0.5) * T;
-    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'crow' ? '🐦‍⬛' : s.bossIntro.key === 'hollow' ? '🍄' : s.bossIntro.key === 'toad' || s.bossIntro.key === 'duke' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : s.bossIntro.key === 'widow' ? '🕷' : s.bossIntro.key === 'centipede' ? '🐛' : '🌀', D.name, D.tip, D.title); }
+    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'crow' ? '🐦‍⬛' : s.bossIntro.key === 'hollow' ? '🍄' : s.bossIntro.key === 'hornets' ? '🐝' : s.bossIntro.key === 'toad' || s.bossIntro.key === 'duke' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : s.bossIntro.key === 'widow' ? '🕷' : s.bossIntro.key === 'centipede' ? '🐛' : '🌀', D.name, D.tip, D.title); }
     // Build 39: a zone taken; and once all 13 are, the end of Phase 1.
     if (s.zoneTaken && s.zoneTaken.t !== app.zoneSeen) { app.zoneSeen = s.zoneTaken.t; const Z = SIM.ZONES.find((z) => z.key === s.zoneTaken.key); if (Z) showBanner('win', '★', `Zone taken: ${Z.name}`, `${s.zoneTaken.n} of ${SIM.ZONES.length} zones. Open the map to see what’s left.`); }
     if (s.phase1 && !s.seen.phase1Shown) { s.seen.phase1Shown = true; showPhase1(s); }
@@ -745,7 +746,10 @@ export function createUI(app) {
     const a = P().ant;
     const nearHome = a && !P().inNest && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 4;
     const nearD = a && !P().inNest && (s.daughters || []).find((d) => d.state === 'ready' && Math.hypot(a.tx - d.ex, a.ty - d.ey) < 4); /* build 50 */
-    el.enter.classList.toggle('hidden', !nearHome && !nearD);
+    const climbOk = a && !P().inNest && !P().climb && !SIM.climbLock(s), climbing = !!P().climb; /* build 57: the Oak */
+    el.enter.classList.toggle('hidden', !nearHome && !nearD && !climbOk && !climbing);
+    const enterMode = climbing ? 'down' : climbOk && !nearHome && !nearD ? 'climb' : 'enter';
+    if (el.enter.dataset.mode !== enterMode) { el.enter.dataset.mode = enterMode; setIcon(el.enter, enterMode === 'down' ? 'climbdown' : enterMode === 'climb' ? 'climb' : 'enter', enterMode === 'down' ? 'Climb down' : enterMode === 'climb' ? 'Climb the Oak' : 'Enter nest'); }
     app.nearDaughter = nearD && !nearHome ? nearD.key : null;
     el.barS.classList.toggle('hidden', app.view !== 'surface');
     el.barN.classList.toggle('hidden', app.view !== 'nest');
@@ -830,6 +834,8 @@ export function createUI(app) {
   el.enter.addEventListener('click', () => {
     const s = app.s, a = P().ant;
     if (!a) return;
+    if (el.enter.dataset.mode === 'down') { SIM.climbDown(s); return; } // build 57
+    if (el.enter.dataset.mode === 'climb') { if (SIM.climb(s)) sfx.play('pickup'); return; }
     P().enterReq = true;
     const d = app.nearDaughter && (s.daughters || []).find((q) => q.key === app.nearDaughter); /* build 50: her door */
     P().enterKey = d ? d.key : null;

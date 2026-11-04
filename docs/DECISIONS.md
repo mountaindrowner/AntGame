@@ -2,6 +2,24 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, step 5: the Oak's Crown and the Hornet Queen (build 57)
+
+Mark: "keep going." The first height in the game: you climb the Oak.
+
+- **Her nest** hangs 420 px up the Oak's south face: a grey paper ball banded in rings, hornets wheeling round it, the queen on its flank (2,600 health). A muster of **four** colonies at the Oak's foot wakes her.
+- **Climbing.**
+  - At the Oak's foot the Enter button becomes **Climb the Oak**, and your crew climbs with you, just behind.
+  - The camera rides up the bark; you reach her in about 9 seconds. **Climb down** brings you all back in about 4.
+  - Climbers are drawn head up on the bark, and nothing else (duels, bugs, orders) moves them while they're up.
+- **Only ants at her nest** (the top 40 px) can bite her; ants below can't reach.
+- **Hornets dive** at a climber every 2.5 seconds (1.6 when she rages), and one streaks down to it. Above 120 px it's stung and knocked off the bark to the foot; lower down it's just stung. You can be knocked off too.
+- **Hunting wasps** come for the ground below, one every 30 seconds (four at most).
+- **Raging:** every 12 seconds a swarm sweeps the upper trunk, 2 to everyone above halfway, unless a dozen hold the top together.
+- **Beaten:**
+  - everyone comes down;
+  - **the comb: hornet larvae, 3 meat a minute for good** (the plan's late answer to the meat ceiling);
+  - two glowrock.
+
 ## Nov 4: the wilds, step 4: the Cordyceps Colony (build 56)
 
 Mark: "Do it." The third wild boss: a dead ant colony the fungus has taken, at the inner edge of the hedge on the east side (the fifth hedge region). It needs a muster of **four** colonies.

@@ -14,6 +14,8 @@ export const ICONS = {
   // Release: a crew scattering.
   release: svg('<circle cx="12" cy="12" r="2.6"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.4 2.4M16 16l2.4 2.4M18.4 5.6L16 8M8 16l-2.4 2.4"/>'),
   // Into the nest / out of it: an arrow and the hole.
+  climb: svg('<path d="M12 20V5M7 10l5-5 5 5"/><path d="M5 21h14" opacity=".5"/>'),
+  climbdown: svg('<path d="M12 4v15M7 14l5 5 5-5"/>'),
   enter: svg('<path d="M12 3v10M8 9l4 4 4-4"/><ellipse cx="12" cy="18.5" rx="7.5" ry="2.6"/>'),
   exit: svg('<path d="M12 14V3M8 7l4-4 4 4"/><ellipse cx="12" cy="18.5" rx="7.5" ry="2.6"/>'),
   // Build nest (the queen digs in): a spade.
