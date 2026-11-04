@@ -381,6 +381,7 @@ function tickWild(s, dt){
   const cr = s.bosses && s.bosses.crow; if (cr && !cr.dead){ W0.capT = (W0.capT || 0) + dt; if (W0.capT >= 3){ W0.capT = 0;
     const has = s.items.some(f => f.type === 'cap' && f.amt > 0) || (s.player.big && s.player.big.type === 'cap');
     if (!has){ W0.capGone = (W0.capGone || 0) + 3; if (!W0.capPut || W0.capGone >= 60){ W0.capGone = 0; W0.capPut = true; for (let k = 0; k < 40; k++){ const x = Math.floor(cr.hx/T) + 6 + Math.floor(Math.random()*6), y = Math.floor(cr.hy/T) + Math.floor(Math.random()*7) - 3; if (walk(s, x, y) && !itemAt(s, x, y)){ s.items.push({ x, y, kind: 'food', type: 'cap', amt: 1 }); break; } } } } } }
+  tickSpores(s, dt); // build 56
   // Glow sickness: an open seam burns the ants who stand on it.
   for (const m of W0.seams){ for (const a of s.ants){ if (a.team || !outside(a) || Math.abs(a.x/T - m.x) > 2 || Math.abs(a.y/T - m.y) > 2) continue;
     if (Math.hypot(a.x/T - (m.x + 0.5), a.y/T - (m.y + 0.5)) < 1.6){ hurtAnt(s, a, 0.25*dt, 'glow'); if (a.isPlayer && !W0.toldSeam){ W0.toldSeam = true; s.player.msg = '🟢 The ground here is warm and wrong. It burns. Don’t linger on the green.'; } } } }
@@ -2422,6 +2423,8 @@ const BUGS = {
   // Build 38.
   wasp:     { name: 'hunting wasp', hp: 45, speed: 30, meat: 20, reach: 1.6, hunter: true, regions: /^(lawn|picnic|feeder|suet|birdbath|pool|sprinkler|frisbee|bone|truck|fairyring|gnome|molehills)$/ },
   skink:    { name: 'skink', hp: 150, speed: 30, meat: 60, reach: 2.2, hunter: true, regions: /^(rockgarden2?|woodpile|fallen|gnomes|grill|oakroots)$/ },
+  // Build 56: an infected ant from the Hollow: it hunts yours, and its bite carries spores. Never spawns on its own.
+  zombie:   { name: 'infected ant', hp: 9, speed: 26, rush: 40, meat: 1, reach: 1.3 },
   assassin: { name: 'assassin bug', hp: 80, speed: 9, meat: 30, chitin: 6, reach: 1.8, hunter: true, regions: /^(tomatoes|beans|peppers|herbs|flowerbed|clover|cloverhill|dandelions|daisies)$/ },
 };
 const HUNTER_BACK = 240; // seconds before a killed hunter's region gets another
@@ -2816,6 +2819,7 @@ function stepBugs(s, dt){
     else if (b.kind === 'assassin') stepAssassin(s, b, B, dt);
     else if (b.kind === 'wasp') stepWasp(s, b, B, dt);
     else if (b.kind === 'skink') stepSkink(s, b, B, dt);
+    else if (b.kind === 'zombie') stepZbug(s, b, B, dt);
     else stepMillipede(s, b, B, dt);
   }
   for (const b of s.critters) if ((b.gone || b.hp <= 0) && b.region != null) s.bugGone[b.region + ':' + b.kind] = s.t;
@@ -3089,6 +3093,9 @@ const BOSSES = {
   // Build 55: the second wild boss, over the Bramble Lot (the west side).
   crow: { name: 'Old Black', title: 'Thief of the Bramble Lot', region: 'side3', hp: 2200, r: 2.6, aggro: 12, meat: 220, chitin: 0, trophy: 'blackfeather', phase2: 0.5, slayer: 'Crow-grounder', wild: 'west', need: 3,
     tip: 'A crow the glow has made huge and bold. Only a muster of three colonies draws him down to fight at all. He circles out of reach, snatches ants, and steals glowrock. He loves shiny things: lift the bottle cap by his roost with a crew and carry it under him, and down he comes to take it. Then swarm him: twenty ants on him keep him grounded.', rage: 'Old Black is enraged: he snatches faster and won’t stay down as long!' },
+  // Build 56: the third wild boss, deep in the hedge on the east side. Needs four colonies.
+  hollow: { name: 'The Cordyceps Colony', title: 'The Dead Nest in the Hedge', region: 'hedge5', hp: 2800, r: 2.8, aggro: 12, meat: 0, chitin: 40, trophy: 'sporeheart', phase2: 0.5, slayer: 'Heart-breaker', wild: 'east', need: 4,
+    tip: 'A whole ant colony the fungus has taken. At its heart, a great fungal stalk; only a muster of four colonies dares it. Infected ants pour out in waves and their bites carry spores; green clouds burst where the ring shows. Spored ants die in 25 seconds unless a medic reaches them, or they get home to the nurses. While six or more infected guard the heart, it shrugs off bites: cut them down, then strike.', rage: 'The heart pulses faster: the waves come thicker!' },
 };
 const ROT_ZONE = new Set(['leaves', 'leaves2', 'compost']);
 const SIDE_ZONE = new Set(['shed', 'side2', 'side3', 'side4']);
@@ -3104,6 +3111,7 @@ const TROPHY = {
   fang2: { name: 'The centipede’s fang', fx: 'Venom ants stun what they bite for a second; no toads in the leaves, and the Rot can be held' },
   widowsilk: { name: 'The widow’s silk', fx: 'a web at your door: raiders stick in it for 3 seconds, and no bug spray in the shed' },
   claw: { name: 'The mantis’s claw', fx: 'each of your fighters’ first bite on a foe always lands, for double; the hedge is safe, and your ants run through it half again faster' },
+  sporeheart: { name: 'The spore heart', fx: 'your colony is immune to the fungus for good: no outbreaks, no spores' },
   blackfeather: { name: 'Old Black’s feather', fx: 'the Bramble Lot is yours: no birds strike anywhere on the west side, and your outposts there can’t be knocked flat' },
   croak: { name: 'The Duke’s croak', fx: 'the Ditch is yours: water never runs short, and builders mend cave-ins four times as fast' },
   poison: { name: 'Old Warty’s poison', fx: 'your ants taste bitter: toads, birds and spiders spit out half the ants they catch, and no toads hunt the Wet Edge' },
@@ -3121,15 +3129,16 @@ function ensureBoss(s, key){
     if (pit < 0) return null; x = w.pits[pit].x; y = w.pits[pit].y;
   } else {
     const shed = key === 'widow' ? w.landmarks.find(l => l.kind === 'shed') : null;
-    let best = -1; const cx = key === 'mantis' ? b0.x0 + 5 : shed ? shed.x0 + shed.w + 5 : (b0.x0 + b0.x1)/2, cy = shed ? shed.y0 + shed.h*0.4 : (b0.y0 + b0.y1)/2; // the mantis at the hedge's edge; the widow by the shed wall // the mantis waits at the hedge's edge, facing the lawn
+    let best = -1; const cx = key === 'mantis' || key === 'hollow' ? b0.x0 + 5 : shed ? shed.x0 + shed.w + 5 : (b0.x0 + b0.x1)/2, cy = shed ? shed.y0 + shed.h*0.4 : (b0.y0 + b0.y1)/2; // the mantis at the hedge's edge; the widow by the shed wall // the mantis waits at the hedge's edge, facing the lawn
     for (let ty = b0.y0 + 6; ty < b0.y1 - 6; ty += 2) for (let tx = b0.x0 + 6; tx < b0.x1 - 6; tx += 2){
       const room = cl[ty*W + tx]; if (room < (key === 'mantis' ? 2 : 4)) continue;
-      const sc = room*3 - Math.hypot(tx - cx, ty - cy)*(key === 'mantis' || key === 'widow' ? 1.5 : 0.3); if (sc > best){ best = sc; x = tx + 0.5; y = ty + 0.5; } }
+      const sc = room*3 - Math.hypot(tx - cx, ty - cy)*(key === 'mantis' || key === 'widow' || key === 'hollow' ? 1.5 : 0.3); if (sc > best){ best = sc; x = tx + 0.5; y = ty + 0.5; } }
     if (x == null) return null;
   }
   return (s.bosses[key] = { key, x: x*T, y: y*T, hx: x*T, hy: y*T, hp: B.hp, maxHp: B.hp, mode: 'idle', phase: 1, atk: null, cd: 2, dx: 1, dy: 0, t: 0, pit, under: key === 'antlion', dead: false });
 }
 const bossArmour = (s, b, a) => {
+  if (b.key === 'hollow') return (b.guards || 0) >= 6 ? 0.3 : b.phase === 2 ? 1.2 : 1; // build 56: shielded by its infected
   if (b.key === 'beetle'){ if (b.dazeT > 0) return 2.5; return a.caste === 'venom' ? 0.5 : a.isPlayer ? 0.35 : 0.15; }
   if (b.key === 'antlion') return b.under ? 0 : 1;
   if (b.key === 'robin') return b.air ? 0 : b.pinned ? 2 : 1;
@@ -3185,6 +3194,7 @@ function tickBosses(s, dt){
     else if (key === 'toad') stepToad(s, b, B, dt);
     else if (key === 'duke') stepDuke(s, b, B, dt);
     else if (key === 'crow') stepCrow(s, b, B, dt);
+    else if (key === 'hollow') stepHollow(s, b, B, dt);
     else if (key === 'mantis') stepMantis(s, b, B, dt);
     else if (key === 'widow') stepWidow(s, b, B, dt);
     else if (key === 'centipede') stepCentipede(s, b, B, dt);
@@ -3201,6 +3211,7 @@ function bossDies(s, b, B){
   if (b.held){ const H = b.held, a = s.ants.find(o => o.id === H.id); b.held = null; if (a && a.state === 'away'){ a.state = H.state || 'return'; a.x = b.x; a.y = b.y; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } }
   if (b.eat) mantisDrops(s, b, null);
   if (b.belly) dukeRetch(s, b);
+  if (b.key === 'hollow'){ for (const z of s.critters) if (z.kind === 'zombie') z.gone = true; for (const a of s.ants) a.hspore = null; } // build 56: the infected fall with the heart
   if (b.key === 'crow'){ crowDrops(s, b); if (b.loot){ s.colony.glow += b.loot; b.loot = 0; } b.air = false; } // build 55: what he stole comes back
   if (B.wild){ s.wild.beaten[B.wild] = true; gainGlow(s, 2, 'guardian'); } // build 54: a wild boss's side goes quiet; it was glow-fed
   b.under = false; b.dive = null;
@@ -3308,6 +3319,44 @@ function stepRobin(s, b, B, dt){
 // Old Warty (build 31). It turns slowly to face what it hunts. Tongue: a thin lane, then the first ant
 // in it is swallowed; bite the toad hard within 3 seconds and it spits the ant back out alive. Leap:
 // a ring where it will land. Phase 2: two tongues in a row, and it puffs up (bites half) now and then.
+// Build 56: the Cordyceps Colony. The heart doesn't move. Waves of infected ants pour out (8, or 12 when it
+// rages), every 20 seconds (14); spore clouds burst where a green ring shows. Six infected near the heart
+// shield it (bites do 30%).
+function spawnZbug(s, x, y){ const B = BUGS.zombie, a = Math.random()*Math.PI*2; const b = { id: s.nextId++, kind: 'zombie', region: null, hx: Math.floor(x/T), hy: Math.floor(y/T), x, y, dx: Math.cos(a), dy: Math.sin(a), hp: B.hp, maxHp: B.hp, state: 'walk', t: 0, life: 0 }; s.critters.push(b); return b; }
+function stepHollow(s, b, B, dt){
+  const P = s.player, fast = b.phase === 2, say = (m) => { if (playerNear(s, b.x, b.y, 30)) P.msg = m; };
+  b.guards = 0; for (const z of s.critters) if (z.kind === 'zombie' && !z.gone && Math.hypot(z.x - b.x, z.y - b.y) < 8*T) b.guards++;
+  if (b.mode === 'idle') return;
+  b.waveT = (b.waveT ?? 2) - dt;
+  if (b.waveT <= 0){ b.waveT = fast ? 14 : 20; const n = fast ? 12 : 8; b.waveAt = s.t; b.waves = (b.waves || 0) + 1;
+    for (let k = 0; k < n; k++){ const a = (k/n)*Math.PI*2 + Math.random()*0.4, r = (3.5 + Math.random()*2)*T, x = b.x + Math.cos(a)*r, y = b.y + Math.sin(a)*r; if (walk(s, Math.floor(x/T), Math.floor(y/T))) spawnZbug(s, x, y); }
+    if (b.waves === 1) say('The dead nest stirs: infected ants pour out of the hedge!'); }
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.atkDone = { kind: 'ring', x: k.x, y: k.y, r: k.r, t: s.t }; b.sporeAt = s.t; s.events.push('spores');
+    for (const a of s.ants){ if (a.team || !outside(a) || !inAtk(k, a.x, a.y)) continue; if (a.isPlayer){ hurtAnt(s, a, 3, 'cordyceps'); continue; } sporeAnt(s, a); }
+    if (!b.saidSpore){ b.saidSpore = true; say('Spores! The ants they touched are infected: get a medic to them, or get them home to the nurses.'); }
+    b.cd = fast ? 4 : 6; return; }
+  b.cd = (b.cd ?? 3) - dt;
+  if (b.cd <= 0){ const tg = bossTarget(s, b, 16); if (tg){ const [a] = tg; b.atk = { kind: 'spit', x: a.x, y: a.y, r: 3*T, t: 0, at: 1.2 }; } else b.cd = 1; }
+}
+function sporeAnt(s, a){ if (a.team || a.isPlayer || a.hspore != null || s.colony.trophies.sporeheart) return; a.hspore = 0; }
+// An infected ant hunts the nearest of yours; its bite hurts and may spore it. It rots away after two minutes.
+function stepZbug(s, b, B, dt){
+  if (b.life > 120){ b.gone = true; return; }
+  b.biteT = Math.max(0, (b.biteT || 0) - dt);
+  const n = nearAnt(s, b, 16*T);
+  if (!n){ bugWander(s, b, 3); return; }
+  const [a, d] = n;
+  if (d < B.reach*T){ b.dx = (a.x - b.x)/(d || 1); b.dy = (a.y - b.y)/(d || 1); if (!b.biteT){ b.biteT = 1.2; b.pinchAt = s.t; spark(s, null, a.x, a.y, 1); hurtAnt(s, a, a.isPlayer ? 1 : 1.5, 'cordyceps'); if (Math.random() < 0.3) sporeAnt(s, a); } }
+  else bugMove(s, b, a.x, a.y, B.rush, dt);
+}
+// Spores (tickWild): a spored ant dies in 25 seconds and rises as one of them, unless a medic out in the yard
+// reaches it (4 tiles) or it gets inside a nest (the nurses).
+function tickSpores(s, dt){
+  for (const a of s.ants){ if (a.hspore == null || a.state === 'dead') continue; a.hspore += dt;
+    const inside = a.state === 'in' || a.state === 'build';
+    if (inside || s.ants.some(m => m.caste === 'medic' && !m.team && outside(m) && Math.abs(m.x - a.x) < 4*T && Math.abs(m.y - a.y) < 4*T)){ if (Math.random() < dt*(inside ? 0.5 : 0.8)){ a.hspore = null; s.colony.sporeCured = (s.colony.sporeCured || 0) + 1; } continue; }
+    if (a.hspore >= 25){ const x = a.x, y = a.y, out = outside(a); a.hspore = null; killAnt(s, a, 'cordyceps'); if (out && a.state === 'dead') spawnZbug(s, x, y); } }
+}
 // Build 55: Old Black. Aloft he circles his roost out of reach; a ring on an ant, and he snatches it (gone in
 // 5 seconds unless he's brought down first). Now and then he steals a glowrock. A crew carrying the bottle cap
 // under him lures him down for 10 seconds (7 when enraged); twenty ants on him keep him grounded. On the ground
@@ -3631,7 +3680,7 @@ function tickDirector(s, dt){
   if (s.t > 900 && s.t - Math.max(D.lastHard || -999, D.lastLethal) > 720) opts.push(['heat', 1.5]);
   const fighters = s.ants.filter(a => !a.team && CASTES[a.caste].fight >= 3).length;
   if (lethalOk && s.rival.queenAlive && (fighters >= 2 || s.t > 1200)) opts.push(['warparty', 2*k]);
-  if (lethalOk && s.t > 1800 && n >= 15) opts.push(['cordyceps', (D.had.cordyceps ? 1.5 : 3)*k]);
+  if (lethalOk && s.t > 1800 && n >= 15 && !s.colony.trophies.sporeheart) opts.push(['cordyceps', (D.had.cordyceps ? 1.5 : 3)*k]);
   let tot = 0; for (const o of opts) tot += o[1];
   let r = Math.random()*tot, key = opts[0][0]; for (const [kk, wt] of opts){ r -= wt; if (r <= 0){ key = kk; break; } }
   startEvent(s, key);
@@ -3886,7 +3935,7 @@ function stats(s){
 function serialize(s){
   return JSON.stringify({ v: SAVE_VERSION, active: s.active, raidStart: s.raidStart || null, seed: s.seed, t: s.t, lost: s.lost, mower: s.mower, areaT: s.areaT, strikeT: s.strikeT, colony: s.colony, rival: s.rival, rivals: s.rivals.slice(1), items: s.items, spider: s.spider, spiderRespawn: s.spiderRespawn, spiderAway: s.spiderAway, cat: s.cat, catRespawn: s.catRespawn, critters: s.critters, bugGone: s.bugGone, bosses: s.bosses, director: s.director, event: s.event, goo: s.goo, stalks: s.stalks,
     nest: { cells: Array.from(s.nest.cells), rooms: s.nest.rooms, digOrders: s.nest.digOrders, fillOrders: s.nest.fillOrders, spoil: s.nest.spoil, open: s.nest.open || {}, breach: s.nest.breach || null }, spoilPile: s.spoilPile, raidLive: !!s.raidLive, patioDeadAt: s.patioDeadAt, outposts: s.outposts, queen: s.queen, phase: s.phase, won: s.won, dew: s.dew, dewTimer: s.dewTimer, rain: s.rain, repairs: s.repairs, seen: s.seen,
-    ants: s.ants.map(a => ({ infect:a.infect, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
+    ants: s.ants.map(a => ({ infect:a.infect, hspore:a.hspore, zombie:a.zombie, zhp:a.zhp, clamp:a.clamp, zgoal:a.zgoal, champion:a.champion, id:a.id, caste:a.caste, state:a.state, team:a.team, tx:a.tx, ty:a.ty, x:a.x, y:a.y, carry:a.carry, kind:a.kind, itype:a.itype, hp:a.hp, thr:a.thr, isPlayer:a.isPlayer, follow:a.follow, nx:a.nx, ny:a.ny, ntx:a.ntx, nty:a.nty, goal:a.goal, dh:a.dh || null, exitTo:a.exitTo || null, duty:a.duty || null, xp:a.xp, name:a.name, title:a.title, legend:a.legend, dodged:a.dodged, loads:a.loads, loot:a.loot, lootKind:a.lootKind, survived:a.survived, frenzy:a.frenzy, frenzyAtk:a.frenzyAtk, feign:a.feign, stunned:a.stunned, exposed:a.exposed, raidT:a.raidT, webbed:a.webbed, webT:a.webT, webFree:a.webFree, holdX:a.holdX, holdY:a.holdY, holdCX:a.holdCX, holdCY:a.holdCY, recall:a.recall })),
     phase1: s.phase1 || null, cds: s.player.cds || null, dayT: s.dayT, nights: s.nights || 0, daughters: s.daughters || [], flightSaid: !!s.flightSaid, wild: s.wild || null, muster: s.muster || null,
     player: { hunger: s.player.hunger, mark: s.player.mark, pending: s.player.pending, msg: s.player.msg, inNest: s.player.inNest, nestKey: s.player.nestKey || null, rebirth: s.player.rebirth || null }, nextId: s.nextId,
     seenMap: Array.from(s.seenMap).join(''),
@@ -3934,7 +3983,7 @@ function deserialize(json){
   if (d.trail) for (let k=0;k<d.trail.length;k+=2){ s.trail[d.trail[k]] = d.trail[k+1]; s.hot.add(d.trail[k]); }
   return s;
 }
-return { WILD_SIDE, tickWild, stirWild, coloniesJoined, ORDERS, orderOf, setOrder, musterRoll, musterLock, callMuster, endMuster, GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
+return { spawnZbug, sporeAnt, WILD_SIDE, tickWild, stirWild, coloniesJoined, ORDERS, orderOf, setOrder, musterRoll, musterLock, callMuster, endMuster, GLOW_NEED, isGlowRock, gainGlow, swarmCallLock, callSwarm, DROOMS, DROOMS_OF, EVO_GATE, dRoomBuilt, dRoomLock, buildDRoom, daughterNest, dcap, travel, travelLock, DAUGHTERS, FLIGHT_AT, DAUGHTER_CAP, flightsAllowed, flightReady, daughterLock, foundDaughter, daughterCount, dpop, _fast: { nearestItem, itemAt, wanted }, GLOW_ROCKS, huntTarget, DAY, dayPhase, daylight, isNight, untilTurn, genesFound, advise, NEST_SECTIONS, SECTION_BY, NEST_FINDS, BEDROCK_PRIZES, sectionAt, cellLocked, sectionLock, startBreach, openSection, HOME_X0, HOME_X1, HOME_Y1, BEDROCK_Y, NEST_SHIFT, BAND_TEXT, BAND_GOOD, roomTier, inBand, NEST_CAP, cancelBuilds, ZONES, ZONE_OF, zonesTaken, ROT_ZONE, SIDE_ZONE, HEDGE_ZONE, abil, abilityLevel, ABILITY_II, bite, ABILITIES, ABILITY_KEYS, abilityLock, useAbility, WET_ZONE, bossArmour, LAWN_ZONE, crewHold, crewFollow, heldCount, HOLD_R, raidTarget, raidScout, raidLock, startRaid, pullOut, RAID, duelStats, swing, duelGangs, DUEL_ROUND, enemyAt, crewAttack, attackTarget, crewSize, RIVALS, rspec, rivalHome, hatchCapOf, crewCap, forageRange, dutyNeed, CASTE_EVO, pickLineage, cordResist, killAnt, carryCap, storeCapOf: storeCap, CASTE_ROOM, roomLevel, roomUpLock, upgradeRoom, woodGoal, fungusCap, CURIOS, BOSSES, TROPHY, EVENTS, startEvent, ensureBoss, DUTIES, JOBS0, jobsOf, setJobFirst, toggleJob, dutyCounts, roomCount, roomCap, roomUpkeep, roomLock, BUGS, W, H, T, NW, NH, SHAFT, AREAS, AREA, SCALE, SURF, REGION, FOOT, BIRD, DROP, HUNT, SEE, areaBounds, CASTES, ROOMS, FOODS, areaOf, findPath, crewAt, ROOM_KEYS, SOIL, SOIL_ROWS, SOIL_TOP, soilTier, QUEEN_UP, queenCap, create, tick, playerDig, buildersInside, actionLabel, doAction, recruit, release, queueEgg, eggLock, queueRoom, roomStateAt, roomAt, roomOf, findRoomRect, freePocket, toggleDigOrder, toggleFillOrder, removeRoom, digAllowed, upgradeQueen, upgradeForage, FORAGE, SPOIL_MAX, antCount, dugCount, queenDig, buildNest, stress, stats, serialize, deserialize, itemAt, nidx, canPay, costText,
   upgradeCaste, upgradeLock, casteLevel: lvl, youHp, picked, buyEvo, evoLock, has, crewCap, possess, setDoctrine, doctrineOf, pickQueenTrait, eggCost, roomCost, maxHp, storeCap,
   placeOutpost, outpostLock, outpostCap, waterCapOf };
 })();

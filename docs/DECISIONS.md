@@ -2,6 +2,20 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, step 4: the Cordyceps Colony (build 56)
+
+Mark: "Do it." The third wild boss: a dead ant colony the fungus has taken, at the inner edge of the hedge on the east side (the fifth hedge region). It needs a muster of **four** colonies.
+
+- **The heart:** a great pale fungal stalk on a grey mound, 2,800 health. It doesn't move; it pulses faster when it rages.
+- **Waves:** every 20 seconds (14 when it rages), 8 infected ants (12) pour out round it. They hunt your nearest ants, bite (1.5), and three bites in ten carry spores. They rot away after two minutes. They're a new kind of creature: drawn as grey-green twitching ants with a pale stalk, bitten by your fighters like any bug.
+- **Spore clouds:** a ring on a crowd, and a burst 1.2 seconds later. Every ant of yours in it is spored; you take a hit instead.
+- **Spored ants** go grey. In 25 seconds they die and **rise as one of the infected**, unless a medic out in the yard comes within 4 tiles, or they get inside a nest (the nurses). So medics matter in this fight.
+- **The shield:** while six or more infected are within 8 tiles of the heart, bites on it do 30%. Its status says how many shield it; cut them down, then strike.
+- **Beaten:**
+  - the spore heart: your colony is immune to the fungus for good (no Cordyceps outbreaks, no spores);
+  - every infected rots on the spot; the east edge quiets;
+  - two glowrock.
+
 ## Nov 4: the wilds, step 3: Old Black (build 55)
 
 The second wild boss, roosting in the side yard on the west edge. Like the Duke he wakes only for a muster of three colonies at his roost.

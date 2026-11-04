@@ -54,6 +54,7 @@ const BUG = {
   assassin: { k: 2.7, stride: 11, bar: 20, back: 4.5 },
   wasp: { k: 2.6, stride: 10, bar: 26, back: 4.4 },      // build 38
   skink: { k: 2.4, stride: 16, bar: 16, back: 2.4 },
+  zombie: { k: 1, stride: 8, bar: 12, back: 2 },        // build 56: an infected ant (drawn with the ant model)
 };
 const HIT = '#ff7a6a';   // the flash on whatever a bite lands on
 // Under attack it flickers, so a long fight doesn't just turn it red.
@@ -471,7 +472,7 @@ export class SurfaceView {
       if (flashed(s, a)) color = HIT;
       // Build 19: Cordyceps. The infected go a little grey; turned, they go
       // grey-green, twitch, and a stalk pokes from the head.
-      if (a.infect != null) { color = tintCache.get('z' + (a.zombie ? 1 : 0)) || (tintCache.set('z' + (a.zombie ? 1 : 0), new THREE.Color(color).lerp(new THREE.Color('#8a9470'), a.zombie ? 0.85 : 0.35)), tintCache.get('z' + (a.zombie ? 1 : 0)));
+      if (a.infect != null || a.hspore != null) { color = tintCache.get('z' + (a.zombie ? 1 : 0)) || (tintCache.set('z' + (a.zombie ? 1 : 0), new THREE.Color(color).lerp(new THREE.Color('#8a9470'), a.zombie ? 0.85 : 0.35)), tintCache.get('z' + (a.zombie ? 1 : 0)));
         if (a.zombie) { tmpQ.multiply(tmpQ3.setFromAxisAngle(UP, Math.sin(t * 23 + a.id) * 0.35)); if (a.clamp) tmpV.y += 3; } }
       // Build 27: mandibles locked, the two shove back and forth.
       if (a.lockT > 0) { const sh = Math.sin(t * 40 + a.id) * 1.6; tmpV.x += a.dx * sh; tmpV.z += a.dy * sh; tmpV.y += 1; }
@@ -887,6 +888,11 @@ export class SurfaceView {
           put(geo, b.x + (b.dx || 1) * go, up, b.y + (b.dy || 0) * go, orient(A.yaw, b.state === 'fly' ? 0.35 : 0.15), k, color);
         } else if (b.state === 'eat') put(G.lbStill, b.x, 0, b.y, orient(A.yaw, -0.12 + Math.sin(t * 6) * 0.08), k, color);
         else put(walking ? G.lb[frame] : G.lbStill, b.x, 0, b.y, orient(A.yaw), k, color);
+      } else if (b.kind === 'zombie') {
+        // Build 56: an ant gone grey-green, twitching, a pale stalk from its head.
+        const zk = ANT_SCALE.surface, zq = orient(A.yaw + Math.sin(t * 21 + b.id) * 0.3);
+        put(antGeometry('worker', walking ? frame % WALK_FRAMES : 0), b.x, FOOT * zk, b.y, zq, zk, flashed(s, b) ? HIT : '#8a9470');
+        put(this.stalkGeo, b.x + (b.dx || 0) * 3, 4, b.y + (b.dy || 0) * 3, orient(0), 1.3, '#d8d0a0');
       } else if (b.kind === 'earwig') {
         const snap = s.t - (b.pinchAt ?? -9) < 0.3;
         const geo = snap ? G.ewSnap : b.state === 'rush' ? G.ewUp[walking ? frame : 0] : walking ? G.ew[frame] : G.ewStill;
@@ -1292,6 +1298,26 @@ export class SurfaceView {
         const col = !tw.dead && flashed(s, tw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : tw.puffT > 0 ? '#e8d890' : '#b8c0a8'; // bitten all the time: a flicker, not solid red
         for (const m of this.wartyMats) m.color.set(col);
         if (!tw.dead && tw.hp < tw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], tw.x, tw.y, 70 + y, tw.hp / tw.maxHp, '#b04ad0');
+      }
+    }
+    // The Cordyceps Colony (build 56): a great pale fungal stalk on a grey mound of dead ants, pulsing; a spore
+    // cloud's ring shows where it will burst.
+    const hz = B.hollow;
+    if (hz && !this.heart) {
+      this.heart = new THREE.Group();
+      const mound = new THREE.Mesh(new THREE.CylinderGeometry(22, 34, 10, 10), psx({ color: '#6a6a58' })); mound.position.y = 5;
+      const stalk = new THREE.Mesh(this.stalkGeo, psx({ vertexColors: true, color: '#e8e0b0' })); stalk.scale.setScalar(14); stalk.position.y = 8;
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(9, 10, 7), psx({ color: '#c8b878' })); cap.position.y = 64;
+      this.heart.add(mound, stalk, cap); this.heart.stalk = stalk; this.heart.cap = cap; this.dyn.add(this.heart);
+    }
+    if (this.heart) {
+      const show = hz && (!hz.dead || s.t - hz.deadT < 6); this.heart.visible = !!show;
+      if (show) {
+        tele(hz);
+        const beat = 1 + (hz.dead ? -Math.min(0.9, (s.t - hz.deadT) / 6) : 0.06 * Math.sin(t * (hz.phase === 2 ? 7 : 4)));
+        this.heart.position.set(hz.x, 0, hz.y); this.heart.stalk.scale.set(14 * beat, 14 * beat, 14 * beat); this.heart.cap.scale.setScalar(beat * (hz.sporeAt != null && s.t - hz.sporeAt < 0.4 ? 1.4 : 1));
+        this.heart.cap.material.color.set(!hz.dead && flashed(s, hz) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : (hz.guards || 0) >= 6 ? '#9a9070' : '#c8b878');
+        if (!hz.dead && hz.hp < hz.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], hz.x, hz.y, 90, hz.hp / hz.maxHp, '#8a9470');
       }
     }
     // The Duke (build 54): Old Warty's model, half again bigger and darker, mud-green. He sinks out of sight when
