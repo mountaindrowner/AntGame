@@ -7,7 +7,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 ## Still open (Nov 4, after build 52)
 
 **Proposed, waiting on Mark**
-- **The outer wasteland ("the wilds")**: past the fence, the hardest bosses needing three colonies, the cordyceps colony, the Oak. The Supercolony's banner promises it. Needs a design pass first.
+- **The outer wasteland ("the wilds")**: drafted in `WILDS.md` (Nov 4); five questions for Mark at its end.
 - **Balance levers from the stress run (build 47), Mark's call:**
   - meat is the late-game ceiling (the Egg larder and the Blue Butterfly Pact help, by design not fully);
   - forager return about 2.5× upkeep (real ants 4–9×), so about 40% of a colony must forage;
