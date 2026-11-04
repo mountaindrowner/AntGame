@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, agreed in outline (design, not built)
+
+Mark, on `WILDS.md`: "All good but the drum. The ore was already underground. Maybe this is another thing affected, and when we beat it, it prompts the house takeover, and the evolution prompting the second takeover, Phase 2."
+
+**What stands:**
+- A ring of wild ground round the yard.
+- Four wild zones and bosses: the Ditch (the Duke), the Bramble Lot (Old Black), the Hollow (the Cordyceps Colony), and the Oak's climbable Crown (the Hornet Queen).
+- Musters and standing orders as the macro layer.
+- The fence gap opens at the third daughter.
+
+**The change:**
+- **No drum.** The glow was always underground; past the fence its seams break the surface.
+- **The final wild zone is the Sinkhole,** with **Old Blind**, a mole the glow has changed.
+- **Beating Old Blind** offers **the Takeover** evolution, which opens the house's back door and Phase 2.
+- **The 13-guardian ending** becomes "the yard is yours"; the door now opens after Old Blind.
+
 ## Nov 4: glowrock, the great evolutions' rare ingredient (build 52)
 
 Mark: the great evolutions should need "some really costly rare ingredient… maybe some of that suspicious green rock", taking "20 to 30 minutes" to dig out.

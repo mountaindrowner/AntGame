@@ -1,6 +1,6 @@
 # Underfoot: the wilds (design draft, Nov 4)
 
-**Status:** a proposal for Mark. Nothing here is built. Decisions go in `DECISIONS.md` once made.
+**Status:** agreed in outline (Nov 4). Mark: "All good but the drum." The ring, musters, the four wild bosses and the climbable Oak's Crown stand; the Drum is replaced (section 2, zone 5). Nothing is built yet.
 
 ## Where this comes from
 
@@ -22,8 +22,8 @@ Also already promised in the game: the Supercolony's banner ("beyond the fence t
 - **Nobody's ground.** No rival colonies to raid; no hazards easing as you win. Everything out there is bigger and hungrier.
 - **No trails stick.** Wind, water and rubble scatter scent: trails fade four times as fast. You need outposts as relays.
 - **Long supply lines.** A forager out there is two regions from the nearest nest. Without an outpost or a daughter close by, foraging doesn't pay.
-- **Glowrock lives here.** The glow under your nest seeped from somewhere. The wilds hold its source, and the only big seams of it.
-- **Danger rises with the glow.** Ground near the source hurts ants who stay too long (the deferred "stored glowrock is dangerous" idea, moved outdoors where it's a place, not a punishment).
+- **The glow comes nearer the surface out here.** The ore was always underground (Mark: "the ore was already underground"); under the yard it sits at the bedrock, but past the fence the seams break the surface in places, and the things that dig into them change. The wilds hold the only big seams.
+- **Danger rises with the glow.** Ground over an open seam hurts ants who stay too long (the deferred "stored glowrock is dangerous" idea, moved outdoors where it's a place, not a punishment).
 
 ## 2. Four wild zones and a source
 
@@ -35,14 +35,14 @@ Each wild zone has a **wild boss** that a single colony can't beat. The ladder i
 | 2 | **The Bramble Lot** | west, past the side yard | **Old Black**, a crow | 3 colonies | Lands, struts, and steals: it carries ants off, and glowrock from outposts. Out of reach in the air. A **shiny decoy** (a crew carrying a bottle cap) brings it down; then it's a brawl. |
 | 3 | **The Hollow** | east, past the hedge | **The Cordyceps Colony** | 4 colonies | A dead ant colony the fungus has taken: zombie ants pour out in waves, and spore clouds infect the living. At its heart, a fungal stalk. Medics cure the infected; you need waves of fighters to reach the heart. |
 | 4 | **The Oak's Crown** | up the Oak's trunk | **The Hornet Queen** | 4 colonies | Her paper nest in the Oak's hollow. Hornets dive at anything on the bark. Crews climb the trunk in columns. Win, and her comb is full of larvae: the meat jackpot. |
-| 5 | **The Drum** | the far corner of the Bramble Lot | **The Thing in the Drum** (final) | the Supercolony | A rusted barrel leaking green: the source of the glow. Something big and wrong lives in it, a mutated millipede or worse. Ground round it burns ants slowly. The last fight of the yard tier. |
+| 5 | **The Sinkhole** | the far south-west corner, where the ground fell in | **Old Blind**, a mole the glow has changed (final) | the Supercolony | Where the ground caved in, the glowing seam lies open. A mole has been eating the grubs that feed on it for years, and grown huge, half-blind and wrong. It tunnels under the fight and erupts beneath crews; the open seam burns ants who linger. The last fight of the yard tier. |
 
 **Wild prizes** (held like yard regions, when their boss falls):
 - **The Ditch:** water never runs short; mud lets builders seal a cave-in instantly.
 - **The Bramble Lot:** brambles shelter outposts (no birds).
 - **The Hollow:** your colony is immune to cordyceps for good.
 - **The Oak's Crown:** hornet larvae, a steady 3 meat a minute. That finally answers the meat ceiling, at the very end.
-- **The Drum:** a glowrock seam (one every 5 minutes), and what comes after: the house, the grand arc.
+- **The Sinkhole:** an open glowrock seam (one every 5 minutes). And beating Old Blind starts **Phase 2** (section 4).
 
 ## 3. Musters: the macro layer
 
@@ -65,8 +65,12 @@ This keeps the game hands-on (you still fight in person) but lets you think in c
 
 - **The fence gap** opens when your **third daughter is joined**. A banner: "Something has dug under the fence." That opens the Ditch and the Bramble Lot (3 colonies).
 - **The Hollow and the Oak's Crown** need 4 colonies (main + 3 daughters).
-- **The Drum** needs the Supercolony. Its banner already promises the wilds; with this design it promises the Drum.
-- **Phase 1's ending** (13 guardians, the back door opening) stays as is. The wilds are optional depth alongside the house, not a gate before it. *(Question for Mark: should the Drum come before the house?)*
+- **The Sinkhole** needs the Supercolony. Its banner already promises the wilds.
+- **Beating Old Blind starts Phase 2** (Mark: "when we beat it, it prompts the house takeover, and the evolution prompting the second takeover, Phase 2"):
+  - the colony, glow-fed from Old Blind's seam, is offered one last evolution, **the Takeover**: the turn from yard colony to house invader;
+  - evolving it plays the ending: the camera rises over the yard, then the house's back door swings open;
+  - Phase 2, the house, begins.
+- **The 13-guardian ending changes:** taking all 13 zones becomes "the yard is yours", a celebration with your colony's record, but the back door now opens only after Old Blind. The wilds are the road to the house, not a side trip.
 
 ## 5. What it costs to build (rough)
 
@@ -74,7 +78,7 @@ This keeps the game hands-on (you still fight in person) but lets you think in c
 |---|---|
 | The ring of wild ground (16 regions, four zone looks: ditch, bramble, hollow, rubble) | large: yard data, ground, landmarks, map photos |
 | The Oak's Crown (climbing the trunk, the hollow) | large: the first vertical ground in the game |
-| Five wild bosses with characters | one build each, like the guardians |
+| Five wild bosses with characters (Duke, Old Black, the Cordyceps Colony, the Hornet Queen, Old Blind) | one build each, like the guardians |
 | Musters and standing orders | medium: map UI, columns marching |
 | Wild rules (fast-fading trails, glow sickness, supply) | small |
 | Saves | the yard keeps its seed; the ring is generated on its own stream, so old yards don't change |
@@ -86,12 +90,12 @@ This keeps the game hands-on (you still fight in person) but lets you think in c
 4. The Bramble Lot and Old Black.
 5. The Hollow.
 6. The Oak's Crown.
-7. The Drum.
+7. The Sinkhole, Old Blind and the Takeover (the hand-off to Phase 2).
 
-## 6. Questions for Mark
+## 6. Decided (Nov 4)
 
-1. **Ring or separate map?** The ring (proposed) keeps one continuous yard you can walk out of. A separate map ("you leave through the gap and arrive somewhere new") is cheaper to build and runs lighter, but breaks the one-yard feel.
-2. **Musters: is that the macro you meant?** Or should daughters fight on their own too (auto-defence, auto-raids), with you as the general?
-3. **The bosses:** Duke the bullfrog, Old Black the crow, the Cordyceps Colony, the Hornet Queen, the Thing in the Drum. Keep, rename, swap?
-4. **The Oak:** the Crown as a vertical, climbable wild zone (more work, very memorable), or a hornet nest at the Oak's foot (simpler)?
-5. **The Drum and the house:** the Drum as the yard's true finale, opening the way to the house? Or the house first?
+1. **A ring** of wild ground round the yard, not a separate map.
+2. **Musters and standing orders** as the macro layer.
+3. **The bosses:** the Duke, Old Black, the Cordyceps Colony, the Hornet Queen; **Old Blind** replaces the Thing in the Drum.
+4. **The Oak's Crown** is climbable.
+5. **The order:** the wilds come before the house. Beating Old Blind offers the Takeover evolution, which opens Phase 2.
