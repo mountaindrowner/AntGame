@@ -2,6 +2,21 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, step 2: the Duke (build 54)
+
+Mark: "keep going." The first wild boss, in the Ditch (the drain, on the south row).
+
+- **He wakes only for a muster.** At least three colonies in it, called within 30 tiles of his lair. A crew alone can't wake him, and its bites do nothing; his status says so, and his first sighting explains how to rouse him.
+- **2,600 health** (Old Warty has 750), half again Old Warty's size on screen, mud-green.
+- **The gulp:** an orange ring, then up to six ants swallowed whole. Bite him for 150 within 5 seconds and he retches them up alive; otherwise they're lost. You in the ring take a hard hit instead.
+- **The tongue:** a long lane (14 tiles) that hurts everything in it and drags it toward him.
+- **The dive:** every 14 seconds (9 when furious) he sinks out of reach; a ring shows where he'll surface, with a splash that hurts and throws ants. **Thirty ants on him pin him: no dive.**
+- **Beaten:**
+  - his croak: the Ditch is yours, so water never runs short and builders mend cave-ins four times as fast;
+  - the south edge quiets (its hazards back to normal);
+  - **two glowrock** (he was glow-fed).
+- **Also:** the "a room only builds with a builder inside it" test runs on a fixed random seed now (it was flaky).
+
 ## Nov 4: the wilds, step 1: the edges stir; musters and standing orders (build 53)
 
 Mark: "step 1" of `WILDS.md`.

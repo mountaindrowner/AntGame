@@ -1527,6 +1527,7 @@ function tickColony(s, c, dt){
     // Build 51: Fungus Empire (2 food a minute a garden, leaves or not), Blue Butterfly Pact (4 sugar, 2 meat a minute),
     // Weaver Canopy (your ants heal beside an outpost).
     if (has(s, 'fungusempire') && fg) c.store = Math.min(c.cap, c.store + fg*2/60*dt);
+    if (c.trophies.croak) c.water = Math.min(c.waterCap, c.water + 0.5*dt); // build 54: the Ditch is yours, water never runs short
     if (has(s, 'butterfly')){ c.bflyAcc = (c.bflyAcc || 0) + dt/15; while (c.bflyAcc >= 1){ c.bflyAcc -= 1; addSugar(s, 1); if (c.bflyN = ((c.bflyN || 0) + 1) % 2) c.protein += 1; } }
     if (has(s, 'weaver') && s.keepMask) for (const a of s.ants) if (!a.team && outside(a) && s.keepMask[idx(a.tx, a.ty)] && a.hp < maxHp(s, a)) a.hp = Math.min(maxHp(s, a), a.hp + 0.5*dt);
     // Egg larder (build 48): food made into meat while the store is over a quarter full and the larder under 150.
@@ -1869,7 +1870,7 @@ function buildersInside(s){ return s.ants.filter(a => a.caste==='builder' && a.t
 function canCave(s){ return s.ants.some(b => b.caste==='builder' && b.team===0 && !b.dh) || antCount(s) >= 12; }
 function tickRepairs(s){
   const c = s.colony;
-  for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i], crew = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y); rep.progress += crew.reduce((t, a) => t + workOf(s, a, 'r'), 0)*(has(s, 'beetles') ? 1.5 : 1); if (rep.progress >= 8){ for (const a of crew) gainXp(s, a, 2); dig(s, rep.x, rep.y); s.repairs.splice(i,1); c.repaired++; } }
+  for (let i=s.repairs.length-1;i>=0;i--){ const rep = s.repairs[i], crew = s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === 'r'+rep.x+','+rep.y); rep.progress += crew.reduce((t, a) => t + workOf(s, a, 'r'), 0)*(has(s, 'beetles') ? 1.5 : 1)*(c.trophies && c.trophies.croak ? 4 : 1); /* build 54: the Ditch's mud */ if (rep.progress >= 8){ for (const a of crew) gainXp(s, a, 2); dig(s, rep.x, rep.y); s.repairs.splice(i,1); c.repaired++; } }
 }
 function tickMaintenance(s, dt){
   const c = s.colony; if (!s.queen.placed) return;
@@ -3076,6 +3077,9 @@ const BOSSES = {
   // Build 36: the Rot's guardian.
   centipede: { name: 'The Giant Centipede', title: 'Terror of the Rot', region: 'leaves2', hp: 540, r: 2.0, aggro: 9, meat: 100, chitin: 30, trophy: 'fang2', phase2: 0.34, slayer: 'Centipede-cutter',
     tip: 'Six segments: every 90 damage cuts one off, and it gets faster for it. When it coils, get out of the ring, but bite it then too: its joints are open (double). When it shows a lane, it rushes down it.', rage: 'Two segments left: the centipede goes frantic!' },
+  // Build 54: the first wild boss (WILDS.md). Wakes only for a muster of three colonies.
+  duke: { name: 'The Duke', title: 'Lord of the Ditch', region: 'drain', hp: 2600, r: 3.4, aggro: 10, meat: 320, chitin: 0, trophy: 'croak', phase2: 0.5, slayer: 'Duke-drowner', wild: 'south', need: 3,
+    tip: 'A bullfrog three times Old Warty, fat on what seeps from the green seams. He ignores a crew: only a muster of three colonies rouses him (tap the map, call a muster here). He gulps whole crews where the orange ring shows: bite him hard, fast, and he retches them up. He dives and surfaces where the water stirs. Thirty ants on him and he can’t dive.', rage: 'The Duke is furious: he gulps faster and dives more often!' },
 };
 const ROT_ZONE = new Set(['leaves', 'leaves2', 'compost']);
 const SIDE_ZONE = new Set(['shed', 'side2', 'side3', 'side4']);
@@ -3091,12 +3095,14 @@ const TROPHY = {
   fang2: { name: 'The centipede’s fang', fx: 'Venom ants stun what they bite for a second; no toads in the leaves, and the Rot can be held' },
   widowsilk: { name: 'The widow’s silk', fx: 'a web at your door: raiders stick in it for 3 seconds, and no bug spray in the shed' },
   claw: { name: 'The mantis’s claw', fx: 'each of your fighters’ first bite on a foe always lands, for double; the hedge is safe, and your ants run through it half again faster' },
+  croak: { name: 'The Duke’s croak', fx: 'the Ditch is yours: water never runs short, and builders mend cave-ins four times as fast' },
   poison: { name: 'Old Warty’s poison', fx: 'your ants taste bitter: toads, birds and spiders spit out half the ants they catch, and no toads hunt the Wet Edge' },
 };
 // Where each boss lives, made when its region first wakes.
 function ensureBoss(s, key){
   if (s.bosses[key]) return s.bosses[key];
   const B = BOSSES[key], ai = REGION[B.region]; if (ai == null || !s.active[ai]) return null;
+  if (B.wild && !(s.wild && s.wild.stirred)) return null; // build 54: wild bosses wake with the edges
   const w = s.world, b0 = areaBounds(ai), cl = clearOf(s);
   let x = null, y = null, pit = -1;
   if (key === 'antlion'){
@@ -3132,13 +3138,14 @@ function tickBosses(s, dt){
     // The first time you come near: its name, and how to beat it.
     if (!b.intro && playerNear(s, b.x, b.y, 18) && !(key === 'mantis' && b.mode === 'idle')){ /* the mantis stays a secret until it shows itself */ b.intro = true; s.bossIntro = { key, t: s.t }; s.events.push('boss'); P.msg = `${B.name}, ${B.title}. ${B.tip}`; }
     let near = nearAnt(s, b, B.aggro*T, (o) => !o.team); // (build 25: rival colonies living near a boss don't wake it)
+    const wildOk = !B.wild || b.mode === 'fight' || musterHere(s, b, B); if (!wildOk) near = null; // build 54: a wild boss wakes only for a big enough muster
     if (key === 'robin'){ b.asleep = isNight(s) && b.mode === 'idle'; if (b.asleep) near = null; } // build 43: asleep on its roost till something bites it
     if (b.mode === 'idle' && (near || s.t - (b.hitT ?? -9) < 1)){ b.mode = 'fight'; b.leaveT = 0; b.wakeAt = s.t; b.cost0 = deathTotal(c); s.events.push('bossawake'); }
     if (b.mode === 'fight'){
       if (!nearAnt(s, b, 30*T)){ b.leaveT += dt; if (b.leaveT > 8){ b.mode = 'idle'; b.atk = null; b.charge = null; b.roll = null; } } else b.leaveT = 0;
     } else if (b.hp < b.maxHp) b.hp = Math.min(b.maxHp, b.hp + 2*dt); // left alone, it heals
     // Bitten by fighters, your crew and you; fighters on patrol nearby join in.
-    const lpit = b.key === 'antlion' && s.world.pits[b.pit], reach = lpit ? (lpit.r*1.05 + 1.2)*T /* build 47: bitten from the rim, off the sliding sand */ : (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air);
+    const lpit = b.key === 'antlion' && s.world.pits[b.pit], reach = lpit ? (lpit.r*1.05 + 1.2)*T /* build 47: bitten from the rim, off the sliding sand */ : (B.r + 0.9)*T, arm0 = (b.key === 'antlion' && b.under) || (b.key === 'robin' && b.air) || (b.key === 'duke' && b.under) || !wildOk;
     let onIt = 0;
     for (const a of s.ants){
       if (a.team || !outside(a)) continue;
@@ -3154,6 +3161,8 @@ function tickBosses(s, dt){
         if (a.caste === 'venom' && picked(s, 'venom', 'neurotoxin') && Math.random() < dt*0.8) b.slowT = 1.5;
       } else if (b.mode === 'fight' && d < 8*T && CASTES[a.caste].fight >= 3 && (a.state === 'patrol' || a.state === 'hunt')){ a.state = 'fight'; a.goal = 'boss'; a.bossKey = key; }
     }
+    b.onIt = onIt;
+    if (key === 'duke'){ const was = b.pinned; b.pinned = !b.under && onIt >= 30; if (b.pinned && !was && playerNear(s, b.x, b.y, 30)) P.msg = 'Thirty of your ants hold the Duke down: he can’t dive!'; }
     if (key === 'robin'){ const was = b.pinned; b.pinned = !b.air && (onIt >= 6 || (isNight(s) && onIt >= 3)); /* build 43: groggy at night, three ants hold it */ if (b.pinned && !was && playerNear(s, b.x, b.y, 24)) P.msg = 'Your ants have the Old Robin by the feet: it’s pinned! Bites do double!'; }
     if (b.phase === 1 && b.hp < b.maxHp*B.phase2){ b.phase = 2; s.events.push('bossphase'); if (playerNear(s, b.x, b.y, 30)) P.msg = B.rage; }
     if (b.hp <= 0){ bossDies(s, b, B); continue; }
@@ -3163,6 +3172,7 @@ function tickBosses(s, dt){
     else if (key === 'beetle') stepBeetle(s, b, B, dt);
     else if (key === 'robin') stepRobin(s, b, B, dt);
     else if (key === 'toad') stepToad(s, b, B, dt);
+    else if (key === 'duke') stepDuke(s, b, B, dt);
     else if (key === 'mantis') stepMantis(s, b, B, dt);
     else if (key === 'widow') stepWidow(s, b, B, dt);
     else if (key === 'centipede') stepCentipede(s, b, B, dt);
@@ -3178,6 +3188,9 @@ function bossDies(s, b, B){
   /* build 41: whatever it holds or is eating goes free (it used to stay 'away' for good) */
   if (b.held){ const H = b.held, a = s.ants.find(o => o.id === H.id); b.held = null; if (a && a.state === 'away'){ a.state = H.state || 'return'; a.x = b.x; a.y = b.y; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } }
   if (b.eat) mantisDrops(s, b, null);
+  if (b.belly) dukeRetch(s, b);
+  if (B.wild){ s.wild.beaten[B.wild] = true; gainGlow(s, 2, 'guardian'); } // build 54: a wild boss's side goes quiet; it was glow-fed
+  b.under = false; b.dive = null;
   b.atk = null; b.charge = null; b.roll = null; b.swoop = null; b.air = false;
   // The carcass: meat in heaps round it, and its chitin. (The Old Robin flies off, dropping the grubs it had.)
   for (let k = 0; k < 4; k++){ const a = k*Math.PI/2 + 0.4, mx = Math.round(x + Math.cos(a)*2), my = Math.round(y + Math.sin(a)*2); if (walk(s, mx, my)) s.items.push({ x: mx, y: my, kind: 'protein', type: 'boss', amt: Math.round(B.meat/4) }); }
@@ -3282,6 +3295,51 @@ function stepRobin(s, b, B, dt){
 // Old Warty (build 31). It turns slowly to face what it hunts. Tongue: a thin lane, then the first ant
 // in it is swallowed; bite the toad hard within 3 seconds and it spits the ant back out alive. Leap:
 // a ring where it will land. Phase 2: two tongues in a row, and it puffs up (bites half) now and then.
+// Build 54: is a big enough muster at this wild boss's lair?
+function musterHere(s, b, B){ const M = s.muster; return !!(M && Object.keys(M.from || {}).length >= (B.need || 1) && Math.hypot((M.x + 0.5)*T - b.hx, (M.y + 0.5)*T - b.hy) < 30*T); }
+function dukeRetch(s, b){ const H = b.belly; b.belly = null; if (!H) return 0; let n = 0;
+  for (const id of H.ids){ const a = s.ants.find(o => o.id === id); if (!a || a.state !== 'away') continue; a.state = H.states[id] || 'return'; const ang = Math.random()*Math.PI*2; a.x = b.x + Math.cos(ang)*3*T; a.y = b.y + Math.sin(ang)*3*T; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); shove(s, a, b.x, b.y, 2); n++; }
+  b.retchAt = s.t; return n; }
+// The Duke: Old Warty's kin, three times the size. He gulps a ring of ants whole (bite him 150 in 5 seconds and he
+// retches them up alive), sweeps a long tongue down a lane, and dives, to surface where the water stirs (a ring
+// shows where) with a splash. Thirty ants on him pin him: no dive.
+function stepDuke(s, b, B, dt){
+  if (b.dx == null){ b.dx = 1; b.dy = 0; }
+  const P = s.player, fast = b.phase === 2, say = (m) => { if (playerNear(s, b.x, b.y, 30)) P.msg = m; };
+  if (b.belly){ const H = b.belly; H.t -= dt;
+    if (b.maxHp - b.hp >= H.hp0 + 150){ const n = dukeRetch(s, b); say(`The Duke retches up ${n} ant${n === 1 ? '' : 's'} alive!`); }
+    else if (H.t <= 0){ for (const id of H.ids){ const a = s.ants.find(o => o.id === id); if (a && a.state === 'away'){ a.state = H.states[id] || 'return'; killAnt(s, a, 'duke'); } } b.belly = null; b.gulpAt = s.t; } }
+  if (b.dive){ const D = b.dive; D.t += dt;
+    if (D.t >= D.at){ b.dive = null; b.under = false; b.x = D.x; b.y = D.y; b.atk = null; b.atkDone = { kind: 'ring', x: b.x, y: b.y, r: 3.2*T, t: s.t }; b.landAt = s.t;
+      for (const a of s.ants){ if (!outside(a) || a.team || Math.hypot(a.x - b.x, a.y - b.y) > 3.2*T) continue; hurtAnt(s, a, 6, 'duke'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, b.x, b.y, 3); }
+      b.cd = 1.2; }
+    return; }
+  if (b.mode === 'idle'){ if (!b.gx || b.t > 8){ b.t = 0; const a = Math.random()*Math.PI*2; b.gx = b.hx + Math.cos(a)*5*T; b.gy = b.hy + Math.sin(a)*5*T; } bossWalk(s, b, b.gx, b.gy, 5, dt); return; }
+  b.cd = (b.cd || 0) - dt; b.diveCd = (b.diveCd ?? 12) - dt;
+  if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return;
+    b.atk = null; b.atkDone = { kind: k.kind, x: k.x, y: k.y, r: k.r, t: s.t, len: k.len, dx: k.dx, dy: k.dy };
+    if (k.kind === 'grab'){ b.gulpAt = s.t; const ids = [], states = {};
+      for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; if (a.isPlayer){ hurtAnt(s, a, 8, 'duke'); continue; } if (ids.length >= 6 || b.belly) continue; ids.push(a.id); states[a.id] = a.state === 'away' ? 'return' : a.state; a.state = 'away'; a.foeId = 0; }
+      if (ids.length){ b.belly = { ids, states, t: 5, hp0: b.maxHp - b.hp }; say(`The Duke gulped ${ids.length} ant${ids.length === 1 ? '' : 's'}! Bite him hard, now, and he’ll retch them up!`); }
+      b.cd = fast ? 1.3 : 2.1; return; }
+    if (k.kind === 'lane'){ b.lashAt = s.t; b.lashLen = k.len;
+      for (const a of s.ants){ if (!outside(a) || a.team || !inAtk(k, a.x, a.y)) continue; hurtAnt(s, a, 4, 'duke'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, a.x + k.dx*T, a.y + k.dy*T, -2); }
+      b.cd = fast ? 1.2 : 2; return; }
+    return; }
+  if (b.cd > 0) return;
+  if (b.diveCd <= 0 && !b.pinned && !b.belly){ b.diveCd = fast ? 9 : 14;
+    const tg = bossTarget(s, b, 16), ang = Math.random()*Math.PI*2; let x = tg ? tg[0].x + Math.cos(ang)*2*T : b.hx + Math.cos(ang)*6*T, y = tg ? tg[0].y + Math.sin(ang)*2*T : b.hy + Math.sin(ang)*6*T;
+    if (Math.hypot(x - b.hx, y - b.hy) > 16*T){ const k = 16*T/Math.hypot(x - b.hx, y - b.hy); x = b.hx + (x - b.hx)*k; y = b.hy + (y - b.hy)*k; }
+    if (!walk(s, Math.floor(x/T), Math.floor(y/T))){ x = b.hx; y = b.hy; }
+    b.under = true; b.dive = { t: 0, at: fast ? 1.6 : 2.2, x, y }; b.atk = { kind: 'ring', x, y, r: 3.2*T, t: 0, at: b.dive.at }; b.diveAt = s.t;
+    if (!b.saidDive){ b.saidDive = true; say('The Duke dives! Watch where the water stirs, and get clear of the ring.'); }
+    return; }
+  const tg = bossTarget(s, b, 14); if (!tg) return;
+  const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
+  if (d < 6*T && !b.belly && Math.random() < 0.55){ b.atk = { kind: 'grab', x: a.x, y: a.y, r: 2.6*T, t: 0, at: fast ? 0.8 : 1.1 }; return; }
+  if (d < 14*T){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: Math.min(14*T, d + 3*T), w: 1.4*T, t: 0, at: fast ? 0.7 : 1 }; return; }
+  bossWalk(s, b, a.x, a.y, 8, dt);
+}
 function stepToad(s, b, B, dt){
   if (b.dx == null){ b.dx = 1; b.dy = 0; }
   const turn = (tx, ty) => { const want = Math.atan2(ty - b.y, tx - b.x), have = Math.atan2(b.dy, b.dx); let d = want - have; while (d > Math.PI) d -= Math.PI*2; while (d < -Math.PI) d += Math.PI*2; const a = have + Math.max(-1, Math.min(1, d))*Math.min(Math.abs(d), 1.6*dt); b.dx = Math.cos(a); b.dy = Math.sin(a); return Math.abs(d); };
