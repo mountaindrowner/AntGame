@@ -141,7 +141,7 @@ export function soundWatch(app, views) {
       const b = s.bosses[k], was = seenBoss[k] || {}, pos = { x: b.x, y: b.y }, low = k === 'hornworm' ? 0.7 : k === 'beetle' ? 1 : 0.85;
       if (b.mode === 'fight' && was.mode === 'idle') sfx.play('roar', pos, low);
       if (b.atk && b.atk !== was.atk) sfx.play('warn', pos, b.atk.at);
-      if (b.charge && !was.charge) sfx.play('charge', pos);
+      if (b.charge && !was.charge) sfx.play('beetleCharge', pos);
       if (b.dazeT > 0 && !(was.dazeT > 0)) sfx.play('dazed', pos);
       const d = b.atkDone; if (d && d !== was.atkDone) { const at = d.x != null ? { x: d.x, y: d.y } : pos; if (d.kind === 'spit') sfx.play('splat', at); else if (d.kind === 'grab') sfx.play('sandSnap', at); else if (d.kind === 'toss') sfx.play('sandHiss', at); else if (d.kind === 'surface') sfx.play('roar', pos, low); else sfx.play('slam', at); }
       seenBoss[k] = { mode: b.mode, atk: b.atk, charge: b.charge, dazeT: b.dazeT, atkDone: b.atkDone };

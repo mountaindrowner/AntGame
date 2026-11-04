@@ -3,7 +3,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 
-const T = SIM.T;
 function founded(seed = 7) {
   const s = SIM.create(seed), q = s.queen;
   SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s); s.seen.intro = 'done';
@@ -12,7 +11,6 @@ function founded(seed = 7) {
   return s;
 }
 const step = (s, sec) => { for (let i = 0; i < sec * 20; i++) SIM.tick(s, 0.05); };
-const rich = (c) => Object.assign(c, { store: 150, water: 60, waterCap: 60, protein: 200, sugar: 50 });
 function farOutpost(s, minD = 170) {
   const w = s.world;
   for (let r = minD; r < minD + 120; r += 10) for (let a = 0; a < 6.28; a += 0.3) {
@@ -27,7 +25,6 @@ function join(s, key) {
   const d = s.daughters[s.daughters.length - 1]; step(s, 11); d.tunnel.progress = d.tunnel.need; step(s, 1);
   assert.equal(d.state, 'ready'); return d;
 }
-const spec = (s, key) => { const d = join(s, key); const [a, b] = SIM.DROOMS_OF[key]; d.rooms = [{ key: a, done: true }, { key: b, done: true }]; return d; };
 const minute = (s, f) => { for (let i = 0; i < 60; i++) { if (f) f(); step(s, 1); } };
 
 test('a great evolution needs the named daughters’ specialty rooms; Swarm Day needs two joined', () => {

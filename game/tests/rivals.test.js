@@ -20,7 +20,7 @@ test('five colonies: the pavement ants awake, the rest asleep in their regions',
 });
 
 test('no new colony while the Patio colony lives; then one every 30 minutes, easiest first', () => {
-  const s = founded(), [pav, odo, arg, carp, fire] = s.rivals;
+  const s = founded(), [, odo, arg, carp, fire] = s.rivals;
   s.t = 5000; step(s, 1); assert.ok(odo.asleep && arg.asleep, 'none while the pavement ants live');
   s.patioDeadAt = s.t;
   s.t += 1790; step(s, 1); assert.ok(odo.asleep, 'not before 30 min');

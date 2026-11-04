@@ -67,7 +67,7 @@ test('play dead: nothing hurts you for 3 s, and you heal', () => {
 });
 
 test('each ability is learned in the evolution tree', () => {
-  const { s, me } = out();
+  const { s } = out();
   for (const k of ['formic', 'danger', 'mandibles', 'thanatosis']) delete s.colony.evo[k];
   for (const k of SIM.ABILITY_KEYS) assert.match(SIM.abilityLock(s, k), /evolve/, k);
   assert.equal(SIM.useAbility(s, 'dead'), false);

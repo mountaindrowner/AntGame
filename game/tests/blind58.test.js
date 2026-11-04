@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 let seed = 5656; Math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }; // fixed rolls
 
-const { T, REGION } = SIM;
+const { T } = SIM;
 function founded(seed = 7) {
   const s = SIM.create(seed), q = s.queen;
   SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s); s.seen.intro = 'done';

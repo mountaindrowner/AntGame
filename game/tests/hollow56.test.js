@@ -41,7 +41,7 @@ test('awake, it sends out waves of infected; six round the heart shield it', () 
 });
 
 test('a spored ant dies in 25 seconds and rises infected, unless a medic reaches it', () => {
-  const s = wild(), c = s.colony; SIM.stress(s, 2); const [a, m] = s.ants.slice(-2), far = (o, dx) => Object.assign(o, { state: 'patrol', x: (s.world.ex + 40 + dx) * T, y: s.world.ey * T, explore: -1e9, hp: 99, flee: 0 });
+  const s = wild(); SIM.stress(s, 2); const [a, m] = s.ants.slice(-2), far = (o, dx) => Object.assign(o, { state: 'patrol', x: (s.world.ex + 40 + dx) * T, y: s.world.ey * T, explore: -1e9, hp: 99, flee: 0 });
   far(a, 0); m.caste = 'medic'; far(m, 60); SIM.sporeAnt(s, a); const n0 = s.critters.filter((q) => q.kind === 'zombie').length;
   step(s, 26, () => { fed(s)(); if (a.state !== 'dead' && s.ants.includes(a)) far(a, 0); far(m, 60); });
   assert.ok(!s.ants.includes(a), 'dead'); assert.equal(s.critters.filter((q) => q.kind === 'zombie').length, n0 + 1, 'it rises as one of them');

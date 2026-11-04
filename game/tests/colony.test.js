@@ -85,7 +85,7 @@ test('nurses tend eggs while there are eggs, and help outside when there are non
 });
 
 test('rooms: one of each per queen level, each extra dearer, and every room eats food', () => {
-  const s = founded(), c = s.colony;
+  const s = founded();
   assert.equal(SIM.roomCap(s), 1);
   const first = SIM.roomCost(s, 'hatchery').food;
   s.nest.rooms.push({ key: 'hatchery', x0: 2, y0: 5, w: 4, h: 3 });

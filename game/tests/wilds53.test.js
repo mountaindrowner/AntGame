@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 
-const { T, AREAS, REGION } = SIM;
+const { T, REGION } = SIM;
 function founded(seed = 7) {
   const s = SIM.create(seed), q = s.queen;
   SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s); s.seen.intro = 'done';

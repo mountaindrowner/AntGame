@@ -43,7 +43,7 @@ test('an Exploder bursts when it dies, hurting rivals near it', () => {
 });
 
 test('Honeypot vault: repletes hold food; Midden: Cordyceps spreads less', () => {
-  const s = founded(), c = s.colony;
+  const s = founded();
   evo(s, 'store2', 'store3', 'honeypot', 'midden', 'glands');
   room(s, 'honeypot', 2, 6); room(s, 'midden', 8, 6); room(s, 'store', 14, 6);
   const cap0 = SIM.storeCapOf(s);
@@ -54,7 +54,7 @@ test('Honeypot vault: repletes hold food; Midden: Cordyceps spreads less', () =>
 });
 
 test('nest nodes: a second queen, deep halls, architects', () => {
-  const s = founded(), c = s.colony;
+  const s = founded();
   room(s, 'hatchery', 2, 6); SIM.tick(s, 0.05);
   const h0 = SIM.hatchCapOf(s), q0 = SIM.queenCap(s.queen.level, s), r0 = SIM.roomCost(s, 'hatchery').food;
   evo(s, 'polygyny', 'deephalls', 'workshop3'); step(s, 0.1);

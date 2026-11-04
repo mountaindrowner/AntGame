@@ -214,7 +214,7 @@ export function sinkholeGeometry(R) {
 // the old nest's galleries laid open in walls that darken stratum by stratum, roots hanging into it,
 // rubble on a black floor. R is the old mound's radius (px). The glow at the bottom is pitGlow().
 const PIT_BANDS = ['#7e4428', '#643620', '#4c2a1a', '#3a2016', '#281612', '#170e0c'].map((c) => new THREE.Color(c));
-const PIT_GREEN = new THREE.Color('#2e8a3a'), PIT_BLACK = new THREE.Color('#050404');
+const PIT_GREEN = new THREE.Color('#2e8a3a');
 export function cavedPitGeometry(R) {
   const D = R * 0.8;
   const prof = [[0.001, -D], [0.18, -D + 2], [0.3, -D * 0.92], [0.4, -D * 0.74], [0.5, -D * 0.54], [0.6, -D * 0.36], [0.69, -D * 0.19], [0.76, -D * 0.06], [0.81, 3], [0.855, 13], [0.9, 21], [0.94, 16], [0.98, 7], [1.03, 0.3]];

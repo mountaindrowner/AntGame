@@ -30,7 +30,7 @@ test('the Old Robin guards the whole Great Lawn', () => {
 
 test('it wakes, telegraphs a peck at a red dot, and the peck lands where it showed', () => {
   const { s, b } = lawn();
-  const [a] = crewAt(s, b.x + 2.5 * T, b.y, 1, 0);
+  crewAt(s, b.x + 2.5 * T, b.y, 1, 0);
   let saw = null; step(s, 8, () => { if (b.atk && b.atk.what === 'peck') saw = { ...b.atk }; return saw; });
   assert.ok(saw, 'a peck was shown'); assert.equal(b.mode, 'fight');
   assert.ok(saw.r <= 1.2 * T, 'a small red dot');
@@ -63,7 +63,7 @@ test('driven off: the trophy, no more robins over the lawn, and birds never take
   assert.match(s.player.msg, /flies off for good/);
   // No robin strikes over the lawn now.
   const lawnI = SIM.REGION.lawn; s.active[lawnI] = true; s.strikeT = s.strikeT.map(() => 0); s.strikes = [];
-  const [a] = crewAt(s, (SIM.areaBounds(lawnI).x0 + 20) * T, (SIM.areaBounds(lawnI).y0 + 20) * T, 1, 0);
+  crewAt(s, (SIM.areaBounds(lawnI).x0 + 20) * T, (SIM.areaBounds(lawnI).y0 + 20) * T, 1, 0);
   step(s, 2);
   assert.ok(!s.strikes.some((k) => k.kind === 'bird' && k.region === lawnI), 'no robin over the lawn');
   // And a bird elsewhere can't take your ant.

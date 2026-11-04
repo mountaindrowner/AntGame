@@ -9,6 +9,7 @@ import { psx, psxBasic, setSeeHole } from '../ps1/materials.js';
 import { rampTexture, PALETTE, noise2 } from '../ps1/textures.js';
 import { Crowd } from '../models/crowd.js';
 import { antGeometry, planFor, FOOT, WALK_FRAMES, outfitGeometry } from '../models/creatures.js';
+import { disposeTree } from '../dispose.js';
 import { raven, zombieAntGeometry, cordycepsHeart, mole, sinkholeGeometry } from '../models/wildBosses.js';
 import { spiderGeometry, caterpillarSegment, SPIDER_FOOT, SPIDER_FRAMES, SPIDER_STRIDE, CAT_SEGMENTS, SPIDER_CROUCH } from '../models/bugs.js';
 import { ladybugGeometry, earwigGeometry, cricketGeometry, millipedeSegment, BUG_WALK, MILLI, jumperGeometry, assassinGeometry, waspGeometry, skinkGeometry } from '../models/critters.js';
@@ -37,7 +38,6 @@ const DAUGHTER_FLAG = { war: '#c8302a', brood: '#f2e6c8', watch: '#3a7ad8', quar
 // Build 43: the colours of the day: sky and fog by day, dusk, night, the moon.
 const DAYC = { sky: "#9bc7e6", fog: "#b9cfd8", rainSky: "#6f7f8f", night: "#121a32", nightFog: "#18213a", dusk: "#e2905e", moon: "#8ea6e8", hemiNight: "#7d8cc8" };
 const tmpQ = new THREE.Quaternion();
-const Q_ID = new THREE.Quaternion();
 const _c2 = new THREE.Color();
 const shade2 = (hexc, k) => '#' + _c2.set(hexc).multiplyScalar(k).getHexString();
 const tmpQ2 = new THREE.Quaternion();
@@ -55,7 +55,7 @@ const BUG = {
   assassin: { k: 2.7, stride: 11, bar: 20, back: 4.5 },
   wasp: { k: 2.6, stride: 10, bar: 26, back: 4.4 },      // build 38
   skink: { k: 2.4, stride: 16, bar: 16, back: 2.4 },
-  zombie: { k: 1, stride: 8, bar: 12, back: 2 },        // build 56: an infected ant (drawn with the ant model)
+  zombie: { k: 1, stride: 8, bar: 12, back: 2 },        // build 56: an infected ant (build 59: its own model, zombieAntGeometry)
 };
 const HIT = '#ff7a6a';   // the flash on whatever a bite lands on
 // Under attack it flickers, so a long fight doesn't just turn it red.
@@ -99,9 +99,16 @@ export function antColor(a) {
   if (!c) { c = new THREE.Color(base).lerp(new THREE.Color(tint[0]), tint[1]); tintCache.set(key, c); }
   return c;
 }
+// Build 19: Cordyceps greys the infected a little; turned, grey-green. Cached per base colour.
+function infectTint(color, zombie) {
+  const key = 'z' + (zombie ? 1 : 0) + (typeof color === 'string' ? color : color.getHexString());
+  let c = tintCache.get(key);
+  if (!c) { c = new THREE.Color(color).lerp(new THREE.Color('#8a9470'), zombie ? 0.85 : 0.35); tintCache.set(key, c); }
+  return c;
+}
 // Veterans stand a little bigger; Elites and Legends wear a ring.
 export const rankScale = (a) => (a.team ? SIM.rspec(a).size : [1, 1, 1.05, 1.1, 1.15][rankOf(a)]);
-export const rankRing = (a) => (a.team ? null : [null, null, null, '#d9c48a', '#ffd34d'][rankOf(a)]);
+const rankRing = (a) => (a.team ? null : [null, null, null, '#d9c48a', '#ffd34d'][rankOf(a)]);
 
 const CAIRN_WORK = 30;
 export class SurfaceView {
@@ -231,7 +238,6 @@ export class SurfaceView {
     return { group, bg, fg };
   }
 
-  // Build everything that only depends on the world layout.
   // One cairn per outpost; stones appear as the work goes on.
   _cairns(s, t) {
     const live = new Set();
@@ -299,12 +305,12 @@ export class SurfaceView {
   setState(s) {
     this.state = s;
     this.camInit = false;
-    if (this.daughterDoors){ for (const m of this.daughterDoors.values()) this.cairnGroup.remove(m); this.daughterDoors.clear(); } // (build 46: a new colony has none)
-    if (this.seams){ for (const m of this.seams.values()) this.cairnGroup.remove(m); this.seams.clear(); } // (build 53)
+    if (this.daughterDoors){ for (const m of this.daughterDoors.values()){ this.cairnGroup.remove(m); disposeTree(m); } this.daughterDoors.clear(); } // (build 46: a new colony has none)
+    if (this.seams){ for (const m of this.seams.values()){ this.cairnGroup.remove(m); disposeTree(m); } this.seams.clear(); } // (build 53)
     if (this.static) {
       this.scenery.dispose();
       this.scene.remove(this.static);
-      this.static.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+      disposeTree(this.static); // (the audit: materials and textures too, not just geometry)
     }
     const g = new THREE.Group();
     this.static = g;
@@ -481,7 +487,7 @@ export class SurfaceView {
       if (flashed(s, a)) color = HIT;
       // Build 19: Cordyceps. The infected go a little grey; turned, they go
       // grey-green, twitch, and a stalk pokes from the head.
-      if (a.infect != null || a.hspore != null) { color = tintCache.get('z' + (a.zombie ? 1 : 0)) || (tintCache.set('z' + (a.zombie ? 1 : 0), new THREE.Color(color).lerp(new THREE.Color('#8a9470'), a.zombie ? 0.85 : 0.35)), tintCache.get('z' + (a.zombie ? 1 : 0)));
+      if (a.infect != null || a.hspore != null) { color = infectTint(color, a.zombie);
         if (a.zombie) { tmpQ.multiply(tmpQ3.setFromAxisAngle(UP, Math.sin(t * 23 + a.id) * 0.35)); if (a.clamp) tmpV.y += 3; } }
       // Build 27: mandibles locked, the two shove back and forth.
       if (a.lockT > 0) { const sh = Math.sin(t * 40 + a.id) * 1.6; tmpV.x += a.dx * sh; tmpV.z += a.dy * sh; tmpV.y += 1; }
@@ -539,7 +545,6 @@ export class SurfaceView {
       // A war party's champion: twice the size, ringed in red (build 19).
       if (a.champion) { ant(a, '#5a1a12', 2); tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('champ', PROPS.ring, tmpV, tmpQ.identity(), 13, '#ff4030'); continue; }
       ant(a, antColor(a), rankScale(a));
-      if (a.zombie) { tmpV.set(a.x + a.dx * 3, 5 + (a.clamp ? 3 : 0), a.y + a.dy * 3); tmpQ.setFromAxisAngle(UP, a.id); this.items.pushAtScale('zstalk', this.stalkGeo, tmpV, tmpQ, 0.75, 0.8, 0.75, '#ffffff'); }
       const ring = rankRing(a);
       if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
@@ -1374,7 +1379,7 @@ export class SurfaceView {
           const a = t * (awake ? 2.2 : 0.9) + (i / 7) * Math.PI * 2, r = (awake ? 70 : 50) + 12 * Math.sin(t * 1.3 + i);
           m.position.set(P0.x + Math.cos(a) * r, P0.y + Math.sin(t * 2 + i) * 30, P0.z + 20 + Math.sin(a) * r * 0.5); m.rotation.set(0, -a, 0);
         });
-        if (diver && this.oakL) { const L = this.oakL, R = L.r * T * (1.1 - 0.28 * diver.climb / 1800); this._decal(di++, { kind: 'ring', x: diver.x, y: diver.y, r: 0.8 * T }, t, '#ff7a20'); this.hornets[0].visible = true; void R; }
+        if (diver && this.oakL) { this._decal(di++, { kind: 'ring', x: diver.x, y: diver.y, r: 0.8 * T, t: hq.dive.t, at: hq.dive.at }, t, '#ff7a20'); this.hornets[0].visible = true; }
         if (!hq.dead && hq.hp < hq.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], P0.x, P0.z - 40, P0.y + 70, hq.hp / hq.maxHp, '#e0a020');
       }
     }
@@ -1527,8 +1532,8 @@ export class SurfaceView {
     // Cordyceps stalks, growing, swelling before they burst; spores when they do.
     for (const st of s.stalks || []) { const g = Math.min(1, st.t / 12), sw = st.t > 9 ? 1 + Math.sin(t * 18) * 0.08 * (st.t - 9) : 1; tmpV.set(st.x, 0, st.y); tmpQ.setFromAxisAngle(UP, st.id); this.bugs.pushAtScale('stalk', this.stalkGeo, tmpV, tmpQ, 3.6 * sw, 3.6 * (0.25 + 0.75 * g) * sw, 3.6 * sw, flashed(s, st) ? HIT : '#ffffff'); }
     for (const bu of s.bursts || []) { const u = (s.t - bu.t) / 1.6; if (u < 0 || u > 1) continue; for (let j = 0; j < 14; j++) { const a = j * 0.45 + bu.t, r = u * 3.5 * T * (0.6 + (j % 3) * 0.2); tmpV.set(bu.x + Math.cos(a) * r, 6 + u * 18 + (j % 4) * 3, bu.y + Math.sin(a) * r); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 2.6 * (1 - u * 0.5), '#e8e0a0'); } }
-    // Spore puffs drifting from stalks close to bursting.
     for (const k of this._hunterAtk || []) this._decal(di++, k, t, '#ff3020'); // build 37: hunters' warnings, in the decals left over
+    // Spore puffs drifting from stalks close to bursting.
     for (const st of s.stalks || []) if (st.t > 6) for (let j = 0; j < 3; j++) { const u = ((t * 0.7 + j / 3) % 1); tmpV.set(st.x + Math.sin(j * 2 + t) * 6 * u, 20 + u * 16, st.y + Math.cos(j * 2 + t) * 6 * u); F.pushAt('dot', this.dotGeo, tmpV, tmpQ2.identity(), 1.6, '#f0e8b0'); }
   }
 

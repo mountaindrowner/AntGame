@@ -9,6 +9,7 @@ export const NEW_GAME_SEED = 7;
 // last good save under SAVE_KEY-prev), and the game says so, instead of quietly starting over on top of it.
 export let loadProblem = null;
 export function loadGame() {
+  pruneOldSaves();
   // Build 41: a save this build couldn't read once (a newer build's, say) waits under -bad. Once a build can
   // read it, it comes back, unless the save it was replaced by has played on further.
   let bad = null;
@@ -40,6 +41,20 @@ export function saveGame(s) {
     if (now - prevAt > 60000) { const old = localStorage.getItem(SAVE_KEY); if (old) localStorage.setItem(SAVE_KEY + '-prev', old); prevAt = now; }
     localStorage.setItem(SAVE_KEY, SIM.serialize(s)); return true;
   } catch (e) { return false; /* storage full or blocked */ }
+}
+
+// Saves from builds before SAVE_KEY's version can never load again (LEGACY_SAVE_KEYS lists any that can):
+// clear them and their backups and map photos, so they don't fill the browser's storage.
+function pruneOldSaves() {
+  const cur = +(SAVE_KEY.match(/-v(\d+)$/) || [])[1], keep = new Set(LEGACY_SAVE_KEYS);
+  try {
+    const old = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i), m = k && k.match(/^(underfoot-(?:poc-)?v(\d+))(?:-prev|-map|-bad)?$/);
+      if (m && !keep.has(m[1]) && (k.startsWith('underfoot-poc-') || +m[2] < cur)) old.push(k);
+    }
+    for (const k of old) localStorage.removeItem(k);
+  } catch (e) { /* storage blocked */ }
 }
 
 export function clearSave() {

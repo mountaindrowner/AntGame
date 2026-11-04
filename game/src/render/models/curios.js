@@ -35,8 +35,7 @@ function cap() {
 function brick() {
   // A yellow toy brick, two by two studs.
   const parts = [paint(new THREE.BoxGeometry(1.6, 0.9, 1.6).translate(0, 0.45, 0), (x, y) => (y > 0.85 ? '#ffd02a' : '#e8b416'))];
-  for (const [x, z] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) parts.push(cyl(0.24, 0.24, 0.18, 10, 0.9, '#ffda40'));
-  for (const [i, [x, z]] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]].entries()) parts[i + 1].translate(x, 0, z);
+  for (const [x, z] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) parts.push(cyl(0.24, 0.24, 0.18, 10, 0.9, '#ffda40').translate(x, 0, z));
   return bake(parts);
 }
 function clip() {

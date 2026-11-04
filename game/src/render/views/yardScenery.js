@@ -12,6 +12,7 @@ import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 import { houseLayout, buildHouse } from '../models/house.js';
 import { cavedPitGeometry, pitGlow } from '../models/wildBosses.js';
+import { disposeTree } from '../dispose.js';
 
 const T = 16;
 const col = new THREE.Color();
@@ -1291,7 +1292,7 @@ export class YardScenery {
     if (R.job) { R.job.return(); R.job = null; }
     if (R.near) {
       this.group.remove(R.near);
-      R.near.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map && o.userData.own) { o.material.map.dispose(); o.material.dispose(); } });
+      R.near.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material && o.userData.own) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } });
       R.near = null; R.swaps = null;
     }
     R.far.visible = true;
@@ -1331,7 +1332,7 @@ export class YardScenery {
     for (const sw of ctx.swaps) { // the great mound, and the pit it falls into
       const geo = mergeGeometries(sw.mound.map((p) => { p = p.index ? p.toNonIndexed() : p; if (p.attributes.normal) p.deleteAttribute('normal'); return p; })); geo.computeVertexNormals();
       const mound = new THREE.Mesh(geo, this.mats.part), Rp = sw.l.r * T, pit = new THREE.Group(), glow = pitGlow(Rp);
-      pit.add(new THREE.Mesh(cavedPitGeometry(Rp), this.mats.pit), glow.group); pit.position.set(sw.l.x * T, 0, sw.l.y * T); pit.userData.glow = glow;
+      pit.add(new THREE.Mesh(cavedPitGeometry(Rp), this.mats.pit), glow.group); pit.position.set(sw.l.x * T, 0, sw.l.y * T); pit.userData.glow = glow; glow.group.traverse((o) => { o.userData.own = true; });
       g.add(mound, pit); R.swaps.push({ mound, pit });
     }
     this._sink(R);
@@ -1395,7 +1396,8 @@ export class YardScenery {
 
   dispose() {
     for (const R of this.regions) this._unload(R);
-    this.group.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    disposeTree(this.group); // far paintings, fence, house, the underlay: materials and textures too
+    for (const m of Object.values(this.mats)) { if (m.map) m.map.dispose(); m.dispose(); }
   }
 }
 

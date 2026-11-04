@@ -248,7 +248,6 @@ function missions() {
 // ---------- main loop ----------
 const minutes = +minArg;
 let qmin = 100, think = 0, nestThink = 0, lastPlayerAnt = null, playerDeaths = 0, minute = 0;
-const deathsBefore = {};
 for (let i = 0; i < minutes * 60 * 20; i++) {
   const before = new Map(s.ants.filter((a) => !a.team && a.state !== 'dead').map((a) => [a, [a.state, a.caste, a.follow, a.goal]]));
   const spBefore = s.spider ? { passing: s.spider.passing, x: s.spider.x, y: s.spider.y } : null;

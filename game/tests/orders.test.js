@@ -34,7 +34,7 @@ test('hold: the crew plants itself and stays when you walk off', () => {
 });
 
 test('a held crew fights what comes into its ring', () => {
-  const { s, P, me } = withCrew();
+  const { s, me } = withCrew();
   const [hx, hy] = openSpot(s, me, 4);
   SIM.crewHold(s, (hx + 0.5) * T, (hy + 0.5) * T); step(s, 5);
   const r = s.ants.find((a) => a.team === 1 && a.state !== 'dead');

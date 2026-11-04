@@ -21,7 +21,7 @@ function atDoor(team = 1, crew = 9, seed = 7) {
 const run = (s, sec, P, me, until) => { for (let i = 0; i < sec * 20; i++) { SIM.tick(s, 0.05); if (me) { P.tx = me.x; P.ty = me.y; } if (until && until()) return true; } return false; };
 
 test('a raid needs a crew and a rival door close by', () => {
-  const { s, r, P, me } = atDoor(1, 0);
+  const { s, r, me } = atDoor(1, 0);
   assert.match(SIM.raidLock(s, 'store'), /crew/);
   Object.assign(me, { tx: r.ex + 30, x: (r.ex + 30.5) * T });
   assert.match(SIM.raidLock(s, 'store'), /walk your crew/);

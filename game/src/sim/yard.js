@@ -4,14 +4,8 @@
 // the same landmarks to draw them.
 //
 // The whole backyard is YARD_MAP below (a 10×8 grid of regions with the house
-// along the top). The built part is a block of it (BLOCK): the first nine
-// regions around home, and since build 10 the ring around them:
-//
-//   col:   2               3          4                5               6
-//   row 1  Back Steps      Patio      Flowerbed        Woodpile        Grill
-//   row 2  Tomato Rows     Spigot     Under the Rock   Compost Heap    Bird Feeder
-//   row 3  Beans/Lettuce   Sandbox    Lawn             Picnic Blanket  Birdbath
-//   row 4  Kiddie Pool     Swing Set  Clover Patch     Molehills       Dandelions
+// along the top). The built part (BLOCK) is all of it but the house's row:
+// 10×7 regions, 70 in all (build 11; it began as nine round home).
 //
 // Layouts are written in design units (40 per region) and stamped at SCALE
 // tiles per unit, so the props tower over an ant the way a backyard should.

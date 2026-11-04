@@ -21,7 +21,7 @@ fs.mkdirSync(SHOTS, { recursive: true });
 
 await build({ logLevel: 'warn' });
 const server = await preview({ preview: { port: 0, host: '127.0.0.1' }, logLevel: 'warn' });
-const url = server.resolvedUrls.local[0];
+const url = server.resolvedUrls.local[0] + '?debug'; // ?debug: the Help page's +200 ants button
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
@@ -356,7 +356,7 @@ try {
   await page.keyboard.press('Escape');
   // Build 15: names over Elites, tapping an ant for its card, the recruit ring, the menu.
   const tapAt = await sim(() => {
-    const { app, views, SIM } = window.UNDERFOOT, s = app.s, a = s.player.ant;
+    const { app, SIM } = window.UNDERFOOT, s = app.s, a = s.player.ant;
     const nm = s.ants.find((o) => !o.team && !o.isPlayer && o.name && o.state !== 'in' && o.state !== 'build');
     if (!nm || !a) return null;
     nm.x = a.x + 3 * SIM.T; nm.y = a.y; nm.tx = Math.floor(nm.x / SIM.T); nm.ty = Math.floor(nm.y / SIM.T); nm.state = 'patrol'; nm.follow = false;
@@ -366,7 +366,6 @@ try {
   await page.waitForTimeout(600);
   await shot('names-and-report');
   if (tapAt) {
-    const p = await sim((t) => { const { views } = window.UNDERFOOT; const v = new views.surface.camera.position.constructor(t.x, 4, t.y).project(views.surface.camera); return [(v.x * 0.5 + 0.5) * innerWidth, (-v.y * 0.5 + 0.5) * innerHeight]; }, tapAt);
     await sim((xy) => window.UNDERFOOT.app.callout.tap(xy.x, xy.y), tapAt);
     await page.waitForTimeout(300);
     await shot('ant-card');

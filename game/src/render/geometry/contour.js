@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 
 // Loops where f crosses zero (negative = inside), sampled every `step`.
-export function contours(f, x0, y0, x1, y1, step) {
+function contours(f, x0, y0, x1, y1, step) {
   const nx = Math.ceil((x1 - x0) / step) + 1, ny = Math.ceil((y1 - y0) / step) + 1;
   const v = new Float32Array(nx * ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) v[j * nx + i] = f(x0 + i * step, y0 + j * step);
@@ -52,7 +52,7 @@ export function contours(f, x0, y0, x1, y1, step) {
 }
 
 // Ramer–Douglas–Peucker on a closed loop.
-export function simplify(pts, tol) {
+function simplify(pts, tol) {
   if (pts.length < 8) return pts;
   const rdp = (a, b) => {
     let dmax = 0, idx = -1;

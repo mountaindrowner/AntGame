@@ -81,7 +81,7 @@ function makeQueen(scale) {
 }
 
 // The score and the sound gags, all scheduled up front from time z.
-export function scoreFilm(S, z) {
+function scoreFilm(S, z) {
   // The saucers are heard before they're seen; the theremin joins under the first card.
   S.ufo(z + 0.2, 11);
   S.theremin(z + 1.0, [440, 523, 494, 392, 415, 330, 349, 440, 523, 622, 587, 440, 494], 1.05);
@@ -239,7 +239,7 @@ export class Cinematic {
   }
 
   // ---------- playback ----------
-  // The film rolls as soon as it's made. A browser that hasn't been tapped
+  // The film holds behind black until the yard round its first shot is built, then rolls. A browser that hasn't been tapped
   // yet won't play sound, so the film starts silent with a "Tap for sound"
   // button; the first tap anywhere starts the score at the film's own time.
   start() {

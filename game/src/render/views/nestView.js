@@ -62,7 +62,7 @@ function tunnelBoxes(s) {
 // and ceiling wobbling a little so it looks dug rather than machined; the
 // floor stays flat (rooms stand things on it). Signed distance in nest px,
 // y down, negative inside.
-export function roomField(rm) {
+function roomField(rm) {
   const cx = (rm.x0 + (rm.w || 4) / 2) * T, cy = (rm.y0 + (rm.h || 3) / 2) * T, hw = (rm.w || 4) * T / 2 + 1.5, hh = (rm.h || 3) * T / 2 + 1.5;
   const seed = rm.x0 * 7.3 + rm.y0 * 3.1, m = Math.min(hw, hh), N = 3;
   const f = (x, y) => {
@@ -77,7 +77,7 @@ const ROOM_BLEND = 20; // tunnels flare into a room's mouth instead of butting i
 
 // Sample the tunnel field on a grid (x0, y0, step, nx × ny). Each box only
 // touches the samples near it, so cost scales with the dug area, not the nest.
-export function tunnelGrid(s, x0, y0, step, nx, ny) {
+function tunnelGrid(s, x0, y0, step, nx, ny) {
   const far = T * 2;
   const grid = new Float32Array(nx * ny).fill(far);
   const reach = ROUND + BLEND;
@@ -122,7 +122,7 @@ export function tunnelGrid(s, x0, y0, step, nx, ny) {
 // The room's back wall as a fine grid clipped to its chamber (see
 // _rebuildPanels). Colour carries the shading, alpha the fade.
 const FEATHER = 10, PANEL_STEP = 2;
-export function roomPanel(r) {
+function roomPanel(r) {
   const f = roomField(r), [bx0, by0, bx1, by1] = f.box.map((v, i) => v + (i < 2 ? -FEATHER : FEATHER)), x0 = r.x0 * T, z = -DEPTH + 0.3;
   const nx = Math.ceil((bx1 - bx0) / PANEL_STEP) + 1, ny = Math.ceil((by1 - by0) / PANEL_STEP) + 1;
   const d = new Float32Array(nx * ny), seed = r.x0 * 13 + r.y0 * 7;
@@ -666,7 +666,7 @@ export class NestView {
     this.scene.fog.far = dist + 1200;
   }
 
-  // Build 42: shut sections: a root-and-stone seam round each, and dust where builders break through.
+  // Build 42: shut sections: a root-and-stone seam round each; and (build 52) the glowrock seams.
   _seams(s, t) {
     // Build 45: green-glowing rocks in the bedrock, barely there; brighter once you've dug down and seen them.
     const seen = !!s.colony.glowSeen;

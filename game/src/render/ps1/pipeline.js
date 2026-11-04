@@ -78,7 +78,8 @@ export class PS1Pipeline {
     this.canvas.style.width = cssW + 'px';
     this.canvas.style.height = cssH + 'px';
     this.target.setSize(w, h);
-    // Snap to a grid coarser than the framebuffer so the wobble shows.
+    // The vertex snap grid: the framebuffer's own pixels (snapDivisor 1), or coarser for more wobble.
+    // (materials.js also reads uSnap as the framebuffer size for the see-through hole: keep snapDivisor 1.)
     this.uniforms.uSnap.value.set(w / RENDER.snapDivisor, h / RENDER.snapDivisor);
     return true;
   }

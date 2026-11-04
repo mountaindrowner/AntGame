@@ -106,7 +106,7 @@ test('choose your rebirth: the next egg hatches as the kind you picked', () => {
 });
 
 test('outposts survive a save', () => {
-  const s = founded(), c = s.colony;
+  const s = founded();
   const [x, y, si] = openIn(s, 'spigot');
   s.outposts.push({ id: 999, x, y, region: si, work: OUTPOST.work, done: true, hp: 2 });
   step(s, 2);

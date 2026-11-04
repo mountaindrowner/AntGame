@@ -3,7 +3,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 
-const T = SIM.T;
 function founded(seed = 7) {
   const s = SIM.create(seed), q = s.queen;
   SIM.queenDig(s, q.x, q.y + 1); SIM.queenDig(s, q.x, q.y + 1); SIM.buildNest(s); s.seen.intro = 'done';
@@ -27,10 +26,8 @@ function join(s, key) {
   const d = s.daughters[s.daughters.length - 1]; step(s, 11); d.tunnel.progress = d.tunnel.need; step(s, 1);
   assert.equal(d.state, 'ready'); return d;
 }
-const hatchMix = (s, d, n) => { const got = {}; for (let i = 0; i < n; i++) { rich(s.colony); d.eggT = 30; d.pop = {}; step(s, 0.05); for (const k in d.pop) got[k] = (got[k] || 0) + d.pop[k]; } return got; };
 
 const inside = (s) => { const P = s.player, a = P.ant; P.inNest = true; P.nestKey = null; a.state = 'nest'; a.nx = SIM.SHAFT + 0.5; a.ny = 0.5; };
-const finish = (s, d) => { for (const r of d.rooms) if (r && !r.done) r.progress = 1e9; step(s, 0.1); };
 
 test('her nest: a shaft, her queen’s chamber, a hatchery and two empty chambers', () => {
   const s = founded(), d = join(s, 'war'), n = SIM.daughterNest(d);

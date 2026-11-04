@@ -9,7 +9,7 @@
 
 const AC = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
 
-export class Sfx {
+class Sfx {
   constructor() {
     this.ctx = null;
     this.on = true;
@@ -234,7 +234,7 @@ const SOUNDS = {
   roar: { cool: 2, fn: (s, o, t, low = 1) => { const c = s.ctx, x = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain(); x.type = 'sawtooth'; x.frequency.setValueAtTime(110 * low, t); x.frequency.exponentialRampToValueAtTime(55 * low, t + 0.9); lfo.frequency.value = 23; lg.gain.value = 30 * low; lfo.connect(lg).connect(x.frequency); s._env(g, t, 0.05, 0.9, 0.22); x.connect(g).connect(o); x.start(t); lfo.start(t); x.stop(t + 1.1); lfo.stop(t + 1.1); s.puff(o, t, 0.8, 600, 0.3, 'lowpass', 150, 0.05); return 1.1; } },
   warn: { cool: 0.4, fn: (s, o, t, d = 1) => { s.chirp(o, t, 300, 900, d, 0.1, 'triangle'); s.puff(o, t, d, 800, 0.12, 'bandpass', 2400, d * 0.8); return d; } },
   slam: { cool: 0.25, always: true, fn: (s, o, t) => { s.thump(o, t, 120, 28, 0.6, 1); s.puff(o, t, 0.5, 900, 0.5, 'lowpass', 120, 0.01); return 0.6; } },
-  charge: { cool: 0.6, fn: (s, o, t) => { for (let i = 0; i < 10; i++) s.thump(o, t + i * 0.07, 90, 50, 0.08, 0.35); s.puff(o, t, 0.8, 400, 0.3, 'lowpass', 200, 0.05); return 0.8; } },
+  beetleCharge: { cool: 0.6, fn: (s, o, t) => { for (let i = 0; i < 10; i++) s.thump(o, t + i * 0.07, 90, 50, 0.08, 0.35); s.puff(o, t, 0.8, 400, 0.3, 'lowpass', 200, 0.05); return 0.8; } },
   dazed: { cool: 1.5, fn: (s, o, t) => { for (let i = 0; i < 6; i++) s.blip(o, t + i * 0.12, N(i % 2 ? 91 : 96), 0.08, 0.08, 'sine'); return 0.8; } },
   splat: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.25, 700, 0.4, 'lowpass', 200, 0.01); s.chirp(o, t, 300, 120, 0.2, 0.2, 'sine'); return 0.3; } },
   sandSnap: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.35, 2500, 0.3, 'bandpass', 600, 0.05); s.blip(o, t + 0.3, 1800, 0.03, 0.3, 'square'); s.blip(o, t + 0.34, 1400, 0.03, 0.3, 'square'); return 0.45; } },

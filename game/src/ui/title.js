@@ -16,7 +16,7 @@ export function loadOptions() {
 function saveOptions(o) { try { localStorage.setItem(OPTS_KEY, JSON.stringify(o)); } catch (e) { /* blocked */ } }
 
 // UI themes (themes.css): the key on <html data-skin>, and its name.
-export const SKINS = [['classic', 'Classic'], ['homestead', 'Homestead'], ['cellar', 'Cellar'], ['island', 'Island Phone'], ['townhall', 'Town Hall'], ['ledger', 'Lantern & Ledger'], ['crypt', 'Crypt'], ['station', 'Field Station'], ['tablet', 'Keeper Tablet']];
+const SKINS = [['classic', 'Classic'], ['homestead', 'Homestead'], ['cellar', 'Cellar'], ['island', 'Island Phone'], ['townhall', 'Town Hall'], ['ledger', 'Lantern & Ledger'], ['crypt', 'Crypt'], ['station', 'Field Station'], ['tablet', 'Keeper Tablet']];
 const btn = (act, icon, label, cls = '') => `<button class="t-btn ${cls}" data-t="${act}">${ICONS[icon]}<span>${label}</span></button>`;
 
 export class TitleMenu {

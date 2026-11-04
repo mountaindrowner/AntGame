@@ -8,9 +8,9 @@ import { YARD_MAP } from '../sim/yard.js';
 import { ICONS } from './icons.js';
 import { MapView } from './mapView.js';
 import { EvolveView } from './evolveView.js';
-import { RES as GRES, UPGRADES, BRANCHES, EVO, EVO_BY, evoCost, laterIn, LATER, RANKS, rankOf, PROMOS, FAMILY, QUEEN_TRAITS, GOALS, goalBoard, SETS, TIERS, prizeOf, GUARDIANS } from '../sim/growth.js';
+import { RES as GRES, UPGRADES, EVO_BY, laterIn, LATER, RANKS, rankOf, PROMOS, FAMILY, QUEEN_TRAITS, GOALS, goalBoard, SETS, TIERS, prizeOf, GUARDIANS } from '../sim/growth.js';
 
-const { NW, NH, T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
+const { T, SHAFT, CASTES, ROOMS, ROOM_KEYS } = SIM;
 const $ = (id) => document.getElementById(id);
 
 export function createUI(app) {
@@ -57,10 +57,21 @@ export function createUI(app) {
   // ---------------------------------------------------------- tips
   // Hover (mouse) or press and hold (touch) anything with data-tip to see
   // what it is. A held button shows its tip instead of acting when let go.
-  let tipFor = null, tipTimer = null, tipHide = null, longPressed = false;
+  let tipTimer = null, tipHide = null, longPressed = false;
+  // ?debug in the address shows test tools (the +200 ants button in Help).
+  const DEBUG = typeof location !== 'undefined' && new URLSearchParams(location.search).has('debug');
+  // Rebuild a panel only when its content changes. Progress bars (style="width:N%") move every tick, so
+  // they're left out of the comparison and nudged in place: rebuilding the HTML 5 times a second ate taps.
+  const WIDTH = /style="width:([\d.e+-]+)%"/g;
+  function setHtml(node, h) {
+    const key = h.replace(WIDTH, '');
+    if (node.dataset.h !== key) { node.dataset.h = key; node.innerHTML = h; return; }
+    const bars = node.querySelectorAll('[style^="width:"]'); let i = 0;
+    for (const m of h.matchAll(WIDTH)) { const b = bars[i++]; if (b) b.style.width = m[1] + '%'; }
+  }
   function showTip(t) {
     const text = t.dataset.tip; if (!text) return;
-    tipFor = t; el.tip.textContent = text; el.tip.classList.remove('hidden');
+    el.tip.textContent = text; el.tip.classList.remove('hidden');
     sfx.play('tick');
     const r = t.getBoundingClientRect(), w = el.tip.offsetWidth, h = el.tip.offsetHeight;
     const below = r.top < 90, left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
@@ -70,7 +81,7 @@ export function createUI(app) {
     el.tip.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - left)) + 'px');
     clearTimeout(tipHide); tipHide = setTimeout(hideTip, 2600);
   }
-  function hideTip() { tipFor = null; el.tip.classList.add('hidden'); clearTimeout(tipTimer); }
+  function hideTip() { el.tip.classList.add('hidden'); clearTimeout(tipTimer); }
   document.addEventListener('pointerover', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t || e.pointerType !== 'mouse') return; clearTimeout(tipTimer); tipTimer = setTimeout(() => showTip(t), 350); });
   document.addEventListener('pointerout', (e) => { if (e.pointerType === 'mouse' && e.target.closest && e.target.closest('[data-tip]')) hideTip(); });
   document.addEventListener('pointerdown', (e) => {
@@ -175,18 +186,6 @@ export function createUI(app) {
   // Three tabs: each kind of ant's upgrades and its veterans' doctrine; the
   // evolution tree, paid in 🧬; and the ranks, named ants and the fallen.
   const CASTE_ORDER = ['forager', 'builder', 'nurse', 'soldier', 'venom'];
-  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
-  function renderGrow() {
-    const s = app.s, c = s.colony, tab = app.growTab || 'goals';
-    let h = `<div class="row head"><strong>Evolve · <span class="genes">🧬 ${c.genes}</span></strong><button class="x" data-close="1">Close</button></div>`;
-    h += `<div class="tabs">${[['goals', 'Goals'], ['ants', 'Ants'], ['evo', 'Evolution'], ['ranks', 'Ranks']].map(([k, n]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${n}</button>`).join('')}</div>`;
-    if (tab === 'goals') h += growGoals(s, c);
-    else if (tab === 'ants') h += growAnts(s, c);
-    else if (tab === 'evo') h += growEvo(s, c);
-    else h += growRanks(s, c);
-    return h;
-  }
-  const there = (A) => A.name.replace(/^The /, 'the ');
   // Build 46: your daughter colonies, in one chip: their ants, or how far the tunnel has come.
   function daughterChip(s, chip) {
     const ds = s.daughters || []; if (!ds.length) return '';
@@ -312,26 +311,6 @@ export function createUI(app) {
     }
     return h;
   }
-  function growEvo(s, c) {
-    let h = `<div class="note">Spend 🧬 Genes and materials. Genes come from scouting new regions, the first of each find brought home, every 10 eggs hatched, and big kills. Doing a node's deed halves its 🧬. Faded nodes come in later builds.</div>`;
-    const kids = (key, b) => EVO.filter((n) => n.branch === b && (n.after || null) === key);
-    for (const B of BRANCHES) {
-      h += `<div class="branch"><b>${B.name}</b><div class="note">${B.note}</div>`;
-      const walk = (key, depth) => {
-        for (const n of kids(key, B.key)) {
-          const lock = SIM.evoLock(s, n.key), cost = evoCost(s, n), pay = SIM.canPay(c, cost);
-          const cls = lock === 'owned' ? 'owned' : n.soon ? 'soon' : !lock && pay ? 'ready' : '';
-          const deed = n.deed ? (n.deed[1](s) ? ' · deed done: half 🧬' : ` · deed: ${n.deed[0]} for half 🧬`) : '';
-          const state = lock === 'owned' ? '✓ evolved' : lock ? lock : pay ? 'tap to evolve' : 'short on materials';
-          h += `<button class="node ${cls}${n.big ? ' big' : ''}" data-evo="${n.key}" style="margin-left:${depth * 14}px;width:calc(100% - ${depth * 14}px)" ${lock || !pay ? 'aria-disabled="true"' : ''}><b>${n.name}</b><i>${n.fx}</i><i>${costIcons(cost)}${deed}</i><i>${state}</i></button>`;
-          walk(n.key, depth + 1);
-        }
-      };
-      walk(null, 0);
-      h += `</div>`;
-    }
-    return h;
-  }
   function growRanks(s, c) {
     const mine = s.ants.filter((a) => !a.team && a.state !== 'dead');
     let h = `<div class="note">Ants get better at their jobs as they work. They hatch pale and darken; Veterans learn a promotion and Elites a second, and get a name. A big kill makes a Legend.</div>`;
@@ -365,7 +344,7 @@ export function createUI(app) {
   // Jobs (build 17): each kind of ant's duties in order. Tap one to make it
   // that kind's main job; ✕ switches it off.
   function renderJobs() {
-    const s = app.s, c = s.colony, counts = SIM.dutyCounts(s), D = SIM.DUTIES;
+    const s = app.s, counts = SIM.dutyCounts(s), D = SIM.DUTIES;
     const show = Object.keys(SIM.JOBS0).filter((k) => counts[k] || k === 'forager' || k === 'builder' || !SIM.eggLock(s, k));
     let h = `<div class="row head"><strong>Jobs</strong><button class="x" data-close="1">Close</button></div>`;
     h += `<div class="note">Each kind of ant does the first job on its list that needs doing, then the next. Tap a job to put it first; ✕ turns it off.</div>`;
@@ -418,8 +397,6 @@ export function createUI(app) {
       } else h += `<div class="note">No eggs. The queen waits.</div>`;
     } else if (app.menu === 'raid') {
       h = renderRaid();
-    } else if (app.menu === 'grow') {
-      h = renderGrow();
     } else if (app.menu === 'reborn') {
       h = renderReborn();
     } else if (app.menu === 'jobs') {
@@ -459,7 +436,7 @@ export function createUI(app) {
       h += `<button data-cleardigs="1" ${s.nest.digOrders.length || s.nest.fillOrders.length || s.colony.buildQueue.length ? '' : 'disabled'}><b>Clear orders</b><i>Cancel pending digs, fills and rooms not yet built (cost back)</i></button>`;
       h += `</div>`;
     }
-    if (el.sheet.dataset.h !== h) { el.sheet.dataset.h = h; el.sheet.innerHTML = h; }
+    setHtml(el.sheet, h);
   }
   // ---------------------------------------------------------- yard map
   // The whole backyard as a plan: all 70 regions, greyed until you've been
@@ -530,7 +507,7 @@ export function createUI(app) {
       h = `<div class="rh">${R.how === 'won' ? '🏆 The nest is yours' : R.how === 'lost' ? '☠ The raid failed' : R.how === 'broken' || R.how === 'called off' ? '✋ Raid called off' : '⚔ Raid over'} · the ${R.name}</div><div class="rl">Brought out: <b>${got}</b> · lost ${R.lost} · killed ${R.killed}${R.crits ? ` · ${R.crits} crit${R.crits === 1 ? '' : 's'}` : ''}</div><div class="rl">Their numbers: ${R.before} → ${R.after}${R.how !== 'won' ? ' · they will strike back' : ''}</div>`;
     }
     C.classList.toggle('hidden', !h);
-    if (C.dataset.h !== h) { C.dataset.h = h; C.innerHTML = h; }
+    setHtml(C, h);
   }
   // Build 39: the yard is yours. The camera rises over it; the 13 crests light one by one; your colony's
   // record; then the back door of the house swings open (Phase 2, the house, comes later).
@@ -568,7 +545,7 @@ export function createUI(app) {
   function openHelp(tab) {
     app.menu = 'help'; app.helpTab = tab ?? app.helpTab ?? 0; el.sheet.classList.remove('hidden'); app.paused = true;
     el.sheet.dataset.h = '';
-    el.sheet.innerHTML = `<div class="row head"><strong>Help</strong><button class="x" data-close="1">Close</button></div><div class="tabs">${HELP_PAGES.map(([n], i) => `<button data-helptab="${i}" class="${i === app.helpTab ? 'on' : ''}">${n}</button>`).join('')}</div>${HELP_PAGES[app.helpTab][1]}`;
+    el.sheet.innerHTML = `<div class="row head"><strong>Help</strong><button class="x" data-close="1">Close</button></div><div class="tabs">${HELP_PAGES.map(([n], i) => `<button data-helptab="${i}" class="${i === app.helpTab ? 'on' : ''}">${n}</button>`).join('')}</div>${DEBUG ? HELP_PAGES[app.helpTab][1] : HELP_PAGES[app.helpTab][1].replace(/<div class="h btnrow"><button data-stress[^]*?<\/div>/, '')}`;
   }
   // The full numbers behind the stat chips.
   function renderColony() {
@@ -577,7 +554,7 @@ export function createUI(app) {
       + `<div class="h">Food ${Math.floor(c.store)} of ${c.cap} · water ${Math.floor(c.water)} of ${c.waterCap} · protein ${Math.floor(c.protein)} · stone ${Math.floor(c.grit)}</div>`
       + `<div class="h">${app.statsLine || ''}</div>`
       + `<div class="h">Ants by kind: ${Object.entries(st.byCaste).map(([k, n]) => `${CASTES[k].name} ${n}`).join(' · ') || 'none yet'}</div>`;
-    if (el.sheet.dataset.h !== h) { el.sheet.dataset.h = h; el.sheet.innerHTML = h; }
+    setHtml(el.sheet, h);
   }
   function openColony() { el.sheet.dataset.h = ''; app.menu = 'colony'; el.sheet.classList.remove('hidden'); renderColony(); }
 
@@ -598,7 +575,7 @@ export function createUI(app) {
       if (app.placing.kind === 'fill') return 'Fill: tap tunnel cells to pack them back. Cancel to stop.';
       return 'Remove: tap a room to tear it out. Cancel to stop.';
     }
-    if (s.lost) return 'The queen is dead. The colony is lost. Press Reset to found a new one.';
+    if (s.lost) return 'The queen is dead. The colony is lost. Choose New colony on the main menu to found another.';
     if (s.won) return 'The rival queen is dead. Keep growing, or Reset for a fresh yard.';
     if (app.areaBanner && app.areaBanner.until > performance.now()) return app.areaBanner.text;
     if (s.phase === 'dig') return q.energy > 0 ? `You are the queen. Tap the dirt next to her to dig (${q.energy} digs left). Two down, then Build nest.` : 'Out of energy. Tap Build nest.';
@@ -804,9 +781,8 @@ export function createUI(app) {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.close) { closeMenu(); return; }
-    if (b.dataset.film) { closeMenu(); app.playFilm(); return; }
     if (b.dataset.title) { closeMenu(); app.openTitle(); return; }
-    if (b.dataset.stress) { closeMenu(); SIM.stress(s, 200); flash('+200 foragers spawned for a frame-rate test.', /^\+200/, 4000); return; }
+    if (b.dataset.stress && DEBUG) { closeMenu(); SIM.stress(s, 200); flash('+200 foragers spawned for a frame-rate test.', /^\+200/, 4000); return; }
     if (b.dataset.reset) { confirmSheet('Start over? This clears the saved colony.', 'Start over', () => app.reset()); return; }
     if (b.dataset.region) { app.mapPick = +b.dataset.region; renderMap(); return; }
     if (b.dataset.raid) { if (SIM.startRaid(s, b.dataset.raid)) { closeMenu(); sfx.play('raid'); } else flash('Raid: ' + SIM.raidLock(s, b.dataset.raid) + '.', /^Raid:/, 2600); return; }
@@ -820,11 +796,9 @@ export function createUI(app) {
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.forage) { SIM.upgradeForage(s); renderSheet(); return; }
     if (b.dataset.grow) { openEvo(b.dataset.grow); return; }
-    if (b.dataset.tab) { app.growTab = b.dataset.tab; renderSheet(); return; }
     if (b.dataset.helptab) { openHelp(+b.dataset.helptab); return; }
     if (b.dataset.retips) { tipsSeen = {}; try { localStorage.removeItem(TIPS_KEY); } catch (e) { /* blocked */ } for (const k in EXPL) delete s.seen[k]; flash('Tips will show again.', /^Tips will/, 2500); return; }
     if (b.dataset.upc) { const [k, pk] = b.dataset.upc.split(':'); if (SIM.upgradeCaste(s, k, pk || undefined)) sfx.play('evolve'); renderSheet(); return; }
-    if (b.dataset.evo) { if (SIM.buyEvo(s, b.dataset.evo)) sfx.play('evolve'); renderSheet(); return; }
     if (b.dataset.doc) { const [k, slot, pk] = b.dataset.doc.split(':'); SIM.setDoctrine(s, k, +slot, pk); renderSheet(); return; }
     if (b.dataset.qt) { const [lv, k] = b.dataset.qt.split(':'); SIM.pickQueenTrait(s, +lv, k); renderSheet(); return; }
     if (b.dataset.possess) { SIM.possess(s, +b.dataset.possess); closeMenu(); return; }
@@ -915,4 +889,3 @@ export function createUI(app) {
   return { saved, update, checkExplainers, closeMenu, openMenu, openHelp, flash, confirmSheet, introStep, introText, evo, mapView };
 }
 
-export const GRID = { NW, NH };

@@ -261,7 +261,7 @@ const DRESS = {
   },
   // Build 23.
   fungus(d) {
-    const { W, H, D, col, t } = d, fill = Math.min(1, (col.fungus || 0) / 60);
+    const { W, D, col } = d, fill = Math.min(1, (col.fungus || 0) / 60);
     // Combs of fungus on beds of cut leaf, swelling as the garden is fed; white knots of food on them.
     for (let i = 0; i < 3; i++) {
       const x = W * (0.22 + i * 0.28), k = 0.7 + fill * 0.5 + (i % 2) * 0.1;
@@ -322,7 +322,7 @@ const DRESS = {
   // Build 48: rows of food eggs on clay shelves, more of them the more meat is in store; a nurse's
   // tray of chewed-up egg (meat) at the front.
   larder(d) {
-    const { W, H, D, col } = d, fill = Math.min(1, (col.protein || 0) / 150);
+    const { W, D, col } = d, fill = Math.min(1, (col.protein || 0) / 150);
     for (let row = 0; row < 2; row++) {
       d.put(PROPS.box, [W / 2, 3 + row * 9, -D * 0.8], [W * 0.42, 0.8, 3], '#6a4a32');
       const n = 3 + Math.round(fill * 6);

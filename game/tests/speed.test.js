@@ -2,7 +2,6 @@
 // of the old full scans.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import SIM from '../src/sim/sim.js';
 
 const { nearestItem, itemAt, wanted } = SIM._fast;

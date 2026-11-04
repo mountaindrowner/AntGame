@@ -48,7 +48,7 @@ test('he gulps up to six whole; bite him hard in time and he retches them up', (
 
 test('he dives and surfaces where the ring showed; thirty ants on him pin him', () => {
   const s = wild(), b = s.bosses.duke; b.mode = 'fight'; s.muster = { x: Math.floor(b.hx / T), y: Math.floor(b.hy / T), t0: 0, sent: 9, from: { main: 3, war: 3, garden: 3 } };
-  const out = soldiers(s, 6, b.x + 8 * T, b.y); b.cd = 0; b.diveCd = 0;
+  soldiers(s, 6, b.x + 8 * T, b.y); b.cd = 0; b.diveCd = 0;
   step(s, 0.1, () => { s.colony.protein = 200; });
   assert.ok(b.under && b.dive, 'under'); const tx = b.dive.x, ty = b.dive.y; assert.equal(b.atk.kind, 'ring');
   step(s, 2.5, () => { s.colony.protein = 200; });
