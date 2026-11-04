@@ -12,7 +12,7 @@ Mark: the great evolutions should need "some really costly rare ingredient… ma
   - **The 9th, 10th and 11th guardians** each leave one (a save already past them gets them on load).
   - **The Quarry's deep seam:** one every 20 minutes once her Cutting hall stands. The only steady source.
 - **What it costs:** 1 for the five root great evolutions, 2 for the six after them, 5 for the Supercolony; 22 in all against 14 found plus the Quarry. So you choose your path, and the Quarry matters.
-- **Left out for now:** stored glowrock being dangerous (Mark's call: with the wilds).
+- **Left out for now:** stored glowrock being dangerous; it can come with the wilds.
 - **Also:** the robin test, flaky about 1 run in 20, now runs on a fixed random seed.
 
 ## Nov 3: the great evolutions (build 51)
