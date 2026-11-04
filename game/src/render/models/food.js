@@ -173,6 +173,12 @@ function acorn() {
   parts.push(at(paint(new THREE.CylinderGeometry(0.06, 0.07, 0.35, 4).rotateZ(Math.PI / 2), '#4a3824'), -1.5, 0.72, 0));
   return bake(parts);
 }
+// Build 55: a bottle cap, Old Black's lure: a crimped red-and-silver disc, shiny side up.
+function bottlecap() {
+  const parts = [paint(new THREE.CylinderGeometry(1, 1.06, 0.32, 14), (x, y, z, f) => (y > 0.1 ? (hash(f) < 0.5 ? '#e8e8f0' : '#c8ccd8') : '#c8282a'))];
+  for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2; parts.push(paint(new THREE.BoxGeometry(0.16, 0.34, 0.1).rotateY(-a).translate(Math.cos(a) * 1.07, 0, Math.sin(a) * 1.07), '#a82020')); }
+  return bake(parts.map((g) => at(g, 0, 0.17, 0)));
+}
 // A slug: a long, glistening grey-brown body with two eye stalks. Protein.
 function slug() {
   const g = new THREE.SphereGeometry(1, 12, 6).scale(1.8, 0.42, 0.55).toNonIndexed(), p = g.attributes.position;
@@ -293,6 +299,7 @@ export const FOOD = {
   hotdog: hotdog(),
   chip: chip(),
   acorn: acorn(),
+  cap: bottlecap(),
   slug: slug(),
   bug: bug(),
   shell: shell(),
@@ -329,6 +336,7 @@ export function itemLook(f, COLORS) {
     case 'tomato': return { geo: FOOD.tomato, key: 'tomato', color: '#ffffff', r: Math.min(6, 3.2 + f.amt * 0.13) };
     case 'aphids': return { geo: FOOD.aphids, key: 'aphids', color: '#ffffff', r: 3.6 + Math.min(f.amt, 20) * 0.08 };
     case 'acorn': return { geo: FOOD.acorn, key: 'acorn', color: '#ffffff', r: 6, treat: true };
+    case 'cap': return { geo: FOOD.cap, key: 'cap', color: '#ffffff', r: 5.5, treat: true };
     case 'chip': return { geo: FOOD.chip, key: 'chip', color: '#ffffff', r: 6.5, treat: true };
     case 'apple': return { geo: FOOD.apple, key: 'apple', color: '#ffffff', r: Math.min(6.5, 3.5 + f.amt * 0.12) };
     case 'popcorn': return { geo: FOOD.popcorn, key: 'popcorn', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.16) };

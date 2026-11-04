@@ -1241,6 +1241,34 @@ export class SurfaceView {
         if (!rb.dead && rb.hp < rb.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], rb.x, rb.y, 70 + RA.y, rb.hp / rb.maxHp, '#b04ad0');
       }
     }
+    // Old Black (build 55): the robin's model, bigger and black, a glint of green in his eye. Aloft he circles high
+    // with his shadow below; a snatched ant dangles; on the ground he struts and pecks like the Old Robin.
+    const cw = B.crow;
+    if (cw && !this.oldBlack) {
+      this.oldBlack = robin(); this.oldBlack.group.scale.setScalar(175); this.dyn.add(this.oldBlack.group);
+      this.oldBlackMats = []; this.oldBlack.group.traverse((o) => { if (o.material) { o.material = o.material.clone(); this.oldBlackMats.push(o.material); } });
+      this.oldBlackShadow = new THREE.Mesh(new THREE.CircleGeometry(1, 24).rotateX(-Math.PI / 2), psxBasic({ color: '#000000', transparent: true, opacity: 0.3, depthWrite: false }));
+      this.dyn.add(this.oldBlackShadow); this.crowAnim = { yaw: 0, y: 0 };
+    }
+    if (this.oldBlack) {
+      const R = this.oldBlack, RA = this.crowAnim, show = cw && (!cw.dead || s.t - cw.deadT < 6);
+      R.group.visible = !!show; this.oldBlackShadow.visible = false;
+      if (show) {
+        tele(cw);
+        const aim = cw.air ? Math.atan2(Math.cos(cw.ang || 0), -Math.sin(cw.ang || 0)) : Math.atan2(cw.dy || 0, cw.dx || 1); RA.yaw += wrapAngle(aim - RA.yaw) * Math.min(1, fdt * 6);
+        let y = 0; if (cw.dead) y = 0; else if (cw.air && cw.mode === 'fight') y = 160; else if (cw.hop) y = Math.sin(Math.PI * Math.min(1, cw.hop.t / 0.35)) * 40;
+        RA.y += (y - RA.y) * (cw.hop ? 1 : Math.min(1, fdt * 3));
+        R.group.position.set(cw.x, RA.y, cw.y); R.group.rotation.set(cw.dead ? 1.4 : 0, -RA.yaw, 0);
+        const peck = cw.peckAt != null && s.t - cw.peckAt < 0.35 ? Math.sin(Math.PI * (s.t - cw.peckAt) / 0.35) : cw.atk && cw.atk.what === 'peck' ? 0.25 : 0;
+        R.body.rotation.z = -0.75 * peck; R.head.rotation.z = -0.4 * peck;
+        const flap = RA.y > 4 || (cw.beatAt != null && s.t - cw.beatAt < 0.6) || (cw.atk && cw.atk.what === 'beat');
+        for (const w of R.wings) w.pivot.rotation.x = flap ? w.s * (0.2 + Math.sin(t * 22) * 0.9) : w.s * (cw.pinned ? 0.35 + 0.15 * Math.sin(t * 20) : 0.05);
+        const col = !cw.dead && flashed(s, cw) && Math.sin(t * 40) > 0.3 ? '#ffc8b8' : cw.pinned ? '#5a5a48' : '#26262c';
+        for (const m of this.oldBlackMats) m.color.set(col);
+        if (RA.y > 6) { this.oldBlackShadow.visible = true; this.oldBlackShadow.position.set(cw.x, 0.8, cw.y); this.oldBlackShadow.scale.setScalar(80); this.oldBlackShadow.material.opacity = 0.22; }
+        if (!cw.dead && cw.hp < cw.maxHp && bi < 2) this._placeBar(this.bossBars[bi++], cw.x, cw.y, 80 + RA.y, cw.hp / cw.maxHp, '#3a3a5a');
+      }
+    }
     // Old Warty (build 31): the strike toad's model, twice the size, darker. It turns to face, lashes its
     // tongue down the lane, leaps in an arc, puffs up in its second phase; a swallowed ant bulges its throat.
     const tw = B.toad, WK = 96;

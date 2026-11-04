@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the wilds, step 3: Old Black (build 55)
+
+The second wild boss, roosting in the side yard on the west edge. Like the Duke he wakes only for a muster of three colonies at his roost.
+
+- **2,200 health.** The Old Robin's model, a third bigger and black.
+- **Aloft** he circles his roost, out of reach of bites:
+  - **snatches:** an orange ring on an ant, then he carries it off; it's lost in 5 seconds unless he's brought down first;
+  - **steals glowrock** from your stores, one every 90 seconds while he's up. He gives it all back when he falls.
+- **The lure:** a **bottle cap** lies by his roost (and comes back a minute after it's gone). Lift it with a crew of four and carry it within 12 tiles of him, and down he comes for it: 10 seconds on the ground (7 when enraged), and he drops any ant he holds. Then 8 seconds before the cap works again.
+- **On the ground** he pecks (a red dot), beats his wings at a crowd of eight, and hops, like the Old Robin. **Twenty ants on him keep him down.**
+- **Beaten:**
+  - his feather: the Bramble Lot is yours, so no birds strike anywhere on the west side, and your outposts there can't be knocked flat;
+  - the west edge quiets;
+  - two glowrock, plus what he stole.
+- **Also:** the duel test "a fight on the ground" runs on a fixed seed now.
+
 ## Nov 4: the wilds, step 2: the Duke (build 54)
 
 Mark: "keep going." The first wild boss, in the Ditch (the drain, on the south row).

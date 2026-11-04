@@ -3,6 +3,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import SIM from '../src/sim/sim.js';
 
+// Build 55: a fixed seed ("a fight on the ground" turned on the dice now and then).
+let seed = 777; Math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+
 const T = SIM.T;
 function arena(seed = 7) {
   const s = SIM.create(seed), q = s.queen;
