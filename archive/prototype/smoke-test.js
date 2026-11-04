@@ -1,4 +1,4 @@
-// Run from anywhere: node prototype/smoke-test.js (rebuild underfoot-poc.html first if you changed the parts).
+// Run from anywhere: node archive/prototype/smoke-test.js (rebuild underfoot-poc.html first if you changed the parts).
 const fs=require('fs'); const path=require('path'); const html=fs.readFileSync(path.join(__dirname,'underfoot-poc.html'),'utf8');
 const js=html.split('<script>')[1].split('</script>')[0];
 const els={}; const mk=()=>{ const o={style:{},classList:{toggle(){},add(){},remove(){}},ls:{},addEventListener(t,f){o.ls[t]=f},setPointerCapture(){},dataset:{},getContext:()=>new Proxy({},{get:(t,k)=>k==='globalAlpha'?1:()=>{}}),innerHTML:'',textContent:''}; return o; };

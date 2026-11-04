@@ -1,5 +1,5 @@
 // Underfoot simulation. No DOM, no renderer: the views read this state; nothing here knows how it is drawn.
-// This file only gathers the pieces (one module per topic, listed in docs/CODE.md) into the SIM object
+// This file only gathers the pieces (one module per topic, listed in game/README.md) into the SIM object
 // everything else uses. The design of record is docs/HANDOFF.md; why things changed is docs/DECISIONS.md.
 import { ZONES, ZONE_OF } from './growth.js';
 import { AREA, AREAS, REGION, SCALE, areaBounds } from './yard.js';

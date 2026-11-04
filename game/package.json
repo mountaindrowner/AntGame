@@ -1,8 +1,8 @@
 {
   "name": "underfoot",
-  "version": "0.7.0",
+  "version": "0.60.0",
   "private": true,
-  "description": "Underfoot: an ant-colony game. PS1-style 3D renderer over the build 6 simulation.",
+  "description": "Underfoot: an ant-colony game in a backyard, with a PS1-style 3D renderer.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,10 @@
     "test:e2e": "node scripts/e2e.mjs",
     "gallery": "vite -c vite.gallery.config.js --open /gallery.html",
     "models": "node scripts/export-models.mjs",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "playtest": "node scripts/playtest.mjs",
+    "film": "node scripts/film.mjs",
+    "itch-art": "node scripts/itch-art.mjs"
   },
   "dependencies": {
     "three": "0.180.0"

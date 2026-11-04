@@ -5,5 +5,5 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   base: './',
   server: { host: true },
-  build: { target: 'es2020', chunkSizeWarningLimit: 900 },
+  build: { target: 'es2020', chunkSizeWarningLimit: 1500 }, // one bundle (three.js is most of it): the artifact page loads a single script
 });

@@ -137,7 +137,7 @@ Reads colony health, population trend, time since last event, whether you're out
 
 ## 4. The prototype (build 6) — exactly what exists
 
-Live at a claude.ai artifact (Mark has the link). Files in `prototype/`:
+Live at a claude.ai artifact (Mark has the link). Files in `archive/prototype/`:
 - `underfoot-poc.html` — the whole playable page (head + sim + app concatenated). ~100 KB. Open it on a phone.
 - `sim.js` — the simulation. **No DOM.** `module.exports = SIM` when run under Node, so it can be unit-tested headlessly.
 - `app.js` — Canvas 2D renderer, input, HUD, sheets, intro, explainers, save/load.
@@ -241,6 +241,6 @@ Run `UNDERFOOT_STYLE_BRIEF.md` in Claude Code: build `styles.html` rendering the
 
 ## 7. Reference index
 - `UNDERFOOT_STYLE_BRIEF.md` — art-direction generation brief (deep specs, prompts, comparisons).
-- `prototype/` — build 6 source and the assembled page, smoke harness, style-mockup generator.
+- `archive/prototype/` — build 6 source and the assembled page, smoke harness, style-mockup generator.
 - Design doc (Claude Doc, "Ant Colony Game — Design Doc (working title: Underfoot)") — the longer narrative version of §2–3 including the full area catalog, tree tables, storyteller deck, decisions list, campaign arc, and the ten-style table. This handoff supersedes it where they differ.
 - SimAnt sources used: Wikipedia; the original manual (via the OpenAnt wiki); COMPUTE! reviews (Jul/Sep 1992); GameFAQs strategy guide (Aristotle47); TV Tropes; lparchive playthrough; PC Gamer on Empires of the Undergrowth; `gdavidss/simant-snes` (reference only).

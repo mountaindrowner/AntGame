@@ -1,6 +1,6 @@
 # Underfoot (game)
 
-The playable game: build 6's simulation, rendered in 3D with a PlayStation 1 look. Phone-first, portrait.
+The playable game: an ant-colony simulation rendered in 3D with a PlayStation 1 look. Phone-first, portrait. This page is the map of the code: where everything lives and the rules that keep it tidy.
 
 ## Run it
 
@@ -8,103 +8,105 @@ The playable game: build 6's simulation, rendered in 3D with a PlayStation 1 loo
 cd game
 npm install
 npm run dev        # http://localhost:5173, and on your LAN for testing on a phone
-npm test           # headless simulation tests (no browser)
+npm test           # headless simulation tests (node:test, no browser)
+npm run lint       # catches mistakes (undefined names, duplicate keys, leftovers); not a style checker
 npm run test:e2e   # builds, serves and plays the opening in headless Chromium (needs Playwright)
 npm run build      # static site in dist/, deployable anywhere (relative paths)
-node scripts/playtest.mjs sensible 7 40   # a bot plays 40 minutes through the UI's actions and reports milestones
-node scripts/film.mjs out/               # records the opening film to out/underfoot-opening.mp4 (needs ffmpeg)
+npm run playtest -- sensible 7 40   # a bot plays 40 minutes through the UI's actions and reports milestones
+npm run gallery    # every model on a turntable (gallery.html)
+npm run models     # writes each model as a .glb (assets/models/) for Blender or any 3D viewer
+npm run film -- out/         # records the opening film to out/underfoot-opening.mp4 (needs ffmpeg)
+npm run itch-art   # the itch.io page art (docs/itch/)
 ```
 
-On a phone: run `npm run dev`, then open the "Network" URL Vite prints from a phone on the same Wi-Fi.
+On a phone: run `npm run dev`, then open the "Network" URL Vite prints from a phone on the same Wi-Fi. Add `?debug` to the address for test tools (the Help page's +200 ants button).
 
 ## Layout
 
 ```
 game/
-├── index.html              page shell: canvas, HUD, bars, sheet
+├── index.html               page shell: canvas, HUD, bars, sheet
+├── gallery.html             the model gallery (src/gallery.js)
 ├── src/
-│   ├── main.js             boot, shared app state, fixed-step loop, render loop, autosave
-│   ├── config.js           tunables: save key, PS1 pixel size, cameras, creature scale, colours
-│   ├── sim/
-│   │   ├── sim.js          the simulation (build 6, plus builder rules, food kinds, the fight to survive). No DOM.
-│   │   ├── growth.js       build 12: 🧬 Genes, ant upgrade levels, veteran ranks, the evolution tree (data the sim and UI share)
-│   │   └── yard.js         the yard: 70 regions at 2× scale, landmarks, food tables, hazards (feet, birds, toads, acorns, spray, fire ants), nest sites, the yard plan
-│   ├── game/
-│   │   └── save.js         localStorage save/load (reads build 6 v5 saves)
+│   ├── main.js              boot, shared app state, fixed-step loop, render loop, autosave, the map photo
+│   ├── config.js            tunables: save key, PS1 look, cameras, creature scale, colours
+│   ├── sim/                 the simulation. No DOM, no renderer (see "The simulation" below)
+│   ├── game/save.js         localStorage save and load, backups, a save set aside if it won't load
 │   ├── render/
-│   │   ├── ps1/
-│   │   │   ├── pipeline.js   low-res framebuffer → 15-bit dither → nearest upscale
-│   │   │   ├── materials.js  Lambert + vertex snapping + affine texture mapping
-│   │   │   └── textures.js   procedural nearest-filtered textures and the palette
-│   │   ├── models/
-│   │   │   ├── creatures.js  low-poly ants (3 walk frames per body plan)
-│   │   │   ├── bugs.js       the wolf spider (8-frame gait) and the woolly bear caterpillar
-│   │   │   ├── bird.js       the robin that hunts the garden and the great lawn
-│   │   │   ├── toad.js       the toad of the wild corner and wet strip (and its tongue), and a falling acorn
-│   │   │   ├── sneaker.js    the red high-top (and the leg in it): the film's stomp, and feet in play
-│   │   │   ├── food.js       each food kind, treats, dew beads; what an ant carries
-│   │   │   ├── crowd.js      instanced batches: hundreds of ants in a few draw calls
-│   │   │   ├── props.js      items, eggs and furniture primitives
-│   │   │   └── roomDecor.js  each room's wall pattern and live decorations
-│   │   ├── geometry/
-│   │   │   └── contour.js    marching squares: a field → smooth outlines → THREE.Shapes
-│   │   ├── motion.js         moving vs still creatures (idle breathing, scraping, biting)
-│   │   └── views/
-│   │       ├── surfaceView.js  the yard: tilted top-down, creatures, items, scent overlay, weather, feet and birds
-│   │       ├── yardScenery.js  each region's ground and landmarks, built as the camera comes near and dropped when it's far
-│   │       └── nestView.js     the cutaway: rounded tunnels traced from nest cells, rooms, orders, queen
-│   ├── ui/
-│   │   ├── ui.js           HUD, hints, queen and build sheets, explainers, intro, buttons
-│   │   ├── copy.js         every player-facing string (verbatim from build 6)
-│   │   ├── labels.js       crisp room and band labels over the 3D frame
-│   │   ├── title.js        the title screen and main menu, and the options
-│   │   ├── callout.js      tap a thing on the surface: a card with its name and what it's for
-│   │   └── ui.css
-│   ├── audio/
-│   │   ├── sfx.js          game sound effects, synthesized (docs/SOUND.md): blocks, recipes, loops
-│   │   ├── watch.js        what plays: compares the game frame to frame, plus button taps
-│   │   └── music.js        the music: five synthesized layers mixed by mood (title, yard, nest, danger, rain)
-│   ├── intro/
-│   │   ├── cinematic.js    the opening film: shots, title cards, actors, timeline
-│   │   └── sound.js        its WebAudio score and sound gags
-│   └── input/
-│       └── pointer.js      tap, hold to walk, pinch, drag; raycasts into the active view
-├── tests/                  node:test checks on the sim (sim, builders, creatures, strikes, growth, outposts)
-└── scripts/
-    ├── e2e.mjs             browser playthrough with screenshots
-    ├── playtest.mjs        headless bot that plays whole sessions (sensible, military, cheese, idle)
-    └── film.mjs            records the opening film, frame by frame, with its score
+│   │   ├── ps1/             pipeline.js (low-res framebuffer, colour quantising, dither), materials.js
+│   │   │                    (vertex snapping), textures.js (procedural textures, the palette)
+│   │   ├── views/           surfaceView.js (the yard: creatures, items, bosses, weather), yardScenery.js
+│   │   │                    (each region's ground and landmarks, built as you come near), nestView.js
+│   │   │                    (the cutaway: tunnels, rooms, orders, the queen)
+│   │   ├── models/          low-poly geometry, one file per family: creatures (ants), bugs (spider,
+│   │   │                    caterpillar), critters, bird, toad, bosses (guardians), wildBosses (the wild
+│   │   │                    bosses, the Sinkhole pit), food, props, nestProps, roomDecor, underground,
+│   │   │                    house, sneaker, curios, shadows, crowd (instanced batches)
+│   │   ├── geometry/contour.js   marching squares: a field → smooth outlines → THREE.Shapes
+│   │   ├── motion.js        moving vs still creatures (idle breathing, scraping, biting)
+│   │   └── dispose.js       freeing a subtree's GPU memory
+│   ├── ui/                  ui.js (HUD, bars, sheets, explainers, intro), copy.js (player-facing text),
+│   │                        evolveView.js (the Evolution book), mapView.js (the yard map), callout.js (tap
+│   │                        a thing for its card), title.js (title screen, menu, options), labels.js,
+│   │                        icons.js, ui.css, themes.css
+│   ├── audio/               sfx.js (synthesized sounds, docs/SOUND.md), watch.js (what plays when),
+│   │                        music.js (five layers mixed by mood)
+│   ├── intro/               cinematic.js (the opening film), sound.js (its score)
+│   ├── input/pointer.js     tap, hold to walk, pinch, drag; raycasts into the active view
+│   └── gallery.js           the model gallery page
+├── tests/                   node:test checks on the sim, one file per topic
+├── scripts/                 e2e.mjs, playtest.mjs, film.mjs, itch-art.mjs, export-models.mjs
+└── assets/models/           the .glb exports (npm run models)
 ```
 
-### Rules that keep it maintainable
+## The simulation (`src/sim/`)
 
-- **The sim never imports the renderer, the UI or the DOM.** Views read sim state and never write it. Input and UI change state only through the sim's public API (`queueEgg`, `toggleDigOrder`, `queueRoom`, …) or the player fields build 6 already used (`tx/ty`, `ntx/nty`, `mark`, `holding`).
-- **Adding a room or caste:** add it in `sim.js` (`ROOMS`/`CASTES` and their effects) and its copy in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js` (`WALLS` and `DRESS`); castes get a colour in `config.js` (`COLORS`).
-- **Tuning the look** is all in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (more or less wobble), `colorLevels` and `dither` (grain), `animFps`, plus the camera and creature-scale settings.
+`sim.js` gathers the modules below into one `SIM` object; everything outside `sim/` uses only that (`import SIM from './sim/sim.js'`).
+
+| Module | What it holds |
+|---|---|
+| `core.js` | The fixed tables: map and nest sizes, soil, nest sections, castes, rival colonies, rooms, foods, forage and queen levels. Imports no other sim module, so anything can read it while the modules load. |
+| `yard.js` | The yard: 70 regions, their layouts, landmarks, food tables, hazards, nest sites. Data only. |
+| `growth.js` | Data the sim and UI share: ant upgrades, ranks, the evolution tree, outposts' prizes, goals, zones. |
+| `state.js` | A new game: `create()`, a colony's starting state, sleeping rivals. |
+| `tick.js` | The main `tick()`, and day and night. |
+| `world.js` | The surface: building the world, fog of war, spawning, items on the ground, walking, pathfinding. |
+| `nest.js` | The cutaway: digging, rooms, fill orders, nest sections, glowrock, builders, rain and cave-ins. |
+| `colony.js` | Running a colony: deposits, deaths, costs, the colony tick (food, water, eggs, upkeep, starvation), hatching, going in and out. |
+| `jobs.js` | Each kind of ant's list of duties. |
+| `progress.js` | Genes, ranks and names, upgrades, evolutions, what they add up to, the goals board. |
+| `outposts.js` | Outposts and held regions. |
+| `daughters.js` | Daughter colonies: flights, tunnels, her rooms, her ants (real near you, numbers far away), travel. |
+| `wilds.js` | The outer ring stirring, standing orders and musters, climbing the Oak, Cordyceps spores. |
+| `raids.js` | Rival colonies' brains, their raids, and the raids you lead. |
+| `combat.js` | Ant against ant: dice duels. |
+| `player.js` | Your ant: moving, actions, your crew (attack, hold, follow), zones taken. |
+| `abilities.js` | Your ant's four abilities. |
+| `spider.js` | The spider and the cat. |
+| `hazards.js` | The mower, antlion pits, feet and birds, fire ants. |
+| `creatures.js` | Small creatures and hunters. |
+| `bosses.js` | Guardians and the wild bosses: their tables and fights. |
+| `events.js` | The director and events (swarm days, heatwaves, the Cordyceps outbreak). |
+| `curios.js` | Lost human things hidden round the yard. |
+| `commands.js` | What the UI asks for: recruit, eggs, rooms, upgrades, and the numbers it shows. |
+| `saveload.js` | `serialize`, save versions and migrations, `deserialize`. |
+
+## Rules that keep it maintainable
+
+- **The sim never imports the renderer, the UI or the DOM.** Views read sim state and never write it. Input and the UI change state only through `SIM`'s functions (`queueEgg`, `toggleDigOrder`, `queueRoom`, …) or the player fields (`tx/ty`, `ntx/nty`, `mark`).
+- **`core.js` stays pure data:** it must not import another sim module. Other modules can call each other freely, because their top-level code only declares things.
+- **Anything new on an ant or the colony that must survive a reload** goes in `saveload.js` (`serialize`'s field lists). `tests/saveload.test.js` and `tests/regressions-code-audit.test.js` show how to check it.
+- **Adding a room or caste:** add it to `ROOMS` or `CASTES` in `sim/core.js` (and its effects where they apply), and its text in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js`; castes get a colour in `config.js` (`COLORS`).
+- **Before committing:** `npm run lint` and `npm test` both clean; `npm run test:e2e` after UI changes.
+- **Tuning the look** is in `config.js`: `RENDER.pixelSize` (chunkier or finer pixels), `snapDivisor` (wobble), `colorLevels` and `dither` (grain), `animFps`, plus the camera and creature-scale settings.
 
 ## How the PS1 look is made
 
-1. **Low resolution.** The canvas is the framebuffer, at the CSS size divided by `pixelSize` (1.75 by default, rounded to whole device pixels; about 223×482 on a phone). The browser upscales it with `image-rendering: pixelated`. This is the look and also the cheapest thing a phone can draw.
+1. **Low resolution.** The canvas is the framebuffer, at the CSS size divided by `pixelSize` (1 by default, in whole device pixels; bigger on a large desktop window). The browser upscales it with `image-rendering: pixelated`.
 2. **Vertex snapping.** Every material rounds clip-space positions to the framebuffer's pixel grid (`snapDivisor` 1), so polygons wobble as the camera moves.
-3. **Affine textures.** UVs interpolate without perspective correction, so 16–32 px textures swim across big faces.
-4. **Reduced colour.** One post pass converts to sRGB and quantises to 48 levels per channel with a half-strength 4×4 Bayer dither (`colorLevels`, `dither`; 31 and 1 give true 15-bit grain).
-5. **Stepped animation.** Walk cycles have three baked frames advanced at 10 fps; the camera and simulation stay smooth.
+3. **Reduced colour.** One post pass converts to sRGB and quantises to 96 levels per channel with a light 4×4 Bayer dither (`colorLevels`, `dither`; 31 and 1 give true 15-bit grain).
+4. **Stepped animation.** Walk cycles are baked frames advanced at 14 fps (`animFps`); the camera and simulation stay smooth.
 
-## Differences from build 6
+## Saves
 
-- **Rendering:** Canvas 2D is replaced by the 3D PS1 renderer. The surface is a three-quarter top-down view; the nest is a side cutaway with real tunnel depth. The controls, sheets, intro and explainers are the same.
-- **No browser dialogs:** `confirm()` dialogs (Reset, Remove room) became in-page sheets, because some hosts block browser dialogs.
-- **Copy:** two stale hints that still mentioned build 4's fixed room slots now point to the Build catalog.
-- **Layout:** the HUD hint no longer runs under the right-hand buttons.
-- **Desktop:** the mouse wheel zooms.
-- **Builders (sim):** each builder works one job, only once it is standing there; one builder per brick, up to three per room; soil takes 6/12/20 builder-seconds.
-- **Food and creatures (sim):** food has kinds (crumb, seed, berry, popcorn) and rare treats worth 35–50; the spider roams the patch, passes the nest, and leaves and returns through the edges.
-- **Tunnels:** drawn as smooth rounded shapes over the same cell grid; a brick being dug visibly erodes.
-- **Saves:** the save key is now `underfoot-v6`; v5 saves from build 6 still load.
-
-## Not done yet
-
-- A PS1-styled HUD (font and panels); the HUD is still build 6's.
-- Audio.
-- Level of detail for 1,000+ ants.
-- Frame-rate numbers from a real phone. The `+200` button is the test, and the fps counter is in the HUD.
+The save key is `underfoot-v11` (`config.js`), with a backup a minute old (`-prev`), the map's photo (`-map`), and a save that failed to load kept aside (`-bad`). Saves from before the whole yard (v10 and earlier) can't load and are cleared on start. The format and its versions are in `sim/saveload.js`.

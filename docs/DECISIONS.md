@@ -2,6 +2,49 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 4: the code audit (build 60)
+
+Mark: "Do a thorough look at all our project code… confirm everything is where it should be and clean and organized… further perfect our project from a code aspect." An automated lint pass, then three read-throughs (simulation, rendering, UI and repo layout), each finding checked before it was fixed. There are no balance changes; every fix is a bug or a mismatch between near and far play.
+
+**Bugs fixed.** The simulation ones are pinned by `tests/regressions-code-audit.test.js`, which fails on the old code.
+- **Raids could stop for good.** A raid never ended if the raiding colony's queen died while it was out. That blocked every later raid, kept the Hive mind bonus on, and gave no raid report.
+- **Musters and fighters' targets weren't saved.** After a reload, End muster found no one, and fighters forgot the boss or bug they were on.
+- **Far daughters starved 5× too fast.** Each one starved on her own clock and ignored Iron Stomach. Now the colony takes one famine death at a time, drawn from near and far ants by their numbers, as meat starvation already was.
+- **Lone infected ants never rotted.** An infected ant with no one near never rotted away; now it goes after two minutes, as described.
+- **Daughters lost things when you walked away.** Her ants' water, meat, grit and chitin vanished (only food arrived), and so did her veterans' names and ranks. Now the loads arrive, and the veterans come back as themselves.
+- **The crew's war cry never played.** Two sounds were both called "charge", and the beetle's thunder replaced it.
+- **Rendering:**
+  - the hornet-dive warning ring drew with broken sizes;
+  - every infected ant took the first one's tint;
+  - turned ants wore two stalks.
+- **Menus with progress bars rebuilt 5 times a second**, which could swallow a tap (the egg menu while eggs hatch). The bars now move in place.
+- **A new game or a load leaked graphics memory** (materials and textures).
+- **Old saves filled storage.** Saves from before the whole yard (v10 and earlier) can never load. They're now cleared on start, so they can't fill the browser's storage.
+- **A test button was visible to everyone.** The "+200 ants" button now shows only with `?debug` in the address.
+- **Corrected text:** two goals now say what they count ("Kill 10 Pavement ants", "Build 6 rooms"), and the lost-colony hint names the real button.
+
+**Organisation:**
+- **The simulation is split by topic.** It was one 4,000-line file; now it's 23 modules in `game/src/sim/`, one per topic, each headed with what it holds. `sim.js` gathers them into the same `SIM` object as before, so nothing outside changed.
+  - A script did the split from the parsed code, moving each statement whole with its comments.
+  - 12 minutes of seeded play give a byte-identical save before and after.
+- **Dead code removed:**
+  - the old Evolve sheet (replaced by the Evolution book in build 14 but still in the code);
+  - functions and exports nothing used;
+  - unused variables and imports;
+  - unused CSS.
+- **Stale comments corrected** across the sim, the renderer and the film.
+- **`npm run lint`.** ESLint now checks for mistakes (not style) and passes with no warnings.
+- **Tests renamed by topic.** The build-numbered test files now have topic names (`qa47` → `regressions-stress`, `crow55` → `wild-nevermore`, and so on).
+- **Old material archived.** `prototype/` and the two art-direction folders moved into `archive/`.
+- **READMEs rewritten.** The root README and `game/README.md` were rewritten; the latter is now the map of the code.
+- **New npm scripts:** `npm run playtest`, `film` and `itch-art`.
+
+**Found, not done (for later):**
+- **Duplicated helpers in the renderer.** It has about 10 copies of the small colouring helper and 6 of the merge helper; they could share one file.
+- **`surfaceView.js` could split up.** It draws all 12 bosses in one long function; each could get its own file, as the sim now has.
+- **The model gallery and the `.glb` exports are behind.** They don't have the newer creatures and the wild bosses.
+- **One design question:** the Cordyceps outbreak's spores also infect rival ants, and their zombies count toward the event. Is that intended?
+
 ## Nov 4: the wild bosses' new look; Old Black becomes Nevermore (build 59)
 
 Mark: "Old Black is a bad name, and should be more raven-esque / Cordyceps should be a different ant design, more zombie-esque / the crater reads as a mound, not a hole / let's vastly improve the visual look of these." Each now has its own model (`render/models/wildBosses.js`).
