@@ -1,7 +1,7 @@
 // Build 20: curios, the lost human things in every region. Each is about one
 // unit across (the renderer scales it), vertex-coloured, low-poly, lying on
 // the ground: origin on the ground, +Y up.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { V, paint, blob, strut, bake } from './kit.js';
 
 const cyl = (r0, r1, h, seg, y, fn) => paint(new THREE.CylinderGeometry(r1, r0, h, seg).translate(0, y + h / 2, 0), fn);

@@ -10,7 +10,7 @@
 // house's back wall faces the yard at Z = front; the house runs back to
 // Z = front - depth. Sizes are in px (S = the yard's scale, T = px a tile).
 import * as THREE from 'three';
-import { paint as paintFaces, bake as merge } from './kit.js';
+import { paintFacets as paintFaces, bakeFacets as merge } from './kit.js'; // the house is world: faceted
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture } from '../ps1/textures.js';
 

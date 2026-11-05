@@ -1,16 +1,12 @@
 // Small low-poly props shared by both views. Unit-sized; scale per use.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { hash as h } from './kit.js';
 
-// White, so the instance colour tints it; fn (x, y, z, face) → a grey per
-// face adds shading that survives any tint (layer 5: seams, speckles, ribs).
+// White, so the instance colour tints it; fn (x, y, z, face) → a grey that adds shading that survives any
+// tint (layer 5: seams, ribs). Build 64, Lean: a grey per vertex, smooth, with no per-face speckle (face 0).
 function colored(g, k = 1) {
-  g = g.index ? g.toNonIndexed() : g;
   const p = g.attributes.position, c = new Float32Array(p.count * 3);
-  for (let i = 0; i < p.count; i += 3) {
-    const v = typeof k === 'function' ? k((p.getX(i) + p.getX(i + 1) + p.getX(i + 2)) / 3, (p.getY(i) + p.getY(i + 1) + p.getY(i + 2)) / 3, (p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2)) / 3, i / 3) : k;
-    c.fill(v, i * 3, i * 3 + 9);
-  }
+  for (let i = 0; i < p.count; i++) { const v = typeof k === 'function' ? k(p.getX(i), p.getY(i), p.getZ(i), 0) : k; c[i * 3] = c[i * 3 + 1] = c[i * 3 + 2] = v; }
   g.setAttribute('color', new THREE.BufferAttribute(c, 3));
   g.computeVertexNormals();
   return g;

@@ -13,7 +13,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, rng, noise2 } from '../ps1/textures.js';
 import { CURIO_GEO } from './curios.js';
-import { paint as paintFaces } from './kit.js';
+import { paintFacets as paintFaces } from './kit.js'; // the soil is world: faceted
 
 const col = new THREE.Color();
 // Painted with a little brightness jitter per face, seeded, and no UVs.

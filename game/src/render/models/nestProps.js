@@ -4,7 +4,7 @@
 // A few are greyscale so one model can be tinted per room (the cradle).
 //
 // Each model's origin and size are noted; room dressing scales them.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { V, paint, blob, strut, bake, hash } from './kit.js';
 import { antGeometry, outfitGeometry, FOOT } from './creatures.js';
 import { COLORS } from '../../config.js';
@@ -227,6 +227,7 @@ function shieldPlate() {
 // Mirror a model left to right, keeping its faces facing out.
 function flipX(src) {
   const g = src.clone().scale(-1, 1, 1);
+  if (g.index) { const ix = g.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } g.computeVertexNormals(); return g; } // (Lean models are indexed: swap the corners there)
   for (const name of Object.keys(g.attributes)) {
     const a = g.attributes[name], n = a.itemSize;
     for (let i = 0; i < a.count; i += 3) for (let k = 0; k < n; k++) { const t = a.array[(i + 1) * n + k]; a.array[(i + 1) * n + k] = a.array[(i + 2) * n + k]; a.array[(i + 2) * n + k] = t; }

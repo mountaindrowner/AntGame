@@ -3,7 +3,7 @@
 // dew is a cluster of clear beads, and treats glint.
 //
 // Every geometry rests on y = 0 and spans roughly -1..1, scaled by `r`.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { paint, bake, hash } from './kit.js';
 import { PROPS } from './props.js';
 import { alateGeometry } from './bosses.js';

@@ -10,7 +10,7 @@
 //   stalk: a Cordyceps fruiting body, a dead ant at its foot.
 //   alate: a winged queen ant fallen on the ground (Swarm day).
 // Local frame: +X forward, +Y up, +Z left; origin on the ground.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { V, paint, blob, strut, bake, hash } from './kit.js';
 
 function leg(hip, foot, up, r0, r1, c0, c1) {

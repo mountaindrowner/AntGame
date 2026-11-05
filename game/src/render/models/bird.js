@@ -1,7 +1,7 @@
 // A robin: grey-brown back, orange breast, yellow beak. Built along +X (beak
 // forward), standing on y = 0, about 2 units long; the head and each wing are
 // their own pivots so it can peck and flap.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { psx } from '../ps1/materials.js';
 import { paint as paintFaces } from './kit.js';
 

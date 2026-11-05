@@ -1,6 +1,6 @@
 // The sneaker that comes down on the yard: in the opening film, and on the
 // Back Steps, the Grill and the Swing Set in play.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { psx } from '../ps1/materials.js';
 import { rampTexture } from '../ps1/textures.js';
 

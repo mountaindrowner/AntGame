@@ -11,9 +11,9 @@ import { AREA, AREAS, SCALE as S, areaBounds } from '../../sim/yard.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 import { houseLayout, buildHouse } from '../models/house.js';
-import { cavedPitGeometry, pitGlow } from '../models/wildBosses.js';
+import { cavedPitGeometry, pitGlow } from '../models/sinkhole.js';
 import { disposeTree } from '../dispose.js';
-import { paint as paintFaces } from '../models/kit.js';
+import { paintFacets as paintFaces } from '../models/kit.js'; // the world stays faceted (build 64)
 
 const T = 16;
 

@@ -3,7 +3,7 @@
 // vertices: banded legs, a striped back, fuzz with pale tips.
 //
 // Local frame as for ants: +X forward, +Y up, +Z to the left.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { V, paint, blob, strut, bake, hash } from './kit.js';
 
 const UP = V(0, 1, 0);

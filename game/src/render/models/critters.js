@@ -6,7 +6,7 @@
 //
 // Local frame: +X forward, +Y up, +Z to the left. Origin on the ground under
 // the body, so a model stands where it is put.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { V, paint, blob, strut, bake } from './kit.js';
 
 

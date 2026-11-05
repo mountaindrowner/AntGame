@@ -1,7 +1,7 @@
 // A toad: a squat, warty brown body, gold eyes, folded back legs. Built along
 // +X (mouth forward), sitting on y = 0, about 2 units long. The tongue is its
 // own mesh along +X from the mouth, scaled to reach.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { psx } from '../ps1/materials.js';
 import { paint as paintFaces, bake as bakeParts, hash as hsh } from './kit.js';
 

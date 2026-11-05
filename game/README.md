@@ -42,8 +42,10 @@ game/
 │   │   ├── models/          low-poly geometry, one file per family: creatures (ants), bugs (spider,
 │   │   │                    caterpillar), critters, bird, toad, bosses (guardians), wildBosses (the wild
 │   │   │                    bosses, the Sinkhole pit), food, props, nestProps, roomDecor, underground,
-│   │   │                    house, sneaker, curios, shadows, crowd (instanced batches); kit.js holds the
-│   │   │                    tools they're all built with (paint, blob, strut, bake, hash)
+│   │   │                    house, sneaker, curios, shadows, crowd (instanced batches), sinkhole (the pit).
+│   │   │                    kit.js holds the tools they're built with: paint, blob, strut, bake (the Lean
+│   │   │                    style, build 64) and paintFacets, bakeFacets (the world's faceted style);
+│   │   │                    lowpoly.js is three.js with every rounded shape capped to a few segments
 │   │   ├── geometry/contour.js   marching squares: a field → smooth outlines → THREE.Shapes
 │   │   ├── motion.js        moving vs still creatures (idle breathing, scraping, biting)
 │   │   └── dispose.js       freeing a subtree's GPU memory
@@ -98,7 +100,7 @@ game/
 - **The sim never imports the renderer, the UI or the DOM.** Views read sim state and never write it. Input and the UI change state only through `SIM`'s functions (`queueEgg`, `toggleDigOrder`, `queueRoom`, …) or the player fields (`tx/ty`, `ntx/nty`, `mark`).
 - **`core.js` stays pure data:** it must not import another sim module. Other modules can call each other freely, because their top-level code only declares things.
 - **Anything new on an ant or the colony that must survive a reload** goes in `saveload.js` (`serialize`'s field lists). `tests/saveload.test.js` and `tests/regressions-code-audit.test.js` show how to check it.
-- **Adding a model:** build it with `render/models/kit.js`, and add it to `src/gallery.js` so it shows in the gallery and `npm run models` exports it. **A boss's look** goes in its own `render/views/bosses/<name>.js`, listed in `BOSS_VIEWS` in `surfaceView.js`.
+- **Adding a model:** creatures and objects are Lean: import THREE from `./lowpoly.js` and build with `render/models/kit.js` (`paint`, `blob`, `strut`, `bake`); world pieces use plain `three` and `paintFacets`/`bakeFacets`. Build it and add it to `src/gallery.js` so it shows in the gallery and `npm run models` exports it. **A boss's look** goes in its own `render/views/bosses/<name>.js`, listed in `BOSS_VIEWS` in `surfaceView.js`.
 - **Adding a room or caste:** add it to `ROOMS` or `CASTES` in `sim/core.js` (and its effects where they apply), and its text in `ui/copy.js`. Rooms then get a wall pattern and props in `render/models/roomDecor.js`; castes get a colour in `config.js` (`COLORS`).
 - **The HUD shows only what's usable or known (build 62):** a button appears when it would work; a material chip once `SIM.resSeen` says the colony has met it or needs it (rules in `sim/progress.js`, `SEEN_RULES`). New buttons and materials should follow suit.
 - **Before committing:** `npm run lint` and `npm test` both clean; `npm run test:e2e` after UI changes.

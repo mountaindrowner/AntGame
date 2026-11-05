@@ -2,6 +2,28 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 5: every creature and object in the Lean style (build 64)
+
+Mark, after the ant lab and the bosses in Lean: "Lean looks better overall… apply this to every single ant and boss and model everything, maybe not the world itself for now." Then: "Keep the other creature models, the first ones, but let's use the Lean versions."
+- **The ants are the Lean ant from the lab:**
+  - a few low-segment parts, smooth shading, one tone per part, three-sided legs;
+  - built from each body plan's own proportions: the worker, the soldier's big head and jaws, the venom ant's wedge head, tapering gaster, sting and fangs, and the queen's wing scars;
+  - about 210–230 triangles a frame, down from 840–930;
+  - they keep the walk, the size and every caste's tint;
+  - outfits are lighter too.
+- **Everything else keeps its own design, in Lean.** The spider, caterpillar, small creatures, hunters, robin, toad, every guardian and wild boss, food, nest props, curios, props, the sneaker and the acorn are the same models, run through Lean's rules:
+  - fewer segments on every rounded part (`render/models/lowpoly.js` caps them);
+  - colours that run smoothly from vertex to vertex, with no per-face speckle;
+  - welded parts, so they shade smoothly.
+  - Markings that depend on where they sit (stripes, the widow's red, the mole's veins) stay.
+- **The world is unchanged:** the ground, landmarks, house, soil and the Sinkhole keep the faceted style (`paintFacets`, `bakeFacets`). The Sinkhole's pit and lip moved from `wildBosses.js` to their own `sinkhole.js`, at full detail, since its rim must cover the hole cut in the ground.
+- **How:**
+  - `render/models/kit.js`'s `paint` and `bake` are now Lean, with the old ones kept as `paintFacets` and `bakeFacets`;
+  - the props' own painter is Lean too;
+  - the nest props' mirror handles welded models.
+  - All 137 models in the gallery checked; tests, e2e and the `.glb` exports are redone.
+- **Next, Mark's idea for later:** exploring what more the Lean approach can do.
+
 ## Nov 4: button labels and badges placed properly (build 63)
 
 Mark: "The sidebar text is a little high and not centred with the buttons; the bottom-layer buttons have text clipping with the buttons and aren't centred; and the notification bubbles clip under the text."

@@ -1,7 +1,7 @@
 // Model pass, layer 5: shadows shaped like what casts them. Each is a flat
 // shape on the ground (XZ plane, facing up), about ±1 across, dark in the
 // middle and fading to nothing at a soft edge (vertex alpha), drawn black.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 
 // Build a soft shadow from an outline (points in XZ, CCW seen from above).
 function softShape(pts, soft = 0.22) {

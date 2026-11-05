@@ -7,7 +7,7 @@
 // the front face (0) back to the wall (-DEPTH). Ants walk at about
 // z = -0.45 DEPTH, so tall props stay behind them (z < -0.6 DEPTH) or hang
 // from the ceiling.
-import * as THREE from 'three';
+import * as THREE from './lowpoly.js'; // build 64: Lean, capped segments
 import { canvasTexture, rng } from '../ps1/textures.js';
 import { psx } from '../ps1/materials.js';
 import { PROPS } from './props.js';
