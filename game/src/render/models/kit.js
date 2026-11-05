@@ -2,7 +2,8 @@
 //   paint, blob, strut, bake: Lean. Colours run smoothly from vertex to vertex and parts are welded, so each
 //     part is smooth-shaded like a PlayStation model, with no per-face speckle (colour functions get face 0).
 //   paintFacets, bakeFacets, facets.blob, facets.strut: the old faceted style, one colour per triangle with
-//     an optional seeded jitter. The world (ground, landmarks, house, soil, the Sinkhole) still uses these.
+//     an optional seeded jitter. The world (ground, landmarks, house, the Sinkhole) still uses these; the
+//     things buried round the nest are Lean (build 66).
 // Local frame as for the ants: +X forward, +Y up, +Z to the left.
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';

@@ -10,19 +10,19 @@
 // Nest frame: px, x right, y DOWN from the surface (world Y = -y), the soil's
 // front face at Z = 0 (things sit half sunk in it, toward the camera).
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { canvasTexture, rng, noise2 } from '../ps1/textures.js';
 import { CURIO_GEO } from './curios.js';
-import { paintFacets as paintFaces } from './kit.js'; // the soil is world: faceted
+import { paint as leanPaint, bake as leanBake } from './kit.js';
 
 const col = new THREE.Color();
-// Painted with a little brightness jitter per face, seeded, and no UVs.
-const paint = (geo, fn, seed = 1) => paintFaces(geo, fn, { dropUV: true, jitter: 0.9, span: 0.2, rng: rng(seed * 977 + 3) });
+// Build 66: the things in the ground are Lean, like the creatures: smooth from vertex to vertex, no speckle,
+// welded when baked, and fewer, bigger pieces (Mark: "redraw the nest"). The soil faces stay textured.
+const paint = (geo, fn) => leanPaint(geo, fn, { dropUV: true });
 
 const UP = new THREE.Vector3(0, 1, 0);
 function rod(a, b, r0, r1, color, sides = 5) {
   const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), len = Math.max(0.01, A.distanceTo(B));
-  const g = paint(new THREE.CylinderGeometry(r1, r0, len, sides, 1).translate(0, len / 2, 0), color);
+  const g = paint(new THREE.CylinderGeometry(r1, r0, len, sides, 1, true).translate(0, len / 2, 0), color); // open: the ends are in the soil
   g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(UP, B.clone().sub(A).normalize()));
   return g.translate(A.x, A.y, A.z);
 }
@@ -85,57 +85,64 @@ const JUNK = ['cap', 'button', 'coin', 'marble', 'clip', 'bead'];
 // (each with the box it covers) so a caller can drop the ones a tunnel has
 // dug into.
 export function buryThings({ x0, x1, y0, y1, bands, seed, extras = false }) {
-  const r = rng(seed), out = [], tier = (y) => (y < bands[0] ? 0 : y < bands[1] ? 1 : 2);
+  // Each kind of thing draws from its own random stream, so changing one kind doesn't move the others.
+  let r = rng(seed);
+  const out = [], tier = (y) => (y < bands[0] ? 0 : y < bands[1] ? 1 : 2);
   // Only what lies wholly inside the box: roots and burrows wander, and one from beside the nest must not stray into it.
   const add = (geo, bx0, by0, bx1, by1) => { if (bx0 >= x0 && bx1 <= x1 && by0 >= y0 - 1 && by1 <= y1) out.push({ geo, x0: bx0, y0: by0, x1: bx1, y1: by1 }); };
   const W = x1 - x0, H = y1 - y0;
   // Roots down from the surface: a tapering, wandering main root that forks.
   const root = (sx, sy, len, w, depth = 0) => {
     let x = sx, y = sy, a = Math.PI / 2 + (r() - 0.5) * 0.6, prev = [x, y];
-    const steps = Math.ceil(len / 12);
+    const steps = Math.ceil(len / 20);
     for (let s = 0; s < steps && y < bands[1] + 20; s++) {
       a += (r() - 0.5) * 0.5; a = Math.max(0.3, Math.min(Math.PI - 0.3, a));
-      x += Math.cos(a) * 12; y += Math.sin(a) * 12;
+      x += Math.cos(a) * 20; y += Math.sin(a) * 20;
       const k = 1 - s / steps, rr = Math.max(0.6, w * k);
-      add(rod([prev[0], -prev[1], 0], [x, -y, 0], rr * 1.15, rr, (px, py, pz) => (pz > rr * 0.5 ? '#6a4e30' : '#4a3420'), 4), Math.min(prev[0], x) - rr, Math.min(prev[1], y) - rr, Math.max(prev[0], x) + rr, Math.max(prev[1], y) + rr);
-      if (depth < 2 && r() < 0.12) root(x, y, len * (1 - s / steps) * 0.6, rr * 0.7, depth + 1);
+      add(rod([prev[0], -prev[1], 0], [x, -y, 0], rr * 1.15, rr, (px, py, pz) => (pz > rr * 0.5 ? '#6a4e30' : '#4a3420'), 3), Math.min(prev[0], x) - rr, Math.min(prev[1], y) - rr, Math.max(prev[0], x) + rr, Math.max(prev[1], y) + rr);
+      if (depth < 2 && r() < 0.2) root(x, y, len * (1 - s / steps) * 0.6, rr * 0.7, depth + 1);
       prev = [x, y];
     }
   };
-  for (let i = 0, n = Math.round(W / 70); i < n; i++) root(x0 + r() * W, 0, 120 + r() * 220, 2.2 + r() * 2.2);
+  for (let i = 0, n = Math.round(W / 70); i < n; i++) root(x0 + r() * W, 0, 120 + r() * 220, 2.8 + r() * 2.4);
+  r = rng(seed * 31 + 1);
   // Stones, half sunk; most in the packed band, and a seam of gravel along each band boundary.
   const stone = (x, y, rr) => {
-    const t = tier(y), g = new THREE.IcosahedronGeometry(1, rr > 5 ? 1 : 0).scale(rr, rr * (0.6 + r() * 0.3), rr * 0.6).rotateZ(r() * 3).translate(x, -y, 0);
+    const t = tier(y), g = (rr < 3.5 ? new THREE.OctahedronGeometry(1, 0) : new THREE.IcosahedronGeometry(1, 0)).scale(rr, rr * (0.6 + r() * 0.3), rr * 0.6).rotateZ(r() * 3).translate(x, -y, 0);
     const c = [['#6e685c', '#857e70', '#5a5650'], ['#8a8476', '#a49c8c', '#6a666e'], ['#8a6a58', '#7a6a62', '#9a7a62']][t][Math.floor(r() * 3)];
-    add(paint(g, (px, py) => (py > -y + rr * 0.3 ? '#b8b0a0' : c), Math.floor(r() * 99)), x - rr, y - rr, x + rr, y + rr);
+    add(paint(g, (px, py) => (py > -y + rr * 0.3 ? '#b8b0a0' : c)), x - rr, y - rr, x + rr, y + rr);
   };
   const area = W * H;
-  for (let i = 0, n = Math.round(area / 2200); i < n; i++) { const y = y0 + r() * H, t = tier(y); if (r() > [0.45, 1, 0.25][t]) continue; stone(x0 + r() * W, y, 2.5 + r() * r() * 9); }
-  for (const by of bands) for (let x = x0; x < x1; x += 7 + r() * 10) stone(x, by + (r() - 0.5) * 10, 1.6 + r() * 2.4);
+  for (let i = 0, n = Math.round(area / 3000); i < n; i++) { const y = y0 + r() * H, t = tier(y); if (r() > [0.45, 1, 0.25][t]) continue; stone(x0 + r() * W, y, 3 + r() * r() * 10); }
+  for (const by of bands) for (let x = x0; x < x1; x += 22 + r() * 26) stone(x, by + (r() - 0.5) * 10, 2.4 + r() * 2.8);
+  r = rng(seed * 31 + 2);
   // Worm burrows: dark wandering tunnels, some with their worm.
   for (let i = 0, n = Math.max(1, Math.round(area / 90000)); i < n; i++) {
     let x = x0 + r() * W, y = Math.max(y0 + 20, Math.min(y1 - 20, bands[0] * (0.3 + r() * 1.2))), a = r() * 6.28; const pts = [[x, y]];
     for (let s = 0; s < 14; s++) { a += (r() - 0.5) * 0.9; x += Math.cos(a) * 9; y += Math.sin(a) * 6; pts.push([x, y]); }
     const bx = pts.map((p) => p[0]), by = pts.map((p) => p[1]);
     for (let s = 0; s < pts.length - 1; s++) add(ribbon(pts[s][0], pts[s][1], pts[s + 1][0], pts[s + 1][1], 4.5, '#24160c'), Math.min(...bx) - 4, Math.min(...by) - 4, Math.max(...bx) + 4, Math.max(...by) + 4);
-    if (r() < 0.6) for (let s = 3; s < 10; s++) add(rod([pts[s][0], -pts[s][1], 0.4], [pts[s + 1][0], -pts[s + 1][1], 0.4], 1.9, 1.9, s % 2 ? '#c87a78' : '#b86a6a', 6), Math.min(...bx) - 4, Math.min(...by) - 4, Math.max(...bx) + 4, Math.max(...by) + 4);
+    if (r() < 0.6) for (let s = 3; s < 10; s++) add(rod([pts[s][0], -pts[s][1], 0.4], [pts[s + 1][0], -pts[s + 1][1], 0.4], 1.9, 1.9, s % 2 ? '#c87a78' : '#b86a6a', 5), Math.min(...bx) - 4, Math.min(...by) - 4, Math.max(...bx) + 4, Math.max(...by) + 4);
   }
+  r = rng(seed * 31 + 3);
   // Grubs curled in their pockets, and snail shells, in the loam.
   for (let i = 0, n = Math.max(1, Math.round(area / 140000)); i < n; i++) {
     const x = x0 + 20 + r() * (W - 40), y = 20 + r() * (bands[0] - 30);
     add(disc(x, y, 9, 7, '#24160c'), x - 9, y - 7, x + 9, y + 7);
-    add(paint(new THREE.TorusGeometry(4, 2.2, 5, 10, Math.PI * 1.5).rotateZ(r() * 6).translate(x, -y, 0.8), (px, py) => (Math.hypot(px - x, py + y) > 5.5 ? '#f0e8d0' : '#e0d4b4')), x - 9, y - 7, x + 9, y + 7);
+    add(paint(new THREE.TorusGeometry(4, 2.2, 4, 8, Math.PI * 1.5).rotateZ(r() * 6).translate(x, -y, 0.8), (px, py) => (Math.hypot(px - x, py + y) > 5.5 ? '#f0e8d0' : '#e0d4b4')), x - 9, y - 7, x + 9, y + 7);
   }
   for (let i = 0, n = Math.max(1, Math.round(area / 160000)); i < n; i++) {
     const x = x0 + r() * W, y = 15 + r() * (bands[1] - 30);
-    for (let k = 0; k < 3; k++) add(paint(new THREE.TorusGeometry(4.5 - k * 1.4, 1.6 - k * 0.3, 4, 10).translate(x + k * 1.2, -y + k * 0.8, 0.5 + k * 0.4), k % 2 ? '#c8a878' : '#e0c898'), x - 7, y - 7, x + 7, y + 7);
+    for (let k = 0; k < 3; k++) add(paint(new THREE.TorusGeometry(4.5 - k * 1.4, 1.6 - k * 0.3, 3, 8).translate(x + k * 1.2, -y + k * 0.8, 0.5 + k * 0.4), k % 2 ? '#c8a878' : '#e0c898'), x - 7, y - 7, x + 7, y + 7);
   }
+  r = rng(seed * 31 + 4);
   // Damp seeps in the clay: a darker stain with a bead of water.
   for (let i = 0, n = Math.max(1, Math.round(area / 180000)); i < n; i++) {
     const x = x0 + r() * W, y = bands[1] + 20 + r() * Math.max(10, y1 - bands[1] - 40);
     add(disc(x, y, 16 + r() * 10, 9 + r() * 5, '#5a3a32', 0.2, 12), x - 26, y - 14, x + 26, y + 14);
-    add(paint(new THREE.SphereGeometry(2, 6, 4).translate(x, -y - 6, 1), '#9ac8e0'), x - 26, y - 14, x + 26, y + 14);
+    add(paint(new THREE.SphereGeometry(2, 5, 3).translate(x, -y - 6, 1), '#9ac8e0'), x - 26, y - 14, x + 26, y + 14);
   }
+  r = rng(seed * 31 + 5);
   // Lost human things, rarely: a bottle cap, a button, a coin, a marble...
   for (let i = 0, n = Math.max(1, Math.round(area / 120000)); i < n; i++) {
     const x = x0 + r() * W, y = 30 + r() * (y1 - 60), k = JUNK[Math.floor(r() * JUNK.length)], sc = k === 'clip' ? 7 : 5;
@@ -144,23 +151,21 @@ export function buryThings({ x0, x1, y0, y1, bands, seed, extras = false }) {
   if (extras) {
     // An old clay drain pipe from the house, running through the packed band.
     const py = bands[0] + (bands[1] - bands[0]) * 0.45, R = 16;
-    for (let x = x0; x < x1; x += 60) {
-      add(paint(new THREE.CylinderGeometry(R, R, 58, 12).rotateZ(Math.PI / 2).translate(x + 29, -py, -R * 0.3), (px, py2) => (py2 > -py + R * 0.5 ? '#c07850' : '#a05a38')), x, py - R, x + 60, py + R);
-      add(paint(new THREE.CylinderGeometry(R * 1.12, R * 1.12, 8, 12).rotateZ(Math.PI / 2).translate(x + 2, -py, -R * 0.3), '#8a4a30'), x, py - R, x + 60, py + R);
+    for (let x = x0; x < x1; x += 120) {
+      add(paint(new THREE.CylinderGeometry(R, R, 118, 8, 1, true).rotateZ(Math.PI / 2).translate(x + 59, -py, -R * 0.3), (px, py2) => (py2 > -py + R * 0.5 ? '#c07850' : '#a05a38')), x, py - R, x + 120, py + R);
+      add(paint(new THREE.CylinderGeometry(R * 1.12, R * 1.12, 8, 8, 1, true).rotateZ(Math.PI / 2).translate(x + 2, -py, -R * 0.3), '#8a4a30'), x, py - R, x + 120, py + R);
     }
   }
   return out;
 }
 // A mole's tunnel: a big round bore, its rim crumbling, loose clods in it.
 export function moleTunnel(x, y, R, seed) {
-  const r = rng(seed), parts = [disc(x, y, R, R * 0.9, '#1e140c', 0.3, 18), paint(new THREE.RingGeometry(R * 0.9, R * 1.12, 18).translate(x, -y, 0.35), '#5a4028')];
+  const r = rng(seed), parts = [disc(x, y, R, R * 0.9, '#1e140c', 0.3, 12), paint(new THREE.RingGeometry(R * 0.9, R * 1.12, 12).translate(x, -y, 0.35), '#5a4028')];
   for (let i = 0; i < 9; i++) { const a = Math.PI * (0.15 + r() * 0.7), d = R * (0.4 + r() * 0.5); parts.push(paint(new THREE.IcosahedronGeometry(2 + r() * 3, 0).translate(x + Math.cos(a) * d * (r() < 0.5 ? -1 : 1), -y - Math.sin(a) * d * 0.9, 0.8), r() < 0.5 ? '#6a4a2e' : '#4e3620')); }
   return parts;
 }
 
+// Welded (Lean), so each stone and root shades smoothly. null for nothing.
 export function bake(parts) {
-  if (!parts.length) return null;
-  const g = mergeGeometries(parts.map((p) => { p = p.index ? p.toNonIndexed() : p; if (p.attributes.uv) p.deleteAttribute('uv'); if (!p.attributes.normal) p.computeVertexNormals(); return p; }));
-  g.computeVertexNormals();
-  return g;
+  return parts.length ? leanBake(parts) : null;
 }

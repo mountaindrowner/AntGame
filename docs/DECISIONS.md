@@ -2,6 +2,28 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 5: the nest redrawn in Lean (build 66)
+
+Mark: "I wanted you to redraw the nest, not all the bosses and stuff; that was already good after the Lean pass." Measured first: of the nest's 132k triangles a frame, the tunnels themselves were only about 1k. The rest was:
+- the things buried in the ground beside the cutaway (66k);
+- the cutaway's own buried things (19k);
+- the back wall behind each room, a fine grid (27k for 8 rooms).
+
+What changed:
+- **The buried things are Lean.** Roots, stones, worms, grubs, snail shells, seeps, the drain pipe and the mole tunnels are smooth-shaded and welded, with no per-face speckle, like the creatures. There are fewer, bigger pieces:
+  - roots in longer, slightly thicker, three-sided segments (open ends, since they sit in the soil);
+  - fewer, bigger stones, and the gravel along each band boundary spaced out;
+  - small pebbles as 8-triangle gems;
+  - the pipe in 120 px lengths.
+
+  Each kind of thing has its own random stream, so the layout doesn't shift when one kind changes.
+- **Room back walls are a fan**: from the chamber's middle out to its wall, then two rings that fade it raggedly into the soil. That's 200 triangles a room instead of 3,000+, and it looks the same.
+- **The ground beside the nest is baked in blocks 400 px across**, so the camera skips the blocks it can't see. It used to be one mesh, drawn in full whenever any of it was on screen.
+- **The soil faces are unchanged.** They keep the band textures and the tunnel outlines (they were already cheap).
+- **Results:**
+  - the nest's own geometry is about 42k triangles, down from about 113k: buried things 85k → 33k, room walls 27k → 1.6k;
+  - less of the beyond is drawn, since off-screen blocks are skipped.
+
 ## Nov 5: faster, now that there's less to draw (build 65)
 
 Mark: "With these changes, improve the performance of the game since it's less triangles." Then: "What are some of the biggest draws… how is that possible and how can we reduce that?" Measured first: a harness times the sim, the scene update and the draw, counts triangles and draw calls, and profiles the processor, on three scenes (250 ants on the surface, the nest, the Cordyceps fight), build 63 against this one, back to back.

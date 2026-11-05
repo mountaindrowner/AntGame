@@ -120,30 +120,33 @@ function tunnelGrid(s, x0, y0, step, nx, ny) {
   }
   return grid;
 }
-// The room's back wall as a fine grid clipped to its chamber (see
-// _rebuildPanels). Colour carries the shading, alpha the fade.
-const FEATHER = 10, PANEL_STEP = 2;
+// The room's back wall (build 66, Lean): a fan from the chamber's middle out to its wall, then two rings that
+// fade it out past the wall, raggedly. About 200 triangles a room; the fine grid it replaces was 3,000+.
+// Colour carries the shading, alpha the fade.
+const FEATHER = 10, RAYS = 40;
 function roomPanel(r) {
-  const f = roomField(r), [bx0, by0, bx1, by1] = f.box.map((v, i) => v + (i < 2 ? -FEATHER : FEATHER)), x0 = r.x0 * T, z = -DEPTH + 0.3;
-  const nx = Math.ceil((bx1 - bx0) / PANEL_STEP) + 1, ny = Math.ceil((by1 - by0) / PANEL_STEP) + 1;
-  const d = new Float32Array(nx * ny), seed = r.x0 * 13 + r.y0 * 7;
-  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
-    const x = bx0 + i * PANEL_STEP, y = by0 + j * PANEL_STEP;
-    // Ragged fade: a little value noise pushes the edge in and out.
-    d[j * nx + i] = f(x, y) + (hash(Math.floor(x / 4) * 31 + Math.floor(y / 4) * 57 + seed) - 0.5) * 3 + Math.sin(x * 0.21 + y * 0.13 + seed) * 1.2;
+  const f = roomField(r), [bx0, by0, bx1, by1] = f.box, cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2, x0 = r.x0 * T, z = -DEPTH + 0.3;
+  const far = Math.hypot(bx1 - bx0, by1 - by0) / 2 + FEATHER * 3, seed = r.x0 * 13 + r.y0 * 7;
+  // How far out along a ray the field reaches d (the field rises outward along every ray from the middle).
+  const reach = (dx, dy, d) => { let lo = 0, hi = far; for (let k = 0; k < 16; k++) { const m = (lo + hi) / 2; if (f(cx + dx * m, cy + dy * m) < d) lo = m; else hi = m; } return lo; };
+  const rings = [0, FEATHER * 0.5, FEATHER]; // the wall, half faded, gone
+  const pts = [];
+  for (let i = 0; i < RAYS; i++) {
+    const a = (i / RAYS) * Math.PI * 2, dx = Math.cos(a), dy = Math.sin(a);
+    // Ragged fade: a little noise pushes the outer edge in and out.
+    const rag = (hash(i * 31 + seed) - 0.5) * 3 + Math.sin(a * 5 + seed) * 1.2;
+    pts.push(rings.map((d, k) => { const t = reach(dx, dy, k ? d + rag : d); return [cx + dx * t, cy + dy * t]; }));
   }
   const pos = [], uv = [], col = [];
-  const vert = (i, j) => {
-    const x = bx0 + i * PANEL_STEP, y = by0 + j * PANEL_STEP, e = Math.max(0, Math.min(1, (FEATHER - d[j * nx + i]) / FEATHER));
-    pos.push(x, -y, z); uv.push((x - x0) / (2 * T), -y / (2 * T));
-    const sm = e * e * (3 - 2 * e), k = 0.7 + 0.3 * sm;
-    col.push(k, k * 0.96, k * 0.92, sm);
-  };
-  for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
-    const a = d[j * nx + i], b = d[j * nx + i + 1], c = d[(j + 1) * nx + i], e = d[(j + 1) * nx + i + 1];
-    if (Math.min(a, b, c, e) >= FEATHER) continue;
-    vert(i, j); vert(i, j + 1); vert(i + 1, j);
-    vert(i + 1, j); vert(i, j + 1); vert(i + 1, j + 1);
+  const vert = (x, y, e) => { pos.push(x, -y, z); uv.push((x - x0) / (2 * T), -y / (2 * T)); const k = 0.7 + 0.3 * e; col.push(k, k * 0.96, k * 0.92, e); };
+  const E = [1, 0.5, 0];
+  for (let i = 0; i < RAYS; i++) {
+    const p = pts[i], q = pts[(i + 1) % RAYS];
+    vert(cx, cy, 1); vert(...q[0], 1); vert(...p[0], 1);
+    for (let k = 0; k < 2; k++) {
+      vert(...p[k], E[k]); vert(...q[k], E[k]); vert(...p[k + 1], E[k + 1]);
+      vert(...p[k + 1], E[k + 1]); vert(...q[k], E[k]); vert(...q[k + 1], E[k + 1]);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -274,9 +277,12 @@ export class NestView {
       ...buryThings({ x0: -1000, x1: -8, y0: 0, y1: deep, bands, seed: 101, extras: true }),
       ...buryThings({ x0: NW * T + 8, x1: NW * T + 1000, y0: 0, y1: deep, bands, seed: 202 }),
       ...buryThings({ x0: 0, x1: NW * T, y0: NH * T + 8, y1: deep, bands, seed: 303 }),
-    ].map((b) => b.geo);
-    beyond.push(...moleTunnel(NW * T + 150, bands[0] * 0.45, 30, 7), ...moleTunnel(-260, bands[0] * 0.7, 26, 8));
-    this.scene.add(new THREE.Mesh(bakeBuried(beyond), psx({ vertexColors: true })));
+    ];
+    for (const [x, y, R, seed] of [[NW * T + 150, bands[0] * 0.45, 30, 7], [-260, bands[0] * 0.7, 26, 8]]) beyond.push(...moleTunnel(x, y, R, seed).map((geo) => ({ geo, x0: x, y0: y })));
+    // Build 66: baked in blocks 400 px across, so the camera skips the ones off screen.
+    const blocks = new Map(), buriedMat = psx({ vertexColors: true });
+    for (const b of beyond) { const k = Math.floor(b.x0 / 400) + ',' + Math.floor(b.y0 / 400); if (!blocks.has(k)) blocks.set(k, []); blocks.get(k).push(b.geo); }
+    for (const parts of blocks.values()) { const g = bakeBuried(parts); g.computeBoundingSphere(); this.scene.add(new THREE.Mesh(g, buriedMat)); }
     this.buried = buryThings({ x0: 0, x1: NW * T, y0: 0, y1: NH * T, bands, seed: 404 });
 
     this.dyn = new THREE.Group();
