@@ -88,6 +88,23 @@ export class PS1Pipeline {
 
   get aspect() { return this.width / Math.max(1, this.height); }
 
+  // Build 67: compile a scene's shaders (and upload its textures) ahead of its first frame, in the background where the browser can
+  // (KHR_parallel_shader_compile). Compiled for the framebuffer the scene draws into: shaders for the screen
+  // are different ones. Resolves when they're ready.
+  warm(scene, camera) {
+    const r = this.renderer, seen = new Set();
+    // Textures too: a big ground texture uploaded in the frame that first shows it is a hitch of its own.
+    scene.traverse((o) => { for (const m of o.material ? [].concat(o.material) : []) if (m.map && m.map.isTexture && !seen.has(m.map)) { seen.add(m.map); try { r.initTexture(m.map); } catch (e) { /* not fatal */ } } });
+    r.setRenderTarget(this.target);
+    let p;
+    try { p = r.compileAsync(scene, camera); } catch (e) { p = Promise.resolve(); }
+    r.setRenderTarget(null);
+    // Never wait more than 3 s (where the browser can't tell when a shader is ready, three may never say);
+    // then finish each one now, while something else is on screen, rather than in the first frame it draws.
+    const limit = new Promise((ok) => setTimeout(ok, 3000));
+    return Promise.race([p, limit]).then(() => { for (const q of r.info.programs) q.getUniforms(); });
+  }
+
   render(scene, camera) {
     const r = this.renderer;
     r.setRenderTarget(this.target);

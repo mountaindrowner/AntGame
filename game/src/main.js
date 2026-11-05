@@ -121,22 +121,25 @@ const built = (i) => { const R = views.surface.scenery && views.surface.scenery.
 // and the fog pushed out of reach (switching it off would make every
 // material compile again). The targets and the copy pass are kept.
 const shot = { px: 0, ph: 0 };
+// Linear to sRGB into an 8-bit target we can read back.
+function copyPass() {
+  if (!shot.quad) {
+    shot.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
+      uniforms: { t: { value: null } }, depthTest: false, depthWrite: false,
+      vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+      fragmentShader: 'uniform sampler2D t; varying vec2 vUv; void main(){ vec3 c = clamp(texture2D(t, vUv).rgb, 0.0, 1.0); gl_FragColor = vec4(mix(c * 12.92, 1.055 * pow(c, vec3(1.0/2.4)) - 0.055, step(vec3(0.0031308), c)), 1.0); }',
+    }));
+    shot.qs = new THREE.Scene(); shot.qs.add(shot.quad);
+    shot.qcam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  }
+  return shot;
+}
 function photo(x0, y0, tw, th, px, done) {
   const sv = views.surface, T = SIM.T, ph = Math.round((px * th) / tw), r = pipeline.renderer;
   if (shot.px !== px || shot.ph !== ph) {
     if (shot.rtA) { shot.rtA.dispose(); shot.rtB.dispose(); }
     Object.assign(shot, { px, ph, rtA: new THREE.WebGLRenderTarget(px, ph, { type: THREE.HalfFloatType, depthBuffer: true }), rtB: new THREE.WebGLRenderTarget(px, ph), buf: new Uint8Array(px * ph * 4) });
-    if (!shot.quad) {
-      // Linear to sRGB into an 8-bit target we can read back.
-      shot.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
-        uniforms: { t: { value: null } }, depthTest: false, depthWrite: false,
-        vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
-        fragmentShader: 'uniform sampler2D t; varying vec2 vUv; void main(){ vec3 c = clamp(texture2D(t, vUv).rgb, 0.0, 1.0); gl_FragColor = vec4(mix(c * 12.92, 1.055 * pow(c, vec3(1.0/2.4)) - 0.055, step(vec3(0.0031308), c)), 1.0); }',
-      }));
-      shot.qs = new THREE.Scene(); shot.qs.add(shot.quad);
-      shot.qcam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    }
-    shot.quad.material.uniforms.t.value = shot.rtA.texture;
+    copyPass().quad.material.uniforms.t.value = shot.rtA.texture;
   }
   const cx = (x0 + tw / 2) * T, cz = (y0 + th / 2) * T;
   const cam = new THREE.OrthographicCamera((-tw * T) / 2, (tw * T) / 2, (th * T) / 2, (-th * T) / 2, 1, 8000);
@@ -175,6 +178,19 @@ app.snapshotMap = () => {
   while (photoQ.length) { const i = photoQ.shift(); if (built(i)) app.photoRegion(i); }
   return c;
 };
+
+// Build 67: the nest, built and its shaders compiled while something else is on screen (the film's black
+// pre-roll, or the title), so the first frame inside it doesn't stall. A first run starts in the nest.
+let nestWarm = 0;
+function warmNest() {
+  if (nestWarm < 0) return;
+  if (++nestWarm === 5) views.nest.update(app, clock, pipeline.aspect);
+  else if (nestWarm === 6) {
+    nestWarm = -1;
+    pipeline.warm(views.nest.scene, views.nest.camera).catch(() => {});
+    pipeline.warm(copyPass().qs, shot.qcam).catch(() => {}); // the map photos' copy pass
+  }
+}
 
 app.playFilm = () => {
   if (cine) return;
@@ -250,6 +266,17 @@ function blend(s, k) {
 let slow = 0, fast = 0, raisedAt = -1e9, noRaise = false; // auto quality (build 65: it can step back up)
 const nameV = new THREE.Vector3();
 let last = performance.now(), acc = 0, hudT = 0, saveT = 0, frames = 0, fpsT = 0, clock = 0;
+// Build 67: a start without the film (on the title) builds the yard round home a slice a frame behind a
+// hidden canvas, compiles it in the background, then fades it in (boot: 1 building, 2 compiling, 0 done).
+// It used to build it all in the first frame, which froze with the title showing for seconds.
+let boot = 0, bootN = 0;
+function startBoot() { boot = 1; app.softLoad = true; document.body.classList.add('booting'); }
+function stepBoot() {
+  if (boot !== 1 || ++bootN < 5 || views.surface.loading() > 0) return;
+  boot = 2; app.softLoad = false;
+  const done = () => { boot = 0; document.body.classList.remove('booting'); };
+  pipeline.warm(views.surface.scene, views.surface.camera).then(done, done);
+}
 let wasInNest = app.s.player.inNest;
 
 // Build 50: a daughter's nest as the nest view sees it: the game state with her nest, queen and eggs in place
@@ -280,6 +307,7 @@ function frame(now) {
   if (cine) {
     // While recording (filmStep), the recorder draws every frame itself.
     if (!cine.manual) {
+      if (!cine.ready) warmNest();
       clock += dt;
       views.surface.update(app, clock, pipeline.aspect);
       cine.update(dt);
@@ -306,6 +334,7 @@ function frame(now) {
 
   // Behind the title screen: a slow drift over the yard round home.
   if (app.titleOpen) {
+    warmNest();
     const w = s.world, k = performance.now() / 1000;
     app.surfaceFocus = { x: (w.ex + 0.5 + Math.sin(k * 0.05) * 60) * SIM.T, y: (w.ey + 0.5 + Math.sin(k * 0.037) * 40) * SIM.T };
   }
@@ -315,7 +344,8 @@ function frame(now) {
   // Draw creatures part way between the last two sim steps, then put them back.
   const restore = blend(s, app.paused ? 1 : acc / STEP);
   view.update(vapp, clock, pipeline.aspect);
-  pipeline.render(view.scene, view.camera);
+  if (boot) stepBoot();
+  if (!boot) pipeline.render(view.scene, view.camera); // (drawing while it loads would only compile shaders the slow way)
   restore();
   if (!app.titleOpen) hear(s, newEvents);
   else hear.quiet();
@@ -375,7 +405,7 @@ measureHud();
 applyOptions();
 // A first run opens with the film (then the menu); later runs on the menu.
 if (app.s.phase === 'dig' && !app.s.seen.film) app.playFilm();
-else title.open();
+else { title.open(); startBoot(); }
 requestAnimationFrame(frame);
 
 // For automated tests and debugging in the console.

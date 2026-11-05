@@ -2,6 +2,28 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 5: no stuck first frame (build 67)
+
+Mark: "There is a definite bug when starting the game for the first time where there's a first frame that's kinda stuck." Measured a first run (no save) and a returning one, frame by frame, with the processor profiled.
+- **The film's pre-roll froze.**
+  - Behind "Loading the yard…" it built the whole film area in one frame (6.4 s in the test browser).
+  - It then compiled every shader at once (2 s), and for the screen, not the low-resolution framebuffer the game draws into. So those were the wrong versions, and the right ones still compiled in the film's first frames.
+  - Now the yard is built a slice a frame (45 ms) with a progress bar. Nothing is drawn behind the black screen.
+  - The shaders are compiled in the background for the right framebuffer, and the textures are uploaded.
+  - Then one hidden frame from above draws everything the film will show, and the black lifts.
+  - A recording (`npm run film`) still builds everything up front.
+- **Play stalled on the nest.** A first run starts in the nest, which had never been drawn, so its first frame compiled all its shaders (1 s). The nest is now built and warmed during the film's pre-roll or under the title, and so is the map photo's copy pass (Skip stalled on it).
+- **The title froze too (returning players).** Its first frame built the yard round home at once (3.9 s) with the title showing and the buttons dead. That yard is now built a slice a frame behind a hidden canvas, warmed, then faded in under the title.
+- **Never stuck for good.** Where a browser can't report that a shader is ready, the wait gives up after 3 s, and each shader is then finished at once, while something else is on screen.
+- **Results** (test browser, no graphics card):
+
+  | Moment | Longest frame, before → after |
+  |---|---|
+  | Film pre-roll | 6.4 s, then 2 s → under 0.1 s each (two ~1.5 s waits on the software GPU remain, idle on the main thread) |
+  | Pressing Play | 1–1.3 s → 0.3 s |
+  | Skip to the title | 1.2 s → none over 0.7 s |
+  | Title's first frame | 3.9 s, then 1.9 s → the yard fades in when ready; the buttons work throughout |
+
 ## Nov 5: the nest redrawn in Lean (build 66)
 
 Mark: "I wanted you to redraw the nest, not all the bosses and stuff; that was already good after the Lean pass." Measured first: of the nest's 132k triangles a frame, the tunnels themselves were only about 1k. The rest was:

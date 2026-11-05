@@ -677,14 +677,21 @@ export class SurfaceView {
     if (raining) this._updateRain(t);
     // Build the regions coming into reach (all of what's on screen at once
     // after a jump), and drop those left far behind.
-    // app.sceneryFocus ({ x, y, view, now }) builds round another spot (the film's).
+    // app.sceneryFocus ({ x, y, view, now, preload }) builds round another spot (the film's): all at once
+    // (now, for a recording), or a slice a frame behind the pre-roll (preload, build 67).
     this.camera.updateMatrixWorld();
     const lf = app.sceneryFocus, view = lf ? lf.view : this._viewReach(dist), lx = lf ? lf.x : this.target.x, lz = lf ? lf.y : this.target.z;
     this.reach = view; // how far the view reaches (tiles), for the rain (build 20)
-    if (jump || (lf && lf.now)) { this.scenery.loadNow(lx, lz, view); if (lf) lf.now = false; }
+    this.focus = [lx, lz, view];
+    if (lf && lf.preload) this.scenery.preload(lx, lz, view, 45); // (even on the first frame: the pre-roll hides it)
+    else if (app.softLoad) this.scenery.preload(lx, lz, view, 45); // build 67: the first view, behind a hidden canvas
+    else if (jump || (lf && lf.now)) { this.scenery.loadNow(lx, lz, view); if (lf) lf.now = false; }
     this.scenery.update(lx, lz, view);
     this.scenery.setSunk(s.wild && s.wild.sinkhole); this.scenery.pulse(t); // build 59: the caved-in fire mound
   }
+
+  // Regions still to build round what the view looks at (build 67: the first view waits for none).
+  loading() { return this.focus ? this.scenery.left(...this.focus) + (this.scenery.busy ? 1 : 0) : 1; }
 
   // Visitors: each shows itself first (a shadow, a hiss, a landing).
   _strikes(s, t, fdt) {

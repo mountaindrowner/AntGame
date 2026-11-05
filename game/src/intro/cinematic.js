@@ -218,7 +218,7 @@ export class Cinematic {
     const el = document.createElement('div');
     el.id = 'cine';
     el.innerHTML = `
-      <div class="grain"></div><div class="vignette"></div><div class="preroll">Loading the yard…</div>
+      <div class="grain"></div><div class="vignette"></div><div class="preroll">Loading the yard…<i class="load"><b></b></i></div>
       <div class="bar top"></div><div class="bar bottom"></div>
       <div class="caption" aria-live="polite"></div>
       <div class="title hidden"><div class="big">Underfoot!</div><div class="sub">One queen. One rock. One very big yard.</div><button class="go">Continue</button></div>
@@ -245,7 +245,7 @@ export class Cinematic {
   start() {
     if (this.started) return;
     this.started = true;
-    this.app.sceneryFocus.now = true;
+    this.app.sceneryFocus.preload = true; // build 67: a slice a frame, not one long frozen frame
     this.sound = new FilmSound();
     if (!this.sound.ctx) return;
     if (this.muted) this.sound.mute(true);
@@ -323,7 +323,8 @@ export class Cinematic {
   step(dt) {
     // Recording takes over: no live sound, and the film from the top.
     if (!this.manual) { this.manual = true; this.t = 0; if (this.sound) { this.sound.stop(); this.sound = null; } }
-    if (!this.started) { this.started = true; this.app.sceneryFocus.now = true; }
+    if (!this.started) this.started = true;
+    if (this.app.sceneryFocus && !this.builtNow) { this.builtNow = true; this.app.sceneryFocus.preload = false; this.app.sceneryFocus.now = true; } // all at once for a recording
     this.t += dt;
     this._advance(dt);
   }
@@ -350,23 +351,32 @@ export class Cinematic {
   update(dt) {
     if (this.manual) return; // a recording steps the film itself
     if (!this.ready) { this._preroll(); return; }
+    if (this.uncover) { this._advance(0); return; } // the first frame, drawn once more behind black
     // Once the score plays, the film follows its clock, so a slow frame never
     // lets picture and sound drift apart.
     if (this.started && !this.done) this.t = this.audioStart != null && this.sound ? Math.max(this.t, this.sound.now - this.audioStart) : this.t + Math.min(dt, 0.1);
     this._advance(dt);
   }
 
-  // Hold the first frame behind black until nothing is left to build for
-  // ten frames running, then compile, uncover and start.
+  // Hold the first frame behind black until the yard round it is built (a
+  // slice a frame, with a bar) and nothing has been built for ten frames
+  // running; then compile its shaders in the background, uncover and start.
   _preroll() {
     this._advance(0);
+    if (this.compiling) return;
     this.warm++;
-    this.calm = this.surface.scenery.busy ? 0 : this.calm + 1;
-    if (this.warm < 20 || this.calm < 10) return;
-    this.ready = true;
-    try { this.pipeline.renderer.compile(this.surface.scene, this.camera); } catch (e) { /* not fatal */ }
-    this.el.querySelector('.preroll').classList.add('gone');
-    if (this.sound && this.scoreWhenReady) { this.scoreWhenReady = false; this._scoreFrom(0); }
+    const F = this.app.sceneryFocus, sc = this.surface.scenery, left = F ? sc.left(F.x, F.y, F.view) : 0;
+    this.total = Math.max(this.total || 0, left);
+    this.el.querySelector('.preroll b').style.width = Math.round(100 * (this.total ? 1 - left / this.total : 1)) + '%';
+    this.calm = sc.busy || left ? 0 : this.calm + 1;
+    if (this.warm < 20 || (this.calm < 10 && this.warm < 900)) return; // (never hold it forever)
+    // Build 67: compiled for the framebuffer the film draws into (the old compile, for the screen, built the
+    // wrong versions and froze the pre-roll for a couple of seconds), without blocking the page.
+    this.compiling = true;
+    if (F) F.preload = false;
+    // Then one frame drawn behind black (anything still compiling finishes there), and the film starts.
+    const go = () => { if (this.done) return; this.compiling = false; this.ready = true; this.uncover = 3; };
+    this.pipeline.warm(this.surface.scene, this.camera).then(go, go);
   }
 
   _advance(dt) {
@@ -538,5 +548,22 @@ export class Cinematic {
     while (this.dirtT > 0.04) { this.dirtT -= 0.04; this._dirt(L); }
   }
 
-  render() { this.pipeline.render(this.surface.scene, this.camera); }
+  _overview() {
+    const F = this.app.sceneryFocus || { x: 0, y: 0, view: 40 }, h = F.view * T;
+    const cam = new THREE.OrthographicCamera(-h, h, h, -h, 1, 9000);
+    cam.position.set(F.x, 4000, F.y); cam.up.set(0, 0, -1); cam.lookAt(F.x, 0, F.y); cam.updateMatrixWorld();
+    return cam;
+  }
+
+  render() {
+    // Build 67: nothing is drawn behind the black pre-roll; drawing there only compiled shaders the slow way.
+    if (!this.ready && !this.manual) return;
+    // The first hidden frame looks down on the whole film area, so everything the film will show is drawn
+    // (and sent to the graphics card) once before the black lifts; the next two are the first shot.
+    this.pipeline.render(this.surface.scene, this.uncover === 3 ? this._overview() : this.camera);
+    if (this.uncover && --this.uncover === 0) {
+      this.el.querySelector('.preroll').classList.add('gone');
+      if (this.sound && this.scoreWhenReady) { this.scoreWhenReady = false; this._scoreFrom(0); }
+    }
+  }
 }

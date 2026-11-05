@@ -1276,6 +1276,10 @@ export class YardScenery {
 
   // Build what's on screen round a point now (the first frame, a jump).
   loadNow(x, z, view = AREA * 0.3) { this.update(x, z, view, Infinity, Math.min(MAX_REACH, view)); }
+  // Build 67: the same regions, a slice (budget ms) a frame, so the page keeps drawing while they load (the
+  // film's black pre-roll shows a bar); left() is how many are still to build.
+  preload(x, z, view, budget) { this.update(x, z, view, budget, Math.min(MAX_REACH, view)); }
+  left(x, z, view) { const tx = x / T, ty = z / T, reach = Math.min(MAX_REACH, view); return this.regions.filter((R) => (!R.near || R.job) && this._dist(R, tx, ty) < reach).length; }
 
   _unload(R) {
     if (R.job) { R.job.return(); R.job = null; }
