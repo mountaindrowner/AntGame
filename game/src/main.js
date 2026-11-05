@@ -93,31 +93,23 @@ function mapCanvas() {
     const g = c.getContext('2d');
     g.fillStyle = '#2e4a1c'; g.fillRect(0, 0, c.width, c.height);
     SIM.AREAS.forEach((A, i) => { const b = SIM.areaBounds(i); g.fillStyle = GROUND_TINT[A.ground] || GROUND_TINT.grass; g.fillRect(b.x0 * MAP_K, b.y0 * MAP_K, SIM.AREA * MAP_K, SIM.AREA * MAP_K); });
-    app.mapDone = new Set();
-    // Photos from earlier sessions of this colony.
-    const m = loadMap();
-    if (m && !app.mapFresh) {
-      const img = new Image();
-      // Only regions not photographed again already this session.
-      img.onload = () => {
-        if (mapFor !== w) return;
-        const k = img.width / c.width;
-        for (const i of m.done) {
-          if (app.mapDone.has(i)) continue;
-          const b = SIM.areaBounds(i), x = b.x0 * MAP_K, y = b.y0 * MAP_K, n = SIM.AREA * MAP_K;
-          g.drawImage(img, x * k, y * k, n * k, n * k, x, y, n, n);
-          app.mapDone.add(i);
-        }
-      };
-      img.src = m.img;
-    }
+    app.mapDone = new Set(); app.mapImgs = {};
+    // Photos from earlier sessions of this colony: one small JPEG per region (build 65), or, from older
+    // saves, one image of the whole map, cut into regions as it loads. Only regions not photographed again
+    // already this session.
+    const m = loadMap(), n = SIM.AREA * MAP_K;
+    const put = (i, img, sx, sy, k) => { if (mapFor !== w || app.mapDone.has(i)) return; const b = SIM.areaBounds(i); g.drawImage(img, sx, sy, n * k, n * k, b.x0 * MAP_K, b.y0 * MAP_K, n, n); app.mapDone.add(i); app.mapImgs[i] = regionJpeg(c, i); };
+    if (m && !app.mapFresh && m.regions) for (const [i, url] of Object.entries(m.regions)) { const img = new Image(); img.onload = () => put(+i, img, 0, 0, img.width / n); img.src = url; }
+    else if (m && !app.mapFresh && m.img) { const img = new Image(); img.onload = () => { const k = img.width / c.width; for (const i of m.done) { const b = SIM.areaBounds(i); put(i, img, b.x0 * MAP_K * k, b.y0 * MAP_K * k, k); } }; img.src = m.img; }
     app.mapFresh = false;
   }
   return app.mapCanvas;
 }
-// Saved with the game, when a new photo has come in since last time.
+// One region of the map as a small JPEG (a couple of milliseconds; the whole map took far longer).
+function regionJpeg(c, i) { const b = SIM.areaBounds(i), n = SIM.AREA * MAP_K, r = document.createElement('canvas'); r.width = r.height = n; r.getContext('2d', { willReadFrequently: true }).drawImage(c, b.x0 * MAP_K, b.y0 * MAP_K, n, n, 0, 0, n, n); return r.toDataURL('image/jpeg', 0.72); }
+// Saved with the game, when a new photo has come in since last time: just the regions' JPEGs, already made.
 let mapSaved = 0;
-function saveMapIfNew() { if (app.mapDone && app.mapDone.size !== mapSaved) { mapSaved = app.mapDone.size; saveMap(app.mapCanvas, app.mapDone); } }
+function saveMapIfNew() { if (app.mapDone && app.mapDone.size !== mapSaved) { mapSaved = app.mapDone.size; saveMap(app.mapImgs); } }
 views.surface.onRegionLoaded = (i) => { mapCanvas(); if (!app.mapDone.has(i) && !photoQ.includes(i)) photoQ.push(i); };
 
 // Only a region still built near you is photographed (one that's been thrown
@@ -157,8 +149,9 @@ function photo(x0, y0, tw, th, px, done) {
   fog.near = near; fog.far = far; sv.rain.visible = rain; sv.dyn.visible = dyn; if (sv.scent) sv.scent.visible = scent; pipeline.uniforms.uSnap.value.copy(snap);
   const toCanvas = () => {
     // GL rows run bottom-up.
+    // (Memory-backed, build 65: encoding it as a JPEG then takes a fraction of a millisecond, not ~20 ms.)
     const c = document.createElement('canvas'); c.width = px; c.height = ph;
-    const g = c.getContext('2d'), img = g.createImageData(px, ph), buf = shot.buf;
+    const g = c.getContext('2d', { willReadFrequently: true }), img = g.createImageData(px, ph), buf = shot.buf;
     for (let y = 0; y < ph; y++) img.data.set(buf.subarray((ph - 1 - y) * px * 4, (ph - y) * px * 4), y * px * 4);
     g.putImageData(img, 0, 0);
     return c;
@@ -172,7 +165,7 @@ function photo(x0, y0, tw, th, px, done) {
 // background and pasted in when it arrives.
 app.photoRegion = (i, sync = true) => {
   const b = SIM.areaBounds(i), c = mapCanvas(), w = app.s.world;
-  const paste = (img) => { if (mapFor !== w) return; c.getContext('2d').drawImage(img, b.x0 * MAP_K, b.y0 * MAP_K); app.mapDone.add(i); };
+  const paste = (img) => { if (mapFor !== w) return; c.getContext('2d').drawImage(img, b.x0 * MAP_K, b.y0 * MAP_K); app.mapDone.add(i); app.mapImgs[i] = img.toDataURL('image/jpeg', 0.72); };
   const img = photo(b.x0, b.y0, SIM.AREA, SIM.AREA, SIM.AREA * MAP_K, sync ? null : paste);
   if (img) paste(img);
 };
@@ -254,7 +247,7 @@ function blend(s, k) {
   return () => { for (const [o, kx, ky, x, y] of saved) { o[kx] = x; o[ky] = y; } };
 }
 
-let slow = 0;
+let slow = 0, fast = 0, raisedAt = -1e9, noRaise = false; // auto quality (build 65: it can step back up)
 const nameV = new THREE.Vector3();
 let last = performance.now(), acc = 0, hudT = 0, saveT = 0, frames = 0, fpsT = 0, clock = 0;
 let wasInNest = app.s.player.inNest;
@@ -359,10 +352,14 @@ function frame(now) {
   fpsT += dt;
   if (fpsT >= 1) {
     app.fps = frames; frames = 0; fpsT = 0;
-    // Three slow seconds in a row: drop a quality step (never back up, so it
-    // doesn't flicker between steps). Skipped while the game is paused.
-    slow = app.paused || app.opts.graphics !== 'auto' ? 0 : app.fps < 40 ? slow + 1 : 0;
-    if (slow >= 3) { slow = 0; pipeline.setQuality(pipeline.quality + 1); }
+    // Three slow seconds in a row: drop a quality step. Build 65: ten smooth ones (55+) step back up, so one
+    // busy moment doesn't leave the whole session blurrier; a step that proves too slow again within 30 s
+    // after being raised stays down for good, so it never flickers. Skipped while paused.
+    const auto = !app.paused && app.opts.graphics === 'auto';
+    slow = auto && app.fps < 40 ? slow + 1 : 0;
+    fast = auto && app.fps >= 55 ? fast + 1 : 0;
+    if (slow >= 3) { slow = 0; if (pipeline.setQuality(pipeline.quality + 1) && clock - raisedAt < 30) noRaise = true; }
+    if (fast >= 10 && pipeline.quality > 0 && !noRaise) { fast = 0; pipeline.setQuality(pipeline.quality - 1); raisedAt = clock; }
   }
   hudT += dt;
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }

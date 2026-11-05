@@ -61,12 +61,14 @@ export function clearSave() {
   try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem(SAVE_KEY + '-prev'); localStorage.removeItem(MAP_KEY); } catch (e) { /* ignore */ }
 }
 
-// The yard map's photo, kept beside the save so explored regions still show
-// after a reload: a JPEG of the map canvas and which regions it holds.
+// The yard map's photos, kept beside the save so explored regions still show
+// after a reload.
 const MAP_KEY = SAVE_KEY + '-map';
-export function saveMap(canvas, done) {
-  try { localStorage.setItem(MAP_KEY, JSON.stringify({ img: canvas.toDataURL('image/jpeg', 0.72), done: [...done] })); } catch (e) { /* storage full or blocked */ }
+// Build 65: one small JPEG per region ({ v: 2, regions: { index: data URL } }), each made once when the region
+// is photographed. Encoding the whole 1600×1120 map at every autosave stalled the game.
+export function saveMap(regions) {
+  try { localStorage.setItem(MAP_KEY, JSON.stringify({ v: 2, regions })); } catch (e) { /* storage full or blocked */ }
 }
 export function loadMap() {
-  try { const m = JSON.parse(localStorage.getItem(MAP_KEY)); return m && m.img ? m : null; } catch (e) { return null; }
+  try { const m = JSON.parse(localStorage.getItem(MAP_KEY)); return m && (m.regions || m.img) ? m : null; } catch (e) { return null; } // (older saves: { img, done })
 }

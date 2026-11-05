@@ -25,6 +25,8 @@ export class PS1Pipeline {
   constructor(canvas) {
     this.canvas = canvas;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+    // Build 65: checking every compiled shader for errors costs time at each new material; only while developing.
+    this.renderer.debug.checkShaderErrors = !!(import.meta.env && import.meta.env.DEV);
     this.renderer.setPixelRatio(1);
     this.renderer.autoClear = true;
     // Shared by every PS1 material: the grid vertices snap to.

@@ -453,6 +453,21 @@ export class SurfaceView {
     this.scentTex.needsUpdate = true;
   }
 
+  // Build 65: the patch of ground the camera sees (world x/z), from where the screen's corners meet the
+  // ground. Crowds drew every ant, item and bug in the loaded yard; now only those on it (or near it).
+  _viewRect(app) {
+    if (app.sceneryFocus) { this.vr = null; return; } // the film looks through its own camera: draw everything
+    const cam = this.camera, cp = cam.position, far = cam.far; let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const [nx, ny] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      tmpV.set(nx, ny, 0.5).unproject(cam).sub(cp).normalize();
+      const d = tmpV.y < -0.02 ? Math.min(far, -cp.y / tmpV.y) : far, x = cp.x + tmpV.x * d, z = cp.z + tmpV.z * d;
+      x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z);
+    }
+    this.vr = { x0: Math.min(x0, this.target.x), x1: Math.max(x1, this.target.x), z0: Math.min(z0, this.target.z), z1: Math.max(z1, this.target.z) };
+  }
+  // Is (x, z) on the ground in view, give or take m (px)? Always yes until the camera has settled.
+  seen(x, z, m = 40) { const v = this.vr; return !v || !this.camInit || (x > v.x0 - m && x < v.x1 + m && z > v.z0 - m && z < v.z1 + m); }
+
   _placeBar(bar, x, y, h, frac, color) {
     bar.group.visible = true;
     bar.group.position.set(x, h, y);
@@ -533,6 +548,7 @@ export class SurfaceView {
       const lifted = f.carried && f.px != null;
       const cx = lifted ? f.px : (f.x + 0.5) * T, cz = lifted ? f.py : (f.y + 0.5) * T, spin = (f.x * 7 + f.y * 13) % 6;
       // (Build 14: the coloured rings under items are gone; Mark didn't like them.)
+      if (!lifted && !this.seen(cx, cz, (L.r || 4) + 40)) continue; // off screen
       if (L.dew) { this._dew(f, L, cx, cz, spin, t); continue; }
       tmpV.set(cx, L.water ? 0.3 : (L.lift || 0) * L.r + 0.15 + (lifted ? 5 + Math.abs(Math.sin(t * 9)) : 0), cz);
       tmpQ.setFromAxisAngle(UP, spin);
@@ -555,6 +571,7 @@ export class SurfaceView {
     }
     for (const a of s.ants) {
       if (a.isPlayer || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'dead' || a.state === 'away') continue;
+      if (!a.climb && !this.seen(a.x, a.y)) continue; // off screen
       // A war party's champion: twice the size, ringed in red (build 19).
       if (a.champion) { ant(a, '#5a1a12', 2); tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('champ', PROPS.ring, tmpV, tmpQ.identity(), 13, '#ff4030'); continue; }
       ant(a, antColor(a), rankScale(a));
@@ -648,6 +665,7 @@ export class SurfaceView {
     // Build 20: rocks and props between the camera and your ant dither away
     // round it, so it never vanishes behind the big rock.
     this.camera.updateMatrixWorld();
+    this._viewRect(app); // build 65: next frame draws only what's on (or near) the ground in view
     if (a && !app.titleOpen) {
       tmpV.set(a.x, 4, a.y).applyMatrix4(this.camera.matrixWorldInverse); const depth = -tmpV.z - 6;
       tmpV.set(a.x, 4, a.y).project(this.camera);
@@ -888,7 +906,7 @@ export class SurfaceView {
     const B = this.bugs, G = this.bugGeo, live = new Set();
     this._hunterAtk = [];
     let bars = 0;
-    const put = (geo, x, y, z, q, k, color, sy) => { tmpV.set(x, y, z); if (sy) B.pushAtScale(geo.uuid, geo, tmpV, q, k, k * sy, k, color); else B.pushAt(geo.uuid, geo, tmpV, q, k, color); };
+    const put = (geo, x, y, z, q, k, color, sy) => { if (!this.seen(x, z, 90)) return; tmpV.set(x, y, z); if (sy) B.pushAtScale(geo.uuid, geo, tmpV, q, k, k * sy, k, color); else B.pushAt(geo.uuid, geo, tmpV, q, k, color); };
     // yaw about up, then pitch (nose up +) about the body's side, then roll about its length.
     const orient = (yaw, pitch = 0, roll = 0) => {
       tmpQ.setFromAxisAngle(UP, yaw);

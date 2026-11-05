@@ -2,6 +2,29 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 5: faster, now that there's less to draw (build 65)
+
+Mark: "With these changes, improve the performance of the game since it's less triangles." Then: "What are some of the biggest draws… how is that possible and how can we reduce that?" Measured first: a harness times the sim, the scene update and the draw, counts triangles and draw calls, and profiles the processor, on three scenes (250 ants on the surface, the nest, the Cordyceps fight), build 63 against this one, back to back.
+- **Off-screen things aren't drawn.** Every ant, ground item and bug in the loaded yard was drawn each frame, even far off-screen (the crowds can't be culled by three.js on their own). Now the view works out the patch of ground the camera sees (plus a margin) and skips the rest. The film, which has its own camera, still draws everything.
+- **Lighter outfits.** The forager's apron was 284 triangles on a few pixels of green; with about 280 foragers it was 80,000 triangles a frame, more than their bodies. It is 104 now: the same apron, basket, straps, bib and bow, with fewer sides, and the basket lid, red ball and bow knot (too small to see) gone. The harvester's sack went from 260 to 156, the builder's hard hat from 180 to 138, and every outfit's bands and balls have fewer sides.
+- **The map no longer stalls the game.** It was saved as one 1600 × 1120 JPEG, encoded on the main thread at every autosave after a new region was photographed. Now each region's photo is encoded once, when it is taken, as a small JPEG in a memory-backed canvas (0.3 ms instead of about 20), and saving just writes them out. Older saves' maps still load, and are converted as they load.
+- **Picture quality recovers.** The game drops a quality step after three slow seconds; it now steps back up after ten smooth ones (55+ fps). A step that proves too slow again within 30 s stays down, so it never flickers.
+- **No shader error checks in the released build** (only while developing): they cost time each time a new material first draws.
+- **Results** (test browser without a graphics card, so the frame rates are low but comparable):
+
+  | Scene | Triangles a frame, before → after | Draw calls | Frame rate |
+  |---|---|---|---|
+  | 250 ants on the surface | 515k → 110k | 66 → 32 | 1.2 → 6 |
+  | Cordyceps fight | 543k → 50k | 88 → 32 | 6.8 → 10 |
+  | Nest | 145k → 132k | 55 → 55 | 6.4 → 7.5 |
+
+- **The biggest draws left:**
+  - the nest's underground (about 120k, the soil and tunnels);
+  - the yard's ground and landmarks (about 50k on screen);
+  - the ant bodies themselves in a big crowd (about 210 each);
+  - the Cordyceps heart (about 14k, mostly its nine ant husks).
+  - The world is next only when Mark says so. For crowds, the next step would be a far-away ant: the 64-triangle Ultra ant, with no outfit, for ants that are only a few pixels tall.
+
 ## Nov 5: every creature and object in the Lean style (build 64)
 
 Mark, after the ant lab and the bosses in Lean: "Lean looks better overall… apply this to every single ant and boss and model everything, maybe not the world itself for now." Then: "Keep the other creature models, the first ones, but let's use the Lean versions."
