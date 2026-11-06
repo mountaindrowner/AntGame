@@ -278,10 +278,17 @@ export function createUI(app) {
     <path class="sky" d="M8,0 A52,52 0 0 0 112,0 Z"/>
     <g clip-path="url(#dc-sky)">
       <g class="stars">${STARS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>
-      <g class="sun"><g class="rays">${RAYS}</g><circle r="8"/></g>
-      <g class="moon"><path d="M3,-8 A8,8 0 1 0 3,8 A6,6 0 1 1 3,-8 Z"/></g>
+      <g class="cloud"><path d="M0,0 a5,5 0 0 1 9,-3 a6,6 0 0 1 11,2 a4,4 0 0 1 1,7 h-20 a4,4 0 0 1 -1,-6 Z"/></g>
+      <g class="sun"><g class="rays">${RAYS}</g><circle r="8"/><g class="face"><circle cx="-2.7" cy="-1.6" r="1"/><circle cx="2.7" cy="-1.6" r="1"/><path d="M-3,1.8 Q0,4.6 3,1.8"/></g></g>
+      <g class="moon"><path d="M3,-8 A8,8 0 1 0 3,8 A6,6 0 1 1 3,-8 Z"/><path class="lid" d="M-5.2,-1 Q-3.6,0.6 -2,-1"/></g>
     </g>
-    <path class="hub" d="M47,0 A13,13 0 0 0 73,0 Z"/>
+    <g class="head">
+      <path class="ant-ant" d="M51,1 Q44,9 38,10 M69,1 Q76,9 82,10"/>
+      <path class="hub" d="M47,0 A13,13 0 0 0 73,0 Z"/>
+      <circle class="eye" cx="55.5" cy="5" r="2.6"/><circle class="eye" cx="64.5" cy="5" r="2.6"/>
+      <circle class="pupil" cx="55.5" cy="5" r="1.3"/><circle class="pupil" cx="64.5" cy="5" r="1.3"/>
+      <path class="jaw" d="M57,11 Q58.5,13.5 60,12 M63,11 Q61.5,13.5 60,12"/>
+    </g>
     <path class="tick" d="M60,48 L60,52"/>
   </svg><div class="cap"></div>`;
   document.body.appendChild(clock);
@@ -300,6 +307,10 @@ export function createUI(app) {
     q('.moon').setAttribute('transform', `translate(${mx.toFixed(1)} ${my.toFixed(1)})`); q('.moon').style.opacity = isDay ? 0 : 1;
     const c = L < 0.5 ? mixRgb(NAVY, DUSK, L / 0.5) : mixRgb(DUSK, BLUE, (L - 0.5) / 0.5);
     q('.sky').style.fill = `rgb(${c.join(',')})`; q('.stars').style.opacity = Math.max(0, 1 - L * 2.5).toFixed(2);
+    // Build 70, some character: the hub is a little ant's head, and its eyes follow the sun or the moon.
+    { const [tx, ty] = isDay ? [sx, sy] : [mx, my];
+      clock.querySelectorAll('.pupil').forEach((e, i) => { const ex = i ? 64.5 : 55.5, dx = tx - ex, dy = ty - 5, m = Math.hypot(dx, dy) || 1; e.setAttribute('cx', (ex + (dx / m) * 1.2).toFixed(2)); e.setAttribute('cy', (5 + (dy / m) * 1.2).toFixed(2)); });
+      q('.cloud').style.opacity = (L * 0.9).toFixed(2); }
     const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + ' min' : Math.max(10, Math.round(u / 10) * 10) + ' s';
     clock.dataset.tip = night ? `Night: dawn in ${left}.` : `Day: night falls in ${left}.`;
     if (clockNight !== null && night !== clockNight) {
@@ -358,7 +369,7 @@ export function createUI(app) {
     let h = '';
     if (!one) h += `<div class="ctabs">` + kinds.map((q) => `<button data-ctab="${q}" class="${q === k ? 'on' : ''}">${sicon(q)}<b>${CASTES[q].name}</b><i>${SIM.casteLevel(s, q)}/${UPGRADES[q].length}</i></button>`).join('') + `</div>`;
     const L = UPGRADES[k], n = SIM.casteLevel(s, k), lock = SIM.upgradeLock(s, k), C = k === 'you' ? { name: 'You' } : CASTES[k];
-    h += `<div class="up"><div class="up-h">${sicon(k === 'you' ? 'forager' : k)}<b>${C.name}</b><span>level ${n} of ${L.length}</span></div><div class="role">${ROLE[k] || ''}</div><ol class="ladder">`;
+    h += `<div class="up"><div class="up-h">${sicon(k === 'you' ? 'forager' : k)}<b>${C.name}</b><span>level ${n} of ${L.length}</span></div><div class="body"><div class="role">${ROLE[k] || ''}</div><ol class="ladder">`;
     L.forEach((U, i) => {
       const pk = (c.picks[k] || {})[i + 1], pn = pk && U.picks.find((p) => p[0] === pk), name = U.boost === 'Mastery' ? '★ Mastery' : U.boost;
       if (i < n) { h += `<li class="done"><em>✓</em><span><b>${name}</b>${pn ? ` · ${pn[1]}` : ''}</span></li>`; return; }
@@ -372,7 +383,7 @@ export function createUI(app) {
     h += `</ol>`;
     const P = PROMOS[FAMILY[k]] || [], d = P.length ? SIM.doctrineOf(s, k) : [];
     if (P.length) { h += `<div class="t">Rank skills</div>`; for (const [slot, label] of [[0, 'Veteran (50 xp)'], [1, 'Elite (150 xp)']]) h += `<div class="doc"><span>${label}</span>` + P.map(([pk, pn, pd]) => `<button data-doc="${k}:${slot}:${pk}" class="${d[slot] === pk ? 'on' : ''}" data-tip="${pn}: ${pd}">${pn}</button>`).join('') + `</div>`; }
-    h += `</div>`;
+    h += `</div></div>`;
     return h;
   }
   function growRanks(s, c) {
@@ -803,7 +814,7 @@ export function createUI(app) {
     // Health (build 14): a red bar, a red rim when you're hit, a slow pulse when low,
     // and a dark one when you die.
     const pa = P().ant, hpMax = pa ? Math.max(SIM.youHp(s), SIM.maxHp(s, pa)) : 1, hp = pa ? Math.max(0, pa.hp) / hpMax : 0;
-    $('hpbar').style.width = hp * 100 + '%';
+    $('hpbar').style.width = hp * 100 + '%'; $('hplag').style.width = hp * 100 + '%'; // (the lag follows late: CSS)
     // Build 69: the values beside the bars.
     { const hv = pa ? `${Math.ceil(Math.max(0, pa.hp))} / ${Math.round(hpMax)}` : '–', uv = pa ? `${Math.round(Math.max(0, P().hunger))}%` : '–';
       if ($('hpv').textContent !== hv) $('hpv').textContent = hv; if ($('huv').textContent !== uv) $('huv').textContent = uv; }
@@ -834,7 +845,7 @@ export function createUI(app) {
       const stage = !alive ? app.hungerStage || 0 : hu < 12 ? 2 : hu < 30 ? 1 : 0;
       if (stage > (app.hungerStage || 0)) shout(stage === 2 ? '🍖' : '🍖', stage === 2 ? 'Starving!' : 'Hungry', 'Eat at the nest, or stand beside a forager carrying food.', stage === 2 ? 'hard' : 'warn');
       app.hungerStage = stage; }
-    el.hungerBar.style.background = P().hunger < 35 ? '#e4524a' : '#8fd36b';
+    el.hungerBar.style.backgroundColor = P().hunger < 35 ? '#e4524a' : ''; // (build 70: the colour only, so the gloss stays; '' is the theme's)
     const lbl = SIM.actionLabel(s) || 'Pick up';
     const lift = /^Lift (\d+\/\d+)/.exec(lbl);
     setIcon(el.act, /^(Drop|Set down)/.test(lbl) ? 'drop' : 'pick', lbl, lift ? lift[1] : '');

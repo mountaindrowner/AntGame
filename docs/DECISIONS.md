@@ -2,6 +2,26 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 6: a little character (build 70)
+
+Mark, on build 69: "I love what you did with the forager section… there should be a bit of an indent, so you know it's under that category… The day clock is awesome too. Add a little pizzazz to it, like a little character… Same thing with HP."
+- **The Ants page:**
+  - the kind's icon sits in a green badge;
+  - everything about it (its line, the ladder, its rank skills) hangs from the badge, indented along a gold guide line, like a branch of a tree;
+  - the rows are narrower (640 px, was 760).
+- **The day clock has character:**
+  - its hub is a little ant's head (antennae, mandibles) whose eyes follow the sun or the moon;
+  - the sun has a face and its rays slowly turn;
+  - the moon dozes;
+  - the stars twinkle;
+  - a cloud drifts across by day.
+
+  All of it still is with reduced motion.
+- **The health bar:**
+  - a fighting game's damage trail: a pale chunk that lingers half a second after a hit, then shrinks, so you see what the hit took;
+  - glossy fills on both bars in each theme's own colours;
+  - the heart beats while you're low.
+
 ## Nov 6: Phase 1, the HUD thought through (build 69)
 
 Mark: "Think through them before just doing a first draft… what exactly am I asking for, what does that look like, how does that compare to what other games do." Each Phase 1 piece is reasoned out in [`PHASE1.md`](PHASE1.md) (asked, means, others, design), then built:
