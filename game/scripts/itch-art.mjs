@@ -126,7 +126,7 @@ await L.evaluate(SCENES.outpost); await quiet(L); await L.waitForTimeout(9000); 
 // Evolve, over the yard.
 await L.evaluate(SCENES.yard); await quiet(L); await L.waitForTimeout(2000); await quiet(L);
 await L.evaluate(() => { const { app } = window.UNDERFOOT; Object.assign(app.s.colony, { genes: 14, genesTotal: 20, protein: 40, grit: 40 }); });
-await L.click('#evolvebtn', { force: true }); await L.waitForTimeout(500); await L.click('#evo .evo-dots button[data-page="3"]', { force: true }); await L.waitForTimeout(400); await L.click('#evo .enode[data-node="mandibles"]', { force: true }); await L.waitForTimeout(500); await shot(L, 'shot-5-evolve');
+await L.click('#evolvebtn', { force: true }); await L.waitForTimeout(500); await L.click('#evo .evo-tabs button[data-page="3"]', { force: true }); await L.waitForTimeout(400); await L.click('#evo .enode[data-node="mandibles"]', { force: true }); await L.waitForTimeout(500); await shot(L, 'shot-5-evolve');
 await L.close();
 
 // ---------- portrait phone screenshots (390×844 @3) ----------

@@ -27,21 +27,24 @@ export function createUI(app) {
   // carries a number when there is one (Lift 3/6, Release 4, Recruit 7).
   // Bottom-bar buttons also wear a short name curved over their tops.
   const ARC = { menu: 'Menu', map: 'Map', evolve: 'Evolve', jobs: 'Jobs', zoom: 'Zoom', help: 'Help', nest: 'Nest', surface: 'Yard', outpost: 'Outpost', raid: 'Raid', hold: 'Hold', split: 'Split', follow: 'Follow', pick: 'Pick up', drop: 'Drop', trail: 'Trail', recruit: 'Recruit', release: 'Release', enter: 'Enter', exit: 'Exit', dig: 'Dig in', queen: 'Queen', build: 'Build', cancel: 'Cancel' };
+  // Build 69: every dock button has a hotkey, printed on it as a keycap (an RTS command card's habit).
+  const HOTKEY = { act: 'E', mark: 'T', recruit: 'R', release: 'G', holdbtn: 'H', splitbtn: 'V', followbtn: 'F', enter: 'N', outpostbtn: 'O', raidbtn: 'B', queenbtn: 'Q', levelbtn: 'B', exitnest: 'N', buildnest: 'B' };
   // A button's name curved over its top, hugging it: the curve's radius follows the button's size (build 63).
   const arc = (b, text) => { const r = b.closest('#bar2') ? 23.5 : 29.5; return `<svg class="arc" viewBox="0 0 70 70" aria-hidden="true"><path id="arc-${b.id}" d="M${35 - r},35 A${r},${r} 0 0 1 ${35 + r},35" fill="none"/><text><textPath href="#arc-${b.id}" startOffset="50%" text-anchor="middle">${text}</textPath></text></svg>`; };
   function setIcon(b, icon, tip, badge) {
     const name = b.closest('.dock') || b.closest('#bar2') ? (/^Lift/.test(tip) ? 'Lift' : /^Set down/.test(tip) ? 'Set down' : ARC[icon]) : '';
     const key = icon + '|' + (badge ?? '') + '|' + name;
-    if (b.dataset.key !== key) { b.dataset.key = key; b.innerHTML = ICONS[icon] + (badge != null && badge !== '' ? `<b class="badge">${badge}</b>` : '') + (name ? arc(b, name) : ''); }
+    const hk = HOTKEY[b.id];
+    if (b.dataset.key !== key) { b.dataset.key = key; b.innerHTML = ICONS[icon] + (badge != null && badge !== '' ? `<b class="badge">${badge}</b>` : '') + (name ? arc(b, name) : '') + (hk ? `<kbd>${hk}</kbd>` : ''); }
     if (b.dataset.tip !== tip) { b.dataset.tip = tip; b.setAttribute('aria-label', tip); }
   }
   setIcon(el.mark, 'trail', 'Mark trail'); setIcon(el.recruit, 'recruit', 'Recruit (hold for more)'); setIcon(el.release, 'release', 'Release');
   // Build 28: the Raid button (by a rival door, with a crew) and the raid card (while one runs).
-  el.raid = document.createElement('button'); el.raid.id = 'raidbtn'; el.raid.className = 'ico hidden'; el.outpost.after(el.raid); setIcon(el.raid, 'raid', 'Raid');
+  el.raid = document.createElement('button'); el.raid.id = 'raidbtn'; el.raid.className = 'ico hidden'; el.outpost.after(el.raid); setIcon(el.raid, 'raid', 'Raid'); // (build 69: with Enter and Outpost, left of the four)
   // Build 29: crew orders, next to Release.
   const mk = (id, icon, tip) => { const b = document.createElement('button'); b.id = id; b.className = 'ico hidden'; setIcon(b, icon, tip); return b; };
   el.hold = mk('holdbtn', 'hold', 'Hold'); el.split = mk('splitbtn', 'split', 'Split'); el.follow = mk('followbtn', 'follow', 'Follow');
-  el.release.closest('#bar').querySelector('.extra').prepend(el.hold, el.split, el.follow); // (build 68: beside the fixed four, not among them)
+  el.release.closest('#bar').querySelector('.crew').append(el.hold, el.split, el.follow); // (build 69: the crew's own group, right of the four)
   // Build 32: your ant's abilities, bottom left: click, or press 1–4. Aimed ones aim at the mouse.
   el.skills = document.createElement('div'); el.skills.id = 'skills'; el.skills.className = 'hidden';
   el.skills.innerHTML = SIM.ABILITY_KEYS.map((k, i) => `<button data-skill="${k}" class="skill"><span class="ic">${SIM.ABILITIES[k].icon}</span><b class="key">${i + 1}</b><i class="cd"></i><em class="secs"></em></button>`).join('');
@@ -70,9 +73,20 @@ export function createUI(app) {
     const bars = node.querySelectorAll('[style^="width:"]'); let i = 0;
     for (const m of h.matchAll(WIDTH)) { const b = bars[i++]; if (b) b.style.width = m[1] + '%'; }
   }
-  function showTip(t) {
+  // Build 69: a tip reads like an RTS's: its name (and hotkey) first, then what it does. The name is the
+  // text before its first colon or full stop, when that's short.
+  function tipParts(text) {
+    const m = /^(.{2,44}?)(?::\s|\.\s)(.+)$/s.exec(text);
+    if (!m) return [text, ''];
+    return [m[1], m[2].replace(/^./, (ch) => ch.toUpperCase())];
+  }
+  function showTip(t, sticky) {
     const text = t.dataset.tip; if (!text) return;
-    el.tip.textContent = text; el.tip.classList.remove('hidden');
+    const [name, line] = tipParts(text), hk = HOTKEY[t.id];
+    el.tip.textContent = '';
+    const b = document.createElement('b'); b.textContent = name; if (hk) { const k = document.createElement('kbd'); k.textContent = hk; b.appendChild(k); } el.tip.appendChild(b);
+    if (line) { const sp = document.createElement('span'); sp.textContent = line; el.tip.appendChild(sp); }
+    el.tip.classList.remove('hidden');
     sfx.play('tick');
     // Worked out in screen pixels, then set in the tip's own: it's scaled up with the HUD on big screens
     // (zoom), and its left and top are scaled with it (build 68: the bottom bar's tips fell off the screen).
@@ -82,11 +96,13 @@ export function createUI(app) {
     el.tip.style.top = Math.max(6, Math.min(window.innerHeight - h - 6, below ? r.bottom + 12 : r.top - h - 22)) / z + 'px';
     el.tip.classList.toggle('below', below);
     el.tip.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - left)) / z + 'px');
-    clearTimeout(tipHide); tipHide = setTimeout(hideTip, 2600);
+    // With a mouse it stays while you hover (build 69: 2.6 s was too quick for a long tip); a touch fades.
+    clearTimeout(tipHide); if (!sticky) tipHide = setTimeout(hideTip, 3200);
   }
   function hideTip() { el.tip.classList.add('hidden'); clearTimeout(tipTimer); }
-  document.addEventListener('pointerover', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t || e.pointerType !== 'mouse') return; clearTimeout(tipTimer); tipTimer = setTimeout(() => showTip(t), 350); });
-  document.addEventListener('pointerout', (e) => { if (e.pointerType === 'mouse' && e.target.closest && e.target.closest('[data-tip]')) hideTip(); });
+  document.addEventListener('pointerover', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (!t || e.pointerType !== 'mouse') return; clearTimeout(tipTimer); tipTimer = setTimeout(() => showTip(t, true), 350); });
+  // (Moving onto the button's own icon or label isn't leaving it.)
+  document.addEventListener('pointerout', (e) => { if (e.pointerType !== 'mouse' || !e.target.closest) return; const t = e.target.closest('[data-tip]'); if (t && !(e.relatedTarget && t.contains(e.relatedTarget))) hideTip(); });
   document.addEventListener('pointerdown', (e) => {
     longPressed = false;
     const t = e.target.closest && e.target.closest('[data-tip]'); if (!t || e.pointerType === 'mouse') return;
@@ -249,29 +265,47 @@ export function createUI(app) {
     const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + 'm' : Math.max(10, Math.round(u / 10) * 10) + 's';
     return chip(night ? '🌙' : SIM.daylight(s) < 1 ? '🌅' : '☀️', left, night ? `Night: ${left} till dawn.` : `Day: ${left} till night falls.`);
   }
-  // Build 68: the day clock, a half dial at the top centre (like an RTS's): a disc of day and night turns
-  // under it, the sun up by day and the moon by night. At dusk and dawn it glows and says so for a moment,
-  // instead of a banner. The disc's angle under the top of the window is the time of day (0 dawn).
+  // The day clock (build 68; drawn properly in build 69), a half dial hanging from the top centre, as in
+  // Warcraft III. The sun crosses its arc from the left horizon to the right by day, the moon by night, so
+  // where it is says how much is left; the sky inside follows the light (blue, orange at the turns, deep blue
+  // with stars). At dawn and dusk the frame glows and says so for a moment, instead of a banner.
   const clock = document.createElement('div'); clock.id = 'dayclock'; clock.className = 'hidden';
-  clock.innerHTML = '<div class="dial"><div class="disc"></div><b class="hub"></b><i class="sun">☀️</i><i class="moon">🌙</i></div><div class="cap"></div>';
+  const STARS = [[30, 10, 1.1], [44, 26, 0.8], [62, 34, 1.2], [80, 18, 0.9], [92, 30, 1], [52, 14, 0.7], [72, 42, 0.8], [36, 36, 0.9]];
+  const RAYS = Array.from({ length: 8 }, (_, i) => { const a = (i / 8) * Math.PI * 2, c = Math.cos(a), si = Math.sin(a); return `<line x1="${(c * 10).toFixed(1)}" y1="${(si * 10).toFixed(1)}" x2="${(c * 13.5).toFixed(1)}" y2="${(si * 13.5).toFixed(1)}"/>`; }).join('');
+  clock.innerHTML = `<svg class="dial" viewBox="-4 -2 128 66" aria-hidden="true">
+    <defs><clipPath id="dc-sky"><path d="M8,0 A52,52 0 0 0 112,0 Z"/></clipPath></defs>
+    <path class="rim" d="M2,0 A58,58 0 0 0 118,0 Z"/>
+    <path class="sky" d="M8,0 A52,52 0 0 0 112,0 Z"/>
+    <g clip-path="url(#dc-sky)">
+      <g class="stars">${STARS.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`).join('')}</g>
+      <g class="sun"><g class="rays">${RAYS}</g><circle r="8"/></g>
+      <g class="moon"><path d="M3,-8 A8,8 0 1 0 3,8 A6,6 0 1 1 3,-8 Z"/></g>
+    </g>
+    <path class="hub" d="M47,0 A13,13 0 0 0 73,0 Z"/>
+    <path class="tick" d="M60,48 L60,52"/>
+  </svg><div class="cap"></div>`;
   document.body.appendChild(clock);
-  const SUN_AT = 0.33, MOON_AT = 0.823; // where the sun and moon sit on the disc: mid-day and mid-night
+  const DAY_SPAN = 0.671; // the share of the cycle that's day (isNight turns at 0.659 and 0.988)
+  const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+  const NAVY = [26, 32, 70], DUSK = [242, 146, 90], BLUE = [143, 202, 245];
   let clockNight = null, clockCapT = null;
+  const onArc = (f, R) => [60 - R * Math.cos(Math.PI * f), R * Math.sin(Math.PI * f)];
   function updateClock(s) {
     const show = s.queen.placed && !app.titleOpen;
     clock.classList.toggle('hidden', !show); if (!show) { clockNight = null; return; }
-    const p = SIM.dayPhase(s), disc = clock.querySelector('.disc');
-    disc.style.transform = `rotate(${(180 - ((s.dayT || 0) / SIM.DAY) * 360).toFixed(1)}deg)`; // now (disc angle p) at the bottom (unwrapped: no spin back at midnight)
-    for (const [sel, at] of [['.sun', SUN_AT], ['.moon', MOON_AT]]) {
-      const a = Math.PI + (at - p) * Math.PI * 2, R = 30, ic = clock.querySelector(sel);
-      ic.style.transform = `translate(${(Math.sin(a) * R).toFixed(1)}px, ${(-Math.cos(a) * R).toFixed(1)}px)`;
-    }
+    const p = SIM.dayPhase(s), d = (p + 0.012) % 1, isDay = d < DAY_SPAN, L = SIM.daylight(s);
+    const [sx, sy] = onArc(isDay ? d / DAY_SPAN : 0, 38), [mx, my] = onArc(isDay ? 0 : (d - DAY_SPAN) / (1 - DAY_SPAN), 38);
+    const q = (sel) => clock.querySelector(sel);
+    q('.sun').setAttribute('transform', `translate(${sx.toFixed(1)} ${sy.toFixed(1)})`); q('.sun').style.opacity = isDay ? 1 : 0;
+    q('.moon').setAttribute('transform', `translate(${mx.toFixed(1)} ${my.toFixed(1)})`); q('.moon').style.opacity = isDay ? 0 : 1;
+    const c = L < 0.5 ? mixRgb(NAVY, DUSK, L / 0.5) : mixRgb(DUSK, BLUE, (L - 0.5) / 0.5);
+    q('.sky').style.fill = `rgb(${c.join(',')})`; q('.stars').style.opacity = Math.max(0, 1 - L * 2.5).toFixed(2);
     const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + ' min' : Math.max(10, Math.round(u / 10) * 10) + ' s';
     clock.dataset.tip = night ? `Night: dawn in ${left}.` : `Day: night falls in ${left}.`;
     if (clockNight !== null && night !== clockNight) {
       clock.classList.remove('glow', 'g-night', 'g-day'); void clock.offsetWidth; clock.classList.add('glow', night ? 'g-night' : 'g-day');
-      clock.querySelector('.cap').textContent = night ? 'Night falls' : 'Dawn: dew on the grass';
-      clearTimeout(clockCapT); clockCapT = setTimeout(() => { clock.classList.remove('glow'); clock.querySelector('.cap').textContent = ''; }, 5000);
+      q('.cap').textContent = night ? 'Night falls' : 'Dawn: dew on the grass';
+      clearTimeout(clockCapT); clockCapT = setTimeout(() => { clock.classList.remove('glow'); q('.cap').textContent = ''; }, 5000);
     }
     clockNight = night;
   }
@@ -315,29 +349,30 @@ export function createUI(app) {
     }
     return h;
   }
+  // Build 69 (Mark: "the ants menu is like giant bars… not everything has to be so explicitly written"): one
+  // kind of ant at a time, picked from tabs, as a ladder of its five levels, a row each: done ✓, the next with
+  // its cost and Evolve, the rest dim. A level with two choices shows them side by side. Then its rank skills.
+  const ROLE = { you: 'The ant you play. Bought once; it carries over every time you are reborn.', forager: 'Brings food and water home.', builder: 'Digs, builds rooms, hauls the spoil out.', nurse: 'Tends the eggs and larvae.', soldier: 'Guards the nest and fights.', venom: 'Stings bugs and bosses.' };
   function growAnts(s, c, kinds = CASTE_ORDER) {
-    let h = kinds.includes('you') ? `<div class="note">The ant you play: quicker, tougher, a better leader. Bought once; it carries over every time you're reborn.</div>` : `<div class="note">Each level is bought once for every ant of that kind. Levels with two choices are for good: pick one.</div>`;
-    for (const k of kinds) {
-      const L = UPGRADES[k], n = SIM.casteLevel(s, k), lock = SIM.upgradeLock(s, k), C = k === 'you' ? { name: 'You' } : CASTES[k];
-      h += `<div class="up"><div class="up-h">${sicon(k === 'you' ? 'forager' : k)}<b>${C.name}</b><span>level ${n} of ${L.length}${lock ? ' · ' + lock : ''}</span></div><div class="lv">`;
-      L.forEach((U, i) => {
-        const pk = (c.picks[k] || {})[i + 1], pn = pk && U.picks.find((p) => p[0] === pk);
-        h += `<span class="${i < n ? 'done' : i === n ? 'next' : ''}">${i + 1}. ${U.boost === 'Mastery' ? '★ Mastery' : U.boost}${pn ? ': ' + pn[1] : ''}</span>`;
-      });
-      h += `</div>`;
-      const U = L[n];
-      if (U && !lock) {
-        const later = laterIn(U.cost), pay = SIM.canPay(c, U.cost);
-        const why = later ? `needs ${LATER[later]}: coming in a later build` : pay ? '' : 'short on materials';
-        if (U.picks) h += `<div class="btns">` + U.picks.map(([pk, pn, pd]) => `<button data-upc="${k}:${pk}" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost === 'Mastery' ? '' : U.boost + ' + '}${pn}</b><i>${pd}</i><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button>`).join('') + `</div>`;
-        else h += `<div class="btns one"><button data-upc="${k}:" ${pay ? '' : 'disabled'}><b>${n + 1}. ${U.boost}</b><i>${costIcons(U.cost)}${why ? ' · ' + why : ''}</i></button></div>`;
-      } else if (!U) h += `<div class="note">All levels bought.</div>`;
-      const P = PROMOS[FAMILY[k]] || [], d = P.length ? SIM.doctrineOf(s, k) : [];
-      if (P.length) for (const [slot, label] of [[0, 'At Veteran (50 xp) it learns'], [1, 'At Elite (150 xp) it also learns']]) {
-        h += `<div class="doc">${label}:` + P.map(([pk, pn, pd]) => `<button data-doc="${k}:${slot}:${pk}" class="${d[slot] === pk ? 'on' : ''}" data-tip="${pd}">${pn}</button>`).join('') + `</div>`;
-      }
-      h += `</div>`;
-    }
+    const one = kinds.length === 1, k = one ? kinds[0] : (kinds.includes(app.evoCaste) ? app.evoCaste : kinds[0]);
+    let h = '';
+    if (!one) h += `<div class="ctabs">` + kinds.map((q) => `<button data-ctab="${q}" class="${q === k ? 'on' : ''}">${sicon(q)}<b>${CASTES[q].name}</b><i>${SIM.casteLevel(s, q)}/${UPGRADES[q].length}</i></button>`).join('') + `</div>`;
+    const L = UPGRADES[k], n = SIM.casteLevel(s, k), lock = SIM.upgradeLock(s, k), C = k === 'you' ? { name: 'You' } : CASTES[k];
+    h += `<div class="up"><div class="up-h">${sicon(k === 'you' ? 'forager' : k)}<b>${C.name}</b><span>level ${n} of ${L.length}</span></div><div class="role">${ROLE[k] || ''}</div><ol class="ladder">`;
+    L.forEach((U, i) => {
+      const pk = (c.picks[k] || {})[i + 1], pn = pk && U.picks.find((p) => p[0] === pk), name = U.boost === 'Mastery' ? '★ Mastery' : U.boost;
+      if (i < n) { h += `<li class="done"><em>✓</em><span><b>${name}</b>${pn ? ` · ${pn[1]}` : ''}</span></li>`; return; }
+      if (i > n || lock) { h += `<li class="${i === n ? 'next locked' : 'later'}"><em>${i + 1}</em><span><b>${name}</b>${U.picks ? ' · a choice of two' : ''}${i === n && lock ? `<small>${lock[0].toUpperCase() + lock.slice(1)}</small>` : ''}</span></li>`; return; }
+      const later = laterIn(U.cost), pay = SIM.canPay(c, U.cost), why = later ? `Needs ${LATER[later]}` : pay ? '' : 'Short on materials';
+      h += `<li class="next"><em>${i + 1}</em><span><b>${name}</b><small>${costIcons(U.cost)}${why ? ' · ' + why : ''}</small></span>`;
+      if (U.picks) h += `<div class="picks">` + U.picks.map(([q, qn, qd]) => `<button data-upc="${k}:${q}" ${pay && !later ? '' : 'disabled'}><b>${qn}</b><i>${qd}</i></button>`).join('') + `</div>`;
+      else h += `<button class="buy" data-upc="${k}:" ${pay && !later ? '' : 'disabled'}>Evolve</button>`;
+      h += `</li>`;
+    });
+    h += `</ol>`;
+    const P = PROMOS[FAMILY[k]] || [], d = P.length ? SIM.doctrineOf(s, k) : [];
+    if (P.length) { h += `<div class="t">Rank skills</div>`; for (const [slot, label] of [[0, 'Veteran (50 xp)'], [1, 'Elite (150 xp)']]) h += `<div class="doc"><span>${label}</span>` + P.map(([pk, pn, pd]) => `<button data-doc="${k}:${slot}:${pk}" class="${d[slot] === pk ? 'on' : ''}" data-tip="${pn}: ${pd}">${pn}</button>`).join('') + `</div>`; }
+    h += `</div>`;
     return h;
   }
   function growRanks(s, c) {
@@ -551,7 +586,7 @@ export function createUI(app) {
       <div class="door">But out at the yard's edges, something is still waking, and under the fire ants' old mound the ground is warm. The house will wait for a colony that can face them.</div>
       <button data-p1="1">Keep playing the yard</button></div>`;
     el2.classList.remove('hidden'); app.paused = true; sfx.play('cheer');
-    const prevZoom = app.zoomMul; app.zoomMul = 0.5; // the camera rises over the yard
+    const prevZoom = app.zoomMul; app.zoomTarget = null; app.zoomMul = 0.5; // the camera rises over the yard
     el2.querySelectorAll('.crests div').forEach((d, i) => setTimeout(() => { d.classList.add('on'); sfx.play('twinkle'); }, 500 + i * 260));
     el2.querySelector('[data-p1]').addEventListener('click', () => { el2.classList.add('hidden'); app.paused = false; app.zoomMul = prevZoom; });
   }
@@ -566,7 +601,7 @@ export function createUI(app) {
       <div class="door">Behind you, the back door of the house swings open. Warm light, a crumb-strewn floor, a world a thousand times bigger. Your scouts are already at the threshold.<br><i>Phase 2, the house, is the next chapter.</i></div>
       <button data-p1="1">Keep playing the yard</button></div>`;
     el2.classList.remove('hidden'); app.paused = true; sfx.play('cheer');
-    const prevZoom = app.zoomMul; app.zoomMul = 0.4;
+    const prevZoom = app.zoomMul; app.zoomTarget = null; app.zoomMul = 0.4;
     el2.querySelector('[data-p1]').addEventListener('click', () => { el2.classList.add('hidden'); app.paused = false; app.zoomMul = prevZoom; });
   }
   function openMenu(m, cell) { app.menu = m; app.menuCell = cell || null; el.sheet.dataset.h = ''; el.sheet.classList.remove('hidden'); renderSheet(); }
@@ -591,12 +626,37 @@ export function createUI(app) {
   // Build 68: a word in the middle of the screen that fades by itself (hunger, the mower, the time of day):
   // for things that matter now, without a notice to read or close. kind: warn, hard, calm.
   const shoutEl = document.createElement('div'); shoutEl.id = 'shout'; shoutEl.className = 'hidden'; document.body.appendChild(shoutEl);
-  let shoutTimer = null;
+  // Build 69: only "act now" moments (the mower, the queen attacked, a war party, hunger); one at a time,
+  // queued, and the same one not again within 20 seconds.
+  let shoutTimer = null, shoutBusyUntil = 0; const shoutQ = [], shoutLast = {};
   function shout(icon, title, line, kind = 'warn') {
+    const now = performance.now();
+    if (now - (shoutLast[title] || -1e9) < 20000) return; shoutLast[title] = now;
+    if (now < shoutBusyUntil) { if (shoutQ.length < 3) shoutQ.push([icon, title, line, kind]); return; }
+    shoutBusyUntil = now + 2900;
     shoutEl.innerHTML = `<b><span class="si">${icon}</span>${title}</b>${line ? `<span>${line}</span>` : ''}`;
     shoutEl.className = 's-' + kind; void shoutEl.offsetWidth; shoutEl.classList.add('on');
-    clearTimeout(shoutTimer); shoutTimer = setTimeout(() => shoutEl.classList.remove('on'), 2600);
+    sfx.play('whoosh', null, true);
+    clearTimeout(shoutTimer); shoutTimer = setTimeout(() => { shoutEl.classList.remove('on'); const n = shoutQ.shift(); if (n) setTimeout(() => { shoutBusyUntil = 0; shoutLast[n[1]] = 0; shout(...n); }, 350); }, 2600);
   }
+  // Build 69: the feed, news at the side: up to three small notices under your health, newest on top, each
+  // with an icon and a coloured edge (red danger, green good news, gold news), fading after five seconds
+  // (danger eight). A repeat refreshes its notice instead of stacking. (One line used to carry everything.)
+  const feed = document.createElement('div'); feed.id = 'feed'; $('msg').before(feed);
+  const FEED_ICON = { danger: '⚠', good: '★', news: '✦', report: '⚔', '': '•' };
+  const WAR = /^Raid! |march on your nest|strike back/;
+  function pushFeed(text) {
+    if (WAR.test(text)) { shout('⚔', 'War party!', text.replace(/^Raid! /, '').replace(/ ?(Your|Soldiers).*$/, ''), 'hard'); }
+    for (const n of feed.children) if (n.dataset.text === text) { feed.prepend(n); n.classList.remove('out'); clearTimeout(n.t); n.t = setTimeout(() => fadeFeed(n), n.dataset.kind === 'danger' ? 8000 : 5000); return; }
+    const kind = noticeKind(text), n = document.createElement('div');
+    n.className = 'note'; n.dataset.kind = kind; n.dataset.text = text;
+    n.innerHTML = `<i>${FEED_ICON[kind] || '•'}</i><span></span>`; n.querySelector('span').textContent = text;
+    feed.prepend(n); while (feed.children.length > 3) feed.lastChild.remove();
+    n.t = setTimeout(() => fadeFeed(n), kind === 'danger' ? 8000 : 5000);
+    pulseFor(text);
+  }
+  function fadeFeed(n) { n.classList.add('out'); setTimeout(() => n.remove(), 400); }
+  app.events = (list) => { for (const e of list) if (e === 'queenhit') shout('👑', 'Queen under attack!', 'Raiders are in the nest. Bring fighters home.', 'hard'); };
   app.shout = shout;
   function flash(text, test, ms) {
     P().msg = text;
@@ -608,7 +668,7 @@ export function createUI(app) {
   function noticeKind(t) { if (!t) return ''; if (GOOD.test(t) && !/lost your hold|knocked/i.test(t)) return /raid over/i.test(t) ? 'report' : 'good'; if (DANGER.test(t)) return 'danger'; if (NEWS.test(t)) return 'news'; return ''; }
   function hint() {
     const s = app.s, c = s.colony, a = P().ant, q = s.queen;
-    if (P().msg) return P().msg;
+    // (Build 69: news and warnings, P.msg, go to the feed; this line is for how-to and where you are.)
     if (app.placing && app.view === 'nest') {
       if (app.placing.kind === 'room') { const R = ROOMS[app.placing.key]; return `Placing ${R.name} (${R.w}×${R.h}). Tap a green cell. Cancel to stop.`; }
       if (app.placing.kind === 'fill') return 'Fill: tap tunnel cells to pack them back. Cancel to stop.';
@@ -725,6 +785,7 @@ export function createUI(app) {
       + `<button class="more" data-tip="Colony details" aria-label="Colony details">⋯</button>`;
     if (el.stats.dataset.html !== statsHtml) { el.stats.dataset.html = statsHtml; el.stats.innerHTML = statsHtml; }
     updateClock(s);
+    { const m = P().msg || ''; if (m && m !== app.feedLast) pushFeed(m); app.feedLast = m; }
     // Build 68: the mower, as a word in the middle of the screen when it starts (it was a notice at the side).
     if (P().mowerAt && P().mowerAt !== app.mowerSeen) { app.mowerSeen = P().mowerAt; if (P().ant && !P().inNest) shout('⚠', 'Mower!', 'It sweeps the Lawn in a few seconds. Get off the grass.', 'hard'); }
     app.statsLine = `🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} food/min · ${app.fps} fps`;
@@ -743,6 +804,9 @@ export function createUI(app) {
     // and a dark one when you die.
     const pa = P().ant, hpMax = pa ? Math.max(SIM.youHp(s), SIM.maxHp(s, pa)) : 1, hp = pa ? Math.max(0, pa.hp) / hpMax : 0;
     $('hpbar').style.width = hp * 100 + '%';
+    // Build 69: the values beside the bars.
+    { const hv = pa ? `${Math.ceil(Math.max(0, pa.hp))} / ${Math.round(hpMax)}` : '–', uv = pa ? `${Math.round(Math.max(0, P().hunger))}%` : '–';
+      if ($('hpv').textContent !== hv) $('hpv').textContent = hv; if ($('huv').textContent !== uv) $('huv').textContent = uv; }
     const low = pa && hp < 0.4, hurt = $('hurt');
     $('hpbar').closest('.vital').classList.toggle('low', !!low);
     el.hungerBar.closest('.vital').classList.toggle('low', !!pa && P().hunger < 30);
@@ -760,8 +824,11 @@ export function createUI(app) {
     // in time with the red edge, faster near the end. Hungry: your stomach growls and the hunger bar shakes,
     // and a word in the middle of the screen the first time it gets low, and again when it's nearly empty.
     { const now = performance.now(), alive = pa && pa.state !== 'dead' && !app.titleOpen, hu = P().hunger;
-      hurt.classList.toggle('crit', !!low && hp < 0.2);
-      if (alive && low && now > (app.beatAt || 0)) { app.beatAt = now + (hp < 0.2 ? 700 : 1100); sfx.play('heartbeat'); }
+      // Build 69: the heartbeat (and the strong red edge) only while you're in danger: hurt in the last eight
+      // seconds, or starving. Healing at home is quiet, with a faint edge.
+      const danger = alive && low && (s.t - (P().hit || -99) < 8 || P().starving);
+      hurt.classList.toggle('crit', !!danger && hp < 0.2); hurt.classList.toggle('calm', !!low && !danger);
+      if (danger && now > (app.beatAt || 0)) { app.beatAt = now + (hp < 0.2 ? 700 : 1100); sfx.play('heartbeat'); }
       const hungry = alive && hu < 30;
       if (hungry && now > (app.growlAt || 0)) { app.growlAt = now + (hu < 12 ? 4000 : 8000); sfx.play('growl'); const v = el.hungerBar.closest('.vital'); v.classList.remove('growl'); void v.offsetWidth; v.classList.add('growl'); }
       const stage = !alive ? app.hungerStage || 0 : hu < 12 ? 2 : hu < 30 ? 1 : 0;
@@ -929,7 +996,19 @@ export function createUI(app) {
     if (got < recN) flash(got ? `${got} ants answered. Recruit near the nest or near other ants.` : 'No ants in range. Walk back toward the nest and try again.', /answered|in range/, 3000);
   };
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => el.recruit.addEventListener(t, recEnd));
-  $('zoom').addEventListener('click', () => { app.zoomMul = app.zoomMul >= 1.5 ? 0.7 : app.zoomMul >= 0.9 ? 1.6 : 1; }); // (build 68: out to 0.7, inside the new limit)
+  // Build 69: the dock's hotkeys. A key presses its button when the button is showing and usable; holding R
+  // recruits like holding the button. The dock in use is the yard's or the nest's.
+  const keyBtn = (k) => { const dock = P().inNest ? $('barn') : $('bar'); if (!dock || dock.classList.contains('hidden')) return null;
+    for (const b of dock.querySelectorAll('button.ico')) if (HOTKEY[b.id] === k && !b.disabled && !b.classList.contains('hidden') && b.offsetParent) return b; return null; };
+  window.addEventListener('keydown', (e) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || app.titleOpen || evo.isOpen || mapView.isOpen || /input|textarea/i.test((e.target && e.target.tagName) || '')) return;
+    const k = e.key.length === 1 ? e.key.toUpperCase() : '', b = k && keyBtn(k); if (!b) return;
+    e.preventDefault(); if (e.repeat) return;
+    if (b === el.recruit) { el.recruit.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })); return; }
+    b.classList.add('keyed'); setTimeout(() => b.classList.remove('keyed'), 140); b.click();
+  });
+  window.addEventListener('keyup', (e) => { if (e.key.toUpperCase() === 'R') recEnd(); });
+  $('zoom').addEventListener('click', () => { const z = app.zoomTarget ?? app.zoomMul; app.zoomTarget = z >= 1.5 ? 0.7 : z >= 0.9 ? 1.6 : 1; }); // (build 68: out to 0.7, inside the new limit; 69: eased)
 
   // In-page confirmation (browser confirm() is blocked in some hosts).
   function confirmSheet(text, yes, fn) {

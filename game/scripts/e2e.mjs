@@ -43,7 +43,7 @@ async function tapCell(cx, cy) {
   await page.mouse.click(p[0], p[1]);
   await page.waitForTimeout(120);
 }
-const msg = () => page.$eval('#msg', (e) => e.textContent);
+const msg = () => page.evaluate(() => [document.querySelector('#feed'), document.querySelector('#msg')].map((e) => (e ? e.textContent : '')).join(' | '));
 const step = async (label) => { await page.waitForTimeout(400); console.log(label.padEnd(22), '|', (await msg()).slice(0, 90)); };
 
 try {
@@ -292,7 +292,7 @@ try {
   await page.click('#evo .evo-next', { force: true, timeout: 5000 });
   await page.waitForTimeout(400);
   await shot('evolve-you');
-  await page.click('#evo .evo-dots button[data-page="3"]', { force: true, timeout: 5000 });
+  await page.click('#evo .evo-tabs button[data-page="3"]', { force: true, timeout: 5000 });
   await page.waitForTimeout(400);
   await page.click('#evo .enode[data-node="mandibles"]', { force: true, timeout: 5000 });
   await page.waitForTimeout(300);
@@ -303,7 +303,7 @@ try {
   const bought = await sim(() => window.UNDERFOOT.SIM.has(window.UNDERFOOT.app.s, 'mandibles'));
   console.log('evolve: mandibles'.padEnd(22), '|', bought);
   if (!bought) errors.push('test: Strong mandibles did not buy');
-  await page.click('#evo .evo-dots button[data-page="8"]', { force: true, timeout: 5000 });
+  await page.click('#evo .evo-tabs button[data-page="8"]', { force: true, timeout: 5000 });
   await page.waitForTimeout(400);
   await shot('evolve-ranks');
   await page.click('#evo .evo-x', { force: true, timeout: 5000 });
@@ -345,7 +345,7 @@ try {
   await shot('outpost-raised');
   await page.click('#evolvebtn', { force: true, timeout: 5000 });
   await page.waitForTimeout(300);
-  await page.click('#evo .evo-dots button[data-page="0"]', { force: true, timeout: 5000 });
+  await page.click('#evo .evo-tabs button[data-page="0"]', { force: true, timeout: 5000 });
   await page.waitForTimeout(200);
   await shot('goals');
   await page.click('#evo .evo-x', { force: true, timeout: 5000 });

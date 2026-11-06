@@ -32,3 +32,14 @@ test('the mower warns without a notice: it marks the time for the UI', () => {
   assert.equal(s.mower.state, 'warn');
   assert.ok(s.player.mowerAt > 0); assert.ok(!/mower/i.test(s.player.msg || ''));
 });
+
+test('build 69: an empty stomach drains your health instead of killing you at once', () => {
+  const s = outside(); const a = s.player.ant;
+  a.x += 8 * SIM.T; a.tx = Math.floor(a.x / SIM.T); s.player.tx = null; s.ants = s.ants.filter((o) => o === a || o.team || o.state !== 'return'); // away from home and foragers
+  s.player.hunger = 0.01; const hp0 = a.hp;
+  for (let i = 0; i < 40; i++) SIM.tick(s, 0.05);
+  assert.equal(s.player.ant, a, 'still alive two seconds in');
+  assert.ok(a.hp < hp0 - 1, 'losing health'); assert.ok(s.player.starving);
+  for (let i = 0; i < 200 && s.player.ant; i++) SIM.tick(s, 0.05);
+  assert.equal(s.player.ant, null, 'starved within ten seconds'); assert.equal(s.player.deathCause, 'hunger');
+});

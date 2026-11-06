@@ -60,14 +60,17 @@ export function stepPlayer(s, a, dt, enemiesNear){
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 1.6;
   let fed = nearHome; if (!fed) for (const o of s.ants){ if (o !== a && !o.team && o.state === 'return' && o.carry && o.kind==='food' && Math.hypot(o.x-a.x, o.y-a.y) < 1.2*T){ fed = true; break; } }
   if (fed && P.hunger < 100) P.hunger = Math.min(100, P.hunger + 20*dt);
-  if (P.hunger <= 0){ if (has(s, 'stomach')) P.hunger = 1; else { killAnt(s, a, 'hunger'); return; } }
+  // Build 69: an empty stomach drains your health (about eight seconds from full) instead of killing you on
+  // the spot, as in most survival games: time to get to food. It's still "You starved."
+  if (P.hunger <= 0){ if (has(s, 'stomach')) P.hunger = 1; else { P.hunger = 0; P.starving = true; a.hp -= Math.max(youHp(s), maxHp(s, a))/8*dt; if (a.hp <= 0){ killAnt(s, a, 'hunger'); return; } } }
+  else P.starving = false;
   if (moving && (P.mark || a.carry)){ const i = idx(a.tx, a.ty); s.trail[i] = Math.min(5, s.trail[i] + 2.5*dt); s.hot.add(i); }
   if (a.carry && nearHome){ deposit(s, a); }
   if (P.big && nearHome) deliverBig(s);
   // fight: player bites enemies / cat adjacent
   const pm = Math.max(youHp(s), maxHp(s, a)), yb = youL(s) >= 3 ? 1.5 : 1;
   // Build 27: you duel too, a swing every 0.6 s, at twice an ant's bite; your rolls show by your health.
-  const en = enemiesNear(a, 1); if (en.length){ const o = en.find(q => q.id === a.foeId) || en[0]; a.foeId = o.id; a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT = 0.6; swing(s, a, o, 2*yb); } } else { a.foeId = 0; if (a.hp < pm) a.hp = Math.min(pm, a.hp + 1*dt); }
+  const en = enemiesNear(a, 1); if (en.length){ const o = en.find(q => q.id === a.foeId) || en[0]; a.foeId = o.id; a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT = 0.6; swing(s, a, o, 2*yb); } } else { a.foeId = 0; if (a.hp < pm && !P.starving) a.hp = Math.min(pm, a.hp + 1*dt); } // (no healing while starving)
   if (a.burnT > 0){ a.burnT -= dt; a.hp -= dt/3*0.6; if (a.hp <= 0){ killAnt(s, a, 'fireants'); return; } }
   if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH){ const dmg = bite(s, a, 'cat')*yb*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); }
   if (P.enterReq && P.enterKey){ const d = (s.daughters || []).find(q => q.key === P.enterKey); /* build 50: in at her door */

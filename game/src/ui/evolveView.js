@@ -17,8 +17,8 @@ export class EvolveView {
     this.pages = [
       { key: 'goals', title: 'Goals', sub: 'Three at a time. Each pays 🧬.', html: pages.goals },
       { key: 'you', title: 'You', sub: 'The ant you play', html: pages.you },
-      { key: 'ants', title: 'The Ants', sub: 'Every kind, level by level', html: pages.ants },
-      ...BRANCHES.map((B) => ({ key: B.key, title: B.name, sub: B.note, art: BRANCH_ART[B.key], branch: B.key })),
+      { key: 'ants', title: 'The Ants', tab: 'Ants', sub: 'Every kind, level by level', html: pages.ants },
+      ...BRANCHES.map((B) => ({ key: B.key, title: B.name, tab: B.key === 'great' ? 'Great' : B.name, sub: B.note, art: BRANCH_ART[B.key], branch: B.key })),
       { key: 'ranks', title: 'Ranks', sub: 'Veterans, Legends and the fallen', html: pages.ranks },
     ];
     this.i = 0; this.pick = null;
@@ -26,10 +26,10 @@ export class EvolveView {
     el.id = 'evo'; el.className = 'hidden';
     el.innerHTML = `<div class="evo-sky"></div><div class="evo-spores">${'<i></i>'.repeat(14)}</div>
       <div class="evo-top"><div class="evo-genes" data-tip="Genes: earned by playing"><span>🧬</span><b></b><small>Genes</small></div><button class="evo-x" aria-label="Close">✕</button></div>
+      <div class="evo-nav"><button class="evo-prev" aria-label="Previous page">‹</button><div class="evo-tabs"></div><button class="evo-next" aria-label="Next page">›</button></div>
       <div class="evo-head"><div class="evo-art"></div><h1></h1><p></p></div>
       <div class="evo-page"></div>
-      <div class="evo-detail hidden"></div>
-      <div class="evo-nav"><button class="evo-prev" aria-label="Previous page">‹</button><div class="evo-dots"></div><button class="evo-next" aria-label="Next page">›</button></div>`;
+      <div class="evo-detail hidden"></div>`; // (build 69: the pages' names across the top, the arrows beside them)
     document.body.appendChild(el);
     el.querySelector('.evo-x').addEventListener('click', () => this.close());
     el.querySelector('.evo-prev').addEventListener('click', () => this.go(this.i - 1));
@@ -62,8 +62,8 @@ export class EvolveView {
     this.el.querySelector('.evo-art').textContent = P.art || '🧬';
     this.el.querySelector('h1').textContent = P.title;
     this.el.querySelector('.evo-head p').textContent = P.sub;
-    const dots = this.pages.map((p, k) => `<button data-page="${k}" class="${k === this.i ? 'on' : ''}" aria-label="${p.title}"></button>`).join(''), de = this.el.querySelector('.evo-dots');
-    if (de.dataset.html !== dots) { de.dataset.html = dots; de.innerHTML = dots; }
+    const tabs = this.pages.map((p, k) => `<button data-page="${k}" class="${k === this.i ? 'on' : ''}">${p.tab || p.title}</button>`).join(''), de = this.el.querySelector('.evo-tabs');
+    if (de.dataset.html !== tabs) { de.dataset.html = tabs; de.innerHTML = tabs; const on = de.querySelector('.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' }); }
     this.el.querySelector('.evo-prev').disabled = this.i === 0;
     this.el.querySelector('.evo-next').disabled = this.i === this.pages.length - 1;
     const page = this.el.querySelector('.evo-page');
@@ -104,6 +104,7 @@ export class EvolveView {
     const b = e.target.closest('button'); if (!b) return;
     const s = this.app.s;
     if (b.dataset.page) { this.go(+b.dataset.page); return; }
+    if (b.dataset.ctab) { this.app.evoCaste = b.dataset.ctab; sfx.play('tap'); this.render(); return; }
     if (b.dataset.node) { this.pick = this.pick === b.dataset.node ? null : b.dataset.node; sfx.play('tap'); this.render(); return; }
     if (b.dataset.line) { if (SIM.pickLineage(s, b.dataset.line)) sfx.play('evolve'); this.render(); return; }
     if (b.dataset.buy) { if (SIM.buyEvo(s, b.dataset.buy)) { sfx.play('evolve'); this.el.classList.remove('burst'); void this.el.offsetWidth; this.el.classList.add('burst'); } this.render(); return; }

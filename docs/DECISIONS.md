@@ -2,6 +2,51 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 6: Phase 1, the HUD thought through (build 69)
+
+Mark: "Think through them before just doing a first draft… what exactly am I asking for, what does that look like, how does that compare to what other games do." Each Phase 1 piece is reasoned out in [`PHASE1.md`](PHASE1.md) (asked, means, others, design), then built:
+- **A command card.** The yard dock is three fixed groups:
+  - places (Enter, Outpost, Raid), on the left;
+  - the four actions, centred;
+  - the crew's orders, on the right.
+
+  An action you can't use now leaves a dashed socket. Every dock button has a hotkey printed on it:
+
+  | Key | Button |
+  |---|---|
+  | E | Pick up |
+  | T | Trail |
+  | R | Recruit (hold to keep recruiting) |
+  | G | Release |
+  | H | Hold |
+  | V | Split |
+  | F | Follow |
+  | N | Enter or exit |
+  | O | Outpost |
+  | B | Raid, or Build in the nest |
+  | Q | Queen |
+- **Tooltips like an RTS's:**
+  - the name and its keycap, then what it does;
+  - with a mouse it stays while you hover;
+  - kept clear of the curved labels and the screen's edges.
+- **Vitals:** two wide bars with their values (❤ 7 / 12, 🍖 96%) and quarter ticks.
+  - The heartbeat and strong red edge only while you're in danger: hurt in the last eight seconds, or starving. Healing at home is quiet.
+  - **An empty stomach drains your health (about eight seconds from full) instead of killing you on the spot,** and you don't heal while starving. This is a balance change, Mark's to keep or drop.
+- **Three tiers of alert:**
+  - **shouts**, mid-screen, for act-now moments only: the mower, the queen under attack, a war party, hunger. One at a time, queued, and the same one not again within 20 seconds.
+  - **the feed**, news at the side: up to three notices under your health, coloured red, green or gold, fading after five seconds (danger eight). A repeat refreshes instead of stacking.
+  - **tips**: the how-to line (first 15 minutes) and smaller first-time cards.
+- **The day clock, drawn:**
+  - an SVG half dial in the HUD's look (cream rim, inked edge, green outline);
+  - the sky follows the light, with stars at night;
+  - the sun crosses from horizon to horizon by day and the moon by night, so its place says how much is left;
+  - it glows gold at dawn and silver at dusk, with a caption.
+- **The Evolution window:**
+  - the pages are named tabs across the top, between the arrows (the dots are gone);
+  - "The Ants" shows one kind at a time, picked from its own tabs, as a ladder of five levels: done ✓, the next with its cost and Evolve (or its two choices side by side), the rest dim;
+  - then its rank skills in one compact block.
+- **Smooth zoom:** the wheel and the Zoom button set a target and the camera eases to it. A pinch stays direct.
+
 ## Nov 6: playtest 3, the HUD (build 68)
 
 Mark and his brother played; the whole session is sorted in [`PLAYTEST-3.md`](PLAYTEST-3.md). This build is its interface fixes:

@@ -17,6 +17,8 @@ How a piece is worked: one at a time, a screenshot or short clip for Mark, his n
 
 ### Phase 1: polish what build 68 added
 
+**Done in build 69**, each piece thought through first in [`PHASE1.md`](PHASE1.md).
+
 A first pass of each is in the game (build 68). Each gets a second look: how it looks, how it sounds, how it reads at a glance.
 
 1. **The bottom dock.** "You press recruit and release takes its place." The four main buttons now keep their slots; check the empty slots read well (or show a dimmed button instead), the curved labels, the badges.

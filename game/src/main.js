@@ -317,6 +317,9 @@ function frame(now) {
     requestAnimationFrame(frame);
     return;
   }
+  // Build 69: smooth zoom. The wheel and the Zoom button set a target; the camera eases to it (about a fifth
+  // of a second). A pinch sets the zoom directly.
+  if (app.zoomTarget != null) { app.zoomMul += (app.zoomTarget - app.zoomMul) * Math.min(1, dt * 14); if (Math.abs(app.zoomTarget - app.zoomMul) < 0.002) { app.zoomMul = app.zoomTarget; app.zoomTarget = null; } }
   let newEvents = [];
   const evSeen = s.events.length;
   if (!app.paused) {
@@ -347,7 +350,7 @@ function frame(now) {
   if (boot) stepBoot();
   if (!boot) pipeline.render(view.scene, view.camera); // (drawing while it loads would only compile shaders the slow way)
   restore();
-  if (!app.titleOpen) hear(s, newEvents);
+  if (!app.titleOpen) { hear(s, newEvents); if (newEvents.length && app.events) app.events(newEvents); }
   else hear.quiet();
   // The music follows the game: the title, the yard or the nest, tension, rain.
   music.set(app.titleOpen ? 'title' : app.view === 'nest' ? 'nest' : 'yard', app.titleOpen ? 0 : hear.mood(s), s.rain.on && !app.titleOpen);
