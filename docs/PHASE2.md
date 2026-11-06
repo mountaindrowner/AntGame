@@ -98,3 +98,33 @@ Playtest 3's second phase ([`PLAYTEST-3.md`](PLAYTEST-3.md)). Each piece has:
   - **Each press rings the alarm** and calls the next six nearest ants home to fight at the door. Fighters answer first, then workers. They drop what they're doing, run home and join the fight; a small "!" shows over each.
   - **A cooldown** of four seconds, drawn as a ring, before it rings again.
   - **The shout** for a raid says to press D, so the button is found at once.
+
+## Part 2: RTS combat (build 72)
+
+- **Asked:** "Think of RTS games when it comes to combat, animations and obvious combat sounds and clashes."
+- **Means:** a fight should be readable by ear and by eye at a glance, the way an RTS battle is. You should hear every blow land, see each hit hit, see who is losing each duel, see the fallen fall, and hear that a battle is on before you look at it.
+- **Today (after build 71):**
+  - the lunge, a spark at the bite, a red flash and a damage number;
+  - one soft tick for your ants' hits and nothing for theirs, a crit or a lock;
+  - a dead ant vanishes the instant it dies;
+  - no health bars on ants;
+  - a battle has no sound of its own.
+- **Others:**
+  - **Every attack has a sound, by weapon and by result.** In Warcraft III and StarCraft a sword's swing, a claw's slash and an impact's thud are separate, with three or four variants pitched at random. Fifty overlapping blows then make a din, not one machine-gun sample.
+  - **Sounds are placed and capped.** Panned and faded by distance from the camera. Only so many of a kind at once, so a big fight doesn't clip.
+  - **A battle sounds like one** before you see it. Age of Empires' melee clatter; Total War's battle ambience under the music.
+  - **Hits throw something.** Sparks, dust and debris at the point of impact; a bigger flash on a critical (Warcraft III's critical strike shows a red number and a heavier hit).
+  - **Deaths are an event.** A death animation and a death sound. The body stays a while and then decays: Age of Empires' corpses become bones; StarCraft's leave remains.
+  - **Health bars over hurt units.** Warcraft III and StarCraft II show a small bar over any damaged unit in the player's or the enemy's colour, so a glance says who is winning each fight.
+- **Design:**
+  1. **Every bite is heard, by its dice.** A miss is a dry mandible snap. A hit is a chitin crunch, and a hard hit a heavier one. A crit is a sharp crack with a ring, and a lock a grinding scrape. Each has random pitch and tone, is heard from where it lands, and is capped so a war party sounds like a din.
+  2. **A battle has its own sound:**
+     - a bed of chittering and scraping whose loudness follows how many duels are near the camera;
+     - a war drum when a battle starts near you;
+     - a crunch and a thin squeal when an ant dies.
+  3. **Hits throw something:**
+     - flecks of chitin fly from each hit, with a puff of dust on the ground;
+     - a crit adds a white ring that spreads;
+     - a crit close to your ant gives the screen a small kick.
+  4. **The fallen fall:** a dead ant flips onto its back, legs up, twitches for a moment, lies there eight seconds, then sinks away. A battlefield shows what it cost.
+  5. **Health bars over fighting ants:** a thin bar over any ant hit in the last four seconds, green for yours and red for theirs. They are drawn in one batch, so a big fight doesn't slow the game.

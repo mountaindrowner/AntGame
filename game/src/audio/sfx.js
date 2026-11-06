@@ -166,6 +166,15 @@ const SOUNDS = {
   queenUp: { cool: 1, fn: (s, o, t) => { [67, 72, 76, 79].forEach((n, i) => s.blip(o, t + i * 0.1, N(n), i === 3 ? 0.4 : 0.12, 0.18, 'square')); return 0.8; } },
   cavein: { cool: 1, fn: (s, o, t) => { s.puff(o, t, 0.7, 400, 0.5, 'lowpass', 120, 0.3); s.thump(o, t + 0.6, 90, 35, 0.4, 0.7); s.grain(o, t + 0.65, 10, 0.04, 500, 0.2, 'lowpass'); return 1.3; } },
   // Build 68: your ant in trouble. A heartbeat while your health is low, and your stomach growling while you're hungry.
+  // Build 72: every bite heard by its dice, RTS-style: random pitch and tone so a crowd is a din, not a
+  // machine gun; heard from where it lands; capped per kind.
+  swMiss: { cool: 0.025, cap: 4, vol: 0.55, fn: (s, o, t) => { const r = 0.85 + Math.random() * 0.3; s.puff(o, t, 0.012, 3800 * r, 0.22, 'highpass'); s.blip(o, t, 1500 * r, 0.014, 0.07, 'square'); return 0.04; } },
+  swHit: { cool: 0.03, cap: 5, vol: 0.7, fn: (s, o, t) => { const r = 0.8 + Math.random() * 0.4; s.thump(o, t, 230 * r, 90, 0.08, 0.32); s.puff(o, t, 0.045, 1500 * r, 0.3, 'bandpass'); s.blip(o, t, 900 * r, 0.012, 0.06, 'square'); return 0.1; } },
+  swHard: { cool: 0.04, cap: 4, vol: 0.8, fn: (s, o, t) => { const r = 0.85 + Math.random() * 0.3; s.thump(o, t, 170 * r, 55, 0.13, 0.5); s.puff(o, t, 0.08, 1000 * r, 0.42, 'bandpass'); s.grain(o, t + 0.02, 3, 0.012, 2400 * r, 0.12, 'bandpass'); return 0.15; } },
+  swCrit: { cool: 0.07, cap: 3, vol: 0.85, fn: (s, o, t) => { const r = 0.9 + Math.random() * 0.2; s.puff(o, t, 0.02, 5200, 0.5, 'highpass'); s.thump(o, t, 150 * r, 45, 0.18, 0.62); s.blip(o, t + 0.01, N(86) * r, 0.28, 0.09, 'triangle'); s.blip(o, t + 0.01, N(93) * r, 0.18, 0.05, 'sine'); return 0.3; } },
+  swLock: { cool: 0.09, cap: 2, vol: 0.6, fn: (s, o, t) => { const r = 0.85 + Math.random() * 0.3; s.grain(o, t, 7, 0.022, 2600 * r, 0.13, 'bandpass'); s.thump(o, t, 120, 80, 0.12, 0.18); return 0.2; } },
+  antDies: { cool: 0.06, cap: 3, vol: 0.75, fn: (s, o, t) => { const r = 0.85 + Math.random() * 0.3; s.thump(o, t, 190 * r, 50, 0.15, 0.45); s.puff(o, t, 0.06, 1200 * r, 0.3, 'bandpass'); s.chirp(o, t + 0.03, 1700 * r, 650, 0.16, 0.07, 'triangle'); return 0.25; } },
+  warDrum: { cool: 6, always: true, fn: (s, o, t) => { for (const [k, v] of [[0, 0.7], [0.22, 0.5], [0.44, 0.8]]) { s.thump(o, t + k, 105, 48, 0.2, v); s.puff(o, t + k, 0.06, 700, 0.25); } return 0.8; } },
   drum: { cool: 0.3, fn: (s, o, t) => { s.thump(o, t, 120, 55, 0.14, 0.55); s.puff(o, t, 0.05, 900, 0.18); return 0.2; } }, // build 71: a raid's clash
   heartbeat: { cool: 0.4, fn: (s, o, t) => { s.thump(o, t, 95, 42, 0.13, 0.55); s.thump(o, t + 0.19, 85, 40, 0.15, 0.42); return 0.4; } },
   growl: { cool: 3, fn: (s, o, t) => { s.puff(o, t, 0.9, 170, 0.32, 'lowpass', 80, 0.15); s.chirp(o, t + 0.05, 72, 52, 0.6, 0.16, 'triangle'); s.chirp(o, t + 0.5, 88, 58, 0.45, 0.13, 'triangle'); return 1; } },
@@ -264,6 +273,16 @@ const SOUNDS = {
 
 // Looping beds: start(sfx, out) → stop().
 const LOOPS = {
+  // Build 72: a battle's din, under everything while duels are near the camera: a scratchy bed of chitin and
+  // a rattle of little clicks and scrapes, louder the bigger the fight (watch.js sets the level).
+  battle: (s, o) => {
+    const c = s.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    n.buffer = s.noise; n.loop = true; f.type = 'bandpass'; f.frequency.value = 2200; f.Q.value = 1.4; g.gain.value = 0.06;
+    lfo.frequency.value = 7; lg.gain.value = 0.04; lfo.connect(lg).connect(g.gain);
+    n.connect(f).connect(g).connect(o); n.start(); lfo.start();
+    const clicks = setInterval(() => { if (!s.ready) return; const t = c.currentTime + Math.random() * 0.1; if (Math.random() < 0.7) s.puff(o, t, 0.01, 2500 + Math.random() * 3000, 0.12, 'highpass'); if (Math.random() < 0.35) s.thump(o, t, 160 + Math.random() * 120, 70, 0.05, 0.12); }, 70);
+    return () => { clearInterval(clicks); n.stop(); lfo.stop(); };
+  },
   rain: (s, o) => {
     const c = s.ctx, n = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
     // A soft patter (build 14: was a bright 2.5 kHz hiss with a drip every 90 ms).

@@ -68,15 +68,15 @@ export function swing(s, a, o, mul = 1){
     if (o.champion && s.event && s.event.key === 'warparty'){ const B = s.event.data.biters || (s.event.data.biters = {}); B[a.id] = (B[a.id] || 0) + dmg; }
     gainXp(s, a, dmg/3);
   }
-  spark(s, null, (a.x + o.x)/2, (a.y + o.y)/2, kind === 'crit' ? 2 : a.team ? 1 : 0);
+  spark(s, null, (a.x + o.x)/2, (a.y + o.y)/2, kind === 'crit' ? 2 : a.team ? 1 : 0, kind); // (build 72: the result, for its sound and its debris)
   const mx = (a.x + o.x)/2, my = (a.y + o.y)/2, seen = a.isPlayer || o.isPlayer || (P.ant && Math.hypot(mx - P.ant.x, my - P.ant.y) < 20*T);
   if (seen && (kind === 'crit' || a.isPlayer || o.isPlayer || (kind === 'lock' && Math.random() < 0.3))) pop(s, mx, my, kind === 'crit' ? 'CRIT ' + Math.max(1, Math.round(dmg)) : kind === 'lock' ? '⚔' : kind === 'miss' ? 'miss' : String(Math.max(1, Math.round(dmg))), kind + (a.team ? '-r' : ''));
   if (a.isPlayer || o.isPlayer) P.duel = { you: a.isPlayer, ra, ma: atk + help, rd, md: def, kind, foe: (a.isPlayer ? o : a).team ? rspec(a.isPlayer ? o : a).name.replace(/s$/, '') : 'Ant', t: s.t };
   if (o.hp <= 0 && o.state !== 'dead'){ killAnt(s, o, a.team ? 'rival' : 'war'); gainXp(s, a, 5); if (!a.team) s.colony.duelsWon = (s.colony.duelsWon || 0) + 1; else if (!o.team) s.colony.duelsLost = (s.colony.duelsLost || 0) + 1; }
   return kind;
 }
-export function spark(s, by, x, y, k){
+export function spark(s, by, x, y, k, w){
   if (by){ if (s.t - (by.sparkT || -9) < 0.3) return; by.sparkT = s.t; }
-  s.hits.push({ x, y, t: s.t, k: k || 0 }); if (s.hits.length > 60) s.hits.shift();
+  s.hits.push({ x, y, t: s.t, k: k || 0, w }); if (s.hits.length > 60) s.hits.shift();
 }
 export function hurtAnt(s, a, dmg, cause){ if (a.isPlayer && a.feign > s.t) return; a.hp -= dmg; a.hitT = s.t; if (a.isPlayer) s.player.hit = s.t; if (a.hp <= 0) killAnt(s, a, cause); }

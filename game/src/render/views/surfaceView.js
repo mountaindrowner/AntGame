@@ -61,6 +61,8 @@ const tmpQ2 = new THREE.Quaternion();
 const ZAX = new THREE.Vector3(0, 0, 1);
 const XAX = new THREE.Vector3(1, 0, 0);
 const tmpQ3 = new THREE.Quaternion();
+const tmpR = new THREE.Vector3(); // build 72: the camera's right, for the health bars
+const corpseTint = new Map(); // build 72: a body's colour, by caste and team
 // Build 16: the small creatures. Model scale (px a unit), how far one walk
 // cycle carries each (px), and how high its health bar floats.
 const BUG = {
@@ -194,6 +196,8 @@ export class SurfaceView {
     this.bugBars = Array.from({ length: 6 }, () => this._bar());
     this.dyn.add(...this.bugBars.map((b) => b.group));
     this.fx = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.95, depthWrite: false }));
+    // Build 72: health bars over fighting ants, all in one batch, drawn on top.
+    this.hpBars = new Crowd(this.dyn, psxBasic({ vertexColors: true, depthTest: false, depthWrite: false }, { snap: false }));
     this.dustFx = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.42, depthWrite: false })); // soft dust (layer 5)
     this.drops = [];
     this.diskGeo = new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2);
@@ -586,6 +590,30 @@ export class SurfaceView {
       const ring = rankRing(a);
       if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
+    // Build 72: the fallen, RTS-style: a dead ant lies on its back, legs up, twitches for a moment, stays eight
+    // seconds, then sinks away.
+    for (const b of s.corpses || []) {
+      const age = s.t - b.t; if (age < 0 || age > 9.5 || !this.seen(b.x, b.y)) continue;
+      const C = CASTES[b.caste] || CASTES.forager, k = (C.r / 2.2) * ANT_SCALE.surface, plan = planFor(b.caste);
+      tmpQ.setFromAxisAngle(UP, b.yaw).multiply(tmpQ3.setFromAxisAngle(XAX, Math.PI));
+      if (age < 1.2) tmpQ.multiply(tmpQ3.setFromAxisAngle(ZAX, Math.sin(age * 34) * 0.25 * (1 - age / 1.2)));
+      const sink = age > 7.5 ? (age - 7.5) / 2 : 0;
+      tmpV.set(b.x, FOOT * k * 1.1 - sink * 7 * k, b.y);
+      let col = corpseTint.get(b.caste + b.team); if (!col) { col = new THREE.Color(antColor({ caste: b.caste, team: b.team, xp: 0 })).lerp(new THREE.Color('#1a1410'), 0.35); corpseTint.set(b.caste + b.team, col); }
+      this.crowd.pushAtScale(plan + '-1', antGeometry(plan, -1), tmpV, tmpQ, k * (1 - sink * 0.4), k * (1 - sink * 0.4), k * (1 - sink * 0.4), col);
+    }
+    // Build 72: a thin bar over any ant hit in the last four seconds, green for yours and red for theirs, as an
+    // RTS shows the hurt: a glance says who's winning each duel.
+    this.hpBars.begin();
+    { const cq = this.camera.quaternion, right = tmpR.set(1, 0, 0).applyQuaternion(cq); let n = 0;
+      for (const a of s.ants) {
+        if (n >= 60 || a.state === 'dead' || a.state === 'in' || a.state === 'away' || a.state === 'build' || a.state === 'nest' || s.t - (a.hitT ?? -9) > 4 || !this.seen(a.x, a.y)) continue;
+        const mx = a.team ? (CASTES[a.caste] || CASTES.forager).hp : SIM.maxHp(s, a), f = Math.max(0, Math.min(1, a.hp / Math.max(1, mx))); if (f >= 1) continue;
+        const k = ((CASTES[a.caste] || CASTES.forager).r / 2.2) * ANT_SCALE.surface * (a.isPlayer ? 1.1 : 1), W = 13 * k + 4, h = 15 * k + 6;
+        tmpV.set(a.x, h, a.y); this.hpBars.pushAtScale('q', PROPS.quad, tmpV, cq, W + 2, 4.4, 1, '#1d1710');
+        tmpV.set(a.x, h, a.y).addScaledVector(right, -(W / 2) * (1 - f)); this.hpBars.pushAtScale('q', PROPS.quad, tmpV, cq, Math.max(0.3, W * f), 2.8, 1, a.team ? '#ff5a3a' : f < 0.35 ? '#ffd34d' : '#8fe07a'); n++;
+      } }
+    this.hpBars.end();
     const pa = P.ant;
     const out = pa && !P.inNest, crew = out && s.ants.some((o) => o.follow && o.state === 'follow');
     this.callRing.visible = !!(out && app.recruiting); this.leashRing.visible = !!crew;
@@ -1078,7 +1106,18 @@ export class SurfaceView {
       F.pushAt('bead', FOOD.bead, tmpV, tmpQ2.identity(), 2 + 1.6 * blink, blink > 0.7 ? '#fff27a' : '#e0c050');
     }
     for (const h of s.hits || []) {
-      const u = (s.t - h.t) / 0.35; if (u < 0 || u > 1) continue;
+      // Build 72: a bite that lands throws chitin flecks and a puff of dust; a crit spreads a white ring, and one
+      // near your ant kicks the view.
+      const age = s.t - h.t;
+      if (age >= 0 && age < 0.6 && (h.w === 'hit' || h.w === 'hard' || h.w === 'crit')) {
+        const v = age / 0.6, big = h.w === 'crit' ? 1.6 : h.w === 'hard' ? 1.25 : 1;
+        for (let j = 0; j < (h.w === 'hit' ? 4 : 6); j++) { const a = h.t * 53 + j * 1.31, r = v * (7 + (j % 3) * 3) * big;
+          tmpV.set(h.x + Math.cos(a) * r, 5 + v * 11 * big - v * v * 15 * big, h.y + Math.sin(a) * r); if (tmpV.y > 0.5) F.pushAt('bead', FOOD.bead, tmpV, tmpQ2.identity(), 1.3 * (1 - v * 0.5) * big, j % 2 ? '#2a1a10' : '#6a4a2a'); }
+        if (v < 0.8) { tmpV.set(h.x, 0.7, h.y); F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), (3 + v * 9) * big, '#c8b090'); }
+        if (h.w === 'crit' && v < 0.7) { tmpV.set(h.x, 1.2, h.y); F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), 5 + v * 30, '#ffffff'); }
+        if (h.w === 'crit' && !h.kicked) { h.kicked = true; if (Math.hypot(h.x - this.target.x, h.y - this.target.z) < 10 * T) this.shake = Math.max(this.shake, 0.12); }
+      }
+      const u = age / 0.35; if (u < 0 || u > 1) continue;
       const c = h.k === 2 ? '#ffffff' : h.k ? '#ff5236' : '#fff0b0', big = h.k === 2 ? 2 : 1; // build 27: a crit flashes white and big
       tmpV.set(h.x, 8 + u * 5, h.y);
       tmpQ.copy(cq).multiply(tmpQ2.setFromAxisAngle(ZAX, h.t * 13 + u));

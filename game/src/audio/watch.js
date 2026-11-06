@@ -18,7 +18,7 @@ export function soundWatch(app, views) {
   let p = null;
   const seenStrike = new WeakMap();
   const seenBug = new WeakMap(); // build 16: each small creature's last state
-  let spiderMode = null, sparks = 0, splashes = 0;
+  let spiderMode = null, sparks = 0, splashes = 0, corpseT = 0, wasBattle = false;
   const seenBoss = {}; let introT = 0, bannerT = 0, downT = 0; // build 19
 
   function hear(s, events) {
@@ -130,7 +130,15 @@ export function soundWatch(app, views) {
     spiderMode = sp ? sp.mode : null;
     const hits = s.hits || [];
     if (sparks > s.t) sparks = 0; if (splashes > s.t) splashes = 0; // a new game
-    for (const h of hits) if (h.t > sparks) { sparks = h.t; if (!h.k) sfx.play('hitTick', { x: h.x, y: h.y }); }
+    // Build 72: a duel's bite sounds as its dice went; other bites keep their tick.
+    const SW = { miss: 'swMiss', hit: 'swHit', hard: 'swHard', crit: 'swCrit', lock: 'swLock' };
+    for (const h of hits) if (h.t > sparks) { sparks = h.t; if (h.w && SW[h.w]) sfx.play(SW[h.w], { x: h.x, y: h.y }); else if (!h.k) sfx.play('hitTick', { x: h.x, y: h.y }); }
+    if (corpseT > s.t) corpseT = 0;
+    for (const b of s.corpses || []) if (b.t > corpseT) { corpseT = b.t; sfx.play('antDies', { x: b.x, y: b.y }); }
+    // A battle's din, by how many duels are near the camera; a war drum when one starts near you.
+    { const tg = views.surface.target; let duels = 0; if (app.view === 'surface') for (const o of s.ants) if (o.foeId && o.state !== 'dead' && Math.abs(o.x - tg.x) < 30 * T && Math.abs(o.y - tg.z) < 30 * T) duels++;
+      sfx.loop('battle', duels >= 2 ? Math.min(1, duels / 14) * 0.8 : 0);
+      if (app.battle && !wasBattle) sfx.play('warDrum'); wasBattle = !!app.battle; }
     for (const sp2 of s.splashes || []) if (sp2.t > splashes) { splashes = sp2.t; sfx.play('plip', sp2); }
     // Build 19: bosses (their intro, roar, every telegraph and blow) and events.
     if (s.bossIntro && s.bossIntro.t !== introT) { introT = s.bossIntro.t; sfx.play('bossIntro'); }

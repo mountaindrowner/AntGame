@@ -2,6 +2,31 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 6: RTS combat (build 72)
+
+Mark: "Think of RTS games when it comes to combat, animations and obvious combat sounds and clashes." Reasoned out in [`PHASE2.md`](PHASE2.md), part 2:
+- **Every bite is heard by its dice:**
+
+  | Result | Sound |
+  |---|---|
+  | miss | a dry snap |
+  | hit | a crunch |
+  | hard hit | a heavier crunch |
+  | crit | a cracking ring |
+  | locked | a scrape |
+
+  Each varies in pitch and tone, is heard from where it lands (panned, faded with distance) and is capped per kind, so a war party is a din, not one sample repeating.
+- **A battle has a sound:**
+  - a bed of chitin chatter and clicks whose loudness follows the duels near the camera;
+  - a war drum when a battle starts near you;
+  - every death a crunch and a thin squeal.
+- **Hits throw something:**
+  - chitin flecks arc out of each landed bite, with a puff of dust on the ground;
+  - a crit spreads a white ring;
+  - a crit near your ant kicks the view.
+- **The fallen fall:** a dead ant (outside) lies on its back, legs up, twitches, stays eight seconds and sinks away. The mower and birds leave nothing. The bodies are not saved.
+- **Health bars:** a thin bar over every ant hit in the last four seconds, green for yours (gold when nearly dead) and red for theirs. They are drawn in one batch, on top.
+
 ## Nov 6: Phase 2, combat feel (build 71)
 
 Each piece is reasoned out in [`PHASE2.md`](PHASE2.md) (asked, means, today, others, design), then built:
