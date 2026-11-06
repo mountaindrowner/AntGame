@@ -6,7 +6,7 @@ Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
 ## Playtest 3 (Nov 6)
 
-Sorted in [`PLAYTEST-3.md`](PLAYTEST-3.md): what build 68 fixed, the creature and combat work next, and the nest decisions that are Mark's call.
+Broken into six phases in [`PLAYTEST-3.md`](PLAYTEST-3.md), worked piece by piece with Mark: Phase 1 polishes what build 68 added, then combat, creatures, the nest (his decisions first), the yard, bigger systems.
 
 ## Still open (Nov 4, after build 52)
 
