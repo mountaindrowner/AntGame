@@ -122,7 +122,7 @@ export function attachPointer(canvas, app, ui, views) {
     if (pinch && ptrs.size === 2) {
       const [p1, p2] = [...ptrs.values()];
       const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-      app.zoomTarget = null; app.zoomMul = Math.max(CAMERA.zoomMin, Math.min(CAMERA.zoomMax, (pinch.z0 * d) / Math.max(1, pinch.d0)));
+      app.zoomTarget = null; app.zoomTouchedAt = performance.now(); app.zoomMul = Math.max(CAMERA.zoomMin, Math.min(CAMERA.zoomMax, (pinch.z0 * d) / Math.max(1, pinch.d0)));
       return;
     }
     if (app.view === 'surface') {
@@ -167,7 +167,7 @@ export function attachPointer(canvas, app, ui, views) {
   // Desktop: wheel zooms.
   canvas.addEventListener('wheel', (e) => {
     e.preventDefault();
-    app.zoomTarget = Math.max(CAMERA.zoomMin, Math.min(CAMERA.zoomMax, (app.zoomTarget ?? app.zoomMul) * (e.deltaY > 0 ? 0.9 : 1.1))); // build 69: eased in the frame loop
+    app.zoomTouchedAt = performance.now(); app.zoomTarget = Math.max(CAMERA.zoomMin, Math.min(CAMERA.zoomMax, (app.zoomTarget ?? app.zoomMul) * (e.deltaY > 0 ? 0.9 : 1.1))); // build 69: eased in the frame loop
   }, { passive: false });
 
   return { nestTap };

@@ -509,6 +509,14 @@ export class SurfaceView {
       const plan = planFor(a.caste);
       tmpQ.setFromAxisAngle(UP, Math.atan2(-a.dy, a.dx));
       tmpV.set(a.x, FOOT * k, a.y);
+      // Build 71: a duel you can read. In a fight an ant faces its foe; each swing it lunges (a tenth of a second
+      // in, then back), further on a hard hit or crit, short on a miss; the one it hits reels back.
+      { const sw = s.t - (a.swingT ?? -9);
+        if (sw < 1.4 && a.lx != null && !moving) {
+          tmpQ.setFromAxisAngle(UP, Math.atan2(-a.ly, a.lx));
+          if (sw < 0.32) { const u = sw < 0.1 ? sw / 0.1 : 1 - (sw - 0.1) / 0.22, reach = a.swingK === 'crit' ? 0.9 : a.swingK === 'hard' ? 0.7 : a.swingK === 'miss' ? 0.3 : 0.5, L = reach * 6.5 * k * u;
+            tmpV.x += a.lx * L; tmpV.z += a.ly * L; tmpV.y += 0.6 * k * u; } }
+        const rl = s.t - (a.reelT ?? -9); if (rl < 0.25 && a.rx != null) { const R = (1 - rl / 0.25) * 3.2 * k; tmpV.x += a.rx * R; tmpV.z += a.ry * R; } }
       // Build 57: on the Oak's bark, head up, belly to the trunk's south face.
       if (a.climb > 0 && this.oakL) { const L = this.oakL, R = L.r * T * (1.1 - 0.28 * a.climb / 1800); tmpV.set(Math.max(L.x * T - R * 0.6, Math.min(L.x * T + R * 0.6, a.x)), a.climb + 4, L.y * T + R + 1.5); tmpQ.setFromAxisAngle(UP, Math.PI / 2).multiply(tmpQ3.setFromAxisAngle(ZAX, Math.PI / 2)); }
       // Bitten: a red flash. Knocked by a raindrop: it tumbles (build 16).
@@ -645,7 +653,7 @@ export class SurfaceView {
     const fx = sf ? sf.x : a ? a.x : (w.ex + 0.5) * T, fy = sf ? sf.y : a ? a.y : (w.ey + 0.5) * T;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    const across = (CAMERA.surfaceTilesAcross * T * fitWide(aspect)) / app.zoomMul;
+    const across = (CAMERA.surfaceTilesAcross * T * fitWide(aspect)) / (app.zoomMul * (app.battleZoom || 1)); // (build 71: eased in a little in a big fight near you)
     const dist = across / 2 / Math.tan(hfov / 2);
     // Keep the player centred in the space the HUD leaves free.
     const viewH = (across / aspect) / Math.sin(CAMERA.surfacePitch);

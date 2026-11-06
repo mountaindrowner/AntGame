@@ -15,7 +15,7 @@ import { exposed, frenzied } from './abilities.js';
 // 1d6 + Defence. Beat it to hit; by 3 or more (or on a pinned foe) for half again; a natural 6 that
 // hits is a crit for double that also lames. A tie locks mandibles: neither moves for a round.
 // Each extra ant on the same foe adds +1 (a swarm ant +2), up to +3; three or more on it pin it.
-export const DUEL_ROUND = 0.7, DUEL_DMG = 1.4;
+export const DUEL_ROUND = 1.1, DUEL_DMG = 1.4; // build 71: a swing every 1.1 s (was 0.7; Mark: "the battle was so quick… unceremonial"); damage per hit unchanged
 const DUEL_STAT = { harvester: [1, 1], soldier: [2, 2], venom: [2, 1], major: [3, 4], supermajor: [4, 6], exploder: [1, 0] };
 const RIVAL_DUEL = { pavement: [[0, 0], [2, 2]], odorous: [[-1, -1], [-1, -1]], argentine: [[0, 0], [1, 1]], carpenter: [[3, 4], [3, 4]], fire: [[2, 1], [2, 1]] };
 export function duelStats(s, a){
@@ -54,6 +54,8 @@ export function swing(s, a, o, mul = 1){
   else if (A > D){ if (ra >= critOn){ kind = 'crit'; m = 2; } else if (A - D >= 3 || pinned){ kind = 'hard'; m = 1.5; } else { kind = 'hit'; m = 1; } }
   else if (A === D){ kind = 'lock'; if (!a.isPlayer) a.lockT = DUEL_ROUND; if (!o.isPlayer) o.lockT = DUEL_ROUND; }
   const col = colonyOf(s, a);
+  // Build 71: remember the swing for the renderer: when, how it went, and which way (the lunge, the reel).
+  { const dx = o.x - a.x, dy = o.y - a.y, d = Math.hypot(dx, dy) || 1; a.swingT = s.t; a.swingK = kind; a.lx = dx/d; a.ly = dy/d; if (m){ o.reelT = s.t; o.rx = dx/d; o.ry = dy/d; } }
   let dmg = 0;
   if (m){
     dmg = bite(s, a)*DUEL_ROUND*DUEL_DMG*m*mul*(a.team && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 5 ? 1.5 : 1)*(exposed(s, o) ? 1.5 : 1);

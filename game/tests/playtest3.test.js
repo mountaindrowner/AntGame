@@ -43,3 +43,21 @@ test('build 69: an empty stomach drains your health instead of killing you at on
   for (let i = 0; i < 200 && s.player.ant; i++) SIM.tick(s, 0.05);
   assert.equal(s.player.ant, null, 'starved within ten seconds'); assert.equal(s.player.deathCause, 'hunger');
 });
+
+test('build 71: Defend calls the next six nearest home, fighters first, with a cooldown', () => {
+  const s = outside(); const c = s.colony, T = SIM.T;
+  // Ants out in the yard, some far, some near; a rival at the door.
+  for (let i = 0; i < 14; i++) { const me = s.player.ant; s.ants.push({ ...me, isPlayer: false, name: null, id: s.nextId++, follow: false, xp: 0, caste: i < 4 ? 'soldier' : 'forager', hp: 6, state: 'explore', foeId: 0, x: (c.ex + 10 + i) * T, y: (c.ey + 0.5) * T, tx: c.ex + 10 + i, ty: c.ey }); }
+  assert.equal(SIM.underAttack(s), false); assert.equal(SIM.callDefend(s), 0, 'nothing to defend against');
+  s.raidLive = true;
+  assert.ok(SIM.underAttack(s));
+  const n = SIM.callDefend(s);
+  assert.equal(n, 6);
+  const called = s.ants.filter((a) => a.goal === 'defend');
+  assert.equal(called.filter((a) => a.caste === 'soldier').length, 4, 'every soldier answers first');
+  assert.equal(SIM.callDefend(s), 0, 'the bell needs a moment');
+  { const a = called.find((o) => o.caste === 'soldier'), d0 = Math.hypot(a.x / T - c.ex, a.y / T - c.ey); for (let i = 0; i < 20; i++) SIM.tick(s, 0.05); assert.ok(Math.hypot(a.x / T - c.ex, a.y / T - c.ey) < d0 - 0.5, 'running home'); }
+  for (let i = 0; i < (SIM.DEFEND.cd - 1) * 20 + 2; i++) SIM.tick(s, 0.05);
+  s.raidLive = true; // (no real raiders in this test: the game clears the flag after a moment)
+  const before = called.length; assert.ok(SIM.callDefend(s) > 0, 'a second ring calls more'); assert.ok(s.ants.filter((a) => a.defendT > s.t).length > before);
+});

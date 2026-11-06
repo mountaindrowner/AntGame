@@ -80,7 +80,7 @@ test('a fight on the ground: soldiers beat foragers, kills and crits are counted
   const gx = Math.floor(me.x / T), gy = Math.floor(me.y / T);
   const mine = [0, 1, 2, 3, 4].map((i) => ant(s, 'soldier', 0, { hp: 6, x: me.x + i * 4, y: me.y + T, tx: gx, ty: gy + 1, state: 'patrol' }));
   const theirs = [0, 1, 2, 3, 4].map((i) => ant(s, 'forager', 1, { hp: 2, x: me.x + i * 4, y: me.y + 2 * T, tx: gx, ty: gy + 2, state: 'explore' }));
-  for (let i = 0; i < 20 * 15; i++) SIM.tick(s, 0.05);
+  for (let i = 0; i < 20 * 24; i++) SIM.tick(s, 0.05); // (build 71: 24 s, was 15, with the slower duel rounds: 1.1 s, was 0.7)
   const dead = theirs.filter((a) => a.state === 'dead' || !s.ants.includes(a)).length;
   assert.ok(dead >= 3, `${dead} of 5 rival foragers killed`);
   assert.ok((s.colony.duelsWon || 0) >= 3);

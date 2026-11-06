@@ -110,14 +110,15 @@ export function tickMyRaid(s, dt){
   // Everyone on both sides fights in pairs; ganging up counts as in a duel on the surface.
   for (const a of raiders) a.foeId = 0;
   const order = raiders.slice().sort(() => Math.random() - 0.5);
-  let crits = 0, felled = 0, lost = 0, named = null; const free = [];
+  let crits = 0, felled = 0, lost = 0, named = null; const free = [], pairs = []; // pairs: build 71, for the raid stage
   order.forEach((a, i) => { if (!def.length || a.loot) { free.push(a); return; } a.foeId = def[i % def.length].id; });
   duelGangs(s);
   for (const a of order){
     if (!a.foeId){ continue; }
     const o = def.find(d => d.id === a.foeId); if (!o || o.state === 'dead'){ free.push(a); continue; }
     const k = swing(s, a, o); if (k === 'crit'){ crits++; if (a.name) named = a.name; } if (o.state === 'dead') felled++;
-    if (o.state !== 'dead' && a.state !== 'dead'){ swing(s, o, a); if (a.state === 'dead') lost++; }
+    let k2 = null; if (o.state !== 'dead' && a.state !== 'dead'){ k2 = swing(s, o, a); if (a.state === 'dead') lost++; }
+    pairs.push([a.id, o.id, k, k2, a.state === 'dead', o.state === 'dead']);
   }
   // Raiders with nobody in front of them go for the prize.
   let took = 0, qhits = 0;
@@ -132,17 +133,21 @@ export function tickMyRaid(s, dt){
     }
   }
   if (M.prize === 'queen' && r.queenAlive && free.length){ const v = free[Math.floor(Math.random()*free.length)]; const [, d] = duelStats(s, v); if (1 + Math.floor(Math.random()*6) + 3 > 1 + Math.floor(Math.random()*6) + d){ v.hp -= 4; if (v.hp <= 0){ killAnt(s, v, 'rival'); lost++; } } }
+  // Build 71: the clash as it happened, for the raid stage: who met whom and how each side rolled, who ran
+  // for the prize, what it brought.
+  M.clash = { n: M.round, pairs, free: free.filter(a => a.state !== 'dead').map(a => a.id), took, qhits, t: s.t };
+  M.defIds = def.filter(d => d.state !== 'dead').map(d => d.id).slice(0, 16);
   // One line a round: the best thing that happened.
   const left = raiders.filter(a => a.state !== 'dead').length, gl = def.filter(d => d.state !== 'dead').length;
   M.left = left; M.guards = s.ants.filter(a => a.team === r.team && a.state === 'in').length;
-  let line = `Round ${M.round}: `;
+  let line = `Clash ${M.round}: `; // (build 71: "clash", was "round")
   if (crits) line += named ? `${named} rolls a 6, crit${crits > 1 ? ` (${crits} crits)` : ''}! ` : crits > 1 ? `${crits} crits! ` : 'A raider rolls a 6, crit! ';
   if (felled) line += `${felled} guard${felled === 1 ? '' : 's'} fall${felled === 1 ? 's' : ''}. `;
   if (lost) line += `${lost} raider${lost === 1 ? '' : 's'} fall${lost === 1 ? 's' : ''}. `;
   if (took && M.prize === 'store') line += `+${Math.round(took)} food grabbed. `;
   if (took && M.prize === 'brood') line += `${took} pupa${took === 1 ? '' : 'e'} taken. `;
   if (M.prize === 'queen' && !gl && r.queenAlive) line += qhits ? `${qhits} bite${qhits === 1 ? '' : 's'} on the queen: ${Math.max(0, Math.ceil(r.qhp))} health left. ` : 'The queen fends them off. ';
-  if (line === `Round ${M.round}: `) line += gl ? `${left} raiders against ${gl} guards. Mandibles locked.` : 'The halls are clear.';
+  if (line === `Clash ${M.round}: `) line += gl ? `${left} raiders against ${gl} guards. Mandibles locked.` : 'The halls are clear.';
   raidSay(M, line.trim());
   if (M.prize === 'queen' && r.queenAlive && r.qhp <= 0){ queenFalls(s, r); raidSay(M, 'The queen is dead!'); endRaid(s, 'won'); return; }
   if (M.prize === 'store' && (M.loot.food >= M.cap || r.store < 1)){ raidSay(M, 'Their store is stripped.'); endRaid(s, 'done'); return; }

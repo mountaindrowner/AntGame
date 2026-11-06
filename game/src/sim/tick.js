@@ -107,7 +107,7 @@ export function tick(s, dt){
     if (a.state === 'zombie'){ stepZombie(s, a, dt); continue; }
     if (a.state === 'climb') continue; // build 57: on the Oak's bark (tickClimb moves it)
     if (a.flee > 0) a.flee -= dt; else a.fleeFrom = null;
-    const aggressive = C.fight >= 3 || a.follow || a.state === 'raid' || (a.team && (rspec(a).swarm || (rspec(a).fierce && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 20)));
+    const aggressive = C.fight >= 3 || a.follow || a.state === 'raid' || a.defendT > s.t || (a.team && (rspec(a).swarm || (rspec(a).fierce && Math.hypot(a.tx - col.ex, a.ty - col.ey) < 20)));
     // spider / enemies
     if (s.spider){ const sd = Math.hypot(a.x - s.spider.x, a.y - s.spider.y) * (s.spider.rest > 0 ? 2.5 : 1); // waiting at its web, it's hard to see
       const brave = a.follow || a.state === 'raid' || (a.state === 'fight' && a.goal === 'spider') || spiderCrew[a.team] >= 5;
@@ -119,8 +119,15 @@ export function tick(s, dt){
       // Rival soldiers fight half again as hard on their own doorstep.
       if (aggressive){ // build 27: a duel, one swing a round
         let o = a.foeId && en.find(q => q.id === a.foeId && Math.abs(q.tx-a.tx)<=reach && Math.abs(q.ty-a.ty)<=reach);
-        if (!o){ o = en.find(q => Math.abs(q.tx-a.tx)<=reach && Math.abs(q.ty-a.ty)<=reach); a.foeId = o ? o.id : 0; if (o && !(a.rollT > 0)) a.rollT = Math.random()*DUEL_ROUND; }
+        // Build 71: spread the duels. A new foe is the one in reach with the fewest on it already (one-on-one
+        // first, then two, then three); a fourth looks elsewhere instead of piling on.
+        if (!o){ let best = null, bn = 3; for (const q of en){ if (Math.abs(q.tx-a.tx) > reach || Math.abs(q.ty-a.ty) > reach) continue; const g = (s.gangs && s.gangs.get(q.id)) || 0; if (g < bn){ bn = g; best = q; } } o = best; a.foeId = o ? o.id : 0; if (o){ s.gangs.set(o.id, bn + 1); if (!(a.rollT > 0)) a.rollT = Math.random()*DUEL_ROUND; } }
         if (o && !stunned(s, a)){ a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT += DUEL_ROUND; swing(s, a, o); } }
+        // Build 71: room to fight. A duellist keeps biting distance from its foe, and fighters of one side ease
+        // apart, so a clash reads as a band of pairs, not a heap.
+        if (o && !(a.lockT > 0)){ let px = 0, py = 0; const dx = a.x - o.x, dy = a.y - o.y, d = Math.hypot(dx, dy) || 1; if (d < 0.75*T){ px += dx/d*(0.75*T - d); py += dy/d*(0.75*T - d); }
+          for (let by = -1; by <= 1; by++) for (let bx = -1; bx <= 1; bx++){ const bk = buckets.get((a.ty + by)*W + a.tx + bx); if (bk) for (const q of bk){ if (q === a || q.team !== a.team || !q.foeId) continue; const ex = a.x - q.x, ey = a.y - q.y, e = Math.hypot(ex, ey); if (e > 0.01 && e < 0.85*T){ px += ex/e*(0.85*T - e); py += ey/e*(0.85*T - e); } } }
+          const pm = Math.hypot(px, py); if (pm > 0.01){ const k = Math.min(pm, 20*dt)/pm, nx = a.x + px*k, ny = a.y + py*k; if (walk(s, Math.floor(nx/T), Math.floor(ny/T))){ a.x = nx; a.y = ny; a.tx = Math.floor(nx/T); a.ty = Math.floor(ny/T); } } }
         if (a.state === 'explore' || a.state === 'return' || a.state === 'patrol') { a.state = 'fight'; a.goal = 'enemy'; } }
       else if (en.some(o => CASTES[o.caste].fight >= 3 || o.follow)){ a.flee = 2.5; }
     }
@@ -141,6 +148,7 @@ export function tick(s, dt){
       else if (a.goal === 'boss'){ const b = s.bosses[a.bossKey]; if (b && !b.dead && b.mode === 'fight' && Math.hypot(a.x - b.x, a.y - b.y) < 20*T){ tx = b.x; ty = b.y; } }
       else if (a.goal === 'zombie'){ const z = s.ants.find(o => o.id === a.zid && o.zombie && o.state !== 'dead'); if (z){ tx = z.x; ty = z.y; } }
       else if (a.goal === 'stalk'){ const st = s.stalks.find(o => o.id === a.zid); if (st){ tx = st.x; ty = st.y; } }
+      else if (a.goal === 'defend'){ /* build 71: called home by Defend: run to the door, then fight whoever is there */ if (Math.hypot(a.tx - c.ex, a.ty - c.ey) < 3){ a.goal = 'enemy'; const e2 = enemiesNear(a, 6); if (e2.length){ tx = e2[0].x; ty = e2[0].y; } } else { tx = (c.ex + 0.5)*T; ty = (c.ey + 0.5)*T; } }
       else { const e2 = enemiesNear(a, 6); if (e2.length){ tx = e2[0].x; ty = e2[0].y; } else if (s.spider && Math.hypot(a.x-s.spider.x, a.y-s.spider.y) < 8*T){ tx = s.spider.x; ty = s.spider.y; } }
       if (tx == null){ a.state = a.carry ? 'return' : a.team ? 'return' : a.duty === 'hunt' ? 'hunt' : 'patrol'; a.explore = 0; continue; }
       if (Math.hypot(a.x-tx, a.y-ty) > 0.9*T){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)) chooseToward(s, a, tx, ty); }
@@ -164,7 +172,7 @@ export function tick(s, dt){
       if (Math.hypot(a.x-gx, a.y-gy) < 1.5*T){ const guarded = s.ants.some(o => !o.team && o.state!=='dead' && CASTES[o.caste].fight >= 3 && (o.state==='patrol'||o.state==='fight') && Math.hypot(o.tx-c.ex, o.ty-c.ey) < 4) || (picked(s, 'nurse', 'broodguard') && s.ants.some(o => !o.team && o.caste === 'nurse' && (o.state === 'in' || o.state === 'build')));
         // Unguarded, raiders push into the nest and go for the queen.
         a.raidT = (a.raidT||0) + dt; raiseAlarm(s, c.ex, c.ey, 2);
-        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt*(qtrait(s, 'hardy') ? 0.4 : 1)*(picked(s, 'soldier', 'guardian') ? 0.5 : 1)*(has(s, 'honourguard') ? 0.5 : 1); if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
+        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt*(qtrait(s, 'hardy') ? 0.4 : 1)*(picked(s, 'soldier', 'guardian') ? 0.5 : 1)*(has(s, 'honourguard') ? 0.5 : 1); s.queenHitT = s.t; if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
         const take = guarded && picked(s, 'soldier', 'doorkeeper') ? 0 : Math.min(guarded ? 1 : 2, c.store); c.store -= take; c.stolen += take; a.carry = take; a.kind = 'food'; a.state = 'return'; a.raidT = 0; continue; }
       if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, gx, gy);
       continue;

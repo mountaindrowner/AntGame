@@ -564,24 +564,55 @@ export function createUI(app) {
     h += `<div class="btns">` + P3.map(([k, n, d]) => { const lock = SIM.raidLock(s, k); return `<button data-raid="${k}" ${lock ? 'disabled' : ''}>${sicon('raid')}<b>${n}</b><i>${lock || d}</i></button>`; }).join('') + `</div>`;
     return h;
   }
+  // Build 71 (Mark: "let's give the UI much more presentation, because you can't see… more animation, more
+  // excitement, more tension"): the raid stage. At the door, your ants against theirs and a door that cracks
+  // as you hold it. Inside, both sides as rows of tokens, each clash's pairs lunging at each other with how
+  // their dice went, who falls, the prize filling, a ring counting to the next clash, and a drum each clash.
+  const KW = { crit: 'CRIT!', hard: 'HIT!', hit: 'hit', miss: 'miss', lock: 'locked' };
+  const token = (a, side) => { const dead = !a || a.state === 'dead', ic = a && ICONS[a.caste] ? ICONS[a.caste] : ICONS.forager;
+    return `<i class="tk ${side}${dead ? ' dead' : ''}${a && a.loot ? ' loot' : ''}">${ic}${a && a.loot ? `<em>${a.lootKind === 'brood' ? '🥚' : '🌾'}</em>` : ''}</i>`; };
+  const DOOR = '<svg class="door" viewBox="0 0 60 66" aria-hidden="true"><path class="frame" d="M4,66 V26 A26,26 0 0 1 56,26 V66 Z"/><path class="planks" d="M10,66 V27 A20,20 0 0 1 50,27 V66 Z"/><path class="seams" d="M23,64 V12 M37,64 V12"/><path class="crack" d="M30,10 L26,22 L33,30 L27,42 L34,52 L29,64 M33,30 L42,34 M27,42 L18,46"/></svg>';
+  let raidPhase = null, raidClash = -1;
   function renderRaidCard() {
     const s = app.s, M = s.myRaid, R = s.report, C = el.raidCard;
     let h = '';
     if (M) {
-      const name = SIM.RIVALS[M.team - 1].name;
+      const RV = SIM.RIVALS[M.team - 1], name = RV.name, byId = (id) => s.ants.find((a) => a.id === id);
+      if (raidPhase === 'breach' && M.phase === 'inside') { shout('⚔', 'Breach!', `${M.raiders.length} raiders storm the ${name.toLowerCase()}’ nest.`, 'warn'); sfx.play('raid'); }
+      raidPhase = M.phase;
       if (M.phase === 'breach') {
-        h = `<div class="rh">⚔ Raid on the ${name} · break the door</div><div class="rl">At the door: <b>${M.ours || 0} of ${M.need || SIM.RAID.door}</b> · theirs in the way: <b>${M.theirs || 0}</b></div><div class="bar"><i style="width:${Math.min(100, (M.hold / SIM.RAID.hold) * 100)}%"></i></div><button data-pull="1">Call off</button>`;
+        const need = M.need || SIM.RAID.door, ours = M.ours || 0, theirs = M.theirs || 0, k = Math.min(1, M.hold / SIM.RAID.hold);
+        h = `<div class="rs-head"><span class="rs-title">⚔ Raid · the ${name}’ door</span></div>
+          <div class="rs-door"><div class="tks ours">${Array.from({ length: need }, (_, i) => `<i class="tk ours${i < ours ? '' : ' empty'}">${ICONS.soldier}</i>`).join('')}</div>
+          <div class="dw${ours >= need && !theirs ? ' hold' : ''}" style="--crack:${k.toFixed(2)}">${DOOR}<div class="bar"><i style="width:${(k * 100).toFixed(0)}%"></i></div></div>
+          <div class="tks theirs">${Array.from({ length: Math.min(8, theirs) }, () => `<i class="tk theirs">${ICONS.soldier}</i>`).join('')}${theirs ? '' : '<span class="clear">none in the way</span>'}</div></div>
+          <div class="rs-note">${theirs ? `<b>Clear their defenders</b> from the door.` : ours < need ? `Bring <b>${need - ours} more</b> of your crew to the door.` : `<b>Holding the door…</b> it's breaking.`}</div>
+          <button data-pull="1">Call off</button>`;
       } else {
-        const r = s.rivals[M.team - 1], prize = M.prize === 'store' ? `🌾 ${Math.round(M.loot.food)} of ${M.cap} food` : M.prize === 'brood' ? `🥚 ${M.loot.brood} pupa${M.loot.brood === 1 ? '' : 'e'} (${M.broodLeft} left)` : `👑 queen ${Math.max(0, Math.ceil(r.qhp))} of ${SIM.RIVALS[M.team - 1].qhp}`;
-        h = `<div class="rh">⚔ Inside the ${name}' nest · round ${M.round}</div><div class="rl">Raiders <b>${M.left ?? M.raiders.length}</b> · guards <b>${M.guards ?? '?'}</b> · ${prize}</div>`;
-        if (M.prize === 'queen') h += `<div class="bar q"><i style="width:${Math.max(0, Math.min(100, (r.qhp / SIM.RIVALS[M.team - 1].qhp) * 100))}%"></i></div>`;
-        h += `<div class="log">${M.log.slice(-4).map((l) => `<div>${l}</div>`).join('')}</div><button data-pull="1">Pull out</button>`;
+        const r = s.rivals[M.team - 1], X = M.clash;
+        if (X && X.n !== raidClash) { raidClash = X.n; sfx.play('drum'); }
+        const raiders = M.raiders.map(byId), defs = (M.defIds || []).map(byId), alive = raiders.filter((a) => a && a.state === 'away').length;
+        const prize = M.prize === 'store' ? ['🌾', `${Math.round(M.loot.food)} of ${M.cap} food`, M.cap ? M.loot.food / M.cap : 0] : M.prize === 'brood' ? ['🥚', `${M.loot.brood} pupa${M.loot.brood === 1 ? '' : 'e'} taken (${M.broodLeft} left)`, M.loot.brood / Math.max(1, M.loot.brood + M.broodLeft)] : ['👑', `queen ${Math.max(0, Math.ceil(r.qhp))} of ${RV.qhp}`, Math.max(0, r.qhp / RV.qhp)];
+        const rows = X ? X.pairs.slice(0, 5).map(([ai, oi, k1, k2, ad, od]) => { const a = byId(ai), o = byId(oi);
+          return `<div class="pair"><span class="sd ours${ad ? ' fell' : ''}">${token(a, 'ours')}<b class="r ${k1}">${KW[k1] || ''}</b></span><span class="x">⚔</span><span class="sd theirs${od ? ' fell' : ''}"><b class="r ${k2 || 'none'}">${k2 ? KW[k2] : od ? 'falls' : ''}</b>${token(o, 'theirs')}</span></div>`; }).join('') : '';
+        const runners = X && X.free.length ? `<div class="run">→ ${X.free.length} raider${X.free.length === 1 ? '' : 's'} ${M.prize === 'queen' ? 'go for the queen' : M.prize === 'brood' ? 'grab the brood' : 'raid the store'}${X.took ? ` (+${Math.round(X.took)})` : X.qhits ? ` (${X.qhits} bite${X.qhits === 1 ? '' : 's'})` : ''}</div>` : '';
+        h = `<div class="rs-head"><span class="rs-title">⚔ Inside the ${name}’ nest</span><span class="rs-clash">Clash ${M.round}<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8"/><circle class="t" cx="10" cy="10" r="8" style="animation-duration:${SIM.RAID.round}s"/></svg></span></div>
+          <div class="rs-sides"><div class="sd ours"><b>${alive}</b><span>raiders</span></div><div class="vs">VS</div><div class="sd theirs"><b>${M.guards ?? '?'}</b><span>guards</span></div></div>
+          <div class="rs-rows">${raiders.slice(0, 14).map((a) => token(a && a.state === 'away' ? a : null, 'ours')).join('')}<span class="gap"></span>${defs.slice(0, 14).map((a) => token(a, 'theirs')).join('')}</div>
+          <div class="rs-pairs" data-n="${X ? X.n : 0}">${rows}${runners}</div>
+          <div class="rs-prize"><span>${prize[0]} ${prize[1]}</span><div class="bar${M.prize === 'queen' ? ' q' : ''}"><i style="width:${(Math.max(0, Math.min(1, prize[2])) * 100).toFixed(0)}%"></i></div></div>
+          <div class="rs-log">${M.log.slice(-1).join('')}</div>
+          <button data-pull="1">Retreat · keep what you've taken</button>`;
       }
-    } else if (R && R.kind === 'myraid' && s.t - R.t < 9) {
-      const got = R.food ? `🌾 ${R.food} food` : R.brood ? `🥚 ${R.brood} pupa${R.brood === 1 ? '' : 'e'}` : R.how === 'won' ? '👑 their queen' : 'nothing';
-      h = `<div class="rh">${R.how === 'won' ? '🏆 The nest is yours' : R.how === 'lost' ? '☠ The raid failed' : R.how === 'broken' || R.how === 'called off' ? '✋ Raid called off' : '⚔ Raid over'} · the ${R.name}</div><div class="rl">Brought out: <b>${got}</b> · lost ${R.lost} · killed ${R.killed}${R.crits ? ` · ${R.crits} crit${R.crits === 1 ? '' : 's'}` : ''}</div><div class="rl">Their numbers: ${R.before} → ${R.after}${R.how !== 'won' ? ' · they will strike back' : ''}</div>`;
+    } else {
+      raidPhase = null; raidClash = -1;
+      if (R && R.kind === 'myraid' && s.t - R.t < 9) {
+        const got = R.food ? `🌾 ${R.food} food` : R.brood ? `🥚 ${R.brood} pupa${R.brood === 1 ? '' : 'e'}` : R.how === 'won' ? '👑 their queen' : 'nothing';
+        h = `<div class="rs-end ${R.how}"><div class="big">${R.how === 'won' ? '🏆 The nest is yours' : R.how === 'lost' ? '☠ The raid failed' : R.how === 'broken' || R.how === 'called off' ? '✋ Raid called off' : '⚔ Raid over'}</div><div class="sub">the ${R.name}</div>
+          <div class="stats"><span>Brought out <b>${got}</b></span><span>Lost <b>${R.lost}</b></span><span>Killed <b>${R.killed}</b></span>${R.crits ? `<span>Crits <b>${R.crits}</b></span>` : ''}<span>Their numbers <b>${R.before} → ${R.after}</b></span></div>${R.how !== 'won' ? '<div class="warn">They will strike back.</div>' : ''}</div>`;
+      }
     }
-    C.classList.toggle('hidden', !h);
+    C.classList.toggle('hidden', !h); C.classList.toggle('stage', !!M);
     setHtml(C, h);
   }
   // Build 39: the yard is yours. The camera rises over it; the 13 crests light one by one; your colony's
@@ -655,9 +686,9 @@ export function createUI(app) {
   // (danger eight). A repeat refreshes its notice instead of stacking. (One line used to carry everything.)
   const feed = document.createElement('div'); feed.id = 'feed'; $('msg').before(feed);
   const FEED_ICON = { danger: '⚠', good: '★', news: '✦', report: '⚔', '': '•' };
-  const WAR = /^Raid! |march on your nest|strike back/;
+  const WAR = /^Raid! \d|march on your nest|strike back/;
   function pushFeed(text) {
-    if (WAR.test(text)) { shout('⚔', 'War party!', text.replace(/^Raid! /, '').replace(/ ?(Your|Soldiers).*$/, ''), 'hard'); }
+    if (WAR.test(text)) { shout('⚔', 'War party!', text.replace(/^Raid! /, '').replace(/ ?(Your|Soldiers).*$/, '') + ' Press D to defend.', 'hard'); }
     for (const n of feed.children) if (n.dataset.text === text) { feed.prepend(n); n.classList.remove('out'); clearTimeout(n.t); n.t = setTimeout(() => fadeFeed(n), n.dataset.kind === 'danger' ? 8000 : 5000); return; }
     const kind = noticeKind(text), n = document.createElement('div');
     n.className = 'note'; n.dataset.kind = kind; n.dataset.text = text;
@@ -667,7 +698,7 @@ export function createUI(app) {
     pulseFor(text);
   }
   function fadeFeed(n) { n.classList.add('out'); setTimeout(() => n.remove(), 400); }
-  app.events = (list) => { for (const e of list) if (e === 'queenhit') shout('👑', 'Queen under attack!', 'Raiders are in the nest. Bring fighters home.', 'hard'); };
+  app.events = (list) => { for (const e of list) if (e === 'queenhit') shout('👑', 'Queen under attack!', 'Raiders are in the nest. Press D to call ants home.', 'hard'); };
   app.shout = shout;
   function flash(text, test, ms) {
     P().msg = text;
@@ -795,7 +826,7 @@ export function createUI(app) {
       + eventChip(s, chip)
       + `<button class="more" data-tip="Colony details" aria-label="Colony details">⋯</button>`;
     if (el.stats.dataset.html !== statsHtml) { el.stats.dataset.html = statsHtml; el.stats.innerHTML = statsHtml; }
-    updateClock(s);
+    updateClock(s); updateDefend(s); updateBattle(s);
     { const m = P().msg || ''; if (m && m !== app.feedLast) pushFeed(m); app.feedLast = m; }
     // Build 68: the mower, as a word in the middle of the screen when it starts (it was a notice at the side).
     if (P().mowerAt && P().mowerAt !== app.mowerSeen) { app.mowerSeen = P().mowerAt; if (P().ant && !P().inNest) shout('⚠', 'Mower!', 'It sweeps the Lawn in a few seconds. Get off the grass.', 'hard'); }
@@ -1019,7 +1050,42 @@ export function createUI(app) {
     b.classList.add('keyed'); setTimeout(() => b.classList.remove('keyed'), 140); b.click();
   });
   window.addEventListener('keyup', (e) => { if (e.key.toUpperCase() === 'R') recEnd(); });
-  $('zoom').addEventListener('click', () => { const z = app.zoomTarget ?? app.zoomMul; app.zoomTarget = z >= 1.5 ? 0.7 : z >= 0.9 ? 1.6 : 1; }); // (build 68: out to 0.7, inside the new limit; 69: eased)
+  // Build 71: Defend (Mark: "a defend button… you have to kind of spam it… a little bit of cooldown"). It
+  // shows above the dock while your nest is under attack; each press (or D) calls the next ants home to the
+  // door, then it needs a moment (the ring fills) before it rings again.
+  const defBtn = document.createElement('button'); defBtn.id = 'defendbtn'; defBtn.className = 'hidden';
+  defBtn.innerHTML = '<svg class="cd" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15"/></svg><span class="sh">🛡</span><b>Defend</b><kbd>D</kbd>';
+  defBtn.dataset.tip = 'Defend: call the nearest ants home to fight at the door. Press again for more, every few seconds.';
+  document.body.appendChild(defBtn);
+  const ringDefend = () => {
+    const n = SIM.callDefend(app.s); if (!n) return;
+    sfx.play('raid'); defBtn.classList.remove('rang'); void defBtn.offsetWidth; defBtn.classList.add('rang');
+    app.s.player.msg = `🛡 ${n} ant${n === 1 ? '' : 's'} answer${n === 1 ? 's' : ''} the call and run for home.`;
+  };
+  defBtn.addEventListener('click', ringDefend);
+  window.addEventListener('keydown', (e) => { if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || app.titleOpen || evo.isOpen || e.key.toUpperCase() !== 'D' || /input|textarea/i.test((e.target && e.target.tagName) || '')) return; if (!defBtn.classList.contains('hidden')) { e.preventDefault(); ringDefend(); } });
+  // Build 71: a battle tally under the clock while a fight of four or more is near you: who's left on each
+  // side, as two bars. (main.js also eases the camera in a little; app.battle is the signal.)
+  const tally = document.createElement('div'); tally.id = 'tally'; tally.className = 'hidden'; tally.innerHTML = '<b class="m"></b><div class="bars"><i class="m"></i><i class="t"></i></div><b class="t"></b>'; document.body.appendChild(tally);
+  function updateBattle(s) {
+    const me = P().ant, now = performance.now();
+    let mine = 0, theirs = 0, duels = 0;
+    if (me && !P().inNest && app.view === 'surface' && !app.titleOpen) for (const a of s.ants) {
+      if (a.state === 'dead' || a.state === 'in' || a.state === 'away' || a.state === 'build' || a.state === 'nest' || Math.hypot(a.x - me.x, a.y - me.y) > 12 * SIM.T) continue;
+      if (a.foeId) duels++; if (a.team) theirs++; else if (a.foeId || a.state === 'fight' || a.follow || a.isPlayer) mine++;
+    }
+    if (duels >= 4 && theirs) { app.battle = { mine, theirs }; app.battleAt = now; }
+    const on = app.battle && now - (app.battleAt || 0) < 3000; tally.classList.toggle('hidden', !on); if (!on) { app.battle = null; return; }
+    const B = app.battle, tot = Math.max(1, B.mine + B.theirs);
+    tally.querySelector('b.m').textContent = B.mine; tally.querySelector('b.t').textContent = B.theirs;
+    tally.querySelector('i.m').style.width = (100 * B.mine / tot).toFixed(0) + '%'; tally.querySelector('i.t').style.width = (100 * B.theirs / tot).toFixed(0) + '%';
+  }
+  function updateDefend(s) {
+    const show = !app.titleOpen && SIM.underAttack(s); defBtn.classList.toggle('hidden', !show); if (!show) return;
+    const left = SIM.defendLeft(s), k = left / SIM.DEFEND.cd; defBtn.classList.toggle('cool', left > 0);
+    defBtn.querySelector('.cd circle').style.strokeDashoffset = (94.25 * k).toFixed(1);
+  }
+  $('zoom').addEventListener('click', () => { const z = app.zoomTarget ?? app.zoomMul; app.zoomTarget = z >= 1.5 ? 0.7 : z >= 0.9 ? 1.6 : 1; app.zoomTouchedAt = performance.now(); }); // (build 68: out to 0.7, inside the new limit; 69: eased)
 
   // In-page confirmation (browser confirm() is blocked in some hosts).
   function confirmSheet(text, yes, fn) {

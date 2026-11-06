@@ -320,6 +320,9 @@ function frame(now) {
   // Build 69: smooth zoom. The wheel and the Zoom button set a target; the camera eases to it (about a fifth
   // of a second). A pinch sets the zoom directly.
   if (app.zoomTarget != null) { app.zoomMul += (app.zoomTarget - app.zoomMul) * Math.min(1, dt * 14); if (Math.abs(app.zoomTarget - app.zoomMul) < 0.002) { app.zoomMul = app.zoomTarget; app.zoomTarget = null; } }
+  // Build 71: in a big fight near you, the camera eases in a little (15%), and back out after; not if you've
+  // zoomed by hand in the last few seconds.
+  { const want = app.battle && performance.now() - (app.zoomTouchedAt || -1e9) > 4000 ? 1.15 : 1; app.battleZoom = (app.battleZoom || 1) + (want - (app.battleZoom || 1)) * Math.min(1, dt * 1.5); }
   let newEvents = [];
   const evSeen = s.events.length;
   if (!app.paused) {
@@ -371,6 +374,9 @@ function frame(now) {
       if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue;
       out.push({ text: a.legend || a.title ? `★ ${a.name}` : a.name, x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: a.legend || a.title ? 'legend' : 'name' });
     }
+    // Build 71: a "!" over each ant answering the Defend call, for two seconds.
+    for (const a of s.ants) { if (!(s.t - (a.defendMark ?? -9) < 2) || a.state === 'dead') continue; nameV.set(a.x, 10, a.y).project(cam);
+      if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue; out.push({ text: '!', x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: 'alert' }); }
     // Build 27: duel numbers and crits, rising and fading over a second.
     for (const q of s.pops || []) {
       const age = s.t - q.t; if (age < 0 || age > 1.1) continue;

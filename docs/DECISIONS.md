@@ -2,6 +2,37 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 6: Phase 2, combat feel (build 71)
+
+Each piece is reasoned out in [`PHASE2.md`](PHASE2.md) (asked, means, today, others, design), then built:
+- **Ants lunge when they bite.** Each swing is remembered (when, how it went, which way).
+  - A fighting ant faces its foe and lunges on every swing: further on a hard hit or a crit, short on a miss.
+  - The one it hits reels back.
+- **Fights spread out:**
+  - a fighter picks the foe in reach with the fewest on it (one-on-one, then two, then three), so a fourth goes elsewhere;
+  - duellists keep biting distance;
+  - fighters of one side ease apart, so a clash reads as a band of pairs rather than a heap.
+- **Fights last longer:** a duel swing every 1.1 s (was 0.7), and your ant's every 0.9 s (was 0.6). Damage per hit is unchanged, so who wins doesn't change, but you can see it and answer it. This is a pace change, Mark's to tune; one test's time window was scaled to match.
+- **A battle view:**
+  - while four or more duels are near you, a tally under the clock ("⚔ 7 ▬▬ 6") shows both sides;
+  - the camera eases in 15% (not if you zoomed by hand in the last four seconds).
+- **The raid stage.** The small raid card became a panel:
+  - **at the door:** your ants against theirs as tokens, and a door that cracks and shakes as you hold it, with plain words on what's needed;
+  - **inside:**
+    - the two sides' counts in big type and both sides as tokens;
+    - each clash's pairs lunging at each other with their results (CRIT!, HIT!, miss, locked, falls);
+    - free raiders running for the prize;
+    - the prize and queen bars;
+    - a ring counting to the next clash;
+    - a drum each clash and "Breach!" when the door gives;
+    - "Clash", not "Round"; "Retreat · keep what you've taken", not "Pull out".
+  - **The result:** a banner with what was won and lost.
+- **Defend.** While your nest is under attack (raiders coming, at the door, or the queen hit), a red Defend button (D) shows above the dock.
+  - Each press rings the alarm and calls the next six nearest ants home to fight at the door, fighters first, then workers. Each shows a "!" for two seconds.
+  - Four seconds' cooldown between rings, drawn as a ring.
+  - The war-party and queen shouts say to press D.
+- **A fix on the way:** the War party shout matched your own raid's opening line; it now matches only raids on you.
+
 ## Nov 6: a little character (build 70)
 
 Mark, on build 69: "I love what you did with the forager section… there should be a bit of an indent, so you know it's under that category… The day clock is awesome too. Add a little pizzazz to it, like a little character… Same thing with HP."

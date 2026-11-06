@@ -1,8 +1,8 @@
 // Your ant: moving, digging, actions, your crew (attack, hold, follow, build 26 and 29), zones taken.
 import { ZONES } from './growth.js';
-import { FOODS, H, NH, NW, SHAFT, SURF, T, W, heavy, idx, nidx, rspec } from './core.js';
+import { CASTES, FOODS, H, NH, NW, SHAFT, SURF, T, W, heavy, idx, nidx, rspec } from './core.js';
 import { addSugar, deposit, killAnt } from './colony.js';
-import { findPath, itemAt, walk } from './world.js';
+import { findPath, itemAt, raiseAlarm, walk } from './world.js';
 import { carveRoom, dig, nestStep } from './nest.js';
 import { bite, discover, gainXp, has, maxHp, picked, storeCap, youHp, youL, youPace } from './progress.js';
 import { heldFx } from './outposts.js';
@@ -70,7 +70,7 @@ export function stepPlayer(s, a, dt, enemiesNear){
   // fight: player bites enemies / cat adjacent
   const pm = Math.max(youHp(s), maxHp(s, a)), yb = youL(s) >= 3 ? 1.5 : 1;
   // Build 27: you duel too, a swing every 0.6 s, at twice an ant's bite; your rolls show by your health.
-  const en = enemiesNear(a, 1); if (en.length){ const o = en.find(q => q.id === a.foeId) || en[0]; a.foeId = o.id; a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT = 0.6; swing(s, a, o, 2*yb); } } else { a.foeId = 0; if (a.hp < pm && !P.starving) a.hp = Math.min(pm, a.hp + 1*dt); } // (no healing while starving)
+  const en = enemiesNear(a, 1); if (en.length){ const o = en.find(q => q.id === a.foeId) || en[0]; a.foeId = o.id; a.rollT = (a.rollT || 0) - dt; if (a.rollT <= 0){ a.rollT = 0.9; /* build 71: was 0.6, with the ants' slower rounds */ swing(s, a, o, 2*yb); } } else { a.foeId = 0; if (a.hp < pm && !P.starving) a.hp = Math.min(pm, a.hp + 1*dt); } // (no healing while starving)
   if (a.burnT > 0){ a.burnT -= dt; a.hp -= dt/3*0.6; if (a.hp <= 0){ killAnt(s, a, 'fireants'); return; } }
   if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH){ const dmg = bite(s, a, 'cat')*yb*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); }
   if (P.enterReq && P.enterKey){ const d = (s.daughters || []).find(q => q.key === P.enterKey); /* build 50: in at her door */
@@ -196,4 +196,28 @@ function deliverBig(s){
   discover(s, b.type);
   P.msg = lost >= 1 ? `${Math.round(put)} food stored, ${Math.round(lost)} wasted: the store was full.${c.cap < 150 ? ' A Food store holds 150.' : ''}` : `Your crew hauls in the ${FOODS[b.type].name}: +${Math.round(put)} food${sweet ? `, +${sweet} 🍯 sugar` : ''}.`;
   s.events.push('bighaul');
+}
+
+// Build 69→71, the Defend call (Mark: "a defend button, and you have to kind of spam it… a little bit of
+// cooldown"). While your nest is under attack, each call rings the alarm and sends the next DEFEND.n nearest
+// ants out in the yard home to fight at the door: fighters first, then workers. It's a bell, not a switch:
+// DEFEND.cd seconds between calls, and those already answering aren't called again.
+export const DEFEND = { n: 6, cd: 4, near: 8, answer: 40 };
+export function underAttack(s){
+  if (!s.queen.placed || s.lost) return false;
+  if (s.raidLive) return true;
+  if (s.t - (s.queenHitT ?? -99) < 15) return true;
+  const c = s.colony; return s.ants.some(a => a.team && a.state !== 'dead' && outside(a) && Math.hypot(a.tx - c.ex, a.ty - c.ey) < DEFEND.near);
+}
+export const defendLeft = s => Math.max(0, (s.defendAt ?? -99) + DEFEND.cd - s.t);
+export function callDefend(s){
+  if (!underAttack(s) || defendLeft(s) > 0) return 0;
+  const c = s.colony, home = (a) => Math.hypot(a.tx - c.ex, a.ty - c.ey);
+  const cands = s.ants.filter(a => !a.team && !a.isPlayer && !a.follow && a.state !== 'dead' && outside(a) && a.state !== 'climb' && !(a.defendT > s.t) && home(a) >= 3);
+  cands.sort((p, q) => (CASTES[q.caste].fight >= 3) - (CASTES[p.caste].fight >= 3) || home(p) - home(q));
+  const got = cands.slice(0, DEFEND.n);
+  for (const a of got){ a.state = 'fight'; a.goal = 'defend'; a.defendT = s.t + DEFEND.answer; a.defendMark = s.t; a.flee = 0; a.explore = 0; }
+  raiseAlarm(s, c.ex, c.ey, 2); // (and the alarm brings the fighters out from inside)
+  s.defendAt = s.t; s.defendCalls = (s.defendCalls || 0) + 1;
+  return got.length;
 }

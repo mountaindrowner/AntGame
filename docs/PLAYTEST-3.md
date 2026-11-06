@@ -33,6 +33,8 @@ A first pass of each is in the game (build 68). Each gets a second look: how it 
 
 ### Phase 2: combat feel
 
+**Done in build 71**, each piece thought through first in [`PHASE2.md`](PHASE2.md).
+
 1. **Ants lunge when they bite.** "Maybe we should give the ants some kind of animation where they lunge a little bit." Today a fighting ant only flickers its walk.
 2. **Fights spread out.** "They shouldn't just be a cluster… match up to each other and separate… chaotic front lines." Ants pair off one-on-one in a loose front.
 3. **Fights last longer and read better.** "The battle was so quick… unceremonial… maybe a bit of a zoom in." Longer duels, and the camera nudges in a little.
