@@ -165,6 +165,9 @@ const SOUNDS = {
   hatch: { cool: 0.25, vol: 0.6, fn: (s, o, t) => { s.chirp(o, t, 300, 1200, 0.05, 0.3); return 0.08; } },
   queenUp: { cool: 1, fn: (s, o, t) => { [67, 72, 76, 79].forEach((n, i) => s.blip(o, t + i * 0.1, N(n), i === 3 ? 0.4 : 0.12, 0.18, 'square')); return 0.8; } },
   cavein: { cool: 1, fn: (s, o, t) => { s.puff(o, t, 0.7, 400, 0.5, 'lowpass', 120, 0.3); s.thump(o, t + 0.6, 90, 35, 0.4, 0.7); s.grain(o, t + 0.65, 10, 0.04, 500, 0.2, 'lowpass'); return 1.3; } },
+  // Build 68: your ant in trouble. A heartbeat while your health is low, and your stomach growling while you're hungry.
+  heartbeat: { cool: 0.4, fn: (s, o, t) => { s.thump(o, t, 95, 42, 0.13, 0.55); s.thump(o, t + 0.19, 85, 40, 0.15, 0.42); return 0.4; } },
+  growl: { cool: 3, fn: (s, o, t) => { s.puff(o, t, 0.9, 170, 0.32, 'lowpass', 80, 0.15); s.chirp(o, t + 0.05, 72, 52, 0.6, 0.16, 'triangle'); s.chirp(o, t + 0.5, 88, 58, 0.45, 0.13, 'triangle'); return 1; } },
   starving: { cool: 6, fn: (s, o, t) => { for (const f of [N(50), N(51)]) s.chirp(o, t, f, f, 2, 0.12, 'triangle'); return 2; } },
   treat: { cool: 1, fn: (s, o, t) => { s.thump(o, t, 200, 80, 0.15, 0.4); s.blip(o, t + 0.12, N(84), 0.1, 0.22); s.blip(o, t + 0.2, N(88), 0.18, 0.22); return 0.45; } },
   // Danger and big moments.

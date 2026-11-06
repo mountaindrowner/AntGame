@@ -4,6 +4,10 @@ Mark's wish list after build 11 (Oct 28). Grouped by area, in his words where th
 
 Everything from Oct 28 is built (build 11.6, `DECISIONS.md`). What's left:
 
+## Playtest 3 (Nov 6)
+
+Sorted in [`PLAYTEST-3.md`](PLAYTEST-3.md): what build 68 fixed, the creature and combat work next, and the nest decisions that are Mark's call.
+
 ## Still open (Nov 4, after build 52)
 
 **Proposed, waiting on Mark**

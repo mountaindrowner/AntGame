@@ -4,11 +4,12 @@ import { CASTES, CASTE_EVO, CASTE_ROOM, QUEEN_UP, ROOMS, T, roomCap, roomCount, 
 import { exitNest, payCost, roomsChanged } from './colony.js';
 import { mkAnt } from './world.js';
 import { findRoomRect, roomOf, roomSlotIndex } from './nest.js';
-import { eggCost, has, picked, roomCost, upgradeCaste } from './progress.js';
+import { crewCap, eggCost, has, picked, roomCost, upgradeCaste } from './progress.js';
 import { dRoomBuilt } from './daughters.js';
 
 export function recruit(s, n){
   const a = s.player.ant; if (!a || s.player.inNest) return 0; const w = s.world; let got = 0;
+  n = Math.min(n, crewCap(s) - s.ants.filter(o => o.follow).length); if (n <= 0) return 0; // build 68: the cap is on your whole crew (holding ones too), not each press
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 3.5;
   const cands = s.ants.filter(o => !o.isPlayer && !o.team && o.state !== 'dead' && !o.follow && (
     ((o.state==='explore' || o.state==='patrol' || (o.state==='return' && !o.carry)) && Math.hypot(o.x-a.x, o.y-a.y) < (picked(s, 'you', 'rally') ? 10 : 7)*(has(s, 'rally') ? 1.5 : 1)*T) || (nearHome && o.state === 'in' && o.goal !== 'job')));

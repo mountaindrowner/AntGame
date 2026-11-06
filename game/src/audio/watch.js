@@ -67,7 +67,6 @@ export function soundWatch(app, views) {
       if (a && p.ant === a && !P.inNest && Math.hypot(now.ax - p.ax, now.ay - p.ay) > 0.3) { stepAcc += Math.hypot(now.ax - p.ax, now.ay - p.ay); if (stepAcc > 9) { stepAcc = 0; sfx.play('step'); } }
       if (a && p.ant === a && !p.carry && now.carry && now.kind === 'water') sfx.play('drip');
       if (now.msg !== p.msg && /^Too heavy/.test(now.msg || '')) sfx.play('groan');
-      if (a && P.hunger < 25) sfx.play('rumble');
       if (now.rivalWar > p.rivalWar || now.oursWar > p.oursWar) sfx.play('bite', at);
       if (now.digs > p.digs) sfx.play('digTick');
       else if (now.digs < p.digs) sfx.play('crumble');

@@ -41,7 +41,7 @@ export function createUI(app) {
   // Build 29: crew orders, next to Release.
   const mk = (id, icon, tip) => { const b = document.createElement('button'); b.id = id; b.className = 'ico hidden'; setIcon(b, icon, tip); return b; };
   el.hold = mk('holdbtn', 'hold', 'Hold'); el.split = mk('splitbtn', 'split', 'Split'); el.follow = mk('followbtn', 'follow', 'Follow');
-  el.release.after(el.hold, el.split, el.follow);
+  el.release.closest('#bar').querySelector('.extra').prepend(el.hold, el.split, el.follow); // (build 68: beside the fixed four, not among them)
   // Build 32: your ant's abilities, bottom left: click, or press 1–4. Aimed ones aim at the mouse.
   el.skills = document.createElement('div'); el.skills.id = 'skills'; el.skills.className = 'hidden';
   el.skills.innerHTML = SIM.ABILITY_KEYS.map((k, i) => `<button data-skill="${k}" class="skill"><span class="ic">${SIM.ABILITIES[k].icon}</span><b class="key">${i + 1}</b><i class="cd"></i><em class="secs"></em></button>`).join('');
@@ -74,12 +74,14 @@ export function createUI(app) {
     const text = t.dataset.tip; if (!text) return;
     el.tip.textContent = text; el.tip.classList.remove('hidden');
     sfx.play('tick');
-    const r = t.getBoundingClientRect(), w = el.tip.offsetWidth, h = el.tip.offsetHeight;
+    // Worked out in screen pixels, then set in the tip's own: it's scaled up with the HUD on big screens
+    // (zoom), and its left and top are scaled with it (build 68: the bottom bar's tips fell off the screen).
+    const z = parseFloat(getComputedStyle(el.tip).zoom) || 1, r = t.getBoundingClientRect(), tb = el.tip.getBoundingClientRect(), w = tb.width, h = tb.height;
     const below = r.top < 90, left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
-    el.tip.style.left = left + 'px';
-    el.tip.style.top = (below ? r.bottom + 12 : r.top - h - 12) + 'px';
+    el.tip.style.left = left / z + 'px';
+    el.tip.style.top = Math.max(6, Math.min(window.innerHeight - h - 6, below ? r.bottom + 12 : r.top - h - 22)) / z + 'px';
     el.tip.classList.toggle('below', below);
-    el.tip.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - left)) + 'px');
+    el.tip.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, r.left + r.width / 2 - left)) / z + 'px');
     clearTimeout(tipHide); tipHide = setTimeout(hideTip, 2600);
   }
   function hideTip() { el.tip.classList.add('hidden'); clearTimeout(tipTimer); }
@@ -246,6 +248,32 @@ export function createUI(app) {
   function dayChip(s, chip) {
     const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + 'm' : Math.max(10, Math.round(u / 10) * 10) + 's';
     return chip(night ? '🌙' : SIM.daylight(s) < 1 ? '🌅' : '☀️', left, night ? `Night: ${left} till dawn.` : `Day: ${left} till night falls.`);
+  }
+  // Build 68: the day clock, a half dial at the top centre (like an RTS's): a disc of day and night turns
+  // under it, the sun up by day and the moon by night. At dusk and dawn it glows and says so for a moment,
+  // instead of a banner. The disc's angle under the top of the window is the time of day (0 dawn).
+  const clock = document.createElement('div'); clock.id = 'dayclock'; clock.className = 'hidden';
+  clock.innerHTML = '<div class="dial"><div class="disc"></div><b class="hub"></b><i class="sun">☀️</i><i class="moon">🌙</i></div><div class="cap"></div>';
+  document.body.appendChild(clock);
+  const SUN_AT = 0.33, MOON_AT = 0.823; // where the sun and moon sit on the disc: mid-day and mid-night
+  let clockNight = null, clockCapT = null;
+  function updateClock(s) {
+    const show = s.queen.placed && !app.titleOpen;
+    clock.classList.toggle('hidden', !show); if (!show) { clockNight = null; return; }
+    const p = SIM.dayPhase(s), disc = clock.querySelector('.disc');
+    disc.style.transform = `rotate(${(180 - ((s.dayT || 0) / SIM.DAY) * 360).toFixed(1)}deg)`; // now (disc angle p) at the bottom (unwrapped: no spin back at midnight)
+    for (const [sel, at] of [['.sun', SUN_AT], ['.moon', MOON_AT]]) {
+      const a = Math.PI + (at - p) * Math.PI * 2, R = 30, ic = clock.querySelector(sel);
+      ic.style.transform = `translate(${(Math.sin(a) * R).toFixed(1)}px, ${(-Math.cos(a) * R).toFixed(1)}px)`;
+    }
+    const night = SIM.isNight(s), u = SIM.untilTurn(s), left = u >= 60 ? Math.round(u / 60) + ' min' : Math.max(10, Math.round(u / 10) * 10) + ' s';
+    clock.dataset.tip = night ? `Night: dawn in ${left}.` : `Day: night falls in ${left}.`;
+    if (clockNight !== null && night !== clockNight) {
+      clock.classList.remove('glow', 'g-night', 'g-day'); void clock.offsetWidth; clock.classList.add('glow', night ? 'g-night' : 'g-day');
+      clock.querySelector('.cap').textContent = night ? 'Night falls' : 'Dawn: dew on the grass';
+      clearTimeout(clockCapT); clockCapT = setTimeout(() => { clock.classList.remove('glow'); clock.querySelector('.cap').textContent = ''; }, 5000);
+    }
+    clockNight = night;
   }
   // Build 42: the nest's shut ground, a section at a time. `first`: the section tapped, shown on top.
   function groundList(s, c, first, bare) {
@@ -560,6 +588,16 @@ export function createUI(app) {
   function openColony() { el.sheet.dataset.h = ''; app.menu = 'colony'; el.sheet.classList.remove('hidden'); renderColony(); }
 
   // ---------------------------------------------------------- HUD
+  // Build 68: a word in the middle of the screen that fades by itself (hunger, the mower, the time of day):
+  // for things that matter now, without a notice to read or close. kind: warn, hard, calm.
+  const shoutEl = document.createElement('div'); shoutEl.id = 'shout'; shoutEl.className = 'hidden'; document.body.appendChild(shoutEl);
+  let shoutTimer = null;
+  function shout(icon, title, line, kind = 'warn') {
+    shoutEl.innerHTML = `<b><span class="si">${icon}</span>${title}</b>${line ? `<span>${line}</span>` : ''}`;
+    shoutEl.className = 's-' + kind; void shoutEl.offsetWidth; shoutEl.classList.add('on');
+    clearTimeout(shoutTimer); shoutTimer = setTimeout(() => shoutEl.classList.remove('on'), 2600);
+  }
+  app.shout = shout;
   function flash(text, test, ms) {
     P().msg = text;
     setTimeout(() => { if (test.test(P().msg)) P().msg = ''; }, ms);
@@ -581,14 +619,17 @@ export function createUI(app) {
     if (app.areaBanner && app.areaBanner.until > performance.now()) return app.areaBanner.text;
     if (s.phase === 'dig') return q.energy > 0 ? `You are the queen. Tap the dirt next to her to dig (${q.energy} digs left). Two down, then Build nest.` : 'Out of energy. Tap Build nest.';
     if (!a) return 'Waiting for the next hatchling.';
-    if (P().inNest) return app.view === 'nest' ? 'Tap the top cell to go outside. Tap the queen for eggs; Build adds rooms.' : 'Your ant is inside. Tap Nest view.';
+    // Build 68: the how-to lines are for the first quarter hour only (Mark: "Why do I need to know that? I know
+    // that."); warnings (water, hunger, food) stay.
+    const learning = s.t < 900;
+    if (P().inNest) return app.view !== 'nest' ? 'Your ant is inside. Tap Nest view.' : learning ? 'Tap the top cell to go outside. Tap the queen for eggs; Build adds rooms.' : '';
     if (a.carry) return 'Carry it to the dark hole. Your trail lays itself.';
     if (s.t < 180 && c.store < 8) return 'Tap a crumb or seed to walk there, then Pick up. Hold to keep walking.';
     if (c.water < 3) return 'Water is low. Fetch dew or puddle water.';
     if (P().hunger < 35) return 'You are hungry. Go home, or stand by a forager carrying food.';
     // Build 41: a low store says so (it used to say "lay an egg" at 4 food with 26 mouths to feed).
     if (c.store < c.cap * 0.1 && s.ants.filter((x) => !x.team).length > 8) return 'Food is low. Lead a crew to a treat, or walk a Trail out to far food.';
-    if (!c.eggQueue.length && !c.eggs.length && c.store >= Math.max(4, c.cap * 0.15)) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
+    if (learning && !c.eggQueue.length && !c.eggs.length && c.store >= Math.max(4, c.cap * 0.15)) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
     if (s.ants.filter((x) => x.caste === 'builder').length === 0 && c.store >= 10) return 'Lay a Builder egg. Builders dig rooms.';
     if (SIM.eggLock(s, 'soldier') && c.protein < 5 && s.cat) return 'Soldiers need protein. Hunt the caterpillar with a crew.';
     if (SIM.eggLock(s, 'soldier') && c.protein >= 5) return 'You have protein. Dig a 6×3 pocket and build a Barracks.';
@@ -683,6 +724,9 @@ export function createUI(app) {
       + eventChip(s, chip)
       + `<button class="more" data-tip="Colony details" aria-label="Colony details">⋯</button>`;
     if (el.stats.dataset.html !== statsHtml) { el.stats.dataset.html = statsHtml; el.stats.innerHTML = statsHtml; }
+    updateClock(s);
+    // Build 68: the mower, as a word in the middle of the screen when it starts (it was a notice at the side).
+    if (P().mowerAt && P().mowerAt !== app.mowerSeen) { app.mowerSeen = P().mowerAt; if (P().ant && !P().inNest) shout('⚠', 'Mower!', 'It sweeps the Lawn in a few seconds. Get off the grass.', 'hard'); }
     app.statsLine = `🐜 ${nAnts}/${cap} (${st.out} out) · rival ${st.rival} · +${st.income.toFixed(0)} −${st.upkeep.toFixed(0)} food/min · ${app.fps} fps`;
     const a0 = P().ant;
     const it = introText();
@@ -712,6 +756,17 @@ export function createUI(app) {
     if (P().hit && P().hit !== app.lastHit) { app.lastHit = P().hit; hurt.classList.add('on'); setTimeout(() => hurt.classList.remove('on'), 160); sfx.play('bonk'); }
     if (P().died && P().died !== app.lastDied) { app.lastDied = P().died; hurt.classList.add('dead'); setTimeout(() => hurt.classList.remove('dead'), 1600); }
     hurt.classList.toggle('low', !!low);
+    // Build 68: warnings you can't miss (Mark: "too often you die without knowing"). Low health: a heartbeat,
+    // in time with the red edge, faster near the end. Hungry: your stomach growls and the hunger bar shakes,
+    // and a word in the middle of the screen the first time it gets low, and again when it's nearly empty.
+    { const now = performance.now(), alive = pa && pa.state !== 'dead' && !app.titleOpen, hu = P().hunger;
+      hurt.classList.toggle('crit', !!low && hp < 0.2);
+      if (alive && low && now > (app.beatAt || 0)) { app.beatAt = now + (hp < 0.2 ? 700 : 1100); sfx.play('heartbeat'); }
+      const hungry = alive && hu < 30;
+      if (hungry && now > (app.growlAt || 0)) { app.growlAt = now + (hu < 12 ? 4000 : 8000); sfx.play('growl'); const v = el.hungerBar.closest('.vital'); v.classList.remove('growl'); void v.offsetWidth; v.classList.add('growl'); }
+      const stage = !alive ? app.hungerStage || 0 : hu < 12 ? 2 : hu < 30 ? 1 : 0;
+      if (stage > (app.hungerStage || 0)) shout(stage === 2 ? '🍖' : '🍖', stage === 2 ? 'Starving!' : 'Hungry', 'Eat at the nest, or stand beside a forager carrying food.', stage === 2 ? 'hard' : 'warn');
+      app.hungerStage = stage; }
     el.hungerBar.style.background = P().hunger < 35 ? '#e4524a' : '#8fd36b';
     const lbl = SIM.actionLabel(s) || 'Pick up';
     const lift = /^Lift (\d+\/\d+)/.exec(lbl);
@@ -874,7 +929,7 @@ export function createUI(app) {
     if (got < recN) flash(got ? `${got} ants answered. Recruit near the nest or near other ants.` : 'No ants in range. Walk back toward the nest and try again.', /answered|in range/, 3000);
   };
   ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => el.recruit.addEventListener(t, recEnd));
-  $('zoom').addEventListener('click', () => { app.zoomMul = app.zoomMul >= 1.5 ? 0.6 : app.zoomMul >= 0.9 ? 1.6 : 1; });
+  $('zoom').addEventListener('click', () => { app.zoomMul = app.zoomMul >= 1.5 ? 0.7 : app.zoomMul >= 0.9 ? 1.6 : 1; }); // (build 68: out to 0.7, inside the new limit)
 
   // In-page confirmation (browser confirm() is blocked in some hosts).
   function confirmSheet(text, yes, fn) {

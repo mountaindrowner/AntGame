@@ -6,7 +6,7 @@ export const EXPL = {
   nest: ['The nest', 'Tap dirt by a tunnel to dig. Press Build to place a room. The yellow ant is you.'],
   surface: ['Outside', 'Tap to walk. Pick up food and bring it to the dark hole. Your path leaves a scent trail others follow.'],
   dew: ['Dew', 'Water beads, for a minute at a time. Each egg costs 1 water.'],
-  night: ['Night', 'Every ten minutes or so the yard goes dark for a while; the top bar shows how long till dawn. Not everything out there keeps the same hours. Watch what sleeps, and what wakes.'],
+  night: ['Night', 'Every ten minutes or so the yard goes dark for a while; the clock at the top shows the time of day. Not everything out there keeps the same hours. Watch what sleeps, and what wakes.'],
   dawn: ['Dawn', 'A heavy dew on the grass, for a minute: fetch water while it lasts.'],
   cat: ['Caterpillar', 'Harmless, and 40 protein. Hold Recruit, lead your crew onto it, then haul the meat home.'],
   treat: ['A treat', 'Too big for one ant. Hold Recruit for a crew, lead them to it, press Lift.'],

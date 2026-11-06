@@ -33,15 +33,15 @@ function tickDay(s, dt){
   s.dayT = (s.dayT ?? DAY*0.02) + dt; const night = isNight(s);
   if (s.nightNow === undefined) s.nightNow = night;
   if (night && !s.nightNow){ s.nightNow = true; s.nights = (s.nights || 0) + 1;
-    if (s.nights <= 3) s.banner = { key: 'night' + s.nights, t: s.t, icon: '🌙', title: 'Night falls', line: 'The yard changes in the dark. Some things sleep. Others wake.', kind: 'event' }; s.events.push('night'); // (build 43.1: the first three nights only, and no spoilers)
+    s.events.push('night'); // (build 68: the HUD's clock marks it, not a banner)
     // Day hunters out on a kill let go and go to roost.
     for (const b of s.critters || []) if (DIURNAL[b.kind] && b.carry){ const a = s.ants.find(o => o.id === b.carry); if (a && a.state === 'away'){ a.state = 'return'; a.x = b.x; a.y = b.y; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } b.carry = null; } }
   else if (!night && s.nightNow){ s.nightNow = false;
     if (s.queen.placed && s.nights === 1 && !s.colony.firstDawn){ s.colony.firstDawn = true; gainGenes(s, 1, 'your first night survived'); }
-    if ((s.nights || 0) <= 3) s.banner = { key: 'dawn' + (s.nights || 0), t: s.t, icon: '🌅', title: 'Dawn', line: 'The yard stirs. Dew on the grass.', kind: 'gift' }; s.events.push('dawn');
+    s.events.push('dawn');
     spawnDew(s, 2); }
 }
-function spawnDew(s, mul){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[REGION.rock, 6], [REGION.lawn, 4], [REGION.flowerbed, 4], [REGION.clover, 3], [REGION.dandelions, 3]]) for (let i = 0; i < n*mul; i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!s.player.msg) s.player.msg = mul > 1 ? 'Dawn dew: water all over the grass for a minute.' : 'Dew is out: water for a minute.'; }
+function spawnDew(s, mul){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[REGION.rock, 6], [REGION.lawn, 4], [REGION.flowerbed, 4], [REGION.clover, 3], [REGION.dandelions, 3]]) for (let i = 0; i < n*mul; i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!s.player.msg && mul === 1) s.player.msg = 'Dew is out: water for a minute.'; } // (dawn's dew: the clock says so)
 export function tick(s, dt){
   s.t += dt; const w = s.world, c = s.colony, P = s.player;
   // Messages fade after a while instead of sticking until the next one.

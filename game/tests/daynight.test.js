@@ -23,12 +23,12 @@ test('a day is ten minutes: it starts in the morning, night falls, dawn comes', 
   assert.ok(dawnAt - nightAt > 140 && dawnAt - nightAt < 200, `night lasts ${dawnAt - nightAt}`);
 });
 
-test('night falls and dawn breaks with a banner; dawn brings a heavy dew', () => {
-  const s = founded(); s.dayT = SIM.DAY * 0.65; s.nightNow = false;
-  step(s, 15); assert.equal(s.banner.title, 'Night falls'); assert.ok(s.events.includes('night') || s.nights === 1);
+test('night falls and dawn breaks (the clock marks them, no banner); dawn brings a heavy dew', () => {
+  const s = founded(); s.dayT = SIM.DAY * 0.65; s.nightNow = false; s.banner = null;
+  step(s, 15); assert.equal(s.nights, 1); assert.equal(s.banner, null);
   s.dew = false; s.items = s.items.filter((f) => f.type !== 'dew');
   s.dayT = SIM.DAY * 0.995; step(s, 15);
-  assert.equal(s.banner.title, 'Dawn');
+  assert.equal(s.nightNow, false); assert.equal(s.banner, null);
   assert.ok(s.items.filter((f) => f.type === 'dew').length >= 30, 'a heavy dew');
   assert.ok(s.colony.firstDawn, 'the first night survived (+1 gene)');
 });
@@ -71,13 +71,12 @@ test('the clock is saved', () => {
   assert.equal(s2.dayT, 4321); assert.equal(s2.nights, 3);
 });
 
-test('the night banner shows the first three nights only, and gives nothing away', () => {
-  const s = founded(); let shown = 0;
+test('nights are counted without a banner each time (build 68: the clock)', () => {
+  const s = founded();
   for (let n = 0; n < 5; n++) {
     s.dayT = Math.floor(s.dayT / SIM.DAY) * SIM.DAY + SIM.DAY * 0.65; s.nightNow = false; s.banner = null;
-    step(s, 10);
-    if (s.banner && s.banner.title === 'Night falls') { shown++; assert.doesNotMatch(s.banner.line, /feet|bird|mower|spider|toad|robin/i); }
+    step(s, 10); assert.equal(s.banner, null);
     s.dayT += SIM.DAY * 0.4; step(s, 1);
   }
-  assert.equal(shown, 3); assert.equal(s.nights, 5);
+  assert.equal(s.nights, 5);
 });

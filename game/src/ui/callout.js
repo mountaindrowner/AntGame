@@ -17,6 +17,7 @@ function itemCard(f) {
   if (f.kind === 'protein') {
     if (f.type === 'spider' || f.type === 'cat') return ['🥩', 'Meat', `${Math.round(f.amt)} protein. Haul it home.`];
     if (SIM.BUGS[f.type]) return ['🥩', 'Dead ' + SIM.BUGS[f.type].name, `${Math.round(f.amt)} protein. Haul it home.`];
+    if (f.type === 'alate') return ['🪽', 'Fallen winged ant', `A queen or male from another colony's swarm, dead after the flight. ${Math.round(f.amt)} protein.`]; // (build 68: it said 'Meat')
     const F = FOODS[f.type];
     return ['🥩', cap(F ? F.name : 'Meat'), `Protein for soldiers. ${Math.round(f.amt)} left.`];
   }
@@ -108,10 +109,12 @@ export class Callout {
       const cam = this.views.surface.camera;
       v.set(this.target.x, this.target.h, this.target.y).project(cam);
       const x = (v.x * 0.5 + 0.5) * window.innerWidth, y = (-v.y * 0.5 + 0.5) * window.innerHeight;
-      const w = this.el.offsetWidth, h = this.el.offsetHeight;
-      this.el.style.left = Math.max(6, Math.min(window.innerWidth - w - 6, x - w / 2)) + 'px';
-      this.el.style.top = Math.max(6, y - h - 18) + 'px';
-      this.el.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, x - parseFloat(this.el.style.left))) + 'px');
+      // In screen pixels, then in the card's own (it's scaled with the HUD on big screens, position too).
+      const z = parseFloat(getComputedStyle(this.el).zoom) || 1, b = this.el.getBoundingClientRect(), w = b.width, h = b.height;
+      const left = Math.max(6, Math.min(window.innerWidth - w - 6, x - w / 2));
+      this.el.style.left = left / z + 'px';
+      this.el.style.top = Math.max(6, y - h - 18) / z + 'px';
+      this.el.style.setProperty('--arrow', Math.max(12, Math.min(w - 12, x - left)) / z + 'px');
       this._follow();
     });
   }

@@ -13,7 +13,7 @@ import { LAWN_ZONE, ROT_ZONE, SIDE_ZONE, WET_ZONE } from './bosses.js';
 // south, killing anything in the grass and shredding trails and seeds.
 export function tickMower(s, dt){
   const m = s.mower, P = s.player, L = s.world.lawn; if (!s.queen.placed) return; m.t += dt;
-  if (m.state === 'idle'){ if (s.t >= m.next && isNight(s)) m.next = s.t + untilTurn(s) + 90 + Math.random()*90; /* build 43: people mow a while after dawn, not at first light */ if (s.t >= m.next && !isNight(s)){ m.state = 'warn'; m.t = 0; s.events.push('mower'); P.msg = 'The mower is coming! Get off the Lawn.'; } return; }
+  if (m.state === 'idle'){ if (s.t >= m.next && isNight(s)) m.next = s.t + untilTurn(s) + 90 + Math.random()*90; /* build 43: people mow a while after dawn, not at first light */ if (s.t >= m.next && !isNight(s)){ m.state = 'warn'; m.t = 0; s.events.push('mower'); if (P.ant && !P.inNest) P.mowerAt = s.t; } return; } // build 68: a word mid-screen (the UI), not a notice
   if (m.state === 'warn'){ if (m.t >= (heldFx(s, 'mower') ? 16 : 8)){ m.state = 'cut'; m.t = 0; m.y = L.y0; } return; }
   m.y += 4*dt;
   const half = 1.5*SCALE, y0 = m.y - half, y1 = m.y + half;

@@ -2,6 +2,24 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 6: playtest 3, the HUD (build 68)
+
+Mark and his brother played; the whole session is sorted in [`PLAYTEST-3.md`](PLAYTEST-3.md). This build is its interface fixes:
+- **Recruit stays put.** The yard dock's four buttons (Pick up, Trail, Recruit, Release) have fixed, centred slots: a hidden one leaves its slot empty. Crew orders, Outpost, Raid and Enter grow to the right of them. Before, Release appearing re-centred the row and took Recruit's place.
+- **The crew cap is on your whole crew.** It was per press, so a second press went over. Ants holding a spot count.
+- **Tooltips sit above the buttons on big screens.** The HUD scales up there, and the tip's position was scaled a second time, so bottom-bar tips fell off the screen. Tap cards had the same bug.
+- **Warnings you can't miss:**
+  - a heartbeat with the red edge at low health, faster below 20%;
+  - a growl and a shaking hunger bar when hungry;
+  - "Hungry" and "Starving!" in the middle of the screen, once each.
+
+  A **shout** (a word mid-screen that fades by itself) now carries these and the mower ("Mower!"), instead of notices at the side.
+- **A day clock:** a half dial at the top centre, day and night turning under it with the sun or moon. It glows at dusk and dawn with a short caption. The night and dawn banners are gone. It is hidden on narrow screens, where the top bar's chip still counts down.
+- **Fewer notices:** the how-to lines show in a colony's first 15 minutes only; warnings stay.
+- **Zoom out stops sooner:** 0.65, was 0.5 (about three wheel notches).
+- **Bigger text** in every sheet and the Evolution window, about two points.
+- **The dead winged ants** after a swarm are named on their card ("Fallen winged ant"), not "Meat".
+
 ## Nov 5: no stuck first frame (build 67)
 
 Mark: "There is a definite bug when starting the game for the first time where there's a first frame that's kinda stuck." Measured a first run (no save) and a returning one, frame by frame, with the processor profiled.
