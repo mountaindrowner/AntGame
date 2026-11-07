@@ -14,6 +14,8 @@ const KEYS = { save: SAVE_KEY, prev: SAVE_KEY + '-prev', map: SAVE_KEY + '-map' 
 const get = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const set = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); return true; } catch (e) { return false; } };
 
+// Build 79 (QA): whether the browser lets the game store anything (private windows and blocked storage don't).
+export function storageOk() { try { localStorage.setItem('underfoot-probe', '1'); localStorage.removeItem('underfoot-probe'); return true; } catch (e) { return false; } }
 // The index. Slot 1 is whatever was saved before slots existed.
 export function slotMeta() {
   let m = null; try { m = JSON.parse(get(META_KEY)); } catch (e) { m = null; }
@@ -84,7 +86,7 @@ export function takeNewColonyFlag() { const f = get(NEW_KEY); if (f) set(NEW_KEY
 export function exportFile(s, name) {
   const blob = new Blob([JSON.stringify({ underfoot: 1, name, save: SIM.serialize(s) })], { type: 'application/json' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = (name || 'colony').replace(/[^\w -]+/g, '').trim().replace(/\s+/g, '-').toLowerCase() + '.underfoot.json';
+  a.download = ((name || '').replace(/[^\p{L}\p{N} -]+/gu, '').trim().replace(/\s+/g, '-').toLowerCase() || 'colony') + '.underfoot.json'; // (build 79: any alphabet; never nameless)
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 // Import into a slot. The file must load (it's tried first), or nothing changes.
@@ -92,7 +94,7 @@ export async function importFile(file, id) {
   const text = await file.text(); let d = null;
   try { d = JSON.parse(text); } catch (e) { throw new Error('That isn’t an Underfoot save file.'); }
   const save = d && d.underfoot ? d.save : text; // (a raw save works too)
-  const s = SIM.deserialize(save); // throws if it can't be read
+  let s; try { s = SIM.deserialize(save); } catch (e) { throw new Error(/newer/i.test(String(e && e.message)) ? String(e.message) : 'That isn’t an Underfoot save file, or it’s damaged.'); } // (build 79: a plain message)
   const m = slotMeta(), sl = slotOf(m, id); if (!sl) throw new Error('No such slot.');
   if (id === m.active) putActive({ save });
   else await idbPut(id, { save });

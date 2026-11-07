@@ -4,7 +4,7 @@
 // in localStorage (app.opts), apart from the saved colony.
 import { ICONS } from './icons.js';
 import { sfx } from '../audio/sfx.js';
-import { slotMeta, slotOf, renameSlot } from '../game/slots.js';
+import { slotMeta, slotOf, renameSlot, storageOk } from '../game/slots.js';
 
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
@@ -68,7 +68,9 @@ export class TitleMenu {
 
   // Build 76 (Mark: "save files… so you can have different nests"): three colonies, each a card.
   _colonies(renaming, note) {
-    const m = slotMeta(), ago = (at) => { if (!at) return ''; const d = (Date.now() - at) / 60000; return d < 2 ? 'just now' : d < 60 ? Math.round(d) + ' min ago' : d < 1440 ? Math.round(d / 60) + ' h ago' : Math.round(d / 1440) + ' days ago'; };
+    if (!storageOk()) { this._page(`<div class="t-note">This browser isn’t letting the game store anything (a private window, or storage blocked), so there’s only the colony you’re playing, and it won’t be there next time.</div>` + btn('back', 'back', 'Back')); return; } // build 79
+    const m = slotMeta(); { const a = slotOf(m, m.active); if (this.started) a.empty = false; } // (build 79: the colony you're playing is never "empty")
+    const ago = (at) => { if (!at) return ''; const d = (Date.now() - at) / 60000; return d < 2 ? 'just now' : d < 60 ? Math.round(d) + ' min ago' : d < 1440 ? Math.round(d / 60) + ' h ago' : Math.round(d / 1440) + ' days ago'; };
     const hm = (t) => { const h = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60); return h ? `${h} h ${mm} min` : `${mm} min`; };
     let h = note ? `<div class="t-note">${note}</div>` : '';
     for (const sl of m.list) {
@@ -108,7 +110,7 @@ export class TitleMenu {
     else if (verb === 'slot') this.hooks.switchTo(id);
     else if (verb === 'slotnew') {
       const sl = slotOf(slotMeta(), id);
-      if (sl.empty) this.hooks.newColony(id);
+      if (sl.empty && id !== slotMeta().active) this.hooks.newColony(id); // (build 79: the one you're playing always asks)
       else this._confirm(`Start a new colony in place of ${esc(sl.name)}? It is lost for good.`, 'slotnew!:' + id, 'Start over');
     } else if (verb === 'slotnew!') this.hooks.newColony(id);
     else if (verb === 'slotdel') this._confirm(`Delete ${esc(slotOf(slotMeta(), id).name)}? It is lost for good.`, 'slotdel!:' + id, 'Delete');

@@ -2,6 +2,31 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: a check of builds 69–78 (build 79)
+
+Mark: "Make sure that all the features work well, that there's no weird clashes between features or effects, buttons, things that work together." Two code reviews (the nest, and the UI, sound and saves), long bot games on both builds and old saves loaded. 15 bugs were found and fixed, each reproduced first and checked after:
+- **Saves:**
+  - A second click during a colony switch could save the old colony over the new one. Now nothing else starts until the page reloads.
+  - If the browser's storage failed mid-switch, saving silently stopped for the rest of the session. Now it carries on and says so.
+  - With storage blocked (a private window), the colony you were playing showed as "Empty" and one click wiped it. Now the Colonies page explains instead, and Start over on the colony you're playing always asks first.
+  - Importing a file that isn't a save gives a plain message.
+  - Exporting a colony with a non-Latin name no longer gives a nameless file.
+- **Room plans** (none can be stranded now: a plan or a growing room's column keeps a dig order on every cell it still needs):
+  - Clear orders wiped a growing room's digs, so it never grew.
+  - Erasing a dig order a plan relied on, or a fill on its doorway or a growing column, left it waiting forever. Now your own dig orders on a plan's cells become part of it, its doorways and a growing column can't be filled, and anything lost comes back.
+  - Removing a growing room left digs you couldn't cancel.
+- **Input:**
+  - With a mouse, clicking a cave-in started a dig stroke instead of mending it yourself. A cave-in now can't take a dig order.
+  - On touch, a pinch during a dig stroke could paint a stray line.
+  - Holding a key, or a shortcut such as Ctrl+R, skipped a boss's introduction.
+- **Sound:**
+  - Stingers for events raised by a button never played (Retreat's defeat, a great evolution's discovery). Events are now counted from where the last frame left off.
+  - The introduction's roar was swallowed by the wake roar's cooldown.
+  - The music didn't dip for the introduction.
+- **Tests:** the crew-attack test that failed about one run in twelve now picks a rival soldier (a worker runs from a crew, by design). The Phase 5 tests are seeded.
+- **What the long games showed:** no crashes, no bad values, nothing stuck and nothing growing without bound; old saves load and play on.
+- **Balance shift for Mark:** the military bot now beats the Pavement ants later, or not at all within an hour: once, at 58 minutes, against twice at about 20 minutes on build 73. Rooms now take digging, which delays the Barracks. Rival deaths are higher in sensible games.
+
 ## Nov 7: boss introductions (build 78)
 
 Mark: "Little boss animations… everything stops and the ants turn their attention to the boss and the boss turns their attention… an introduction sequence when a boss is introduced, at least when they're in fighting range. Maybe the same thing with the big enemy ants." Thought through in [`BOSS-INTROS.md`](BOSS-INTROS.md):

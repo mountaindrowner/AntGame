@@ -162,10 +162,10 @@ export function createUI(app) {
   function checkExplainers() {
     const s = app.s;
     tickIntro();
-    if (introStep() >= 0) { if (s.events.length && !EXPL[s.events[0]]) s.events.shift(); }
+    if (introStep() >= 0) { if (s.events.length && !EXPL[s.events[0]]) (app.evShift = (app.evShift || 0) + 1, s.events.shift()); }
     if (introStep() >= 0) {
       while (s.events.length) {
-        const e = s.events.shift();
+        const e = (app.evShift = (app.evShift || 0) + 1, s.events.shift());
         if (EXPL[e] && !['dig', 'nest', 'surface'].includes(e)) { showExplainer(e); if (tipBusy()) return; }
       }
       // The spider warning can't wait for the intro to finish.
@@ -177,7 +177,7 @@ export function createUI(app) {
     else if (P().ant && P().inNest) showExplainer('nest');
     else if (P().ant && !P().inNest) showExplainer('surface');
     if (tipBusy()) return;
-    while (s.events.length) { const e = s.events.shift(); if (EXPL[e]) { showExplainer(e); if (tipBusy()) return; } }
+    while (s.events.length) { const e = (app.evShift = (app.evShift || 0) + 1, s.events.shift()); if (EXPL[e]) { showExplainer(e); if (tipBusy()) return; } }
     const a = P().ant;
     if (a && !P().inNest) {
       if (s.spider && Math.hypot(a.x - s.spider.x, a.y - s.spider.y) < 9 * T) showExplainer('spider');

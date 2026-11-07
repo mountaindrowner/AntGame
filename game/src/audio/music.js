@@ -149,6 +149,9 @@ export class Music {
     }
   }
 
+  // Build 79: held down under something (a boss's introduction), and back.
+  hush(on) { if (!this.g) return; const now = this.s.ctx.currentTime; this.duck.gain.cancelScheduledValues(now); this.duck.gain.setTargetAtTime(on ? 0.25 : 1, now, on ? 0.15 : 0.8); }
+
   // ---------- stingers ----------
   // A short phrase over the music, which ducks under it. kind: victory, defeat, discovery, milestone, night, dawn.
   sting(kind, at) {

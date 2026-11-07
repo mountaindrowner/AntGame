@@ -5,6 +5,7 @@
 // name lands; then the camera glides back and play resumes. Any click or key skips it.
 import SIM from '../sim/sim.js';
 import { sfx } from '../audio/sfx.js';
+import { music } from '../audio/music.js';
 
 const ICON = { hornworm: '🐛', beetle: '🪲', antlion: '🌀', robin: '🐦', toad: '🐸', duke: '🐸', mantis: '🦗', widow: '🕷', centipede: '🐛', crow: '🐦‍⬛', hollow: '🍄', hornets: '🐝', blind: '🕳' };
 export const INTRO_LEN = 3.6, ROAR_AT = 1.0;
@@ -18,7 +19,7 @@ export class BossIntro {
     el.innerHTML = '<div class="bar top"></div><div class="bar bot"></div><div class="card"><div class="ic"></div><div class="nm"></div><div class="tt"></div><div class="tp"></div></div><div class="skip">click to skip</div>';
     document.body.appendChild(el);
     el.addEventListener('pointerdown', (e) => { if (this.q) { e.stopPropagation(); this.end(); } });
-    window.addEventListener('keydown', (e) => { if (this.q) { e.stopPropagation(); e.preventDefault(); this.end(); } }, true);
+    window.addEventListener('keydown', (e) => { if (!this.q) return; e.stopPropagation(); if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return; e.preventDefault(); this.end(); }, true); // (build 79: a held key or a shortcut doesn't skip it)
   }
 
   get playing() { return !!this.q; }
@@ -43,7 +44,7 @@ export class BossIntro {
     this.el.querySelector('.nm').textContent = D ? D.name : q.name;
     this.el.querySelector('.tt').textContent = D ? D.title : 'Champion of the pavement ants';
     this.el.querySelector('.tp').textContent = D ? D.tip : `Kill ${q.name} and the war party loses heart.`;
-    this.el.className = 'on'; document.body.classList.add('intro-on');
+    this.el.className = 'on'; document.body.classList.add('intro-on'); music.hush(true); // build 79: the music steps back for it
     sfx.play('bossIntro');
   }
 
@@ -54,7 +55,7 @@ export class BossIntro {
     const w = ease(t / 0.7) * (1 - ease((t - (INTRO_LEN - 0.7)) / 0.7));
     app.surfaceFocus = { x: this.from.x + (this.at.x - this.from.x) * w, y: this.from.y + (this.at.y - this.from.y) * w };
     app.introZoom = 1 + 0.45 * w; app.intro.t = t;
-    if (!this.roared && t >= ROAR_AT) { this.roared = true; sfx.play('roar', null, this.q.kind === 'champ' ? 1.4 : 0.8); if (this.hooks.shake) this.hooks.shake(0.9); }
+    if (!this.roared && t >= ROAR_AT) { this.roared = true; sfx.last.roar = -9; sfx.play('roar', null, this.q.kind === 'champ' ? 1.4 : 0.8); /* (build 79: past the wake roar's cooldown) */ if (this.hooks.shake) this.hooks.shake(0.9); }
     if (t >= ROAR_AT + 0.15) this.el.classList.add('card-on');
     if (t >= INTRO_LEN - 0.5) this.el.classList.add('out');
     if (t >= INTRO_LEN) this.end();
@@ -64,6 +65,6 @@ export class BossIntro {
     const app = this.app; if (!this.q) return;
     this.q = null; app.surfaceFocus = null; app.introZoom = 1; app.intro = null;
     if (this.paused) app.paused = false;
-    this.el.className = 'hidden'; document.body.classList.remove('intro-on');
+    this.el.className = 'hidden'; document.body.classList.remove('intro-on'); music.hush(false);
   }
 }

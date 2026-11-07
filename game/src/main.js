@@ -202,6 +202,14 @@ app.playFilm = () => {
 };
 
 // The title screen and main menu (ui/title.js), over the live yard.
+let swapping = false;
+async function swapColony(swap) {
+  if (swapping) return; swapping = true;
+  if (saveGame(app.s)) touchActive(app.s); saveMapIfNew(); freezeSaves();
+  let ok = false; try { ok = await swap(); } catch (e) { ok = false; ui.flash('Couldn\u2019t switch colonies: this browser\u2019s storage isn\u2019t available. Your colony is still saved here.', /^Couldn/, 6000); }
+  if (ok) { location.reload(); return; } // (stays frozen and swapping until the page goes)
+  unfreezeSaves(); swapping = false;
+}
 // Build 78: bosses' and champions' introductions (ui/bossIntro.js).
 const bossIntro = new BossIntro(app, { shake: (k) => { views.surface.shake = Math.max(views.surface.shake, k); } });
 const title = new TitleMenu(app, {
@@ -209,11 +217,13 @@ const title = new TitleMenu(app, {
   film: () => app.playFilm(),
   applyOptions,
   // Build 76: colonies. A switch saves the one you're in, swaps them over and reloads; nothing is saved after.
-  switchTo: async (id) => { if (saveGame(app.s)) touchActive(app.s); saveMapIfNew(); freezeSaves(); if (await switchTo(id)) location.reload(); else unfreezeSaves(); },
-  newColony: async (id) => { if (saveGame(app.s)) touchActive(app.s); saveMapIfNew(); freezeSaves(); if (await newColonyIn(id)) location.reload(); else unfreezeSaves(); },
+  // Build 79 (QA): once a swap is under way nothing else starts one (a second click could save the old colony
+  // over the new), and if the browser's storage fails, saving resumes and you're told.
+  switchTo: (id) => swapColony(() => switchTo(id)),
+  newColony: (id) => swapColony(() => newColonyIn(id)),
   deleteSlot: (id) => deleteSlot(id),
   exportFile: () => { saveGame(app.s); exportFile(app.s, slotOf(slotMeta(), slotMeta().active).name); },
-  importFile: async (file, id) => { const active = slotMeta().active === id; if (active) freezeSaves(); try { await importFile(file, id); } catch (e) { if (active) unfreezeSaves(); throw e; } if (active) location.reload(); },
+  importFile: async (file, id) => { if (swapping) return; const active = slotMeta().active === id; if (active) { swapping = true; freezeSaves(); } try { await importFile(file, id); } catch (e) { if (active) { unfreezeSaves(); swapping = false; } throw e; } if (active) location.reload(); },
 });
 app.openTitle = () => title.open();
 // Graphics: Auto starts sharp and may step down; Sharp and Fast are fixed.
@@ -334,12 +344,14 @@ function frame(now) {
   { const want = app.battle && performance.now() - (app.zoomTouchedAt || -1e9) > 4000 ? 1.15 : 1; app.battleZoom = (app.battleZoom || 1) + (want - (app.battleZoom || 1)) * Math.min(1, dt * 1.5); }
   bossIntro.check(s); bossIntro.update(dt);
   let newEvents = [];
-  const evSeen = s.events.length;
+  if (app.evFor !== s) { app.evFor = s; app.evShift = 0; app.evMark = s.events.length; }
   if (!app.paused) {
     acc += dt;
     while (acc >= STEP) { snapshot(s); SIM.tick(s, STEP); acc -= STEP; }
-    // New sim events this frame (before the HUD's explainers take them).
-    newEvents = s.events.slice(evSeen);
+    // New sim events since last heard (before the HUD's explainers take them). Build 79: counted from where the
+    // last frame left off (the explainers take events off the front), so ones a button raised between frames
+    // (Retreat, a great evolution) are heard too.
+    newEvents = s.events.slice(Math.max(0, app.evMark - app.evShift)); app.evMark = app.evShift + s.events.length;
     clock += dt;
   } else { acc = 0; if (app.intro) clock += dt; } // (build 78: in an introduction the sim holds still but the scene still moves)
   if (s.player.inNest !== wasInNest) {
