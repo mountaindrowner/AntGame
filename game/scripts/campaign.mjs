@@ -90,9 +90,11 @@ const ORDER = {
 // Build 74: rooms go in closed chambers, placed as plans the builders dig out (Build → place the ghost).
 let planT = -99;
 function roomPlan() {
-  const keys = ORDER[strategy] || ORDER.sensible;
-  // A room costing more food than the store can hold has to wait for a Food store.
-  const next = keys.find((k) => !SIM.roomOf(s, k) && !SIM.roomLock(s, k) && (!SIM.ROOMS[k].evo || established()) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
+  const keys = SMART ? SMART_ROOMS : ORDER[strategy] || ORDER.sensible;
+  // A room costing more food than the store can hold has to wait for a Food store. (SMART: a key listed twice wants
+  // two of that room: more Food stores lift the food cap the queen's later levels need.)
+  const seenK = {};
+  const next = keys.find((k) => { seenK[k] = (seenK[k] || 0) + 1; return SIM.roomCount(s, k) < seenK[k] && !SIM.roomLock(s, k) && (!SIM.ROOMS[k].evo || established() || SMART) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap; });
   if (!next || !caste('builder') || c.buildQueue.length || s.t - planT < 10) return;
   const R = SIM.ROOMS[next];
   if (!SIM.canPay(c, SIM.roomCost(s, next))) return;
@@ -220,6 +222,21 @@ function missions() {
   }
 }
 
+// ---------- SMART=1: a competent player's habits (build 80) ----------
+// It rings Defend when the nest is attacked, builds more Food stores (the queen's later levels cost more food than
+// one store holds) and the Egg larder (meat at home), spends genes on a sensible list whenever it can pay and keep
+// 30 food back, and upgrades the queen whenever it can pay.
+const SMART = !!process.env.SMART;
+const SMART_ROOMS = ['hatchery', 'store', 'barracks', 'cistern', 'workshop', 'larder', 'nursery', 'store', 'infirmary', 'store', 'granary', 'midden', 'honeypot', 'fungus', 'dairy'];
+const SMART_EVOS = ['waypoints', 'hatchery2', 'trophic', 'scent', 'store2', 'insulation', 'mandibles', 'crews', 'drillhall', 'formic', 'division', 'trailrunners', 'hatchery3', 'stridulation', 'infirmary', 'granary', 'crews2', 'store3', 'memory', 'midden', 'majors', 'honeypot', 'cuticle', 'brood'];
+let defT = 0;
+function smart() {
+  if (!SMART) return;
+  if (SIM.underAttack(s) && s.t - defT > 4.5 && SIM.callDefend(s)) { defT = s.t; mile('rang Defend'); }
+  for (const k of SMART_EVOS) { if (!EVO_BY[k] || SIM.evoLock(s, k)) continue; const f = EVO_BY[k].cost.food || 0; if (c.store - f < 30 && f > 0) continue; if (SIM.buyEvo(s, k)) { note(`evolved ${k} (smart)`); break; } }
+  if (SIM.QUEEN_UP[s.queen.level] && SIM.upgradeQueen(s)) note(`queen upgraded to ${s.queen.level} (smart)`);
+}
+
 // ---------- the campaign: the zones' guardians ----------
 const BOSS_ORDER = ['hornworm', 'beetle', 'antlion', 'robin', 'toad', 'mantis', 'widow', 'centipede'];
 let hunt = null, huntCool = 0, explore = null;
@@ -296,7 +313,7 @@ for (let i = 0; i < minutes * 60 * 20; i++) {
   }
   if ((nestThink += 0.05) >= 3) {
     nestThink = 0;
-    eggs(); roomPlan();
+    eggs(); roomPlan(); smart();
     if (SIM.QUEEN_UP[s.queen.level] && SIM.antCount(s) >= SIM.queenCap(s.queen.level) - 3 && SIM.upgradeQueen(s)) note(`queen upgraded to ${s.queen.level}`);
     const fu = SIM.FORAGE && SIM.FORAGE[(c.forage || 0) + 1];
     if (fu && strategy !== 'idle' && SIM.upgradeForage(s)) note(`foragers trained to ${c.forage}`);
