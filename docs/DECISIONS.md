@@ -2,6 +2,29 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: songs, battle music and stingers (build 77)
+
+Mark: "A few songs for specific things… sound effects when there's a raid happening or a big fight. It slowly transitions to a battle song. Maybe successful noises if it's successful." Thought through in [`SOUND-POLISH.md`](SOUND-POLISH.md):
+- **A song for each situation,** all in A minor at 92 bpm on one bar clock, so they blend on the bar line rather than cut:
+  - day in the yard (as before);
+  - **night** (a music box over a low pad, no drums);
+  - the nest, now with a kalimba line;
+  - **battle**;
+  - **boss** (its own chords, Am, B♭, Am, E, with a low choir and timpani);
+  - the title screen.
+- **The battle song builds with the fight:** war drums and a chugging bass from a skirmish, brass stabs as it grows, and the battle tune (a fixed eight bars) at full.
+  - **What drives it:** the duels near the camera, a raid you lead (full inside their nest), raiders on their way to yours, and the battle tally.
+  - **How it moves:** it rises in a couple of seconds, holds six after the fighting stops and fades over eight; the day song dips under it and comes back.
+  - It plays about twice as loud as the calm music.
+- **Stingers,** with the music ducking under them:
+  - **victory:** a raid won, a raid on your nest beaten off, a boss down;
+  - **defeat:** a raid failed or called off, an outpost lost;
+  - **discovery:** breaking into new ground, an outpost, a region held, a zone, a great evolution;
+  - **milestone:** a goal, a daughter;
+  - **nightfall** and **dawn**.
+- **Sounds for events that had none:** a rumble for breaking through, a shimmer for glowrock, a chime for the first wood, sugar and chitin, a brass blip for the first veteran, a flutter for the nuptial flight, a quake for the fire ants' eruption and the sinkhole, the boss's second roar, a thud when a dig or a room is refused, and a soft tick as the room ghost turns green.
+- The music renders offline too (`renderMusicWav`), so demos can be listened to outside the game.
+
 ## Nov 7: Phase 6, save slots (build 76)
 
 Mark: "It auto saves? Yeah, that's good. But it'd be good to have, like, save files, like different options. So you can have different nests." Thought through in [`PHASE6.md`](PHASE6.md):

@@ -154,6 +154,11 @@ Charted here too. The plan is a few loops built from the film's instruments, so 
 | Nest | In the nest | Warm, steady, a little hypnotic | Low drone, soft kick, a slow arpeggio |
 | Danger | The spider near, a raid, the queen hit | Tense, faster | The yard groove with the drums doubled and an ominous drone. Crossfades in and out |
 | Rain | During rain | Quiet, soft | The current track low-passed, with fewer instruments |
+| Night (build 77) | The yard at night | Hushed, starry | A music box over a low slow pad; no drums |
+| Battle (build 77) | Duels near the camera, a raid you lead, raiders coming | Driving, rising | In three steps as it grows: war drums and a chugging bass; brass stabs; the battle tune (a fixed eight bars). Rises in a couple of seconds, holds six after the fighting, fades over eight |
+| Boss (build 77) | A boss fighting on screen | Dark, uneasy | Its own chords (Am, B♭, Am, E), a low choir, timpani, the war drums |
+
+**Stingers (build 77):** short phrases over the music, which ducks under them. Victory (a raid won, a raid beaten off, a boss down), defeat (a raid failed, an outpost lost), discovery (new ground, an outpost, a region held, a great evolution), milestone (a goal, a daughter), nightfall and dawn. See [`SOUND-POLISH.md`](SOUND-POLISH.md).
 
 - **Adaptive, not a playlist.** The tracks share a tempo and key, so the game crossfades between layers as things change.
 - **Quiet by default** and ducked under big effects, with its own volume in Options.

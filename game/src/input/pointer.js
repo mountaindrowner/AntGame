@@ -3,6 +3,7 @@
 // raycasting into whichever 3D view is showing.
 import SIM from '../sim/sim.js';
 import { CAMERA } from '../config.js';
+import { sfx } from '../audio/sfx.js';
 
 const { NW, NH, SHAFT, ROOMS } = SIM;
 
@@ -38,7 +39,7 @@ export function attachPointer(canvas, app, ui, views) {
 
   // Why a dig order can't go here, said once a stroke.
   const DIG_WHY = { 'not adjacent': 'Dig next to an existing tunnel (the faint dots).', 'too many': `${SIM.DIG_ORDERS} dig orders queued. Let the builders catch up.`, edge: 'Not at the edge.', planned: 'That\u2019s part of a planned room: cancel the room to change it.', wall: 'That\u2019s a room\u2019s wall: a room has one or two ways in.' };
-  const digWhy = (res) => DIG_WHY[res] || 'That soil ' + res + '.';
+  const digWhy = (res) => { sfx.play('nope'); return DIG_WHY[res] || 'That soil ' + res + '.'; }; // build 77: a dull thud when it can't
   // A builder you play walks to the dig and does it (build 74).
   function builderGo(cx, cy) {
     const p = P(); if (!p.ant || !p.inNest || p.nestKey || p.ant.caste !== 'builder') return;
@@ -55,7 +56,7 @@ export function attachPointer(canvas, app, ui, views) {
       const inGhost = g && cx >= g.x0 && cx < g.x0 + g.w && cy >= g.y0 && cy < g.y0 + g.h;
       if (!mouse && !(app.ghostCell && inGhost)) { app.ghostCell = [cx, cy]; return; }
       const p = mouse ? SIM.snapPlan(s, key, cx, cy) : g;
-      if (!p || !p.ok) { say('Can\u2019t put it here: ' + ((p && p.why) || 'no room') + '.', /^Can\u2019t put it/, 2500); return; }
+      if (!p || !p.ok) { sfx.play('nope'); say('Can\u2019t put it here: ' + ((p && p.why) || 'no room') + '.', /^Can\u2019t put it/, 2500); return; }
       if (SIM.queueRoom(s, key, null, [p.x0, p.y0])) { app.placing = null; app.ghostCell = null; say(p.dig.length ? `${ROOMS[key].name} planned: builders dig it out, then build it.` : `${ROOMS[key].name} placed: builders are on their way.`, /planned:|placed:/, 2500); }
       else say('Short on: ' + SIM.costText(SIM.roomCost(s, key)) + '.', /^Short on/, 2500);
       return;
@@ -161,7 +162,7 @@ export function attachPointer(canvas, app, ui, views) {
   canvas.addEventListener('pointermove', (e) => {
     const p = ptrs.get(e.pointerId);
     if (e.pointerType === 'mouse' && app.view === 'surface') { const w = surfacePoint(e); if (w) app.mouseWorld = w; app.mouseOn = true; } // build 32: where abilities aim (73: and what's hovered)
-    if (e.pointerType === 'mouse' && app.view === 'nest') { app.nestHover = nestCell(e); app.ghostCell = null; } // build 74: the room ghost follows the cursor
+    if (e.pointerType === 'mouse' && app.view === 'nest') { app.nestHover = nestCell(e); app.ghostCell = null; const g = app.ghostPlan(), ok = !!(g && g.ok); if (g && ok && !app.ghostWasOk) sfx.play('ghostOk'); app.ghostWasOk = ok; } // build 74: the room ghost follows the cursor (77: a soft tick as it turns green)
     if (!p) { if (e.pointerType === 'mouse') hoverAt(e); return; }
     p.x = e.clientX;
     p.y = e.clientY;

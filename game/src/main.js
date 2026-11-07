@@ -10,7 +10,7 @@ import { Callout } from './ui/callout.js';
 import { TitleMenu, loadOptions } from './ui/title.js';
 import { sfx } from './audio/sfx.js';
 import { soundWatch, tapSounds } from './audio/watch.js';
-import { music } from './audio/music.js';
+import { music, renderMusicWav } from './audio/music.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
 import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED, loadProblem, freezeSaves, unfreezeSaves } from './game/save.js';
@@ -362,7 +362,7 @@ function frame(now) {
   if (!app.titleOpen) { hear(s, newEvents); if (newEvents.length && app.events) app.events(newEvents); }
   else hear.quiet();
   // The music follows the game: the title, the yard or the nest, tension, rain.
-  music.set(app.titleOpen ? 'title' : app.view === 'nest' ? 'nest' : 'yard', app.titleOpen ? 0 : hear.mood(s), s.rain.on && !app.titleOpen);
+  music.set(app.titleOpen ? 'title' : app.view === 'nest' ? 'nest' : 'yard', app.titleOpen ? 0 : hear.mood(s), s.rain.on && !app.titleOpen, app.titleOpen ? {} : hear.score(s, dt)); // build 77: the songs
   // One map photo a frame, for regions just built.
   if (photoQ.length && view === views.surface && !shot.busy) { const i = photoQ.shift(); if (built(i)) app.photoRegion(i, false); }
   if (app.view === 'nest') {
@@ -431,4 +431,4 @@ requestAnimationFrame(frame);
 // For automated tests and debugging in the console.
 // filmStep(dt) advances the opening film by exactly dt and draws it, for recording.
 const filmStep = (dt) => { if (!cine) return false; clock += dt; views.surface.update(app, clock, pipeline.aspect); cine.step(dt); if (cine) cine.render(); return !!cine; };
-window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, filmStep };
+window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep };

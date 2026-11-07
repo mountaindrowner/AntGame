@@ -3,6 +3,7 @@
 // sim's new events (rain, a raid…). The sim itself knows nothing of sound.
 import SIM from '../sim/sim.js';
 import { sfx } from './sfx.js';
+import { music } from './music.js';
 
 const { T, DROP } = SIM;
 
@@ -18,6 +19,7 @@ export function soundWatch(app, views) {
   let p = null;
   const seenStrike = new WeakMap();
   const seenBug = new WeakMap(); // build 16: each small creature's last state
+  let duelsNear = 0, battleK = 0, battleHold = 0; // build 77: the battle music's intensity
   let spiderMode = null, sparks = 0, splashes = 0, corpseT = 0, wasBattle = false, spStomp = null;
   const seenBoss = {}; let introT = 0, bannerT = 0, downT = 0; // build 19
 
@@ -93,6 +95,22 @@ export function soundWatch(app, views) {
       else if (e === 'rainsoon') sfx.play('thunder', null, 0.85);
       else if (e === 'rain') setTimeout(() => sfx.play('thunder', null, 0.2), 600);
       else if (e === 'pitfound') sfx.play('crumble'); // build 75: sand trickling into a hidden pit
+      // Build 77 (docs/SOUND-POLISH.md): how things end, and milestones, as stingers over the music; and the
+      // events that had no sound of their own.
+      else if (e === 'report') { const R = s.report || {}; if (R.kind === 'myraid') music.sting(R.how === 'won' ? 'victory' : 'defeat'); else if (R.kind === 'raid') music.sting(R.took > 0 && R.lost > R.killed ? 'defeat' : 'victory'); }
+      else if (e === 'bossdown') setTimeout(() => music.sting('victory'), 900);
+      else if (e === 'bossphase') sfx.play('roar', null, 0.6);
+      else if (e === 'outpost' || e === 'held' || e === 'zone' || e === 'great' || e === 'takeoverready' || e === 'phase1' || e === 'phase2') music.sting('discovery');
+      else if (e === 'breakthrough') { sfx.play('breakRumble'); setTimeout(() => music.sting('discovery'), 700); }
+      else if (e === 'glow') sfx.play('shimmer');
+      else if (e === 'outpostlost') music.sting('defeat');
+      else if (e === 'goal' || e === 'daughter') music.sting('milestone');
+      else if (e === 'veteran') sfx.play('promote');
+      else if (e === 'night') music.sting('night');
+      else if (e === 'dawn') music.sting('dawn');
+      else if (e === 'wood' || e === 'sugar' || e === 'chitin') sfx.play('chime');
+      else if (e === 'flight') sfx.play('flutter');
+      else if (e === 'erupt' || e === 'sinkhole') sfx.play('quake');
     }
     // Visitors: a warning when one arrives, then its hit, pecks and exit.
     for (const st of s.strikes || []) {
@@ -139,8 +157,8 @@ export function soundWatch(app, views) {
     if (corpseT > s.t) corpseT = 0;
     for (const b of s.corpses || []) if (b.t > corpseT) { corpseT = b.t; sfx.play('antDies', { x: b.x, y: b.y }); }
     // A battle's din, by how many duels are near the camera; a war drum when one starts near you.
-    { const tg = views.surface.target; let duels = 0; if (app.view === 'surface') for (const o of s.ants) if (o.foeId && o.state !== 'dead' && Math.abs(o.x - tg.x) < 30 * T && Math.abs(o.y - tg.z) < 30 * T) duels++;
-      sfx.loop('battle', duels >= 2 ? Math.min(1, duels / 14) * 0.8 : 0);
+    { const tg = views.surface.target; let duels = 0; duelsNear = 0; if (app.view === 'surface') for (const o of s.ants) if (o.foeId && o.state !== 'dead' && Math.abs(o.x - tg.x) < 30 * T && Math.abs(o.y - tg.z) < 30 * T) duels++;
+      sfx.loop('battle', duels >= 2 ? Math.min(1, duels / 14) * 0.8 : 0); duelsNear = duels;
       if (app.battle && !wasBattle) sfx.play('warDrum'); wasBattle = !!app.battle; }
     for (const sp2 of s.splashes || []) if (sp2.t > splashes) { splashes = sp2.t; sfx.play('plip', sp2); }
     // Build 19: bosses (their intro, roar, every telegraph and blow) and events.
@@ -186,13 +204,25 @@ export function soundWatch(app, views) {
     const a = s.player.ant, c = views.surface.target;
     let d = 0;
     if (s.spider) d = Math.max(d, Math.max(0, 1 - Math.hypot(s.spider.x - c.x, s.spider.y - c.z) / (25 * T)));
-    if (s.ants.some((o) => o.team && o.state === 'raid')) d = Math.max(d, 0.8);
-    if (s.queen.placed && s.queen.hp < 60) d = 1;
+    if (s.queen.placed && s.queen.hp < 60) d = 1; // (build 77: raids and boss fights are the battle and boss songs now, below)
     if ((s.strikes || []).some((st) => Math.hypot(st.x * T - c.x, st.y * T - c.z) < 20 * T)) d = Math.max(d, 0.6);
     // A boss fight on screen, or a lethal event under way (build 19).
-    for (const k in s.bosses || {}) { const b = s.bosses[k]; if (!b.dead && b.mode === 'fight' && Math.hypot(b.x - c.x, b.y - c.z) < 35 * T) d = 1; }
     if (s.event && SIM.EVENTS[s.event.key].kind === 'lethal') d = Math.max(d, 0.75);
     return a || s.queen.placed ? d : 0;
+  };
+  // Build 77 (Mark: "it slowly transitions to a battle song"): what the music should play. battle, 0 to 1: duels
+  // near the camera, a raid you lead (full inside their nest), raiders on their way to yours; it rises in a couple of
+  // seconds, holds six after the fighting stops and fades over eight. boss: a boss fighting on screen. night: dark.
+  hear.score = (s, dt) => {
+    const c = views.surface.target; let raw = Math.min(1, duelsNear / 10);
+    if (s.myRaid) raw = Math.max(raw, s.myRaid.phase === 'inside' ? 1 : 0.7);
+    if (s.ants.some((o) => o.team && o.state === 'raid')) raw = Math.max(raw, 0.75);
+    if (app.battle) raw = Math.max(raw, 0.5);
+    if (raw >= battleK - 0.02) { battleK += (raw - battleK) * Math.min(1, dt / 1.2); if (raw > 0.05) battleHold = 6; }
+    else if (battleHold > 0) battleHold -= dt;
+    else battleK = Math.max(raw, battleK - dt / 8);
+    let boss = false; for (const k in s.bosses || {}) { const b = s.bosses[k]; if (!b.dead && b.mode === 'fight' && Math.hypot(b.x - c.x, b.y - c.z) < 35 * T) boss = true; }
+    return { battle: s.player.ant || s.queen.placed ? battleK : 0, boss, night: 1 - SIM.daylight(s) };
   };
   // Behind the title screen: the beds fall silent.
   hear.quiet = () => { for (const k of ['rain', 'mower', 'spider', 'fireants', 'yard', 'nest', 'crickets', 'wet', 'chipping', 'trail', 'munch']) sfx.loop(k, 0); };

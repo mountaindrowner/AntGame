@@ -70,6 +70,15 @@ class Sfx {
     this._env(g, t, 0.008, d, v); o.connect(g).connect(out); o.start(t); o.stop(t + d + 0.05);
   }
   thump(out, t, f0 = 140, f1 = 45, d = 0.25, v = 0.6) { this.chirp(out, t, f0, f1, d, v, 'sine'); }
+  // Build 77: a brass-like note: two detuned saws through a low-pass that opens on the attack and closes as it
+  // fades (a, its swell; c0 → c1, the filter's sweep).
+  brass(out, t, f, d, v = 0.12, a = 0.05, c0 = 2400, c1 = 600) {
+    const c = this.ctx, fl = c.createBiquadFilter(), g = c.createGain();
+    fl.type = 'lowpass'; fl.Q.value = 1.2; fl.frequency.setValueAtTime(300, t); fl.frequency.exponentialRampToValueAtTime(c0, t + a); fl.frequency.exponentialRampToValueAtTime(c1, t + a + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.setValueAtTime(v, t + a + d * 0.5); g.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    for (const det of [-7, 7]) { const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; o.connect(fl); o.start(t); o.stop(t + a + d + 0.05); }
+    fl.connect(g).connect(out);
+  }
   // Filtered noise; f1 sweeps the filter if given.
   puff(out, t, d, f, v = 0.3, type = 'lowpass', f1, a = 0.005) {
     const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain();
@@ -254,6 +263,15 @@ const SOUNDS = {
   splat: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.25, 700, 0.4, 'lowpass', 200, 0.01); s.chirp(o, t, 300, 120, 0.2, 0.2, 'sine'); return 0.3; } },
   sandSnap: { cool: 0.3, fn: (s, o, t) => { s.puff(o, t, 0.35, 2500, 0.3, 'bandpass', 600, 0.05); s.blip(o, t + 0.3, 1800, 0.03, 0.3, 'square'); s.blip(o, t + 0.34, 1400, 0.03, 0.3, 'square'); return 0.45; } },
   sandHiss: { cool: 0.4, fn: (s, o, t) => { s.puff(o, t, 0.5, 3000, 0.25, 'bandpass', 1200, 0.05); return 0.5; } },
+  // Build 77 (docs/SOUND-POLISH.md): events that had no sound of their own.
+  breakRumble: { cool: 2, fn: (s, o, t) => { s.puff(o, t, 1.1, 180, 0.5, 'lowpass', 90, 0.15); s.thump(o, t + 0.1, 70, 32, 0.9, 0.5); s.grain(o, t + 0.3, 12, 0.05, 500, 0.12, 'lowpass'); return 1.3; } },
+  shimmer: { cool: 1, fn: (s, o, t) => { for (let i = 0; i < 7; i++) { const f = N(88 + (i % 3) * 3 + (i > 3 ? 12 : 0)); s.blip(o, t + i * 0.05, f, 0.5, 0.03, 'sine'); s.blip(o, t + i * 0.05, f * 1.5, 0.3, 0.012, 'sine'); } s.puff(o, t, 0.8, 9500, 0.04, 'highpass'); return 0.9; } },
+  chime: { cool: 0.5, fn: (s, o, t) => { s.blip(o, t, N(84), 0.5, 0.07, 'sine'); s.blip(o, t, N(91), 0.3, 0.025, 'sine'); s.blip(o, t + 0.09, N(88), 0.6, 0.06, 'sine'); return 0.7; } },
+  promote: { cool: 0.5, fn: (s, o, t) => { s.brass(o, t, N(69), 0.12, 0.07, 0.01, 3200, 1200); s.brass(o, t + 0.13, N(76), 0.3, 0.07, 0.01, 3400, 1000); return 0.5; } },
+  flutter: { cool: 1, fn: (s, o, t) => { for (let i = 0; i < 14; i++) s.puff(o, t + i * 0.045, 0.03, 1400 + i * 120, 0.12, 'bandpass'); s.chirp(o, t + 0.2, N(72), N(84), 0.5, 0.05, 'sine'); return 0.8; } },
+  quake: { cool: 2, always: true, fn: (s, o, t) => { s.puff(o, t, 1.6, 140, 0.6, 'lowpass', 60, 0.3); s.thump(o, t + 0.5, 90, 28, 0.8, 0.7); s.puff(o, t + 0.5, 0.25, 3000, 0.35, 'bandpass', 900); s.grain(o, t + 0.6, 18, 0.05, 600, 0.15, 'lowpass'); return 2; } },
+  nope: { cool: 0.25, vol: 0.6, fn: (s, o, t) => { s.thump(o, t, 160, 90, 0.1, 0.35); s.puff(o, t, 0.06, 600, 0.12, 'lowpass'); return 0.15; } },
+  ghostOk: { cool: 0.08, vol: 0.5, fn: (s, o, t) => { s.blip(o, t, N(81), 0.05, 0.1, 'sine'); return 0.08; } },
   bossDie: { cool: 3, always: true, fn: (s, o, t) => { s.thump(o, t, 140, 30, 0.8, 0.9); [60, 64, 67, 72, 76, 79, 84].forEach((n, i) => s.blip(o, t + 0.5 + i * 0.1, N(n), i === 6 ? 0.9 : 0.14, 0.2, 'square')); return 1.8; } },
   eventGift: { cool: 3, always: true, fn: (s, o, t) => { [72, 76, 79, 84, 88].forEach((n, i) => s.blip(o, t + i * 0.08, N(n), 0.25, 0.14, 'triangle')); return 0.8; } },
   eventHard: { cool: 3, always: true, fn: (s, o, t) => { s.chirp(o, t, N(62), N(60), 1.2, 0.12, 'triangle'); s.chirp(o, t + 0.1, N(66), N(64), 1.2, 0.1, 'triangle'); s.puff(o, t, 1.4, 1800, 0.08, 'bandpass', 2600, 0.6); return 1.5; } },
