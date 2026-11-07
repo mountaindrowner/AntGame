@@ -84,7 +84,7 @@ export function snapPlan(s, key, cx, cy){
     const sc = p.dig.length*10 + Math.abs(x0 + (R.w - 1)/2 - cx) + Math.abs(y0 + (R.h - 1)/2 - cy); if (sc < bs){ bs = sc; best = p; } }
   return best || roomPlan(s, key, cx - Math.floor((R.w - 1)/2), cy - Math.floor((R.h - 1)/2));
 }
-// Build 75 (Mark: "the hatchery would upgrade in the way it looks… a little bit of space"): a room going up a level
+// Build 74 (Mark: "the hatchery would upgrade in the way it looks… a little bit of space"): a room going up a level
 // grows a column, on whichever side keeps its wall and its one or two ways in; the builders dig it out.
 export function growPlan(s, r){
   const n = s.nest, w = r.w || 4, h = r.h || 3;
@@ -324,6 +324,15 @@ export function nestStep(s, a, speed, dt){
 function note(s, msg){ s.player.msg = msg; }
 // Build 51: rain that matters to your ants (not with the Raft Colony).
 export const wet = s => s.rain.on && !has(s, 'raft');
+// Build 75 (Mark: "a few drips, and then slowly it picks up"): how hard it's raining, 0 to 1. Scattered drops for
+// ten seconds after the thunder, then it builds over twelve, holds, and eases off over the last ten.
+export const RAIN_LEN = 40;
+export function rainK(s){
+  const r = s.rain;
+  if (r.on) return Math.max(0.1, Math.min(1, 0.1 + 0.9*r.t/12, (RAIN_LEN - r.t)/10));
+  if (r.warned && r.next - r.t < 10) return 0.1*(1 - (r.next - r.t)/10);
+  return 0;
+}
 export function tickRain(s, dt){
   const r = s.rain; r.t += dt;
   // Thunder in the distance twenty seconds before it rains (build 14).
@@ -332,7 +341,7 @@ export function tickRain(s, dt){
   if (!r.on && r.t >= r.next){ r.on = true; r.warned = false; r.t = 0; r.next = 480 + Math.random()*240; s.events.push('rain'); note(s, 'Rain! Trails wash out.' + (buildersInside(s) ? '' : ' Get a Builder inside.')); }
   else if (r.on){
     if (roomSlotIndex(s, 'cistern') >= 0) s.colony.water = Math.min(s.colony.waterCap, s.colony.water + (has(s, 'raft') ? 0.8 : 0.4)*dt); // build 51: Raft Colony, twice
-    if (r.t >= 30){ r.on = false; r.t = 0; if (!buildersInside(s) && s.queen.placed && canCave(s) && !has(s, 'chimneys') && !has(s, 'raft') && !picked(s, 'builder', 'tunnelmaster')){ let fell = collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) fell = collapse(s, true) || fell; if (fell) note(s, 'The rain caved in a tunnel.'); } }
+    if (r.t >= RAIN_LEN){ r.on = false; /* build 75: 40 s, was 30, so the full downpour keeps its time */ r.t = 0; if (!buildersInside(s) && s.queen.placed && canCave(s) && !has(s, 'chimneys') && !has(s, 'raft') && !picked(s, 'builder', 'tunnelmaster')){ let fell = collapse(s, true); if (!has(s, 'insulation') && !picked(s, 'builder', 'shorer')) fell = collapse(s, true) || fell; if (fell) note(s, 'The rain caved in a tunnel.'); } }
   }
 }
 export function buildersInside(s){ return s.ants.filter(a => a.caste==='builder' && a.team===0 && (a.state==='in' || a.state==='build')).length; }

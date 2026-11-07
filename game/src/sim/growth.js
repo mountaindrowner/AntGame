@@ -153,6 +153,7 @@ export const EVO = [
   { key: 'crews2', branch: 'senses', after: 'crews', name: 'Bigger crews II', cost: { genes: 5 }, fx: 'Recruit up to 45' },
   { key: 'warcolumns', branch: 'senses', after: 'crews2', name: 'War columns', cost: { genes: 9, protein: 80 }, fx: 'Recruit up to 60', big: true },
   { key: 'nightsense', branch: 'senses', name: 'Rain sense', cost: { genes: 3 }, fx: 'Ants keep foraging in the rain' },
+  { key: 'glow', branch: 'senses', after: 'nightsense', name: 'Bioluminescence', cost: { genes: 3 }, fx: 'At night your ants and their trails glow a faint blue' }, // build 75 (Mark: "something minor… a little bioluminescence")
   { key: 'vibration', branch: 'senses', after: 'nightsense', name: 'Vibration sense', cost: { genes: 5 }, fx: 'Feel feet and acorns coming: over a second more warning' },
   // Nest
   { key: 'hatchery2', branch: 'nest', name: 'Hatchery II', cost: { genes: 1, food: 30, grit: 10 }, fx: '4 eggs at once', need: 'hatchery', deed: ['Hatch 30 eggs', (s) => (s.colony.hatched || 0) >= 30] },

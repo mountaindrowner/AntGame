@@ -92,6 +92,7 @@ export function soundWatch(app, views) {
       else if (e === 'bighaul') sfx.play('cheer');
       else if (e === 'rainsoon') sfx.play('thunder', null, 0.85);
       else if (e === 'rain') setTimeout(() => sfx.play('thunder', null, 0.2), 600);
+      else if (e === 'pitfound') sfx.play('crumble'); // build 75: sand trickling into a hidden pit
     }
     // Visitors: a warning when one arrives, then its hit, pecks and exit.
     for (const st of s.strikes || []) {
@@ -158,7 +159,7 @@ export function soundWatch(app, views) {
     for (const e of events) { if (e === 'spores') sfx.play('spores', s.bursts && s.bursts.length ? s.bursts[s.bursts.length - 1] : null); else if (e === 'eventover') sfx.play('eventOver'); else if (e === 'curio') sfx.play('curio'); }
     // Beds: rain, the mower, the spider's menace, fire ants underfoot.
     const ear = (x, y) => sfx.ear(x, y);
-    sfx.loop('rain', s.rain.on ? (app.view === 'nest' ? 0.25 : 0.55) : 0);
+    sfx.loop('rain', SIM.rainK(s) * (app.view === 'nest' ? 0.25 : 0.55)); // build 75: swells as it builds
     const mw = s.mower;
     if (mw && mw.state === 'cut') { const e = ear((w.lawn.x0 + w.lawn.w / 2) * T, mw.y * T); sfx.loop('mower', e.gain * 0.9, e.pan); } else sfx.loop('mower', 0);
     if (s.spider) { const e = ear(s.spider.x, s.spider.y); sfx.loop('spider', e.gain * e.gain * 0.8, e.pan); } else sfx.loop('spider', 0);

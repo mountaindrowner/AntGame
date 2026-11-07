@@ -139,13 +139,13 @@ test('spider and bug deaths leave a body for the renderer', () => {
 
 test('rain knocks ants about, and some drop what they carry', () => {
   const s = founded(), [x, y] = open(s, 'lawn');
-  s.rain.on = true; s.rain.t = 0;
+  s.rain.on = true; s.rain.t = 20; // (build 75: the downpour; it starts as a few drips)
   SIM.stress(s, 6); const ants = s.ants.slice(-6);
   let knocked = 0, dropped = 0;
   for (let k = 0; k < 1600; k++) {
     for (const a of ants) Object.assign(a, { state: 'explore', x: px(x), y: px(y), tx: x, ty: y, carry: 5, kind: 'food', itype: 'seed', explore: 0, flee: 0 });
     s.items = s.items.filter((f) => !(f.x === x && f.y === y));
-    SIM.tick(s, 0.05); s.rain.t = 0;
+    SIM.tick(s, 0.05); s.rain.t = 20;
     for (const a of ants) { if (a.knockT > 0) knocked++; if (a.carry === 0) dropped++; }
   }
   assert.ok(knocked > 3, `${knocked} knocks`);

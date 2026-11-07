@@ -202,6 +202,26 @@ function textureFrom(canvas) {
 // Colour a geometry per face, with a little random shading so facets read.
 const paint = (geo, fn, seed = 1) => paintFaces(geo, fn, { dropUV: true, jitter: 0.92, span: 0.16, rng: rng(seed) });
 const at = (g, x, y, z) => g.translate(x, y, z);
+// An antlion's funnel (build 14): a raised rim of sand, a slope with grains streaking down it, a dark hole, and
+// the antlion's jaws. Build 75: hidden, only a shallow dimple the colour of the sand round it.
+export function pitGeometry(p, full) {
+  const R = p.r * T, cx = p.x * T, cz = p.y * T, H = full ? Math.max(5, R * 0.22) : Math.max(0.5, R * 0.02);
+  const prof = [[0, 0.4], [R * 0.12, 0.5], [R * 0.35, H * 0.35], [R * 0.7, H * 0.8], [R * 0.95, H], [R * 1.1, H * 0.8], [R * 1.35, 0.2]].reverse().map(([x, y]) => new THREE.Vector2(x, y)); // outside in, so the faces look up
+  const cone = paint(at(new THREE.LatheGeometry(prof, 24), cx, full ? 0.15 : 0, cz), (x, y, z) => {
+    const d = Math.hypot(x - cx, z - cz) / R, a = Math.atan2(z - cz, x - cx);
+    if (!full) return d < 0.25 ? '#c4ac7a' : '#cbb382'; // only just darker in the middle
+    if (d < 0.14) return '#1c140c';
+    if (d < 0.95) return Math.sin(a * 11 + d * 3) > 0.55 ? '#9c8258' : d < 0.4 ? '#8a7048' : '#b89c6c';
+    return d < 1.05 ? '#e2cc98' : '#c8b07c';
+  });
+  if (!full) return cone;
+  const parts = [cone];
+  for (const side of [-1, 1]) {
+    const jaw = new THREE.ConeGeometry(0.9, R * 0.22, 4).rotateZ(side * 0.5).rotateX(-0.6);
+    parts.push(paint(at(jaw, cx + side * R * 0.05, 1.3, cz), '#4a2e18'));
+  }
+  return mergeGeometries(parts.map((g) => g.index ? g.toNonIndexed() : g));
+}
 // Nudge vertices so a shape looks lumpy rather than machined.
 function lumpy(geo, amt, seed) {
   const g = geo.index ? geo.toNonIndexed() : geo, p = g.attributes.position, r = rng(Math.floor(seed * 977) + 5);
@@ -424,14 +444,27 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'bucket': {
-        // A toy bucket: ribbed blue plastic, a rolled rim, sand heaped inside,
-        // a white handle.
+        // Build 75 (Mark: "the bucket looks weird… it's not hollow"): a toy bucket tipped on its side, its mouth
+        // to the open sand. Ribbed blue plastic, thin-walled and hollow (you see its pale inside and the sand still
+        // in it), a rolled rim round the mouth, the bottom closed, a white handle flopped over, and a tongue of
+        // sand spilled out across the ground.
         claim(l.x0, l.y0, l.w, l.h);
-        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, R = l.w * T * 0.55;
-        parts.push(paint(at(new THREE.CylinderGeometry(R, l.w * T * 0.42, 46 * S, 16, 4), cx, 23 * S, cz), (x, y) => (Math.floor(y / (6 * S)) % 3 === 0 ? '#2470d0' : y > 40 * S ? '#5aa0f0' : '#2a7ad8'), 44));
-        parts.push(paint(at(new THREE.TorusGeometry(R, 2.2 * S, 4, 18).rotateX(Math.PI / 2), cx, 46 * S, cz), '#6ab0ff'));
-        parts.push(paint(at(new THREE.SphereGeometry(R * 0.95, 14, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.25, 1), cx, 41 * S, cz), (x, y, z) => (Math.sin(x * 0.9) * Math.sin(z * 0.8) > 0.5 ? '#c8b07c' : '#dcc898'), 45));
-        parts.push(paint(at(new THREE.TorusGeometry(R, 1.4 * S, 4, 14, Math.PI).rotateY(Math.PI / 2), cx, 46 * S, cz), '#e8e8e0'));
+        const cx = (l.x0 + l.w / 2) * T, cz = (l.y0 + l.h / 2) * T, Rt = l.w * T * 0.5, Rb = l.w * T * 0.38, Lb = l.h * T * 0.95, wall = 1.6 * S;
+        const lay = (g) => g.rotateZ(-Math.PI / 2).rotateY(-1.25).translate(cx, Rt * 0.92, cz); // mouth toward the camera (south, a little east), lying on the ground
+        const ribs = (x, y, z) => { const v = (x + Lb / 2) / (8 * S); return Math.floor(v) % 3 === 0 ? '#2470d0' : '#2a7ad8'; };
+        const shell = new THREE.CylinderGeometry(Rt, Rb, Lb, 22, 6, true); // open ended: hollow
+        parts.push(paint(lay(shell.clone()), ribs, 44));
+        const inner = new THREE.CylinderGeometry(Rt - wall, Rb - wall, Lb - 0.5, 22, 1, true); inner.index.array.reverse(); { const nn = inner.attributes.normal.array; for (let i = 0; i < nn.length; i++) nn[i] = -nn[i]; } // faces turned inward
+        parts.push(paint(lay(inner), (x, y) => (y < Rt * 0.45 ? '#3a8ae0' : '#4a98ea'), 46));
+        parts.push(paint(lay(new THREE.CircleGeometry(Rb, 22).rotateX(Math.PI / 2).translate(0, -Lb / 2 + 0.3, 0)), '#1e62b8'));
+        parts.push(paint(lay(new THREE.TorusGeometry(Rt, 2 * S, 5, 22).rotateX(Math.PI / 2).translate(0, Lb / 2, 0)), '#6ab0ff'));
+        // The sand still inside, a wedge along the bottom of the shell, sloping out of the mouth.
+        parts.push(paint(lay(new THREE.CylinderGeometry(Rt * 0.82, Rb * 0.82, Lb * 0.9, 12, 1, false, Math.PI * 0.12, Math.PI * 0.76)), (x, y, z) => (Math.sin(x * 0.9 + z) > 0.6 ? '#c8b07c' : '#dcc898'), 45));
+        // The handle, flopped across the top.
+        parts.push(paint(lay(new THREE.TorusGeometry(Rt * 0.98, 1.2 * S, 4, 14, Math.PI).rotateY(Math.PI / 2).rotateZ(0.5).translate(0, Lb * 0.35, 0)), '#e8e8e0'));
+        // Spilled sand: a low fan out of the mouth.
+        const ang = -1.25, mx = cx + Math.cos(-ang) * Lb * 0.5, mz = cz + Math.sin(-ang) * Lb * 0.5;
+        parts.push(paint(at(new THREE.SphereGeometry(Rt * 1.1, 14, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.3, 0.12, 0.9).rotateY(ang), mx + Math.cos(-ang) * Rt * 0.6, 0, mz + Math.sin(-ang) * Rt * 0.6), (x, y, z) => (Math.sin(x * 0.7) * Math.sin(z * 0.9) > 0.45 ? '#c4ac78' : '#d6c290'), 47));
         break;
       }
       case 'shovel': {
@@ -449,21 +482,9 @@ function meshLandmark(l, w, ctx) {
         break;
       }
       case 'pit': {
-        // An antlion's funnel (build 14): a raised rim of sand, a slope with
-        // grains streaking down it, a dark hole, and the antlion's jaws.
-        const p = l, R = p.r * T, cx = p.x * T, cz = p.y * T, H = Math.max(5, R * 0.22);
-        const prof = [[0, 0.4], [R * 0.12, 0.5], [R * 0.35, H * 0.35], [R * 0.7, H * 0.8], [R * 0.95, H], [R * 1.1, H * 0.8], [R * 1.35, 0.2]].reverse().map(([x, y]) => new THREE.Vector2(x, y)); // outside in, so the faces look up
-        const cone = new THREE.LatheGeometry(prof, 24);
-        parts.push(paint(at(cone, cx, 0, cz), (x, y, z) => {
-          const d = Math.hypot(x - cx, z - cz) / R, a = Math.atan2(z - cz, x - cx);
-          if (d < 0.14) return '#1c140c';
-          if (d < 0.95) return Math.sin(a * 11 + d * 3) > 0.55 ? '#9c8258' : d < 0.4 ? '#8a7048' : '#b89c6c';
-          return d < 1.05 ? '#e2cc98' : '#c8b07c';
-        }));
-        for (const side of [-1, 1]) {
-          const jaw = new THREE.ConeGeometry(0.9, R * 0.22, 4).rotateZ(side * 0.5).rotateX(-0.6);
-          parts.push(paint(at(jaw, cx + side * R * 0.05, 1.2, cz), '#4a2e18'));
-        }
+        // Build 75 (Mark: "a little more hidden"): baked as a faint dimple in the sand; the surface view draws the
+        // full funnel over it once one of your ants has found it (pitGeometry).
+        parts.push(pitGeometry(l, false));
         break;
       }
       case 'can': {

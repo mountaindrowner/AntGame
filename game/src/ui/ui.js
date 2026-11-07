@@ -505,11 +505,11 @@ export function createUI(app) {
           h += `<button data-roomup="${k}" ${pay ? '' : 'disabled'}>${sicon(k)}<b>${R.name} → level ${['', 'I', 'II', 'III'][n + 1]}</b><i>${costIcons(U.cost)} · ${U.fx}</i><i>${pay ? 'ready' : 'short on: ' + SIM.costText(U.cost)}</i></button>`;
         }
       }
-      // Build 75: packed passages, bought once.
+      // Build 74: packed passages, bought once.
       { const lock = SIM.passagesLock(s), pay = SIM.canPay(c, SIM.PASSAGES.cost);
         h += `</div><div class="t" style="margin-top:10px">The nest</div><div class="btns"><button data-passages="1" ${lock || !pay ? 'disabled' : ''}><b>Packed passages</b><i>${costIcons(SIM.PASSAGES.cost)} · Every ant walks the nest 40% faster</i><i>${lock === 'done' ? 'done' : lock || (pay ? 'ready' : 'short on: ' + SIM.costText(SIM.PASSAGES.cost))}</i></button>`; }
       h += `</div>` + groundList(s, c) + `<div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
-      h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
+      h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt (from the spoil heap, three times as fast)</i></button>`;
       h += `<button data-tool="remove"><b>Remove room</b><i>Tap a room to tear it out, half the cost back</i></button>`;
       h += `<button data-cleardigs="1" ${s.nest.digOrders.length || s.nest.fillOrders.length || s.colony.buildQueue.length ? '' : 'disabled'}><b>Clear orders</b><i>Cancel pending digs, fills and rooms not yet built (cost back)</i></button>`;
       h += `</div>`;

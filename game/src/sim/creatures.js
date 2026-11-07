@@ -4,7 +4,7 @@ import { AREA, AREAS, areaBounds } from './yard.js';
 import { CASTES, FOODS, H, SURF, T, W, idx } from './core.js';
 import { killAnt } from './colony.js';
 import { itemAt, walk } from './world.js';
-import { wet } from './nest.js';
+import { rainK, wet } from './nest.js';
 import { bite, gainGenes, gainXp, picked, reachOf, stingSlow, trailHome, youL } from './progress.js';
 import { stepZbug } from './wilds.js';
 import { DIURNAL, isNight } from './tick.js';
@@ -391,7 +391,7 @@ export function tickSplash(s, dt){
   const P = s.player;
   for (const a of s.ants){
     if (!outside(a) || a.knockT > 0 || (a.isPlayer && P.big)) continue;
-    if (Math.random() > dt*(a.isPlayer ? 0.12 : 0.08)) continue;
+    if (Math.random() > dt*(a.isPlayer ? 0.12 : 0.08)*rainK(s)) continue; // build 75: as hard as it's raining
     const ang = Math.random()*Math.PI*2, d = (1 + Math.random())*T*(a.isPlayer ? 0.6 : 1);
     a.knockT = 0.3; a.kx = Math.cos(ang)*d/0.3; a.ky = Math.sin(ang)*d/0.3; a.hitT = s.t;
     s.splashes.push({ x: a.x, y: a.y, t: s.t }); if (s.splashes.length > 40) s.splashes.shift();

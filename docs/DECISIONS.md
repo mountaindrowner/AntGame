@@ -2,6 +2,17 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: Phase 5, the yard and the air (build 75)
+
+Mark's notes: the sand bucket "looks weird… it's not hollow"; "you wouldn't find tiny little apple cores the same size as an ant, but you might find a larger apple core somewhere"; the night glow "would be an evolution… something minor"; "make sure that rain fades in"; the spoil heap: "maybe builders can use it to fill holes". Each piece is reasoned out in [`PHASE5.md`](PHASE5.md), then built:
+- **Rain fades in:** every storm has a strength that the streaks, the ground splashes, the grey of the sky, the sound and the raindrop knocks all follow. Ten seconds of scattered drops after the thunder, twelve seconds building to the downpour, then easing off over the last ten. Storms last 40 s (was 30) so the downpour keeps its time: a balance change, Mark's to tune.
+- **The sand bucket** lies tipped on its side, its mouth to the view: a hollow ribbed shell with a pale inside, a rolled rim, a closed bottom, a handle, sand still in it and a tongue of sand spilled out.
+- **Hidden antlion pits:** each is a faint dimple in the sand until one of your ants comes within a few tiles; then sand trickles in (with a sound, and a line the first time) and it shows in full, for good. Three more, smaller pits join the seven (from their own random stream, so nothing else in a saved yard moves). Their danger is unchanged.
+- **Food at a believable size:** one apple core in the yard at a time, in the Compost Heap: drawn at its real size (about fifteen ants long, lathe-turned, bitten to the core, red skin left on its ends), worth 150 to 200 food, shrinking as it's eaten. The rest of the compost gives berries, crumbs and seeds.
+- **The spoil heap fills holes:** a fill packs a load of dug dirt back in (from the loads waiting inside, or the heap by the door) three times as fast as chewing the walls, and the heap shrinks. Tapping the heap says so.
+- **Bioluminescence,** a small Senses node after Rain sense (3 genes): at night your ants glow a faint blue, with a soft light pooled under each, and their trails glow blue. No stats.
+- Tests in `phase5.test.js`; the rain-knock test now runs in the downpour.
+
 ## Nov 7: Phase 4, the nest (build 74)
 
 Mark's answers: "Only in a closed chamber and hallway", "Place myself and yes drag to dig", "If we can birth it as different ants it should have those abilities", "Yes crew and water". Each piece is reasoned out in [`PHASE4.md`](PHASE4.md), then built.

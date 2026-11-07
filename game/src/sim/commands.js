@@ -41,7 +41,7 @@ export function roomLock(s, room){
 // Room levels (build 23): why this room kind can't go up a level now, or ''.
 export function pickLineage(s, k){ const c = s.colony; if (!has(s, 'lineage') || c.lineage || !['acid', 'trapjaw', 'bullet'].includes(k)) return false; c.lineage = k; s.player.msg = 'Your line is ' + { acid: 'Acid', trapjaw: 'Trap-jaw', bullet: 'Bullet' }[k] + ', for good.'; return true; }
 export function roomUpLock(s, key){ const R = ROOMS[key], n = roomLevel(s, key); if (!R.lv) return 'no levels'; if (!roomCount(s, key)) return 'build one first'; if (key === 'fungus' && n === 2 && !dRoomBuilt(s, 'greenhouse')) return 'needs the Garden’s Greenhouse'; /* build 50 */ if (n > R.lv.length) return 'top level'; return ''; }
-export function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; let grew = 0; for (const r of s.nest.rooms) if (r.key === key && !r.grow && growRoom(s, r)) grew++; roomsChanged(s); /* build 75: and it grows a column */ s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.${grew ? ' Builders dig it a column wider.' : ''}`; s.events.push('roomdone'); return true; }
+export function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; let grew = 0; for (const r of s.nest.rooms) if (r.key === key && !r.grow && growRoom(s, r)) grew++; roomsChanged(s); /* build 74: and it grows a column */ s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.${grew ? ' Builders dig it a column wider.' : ''}`; s.events.push('roomdone'); return true; }
 // Build 40: cancel every room still waiting to be built. Not started, all its cost back; started, half.
 export function cancelBuilds(s){
   const c = s.colony; let n = 0;
@@ -62,7 +62,7 @@ export function queueRoom(s, room, cell, at){
   s.nest.fillOrders = s.nest.fillOrders.filter(o => !mine(o.x, o.y)); // build 40: a room's ground isn't filled in
   return true;
 }
-// Build 75 (Phase 4: "faster passages, an upgrade"): builders pack and smooth the galleries; every ant walks
+// Build 74 (Phase 4: "faster passages, an upgrade"): builders pack and smooth the galleries; every ant walks
 // 40% faster in the nest. Bought once, from the Build menu, with a Workshop.
 export const PASSAGES = { cost: { food: 30, grit: 40 }, speed: 1.4 };
 export function passagesLock(s){ if (s.colony.passages) return 'done'; if (!roomOf(s, 'workshop')) return 'needs a Workshop'; return ''; }

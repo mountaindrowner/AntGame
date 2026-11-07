@@ -75,6 +75,7 @@ export class Callout {
     for (const f of s.items) if (f.amt > 0) take(f.carried && f.px != null ? f.px : (f.x + 0.5) * T, f.carried && f.py != null ? f.py : (f.y + 0.5) * T, 1.6 * T, () => itemCard(f));
     if (s.spider) take(s.spider.x, s.spider.y, 3.5 * T, () => { const L = SIM.crippledLegs(s.spider); return ['🕷', 'Wolf spider', `${L ? `${L} of 8 legs crippled. ` : ''}Ring its legs: each ant takes one, and a leg bitten enough is crippled. Thirty ants or five Venom ants can kill it.`]; }, 30); // (build 73: its legs)
     if (s.cat) take(s.cat.x, s.cat.y, 3 * T, () => ['🐛', 'Caterpillar', 'Harmless. 40 protein if a crew brings it down.'], 14);
+    if ((s.spoilPile || 0) >= 1 && s.spoilAt) take((s.spoilAt.x + 0.5) * T, (s.spoilAt.y + 0.5) * T, 2.5 * T, () => ['⛰', 'Spoil heap', `${Math.floor(s.spoilPile)} loads of dug dirt. Builders fill tunnels with it, three times as fast as chewing the walls (Build, Fill tunnel).`], 4); // build 75
     for (const b of s.critters || []) take(b.x, b.y, 2 * T, () => bugCard(b), 10);
     // Build 19: bosses, Cordyceps stalks.
     for (const k in s.bosses || {}) { const b = s.bosses[k]; if (b.dead) continue; const D = SIM.BOSSES[k]; take(b.x, b.y, 4 * T, () => ['👑', D.name, `${D.title}. ${Math.ceil(b.hp)} of ${b.maxHp} health. ${D.tip}`], 40); }

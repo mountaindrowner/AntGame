@@ -78,14 +78,31 @@ function popcorn() {
   return bake(parts);
 }
 
-// Apple core: a pinched waist of cream flesh, red skin top and bottom, a stem.
+// Apple core (build 75: drawn at its real size, so it has the detail to hold it): lying on its side, a pinched
+// waist of flesh scalloped by bites and browning at the edges, red skin left at both ends, dark seeds showing
+// in the middle, a stem at one end and the dry calyx at the other.
 function apple() {
-  const g = new THREE.CylinderGeometry(1, 1, 2.2, 9, 4);
+  // Turned on a lathe round its long axis: rounded ends where the apple's skin is left, a waist eaten down to the core.
+  const prof = [[0.04, -1.1], [0.3, -1.07], [0.56, -0.98], [0.7, -0.84], [0.66, -0.7], [0.5, -0.52], [0.38, -0.3], [0.34, 0], [0.38, 0.3], [0.5, 0.52], [0.66, 0.7], [0.72, 0.84], [0.58, 0.98], [0.32, 1.07], [0.04, 1.1]]
+    .map(([r, y]) => new THREE.Vector2(r, y));
+  const g = new THREE.LatheGeometry(prof, 18);
   const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) { const y = p.getY(i), k = 0.45 + Math.abs(y) * 0.5; p.setXYZ(i, p.getX(i) * k, y, p.getZ(i) * k); }
-  const core = paint(g, (x, y) => (Math.abs(y) > 0.75 ? '#c8282e' : Math.abs(y) < 0.2 && Math.abs(x) < 0.2 ? '#4a2a14' : '#f2e2b0'));
-  const parts = [at(core.rotateZ(Math.PI / 2), 0, 0.95, 0)];
-  parts.push(at(paint(new THREE.CylinderGeometry(0.08, 0.1, 0.6, 4).rotateZ(Math.PI / 2), '#5a3a1e'), 1.4, 1.0, 0));
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i), a = Math.atan2(z, x), u = Math.abs(y) / 1.1;
+    const bite = u < 0.66 ? 1 + 0.12 * Math.sin(a * 5 + y * 3) + 0.06 * Math.sin(a * 11) : 1; // tooth scallops
+    p.setXYZ(i, x * bite, y, z * bite);
+  }
+  g.computeVertexNormals();
+  const core = paint(g, (x, y, z) => {
+    const u = Math.abs(y) / 1.1, a = Math.atan2(z, x);
+    if (u > 0.8) return Math.sin(a * 7 + y) > 0.55 ? '#e2523a' : '#b81e26'; // the skin left on the rounded ends
+    if (u > 0.64) return '#d4a868'; // browned where it was bitten to
+    if (u < 0.18 && Math.sin(a * 5) > 0.5) return '#3a2010'; // seeds
+    return Math.sin(a * 9 + y * 5) > 0.7 ? '#e6cf92' : '#f2e2b0';
+  });
+  const parts = [at(core.rotateZ(Math.PI / 2), 0, 0.72, 0)];
+  parts.push(at(paint(new THREE.CylinderGeometry(0.05, 0.08, 0.55, 5).rotateZ(Math.PI / 2 - 0.3), '#5a3a1e'), 1.32, 0.82, 0));
+  for (let k = 0; k < 5; k++) { const a = (k / 5) * Math.PI * 2; parts.push(at(paint(new THREE.ConeGeometry(0.06, 0.24, 3).rotateZ(-Math.PI / 2), '#4a3a22'), -1.16, 0.72 + Math.cos(a) * 0.08, Math.sin(a) * 0.08)); }
   return bake(parts);
 }
 
@@ -318,7 +335,7 @@ export function itemLook(f, COLORS) {
     case 'acorn': return { geo: FOOD.acorn, key: 'acorn', color: '#ffffff', r: 6, treat: true };
     case 'cap': return { geo: FOOD.cap, key: 'cap', color: '#ffffff', r: 5.5, treat: true };
     case 'chip': return { geo: FOOD.chip, key: 'chip', color: '#ffffff', r: 6.5, treat: true };
-    case 'apple': return { geo: FOOD.apple, key: 'apple', color: '#ffffff', r: Math.min(6.5, 3.5 + f.amt * 0.12) };
+    case 'apple': return { geo: FOOD.apple, key: 'apple', color: '#ffffff', r: 9 + Math.min(200, f.amt) * 0.13 }; // build 75: real size, about fifteen ants long; it shrinks as it's eaten
     case 'popcorn': return { geo: FOOD.popcorn, key: 'popcorn', color: '#ffffff', r: Math.min(5.5, 3 + f.amt * 0.16) };
     case 'jellybean': return { geo: FOOD.jellybean[v % 3], key: 'jb' + (v % 3), color: '#ffffff', r: 5 + f.amt * 0.14, treat: true };
     case 'cookie': return { geo: FOOD.cookie, key: 'cookie', color: '#ffffff', r: 5 + f.amt * 0.15, treat: true };

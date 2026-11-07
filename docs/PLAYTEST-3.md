@@ -67,6 +67,8 @@ Mark's answers: rooms only in a closed chamber with a hallway; he places them hi
 
 ### Phase 5: the yard and the air
 
+**Done in build 75**, each piece thought through first in [`PHASE5.md`](PHASE5.md).
+
 1. **Rain fades in.** "A few drips, and then slowly it picks up."
 2. **Hidden antlion holes in the sandpit.** "A little more hidden… like the hole at the end of the game, but lesser." The sand pail "looks odd".
 3. **Food ants would really find.** "Apple cores… probably not realistic… should be crumbs and stuff." (Apple cores are only in the Compost Heap already.)

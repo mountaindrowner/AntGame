@@ -342,6 +342,21 @@ export function makeYard(seed) {
       if (d < pr * 0.5) pit[idx(xx, yy)] = 2; else if (d < pr * 1.05) pit[idx(xx, yy)] = 1;
     }
   }
+  // Build 75: three smaller pits among them, from their own random stream (the yard's own is left as it was, so
+  // nothing else moves in a saved game).
+  { let h = 7517; const r2 = () => (h = (h * 1103515245 + 12345) >>> 0) / 4294967296, qr = 1.2 * S;
+    for (let i = 0, n = 0; i < 120 && n < 3; i++) {
+      const x = sb.x0 + u(4) + r2() * (sb.x1 - sb.x0 - u(8)), y = sb.y0 + u(4) + r2() * (sb.y1 - sb.y0 - u(8));
+      if (pits.some((p) => Math.hypot(p.x - x, p.y - y) < (p.r + qr) * 1.9)) continue;
+      let ok = true;
+      for (let yy = Math.floor(y - qr - 1); yy <= y + qr + 1; yy++) for (let xx = Math.floor(x - qr - 1); xx <= x + qr + 1; xx++) if (blocked[idx(xx, yy)]) ok = false;
+      if (!ok) continue;
+      pits.push({ x, y, r: qr }); n++;
+      for (let yy = Math.floor(y - qr - 1); yy <= y + qr + 1; yy++) for (let xx = Math.floor(x - qr - 1); xx <= x + qr + 1; xx++) {
+        const d = Math.hypot(xx + 0.5 - x, yy + 0.5 - y);
+        if (d < qr * 0.5) pit[idx(xx, yy)] = 2; else if (d < qr * 1.05 && !pit[idx(xx, yy)]) pit[idx(xx, yy)] = 1;
+      }
+    } }
   landmarks.push({ kind: 'pits', pits });
 
   // The Lawn. A few stones in deep grass (the renderer grows the grass).

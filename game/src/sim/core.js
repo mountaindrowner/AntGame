@@ -135,7 +135,7 @@ export const FOODS = {
   seed:     {name:'seed', amt:[20,20]},
   berry:    {name:'berry', amt:[10,14]},
   popcorn:  {name:'popcorn', amt:[12,16]},
-  apple:    {name:'apple core', amt:[20,28]},
+  apple:    {name:'apple core', amt:[150,200]}, // build 75: one at a time, at its real size (a feast, not a crumb)
   tomato:   {name:'piece of tomato', amt:[16,22]},
   // Aphids on a stem: milked for honeydew, they refill like a puddle.
   aphids:   {name:'aphids', amt:[20,20]},

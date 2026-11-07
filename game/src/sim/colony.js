@@ -174,13 +174,16 @@ export function tickColony(s, c, dt){
     if (job){ const builders = atWork('j') + youBuild(s, job);
       job.progress += builders*ws*dt; const R = ROOMS[job.room];
       if (job.progress >= R.work){ for (const a of crewOf('j')) gainXp(s, a, 3); c.buildQueue.splice(c.buildQueue.indexOf(job), 1); finishRoom(s, job); } }
-    for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; if (s.nest.cells[nidx(o.x,o.y)] === 2){ s.nest.fillOrders.splice(i, 1); continue; } /* never into a room */ const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
+    for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; if (s.nest.cells[nidx(o.x,o.y)] === 2){ s.nest.fillOrders.splice(i, 1); continue; } /* never into a room */ const b = atWork('f'+o.x+','+o.y), dirt = (s.nest.spoil || 0) + (s.spoilPile || 0) >= 1; o.progress += b*ws*dt*(dirt ? FILL_FAST : 1); /* build 75: with dug dirt to hand, three times as fast */ if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); if ((s.nest.spoil || 0) >= 1) s.nest.spoil--; else if ((s.spoilPile || 0) >= 1) s.spoilPile--; } } }
     const full = (s.nest.spoil||0) >= SPOIL_MAX; // dirt waiting to go out: digging stops
     for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y) + youDig(s, o); o.progress += o.glow ? Math.min(b*ws, 1)*(joined(s, 'quarry') ? 1.25 : 1)*dt : b*ws*dt; /* build 52: glowrock comes out at its own pace */ if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); bedrockGlow(s, o.y); if (o.glow) gainGlow(s, 1, 'dug'); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
   }
 }
 // Build 74 (Mark: "what's the point of your ant being a builder if he cannot dig himself?"): a builder you play
 // digs the order beside it and builds the room it stands in, at twice a builder's pace.
+// Build 75 (Mark: "maybe builders can use it to fill holes"): a fill packs a load of dug dirt back in, from the
+// loads waiting inside or the spoil heap by the door, three times as fast as chewing it from the walls.
+export const FILL_FAST = 3;
 function youNurse(s){ const P = s.player, a = P.ant; if (!a || !P.inNest || P.nestKey || a.caste !== 'nurse') return false; const r = roomOf(s, 'hatchery') || s.queen.room, x = Math.floor(a.nx), y = Math.floor(a.ny); return !!r && x >= r.x0 - 1 && x <= r.x0 + (r.w || 4) && y >= r.y0 - 1 && y <= r.y0 + (r.h || 3); }
 function youBuilder(s){ const P = s.player, a = P.ant; return a && P.inNest && !P.nestKey && a.caste === 'builder' ? a : null; }
 function youBuild(s, job){ const a = youBuilder(s); if (!a) return 0; const x = Math.floor(a.nx), y = Math.floor(a.ny); return x >= job.x0 && x < job.x0 + job.w && y >= job.y0 && y < job.y0 + job.h ? 2 : 0; }
@@ -255,7 +258,7 @@ export function tickInside(s, a, dt){
   }
   if (a.state === 'in' && a.goal == null){ const [tx,ty] = roomTarget(s, a); a.ntx = tx; a.nty = ty; a.goal = 'idle'; }
   // walk inside; work only counts once the builder stands on its own cell
-  const arrived = nestStep(s, a, C.speed*0.8*(c.passages ? PASSAGES.speed : 1), dt); // build 75: packed passages
+  const arrived = nestStep(s, a, C.speed*0.8*(c.passages ? PASSAGES.speed : 1), dt); // build 74: packed passages
   a.atWork = a.state === 'build' && arrived && Math.floor(a.nx) === a.ntx && Math.floor(a.ny) === a.nty;
   // A hauler at the top of the shaft takes a load of dirt out.
   if (a.task === 'h' && a.atWork){ a.task = null; a.taskCell = null;

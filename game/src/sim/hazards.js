@@ -29,7 +29,12 @@ export function tickMower(s, dt){
 // the antlion bites.
 export function tickPits(s, dt){
   const w = s.world; if (!w.pits.length) return;
-  const spared = s.colony.trophies.mandible;
+  const spared = s.colony.trophies.mandible, seen = s.colony.pitsSeen || (s.colony.pitsSeen = []);
+  // Build 75 (Mark: "a little more hidden"): a pit is a faint dimple until one of your ants comes close, or one is
+  // caught in it; then it shows, for good.
+  s.pitT = (s.pitT || 0) + dt; if (s.pitT >= 0.25){ s.pitT = 0;
+    w.pits.forEach((q, i) => { if (seen.includes(i)) return; const near = s.ants.some(a => !a.team && outside(a) && Math.abs(a.x/T - q.x) < q.r + 2.5 && Math.abs(a.y/T - q.y) < q.r + 2.5 && Math.hypot(a.x/T - q.x, a.y/T - q.y) < q.r + 2.5);
+      if (near){ seen.push(i); s.pitSeenAt = s.pitSeenAt || {}; s.pitSeenAt[i] = s.t; s.events.push('pitfound'); if (!s.seen.pitfound){ s.seen.pitfound = true; s.player.msg = 'Sand trickles into a hollow: an antlion pit, hidden in the sand. There are more.'; } } }); }
   for (const a of s.ants){ if (a.state==='dead'||a.state==='in'||a.state==='build'||a.state==='nest') continue;
     if (spared && !a.team) continue;
     const p = w.pit[idx(Math.floor(a.x/T), Math.floor(a.y/T))]; if (!p) continue;

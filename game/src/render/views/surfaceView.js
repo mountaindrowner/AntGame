@@ -20,7 +20,7 @@ import { PROPS } from '../models/props.js';
 import { FOOD, itemLook, carryLook } from '../models/food.js';
 import { MotionTracker, idlePose } from '../motion.js';
 import { rankOf } from '../../sim/growth.js';
-import { YardScenery, mowerMesh } from './yardScenery.js';
+import { YardScenery, mowerMesh, pitGeometry } from './yardScenery.js';
 import { sneaker } from '../models/sneaker.js';
 import { robin } from '../models/bird.js';
 import { toad, fallingAcorn } from '../models/toad.js';
@@ -48,7 +48,7 @@ const TOAD = 48;
 // toad model scale (px a unit): about six tiles nose to tail
 const UP = new THREE.Vector3(0, 1, 0);
 const tmpV = new THREE.Vector3();
-const tmpC = new THREE.Color(), tmpC2 = new THREE.Color();
+const tmpC = new THREE.Color(), tmpC2 = new THREE.Color(), tmpC3 = new THREE.Color(), tmpC4 = new THREE.Color();
 const DAUGHTER_FLAG = { war: '#c8302a', brood: '#f2e6c8', watch: '#3a7ad8', quarry: '#8a8478', garden: '#4caf50' }; // build 46
 // Build 43: the colours of the day: sky and fog by day, dusk, night, the moon.
 const BOSS_VIEWS = [drawHornworm, drawBeetle, drawAntlion, drawRobin, drawNevermore, drawWarty, drawOldBlind, drawHornets, drawCordyceps, drawDuke, drawMantis, drawWidow, drawCentipede];
@@ -436,7 +436,7 @@ export class SurfaceView {
     }
     if (any) {
       if (!this.tc) { this.tc = new THREE.Color(COLORS.trail).lerp(new THREE.Color('#ffffff'), 0.4); this.ac = new THREE.Color(COLORS.alarm); }
-      const tc = this.tc, ac = this.ac, drift = time * 0.35;
+      const gk = this.glowK || 0, tc = gk ? (this.tcg || (this.tcg = new THREE.Color())).copy(this.tc).lerp(tmpC4.set('#5ac8ff'), gk) : this.tc, ac = this.ac, drift = time * 0.35; // build 75: trails glow blue at night
       for (let ty = 0; ty < TW; ty++) {
         const fy = Math.max(0, Math.min(SW - 1.001, (ty + 0.5) / SR - 0.5)), j = Math.floor(fy), v = fy - j;
         for (let tx = 0; tx < TW; tx++) {
@@ -450,7 +450,7 @@ export class SurfaceView {
           let aa = Math.pow(ts, 0.8) * (0.25 + 0.75 * wisp * wisp) * 0.7, rr = tc.r, gg = tc.g, bb = tc.b;
           if (as > 0.01) { const m = Math.min(1, as * (0.4 + 0.6 * wisp)); rr = rr * (1 - m) + ac.r * m; gg = gg * (1 - m) + ac.g * m; bb = bb * (1 - m) + ac.b * m; aa = Math.max(aa, m * 0.6); }
           const o = (ty * TW + tx) * 4;
-          d[o] = rr * 255; d[o + 1] = gg * 255; d[o + 2] = bb * 255; d[o + 3] = Math.min(0.55, aa) * 255;
+          d[o] = rr * 255; d[o + 1] = gg * 255; d[o + 2] = bb * 255; d[o + 3] = Math.min(0.55 + 0.2 * gk, aa * (1 + 0.6 * gk)) * 255;
         }
       }
     }
@@ -489,6 +489,7 @@ export class SurfaceView {
     const P = s.player, w = s.world;
     const frameT = Math.floor(t * RENDER.animFps);
 
+    this.glowK = SIM.has(s, 'glow') ? Math.max(0, Math.min(1, (1 - SIM.daylight(s)) * 1.4)) : 0; // build 75
     this._updateScent(s, t);
     // The spoil heap grows with the loads dumped on it.
     const pile = s.spoilPile || 0;
@@ -503,9 +504,12 @@ export class SurfaceView {
     this.crowd.begin();
     this.marks.begin();
     if (this.oakFor !== s) { this.oakFor = s; this.oakL = s.world.landmarks.find((l) => l.kind === 'oak') || null; }
+    // Build 75: Bioluminescence: at night your ants glow a faint blue, and a soft light pools under each.
+    const gk = this.glowK;
     const ant = (a, color, scaleMul) => {
       const C = CASTES[a.caste];
       const k = (C.r / 2.2) * (scaleMul || 1) * ANT_SCALE.surface;
+      if (gk > 0.02 && !a.team && !a.zombie) { color = '#' + tmpC3.set(color).lerp(tmpC4.set('#8fd4ff'), 0.5 * gk).getHexString(); tmpV.set(a.x, 0.45, a.y); this.marks.pushAt('glow', SHADOW_DISC, tmpV, tmpQ.identity(), 5 * k * (0.9 + 0.1 * Math.sin(t * 2.3 + a.id)), '#' + tmpC3.set('#141c2a').lerp(tmpC4.set('#2a78b8'), 0.75 * gk).getHexString()); }
       const moving = this.motion.moving(a.id, a.x, a.y, t);
       const idle = moving ? null : idlePose(a, t);
       const frame = idle ? idle.frame : (frameT + a.id) % WALK_FRAMES;
@@ -653,6 +657,7 @@ export class SurfaceView {
     this._spider(s, t, fdt);
     this._caterpillar(s, t, fdt);
     this.bugs.begin(); this.fx.begin(); this.dustFx.begin();
+    this._pits(s, t);
     this._critters(s, t, fdt);
     this._fx(s, t, fdt);
     this._bosses(s, t, fdt);
@@ -663,16 +668,16 @@ export class SurfaceView {
     this.bugs.end(); this.fx.end(); this.dustFx.end();
 
     // Weather and light.
-    const raining = s.rain.on;
-    this.rain.visible = raining;
+    const rk = SIM.rainK(s), raining = rk > 0; // build 75: rain fades in and out
+    this.rain.visible = raining; this.rainK = rk;
     // Build 43: day and night. L: 1 full day, 0 night; dusk and dawn go orange on the way.
     const L = SIM.daylight(s), glow = Math.max(0, 1 - Math.abs(L - 0.45) / 0.45) * (L < 1 ? 1 : 0);
-    const skyDay = raining ? DAYC.rainSky : DAYC.sky, fogDay = raining ? DAYC.rainSky : DAYC.fog;
+    const skyDay = tmpC3.set(DAYC.sky).lerp(tmpC4.set(DAYC.rainSky), Math.min(1, rk * 1.4)).getStyle(), fogDay = tmpC3.set(DAYC.fog).lerp(tmpC4.set(DAYC.rainSky), Math.min(1, rk * 1.4)).getStyle();
     this.scene.background.copy(tmpC.set(DAYC.night).lerp(tmpC2.set(skyDay), L)).lerp(tmpC2.set(DAYC.dusk), glow * 0.55);
     this.scene.fog.color.copy(tmpC.set(DAYC.nightFog).lerp(tmpC2.set(fogDay), L)).lerp(tmpC2.set(DAYC.dusk), glow * 0.45);
-    this.hemi.intensity = (raining ? 0.75 : 1.25) * (0.42 + 0.58 * L);
+    this.hemi.intensity = (1.25 - 0.5 * Math.min(1, rk * 1.4)) * (0.42 + 0.58 * L);
     this.hemi.color.set(DAYC.hemiNight).lerp(tmpC2.set('#fff2dc'), L);
-    this.sun.intensity = (raining ? 0.35 : 1.6) * Math.max(0.22, L);
+    this.sun.intensity = (1.6 - 1.25 * Math.min(1, rk * 1.4)) * Math.max(0.22, L);
     this.sun.color.set(DAYC.moon).lerp(tmpC2.set('#fff0d8'), L).lerp(tmpC2.set(DAYC.dusk), glow * 0.6);
     // At night a soft pool of light round your ant, so you can see where you go.
     const pa2 = P.ant && !P.inNest ? P.ant : null;
@@ -1161,12 +1166,24 @@ export class SurfaceView {
       }
     };
     for (const sp of s.splashes || []) { const u = (s.t - sp.t) / 0.6; if (u >= 0 && u <= 1) splash(sp.x, sp.y, u, true); }
-    if (s.rain.on) {
-      const span = Math.max(420, (this.reach || 16) * T * 2), k = Math.min(10, (span / 420) ** 2);
+    if (this.rainK > 0) {
+      const span = Math.max(420, (this.reach || 16) * T * 2), k = Math.min(10, (span / 420) ** 2) * this.rainK;
       for (let n = Math.round(fdt * 70 * k + Math.random() * 0.5); n > 0; n--) this.drops.push({ x: this.target.x + (Math.random() - 0.5) * span, z: this.target.z + (Math.random() - 0.5) * span * 0.75, t });
     }
     this.drops = this.drops.filter((d) => t - d.t < 0.4);
     for (const d of this.drops) splash(d.x, d.z, (t - d.t) / 0.4, false);
+  }
+
+  // Build 75: antlion pits your ants have found: the full funnel over the baked dimple, and for a moment as it's
+  // found, sand trickling down into it.
+  _pits(s, t) {
+    const seen = s.colony.pitsSeen || [], pits = s.world.pits;
+    if (!this.pitMeshes || this.pitWorld !== s.world) { if (this.pitMeshes) for (const m of this.pitMeshes.values()) { this.scene.remove(m); m.geometry.dispose(); } this.pitMeshes = new Map(); this.pitWorld = s.world; this.pitMat = this.pitMat || psx({ vertexColors: true }); }
+    for (const i of seen) if (!this.pitMeshes.has(i) && pits[i]) { const m = new THREE.Mesh(pitGeometry(pits[i], true), this.pitMat); this.scene.add(m); this.pitMeshes.set(i, m); }
+    const at = s.pitSeenAt || {};
+    for (const i in at) { const u = (s.t - at[i]) / 2.2, q = pits[i]; if (!q || u < 0 || u > 1) continue;
+      for (let k = 0; k < 10; k++) { const ph = (u * 3 + k / 10) % 1, a = k * 2.4 + i, rr = q.r * T * (1.15 - ph);
+        tmpV.set(q.x * T + Math.cos(a) * rr, 1.5 + (1 - ph) * 2, q.y * T + Math.sin(a) * rr); this.fx.pushAt('trickle', PROPS.pebble, tmpV, tmpQ.identity(), 0.9 * (1 - u * 0.6), k % 2 ? '#d8c08c' : '#b89c6c'); } }
   }
 
   // Build 19: the bosses, their telegraphs, and the pieces of the events.
@@ -1298,7 +1315,7 @@ export class SurfaceView {
     const pos = this.rain.geometry.attributes.position.array, sd = this.rainSeeds;
     const span = Math.max(520, (this.reach || 16) * T * 2.2), hgt = 260;
     // The same density however far you see: more streaks for a bigger box.
-    const n = Math.min(sd.length / 3, Math.round(420 * (span / 520) ** 2));
+    const n = Math.min(sd.length / 3, Math.round(420 * (span / 520) ** 2 * (this.rainK ?? 1)));
     this.rain.geometry.setDrawRange(0, n * 2);
     for (let i = 0; i < n; i++) {
       const x = this.target.x + (sd[i * 3] - 0.5) * span;

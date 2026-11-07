@@ -86,6 +86,7 @@ export function spawnFood(s, ai, treats){
   let tot = 0; for (const f of A.foods) tot += f[1];
   let r = w.rnd()*tot, type = A.foods[0][0];
   for (const f of A.foods){ r -= f[1]; if (r <= 0){ type = f[0]; break; } }
+  if (type === 'apple' && s.items.some(f => f.type === 'apple')) type = 'berry'; // build 75: one apple core in the yard at a time
   return spawnInArea(s, ai, FOODS[type] && FOODS[type].protein ? 'protein' : 'food', type);
 }
 // How far foragers roam on their own: farther with each forage level and with some evolutions.
