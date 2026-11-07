@@ -505,6 +505,9 @@ export function createUI(app) {
           h += `<button data-roomup="${k}" ${pay ? '' : 'disabled'}>${sicon(k)}<b>${R.name} → level ${['', 'I', 'II', 'III'][n + 1]}</b><i>${costIcons(U.cost)} · ${U.fx}</i><i>${pay ? 'ready' : 'short on: ' + SIM.costText(U.cost)}</i></button>`;
         }
       }
+      // Build 75: packed passages, bought once.
+      { const lock = SIM.passagesLock(s), pay = SIM.canPay(c, SIM.PASSAGES.cost);
+        h += `</div><div class="t" style="margin-top:10px">The nest</div><div class="btns"><button data-passages="1" ${lock || !pay ? 'disabled' : ''}><b>Packed passages</b><i>${costIcons(SIM.PASSAGES.cost)} · Every ant walks the nest 40% faster</i><i>${lock === 'done' ? 'done' : lock || (pay ? 'ready' : 'short on: ' + SIM.costText(SIM.PASSAGES.cost))}</i></button>`; }
       h += `</div>` + groundList(s, c) + `<div class="t" style="margin-top:10px">Tools</div><div class="btns">`;
       h += `<button data-tool="fill"><b>Fill tunnel</b><i>Tap dug cells to have builders pack them back with dirt</i></button>`;
       h += `<button data-tool="remove"><b>Remove room</b><i>Tap a room to tear it out, half the cost back</i></button>`;
@@ -965,6 +968,7 @@ export function createUI(app) {
     if (b.dataset.droom) { const [dk, rk] = b.dataset.droom.split(':'); if (SIM.buildDRoom(s, dk, rk)) sfx.play('roomPlaced'); else flash(SIM.DROOMS[rk].name + ': ' + SIM.dRoomLock(s, dk, rk) + '.', /:/, 2600); renderSheet(); return; }
     if (b.dataset.egg) { SIM.queueEgg(s, b.dataset.egg); renderSheet(); return; }
     if (b.dataset.roomup) { SIM.upgradeRoom(s, b.dataset.roomup); renderSheet(); return; }
+    if (b.dataset.passages) { SIM.buyPassages(s); renderSheet(); return; }
     if (b.dataset.up) { SIM.upgradeQueen(s); renderSheet(); return; }
     if (b.dataset.forage) { SIM.upgradeForage(s); renderSheet(); return; }
     if (b.dataset.grow) { openEvo(b.dataset.grow); return; }

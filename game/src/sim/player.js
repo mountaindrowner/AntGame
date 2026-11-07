@@ -7,6 +7,7 @@ import { carveRoom, dig, nestStep } from './nest.js';
 import { GRAIN, bite, discover, gainXp, has, maxHp, picked, storeCap, youHp, youL, youPace } from './progress.js';
 import { heldFx } from './outposts.js';
 import { endRaid } from './raids.js';
+import { PASSAGES } from './commands.js';
 import { CAT_REACH, SPIDER_REACH } from './spider.js';
 import { outside } from './hazards.js';
 import { BUGS, knock } from './creatures.js';
@@ -24,7 +25,7 @@ export function stepPlayer(s, a, dt, enemiesNear){
   if (P.inNest){
     // walk inside the nest
     if (P.ntx != null){ a.ntx = P.ntx; a.nty = P.nty; }
-    const arrived = nestStep(s, a, 70, dt);
+    const arrived = nestStep(s, a, 70*(s.colony.passages ? PASSAGES.speed : 1), dt);
     if (arrived && P.ntx != null && Math.floor(a.nx) === SHAFT && Math.floor(a.ny) === 0 && P.exiting){ P.exiting = false; P.ntx = null; P.inNest = false; a.tx = w.ex; a.ty = w.ey; a.x = (w.ex+0.5)*T; a.y = (w.ey+0.5)*T; a.state = 'player'; P.tx = null; return; }
     if (arrived) P.ntx = null;
     P.hunger = Math.min(100, P.hunger + 10*dt);

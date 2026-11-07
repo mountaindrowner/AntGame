@@ -210,6 +210,9 @@ export function waterGeometry(r, h) {
 }
 const PROP_KEY = new Map([...Object.entries(PROPS), ...Object.entries(NEST).map(([k, g]) => ['n:' + k, g])].map(([k, g]) => [g, k]));
 
+const FOG = [null, '#3a2616', '#22160c', '#100a06'];
+// Build 75: each room's lamp, by the room: fungus glow, glow-worms, a lit honey drop, warm by default.
+const LAMP = { default: '#ffc078', fungus: '#c8f0a0', dairy: '#ffd890', honeypot: '#ffb848', infirmary: '#d8f0ff', cistern: '#b8e0ff', nursery: '#ffe0c0', barracks: '#ff9c60', midden: '#c0d890', queen: '#ffd8a0' };
 const tmpV = new THREE.Vector3();
 const tmpQ = new THREE.Quaternion();
 const tmpM = new THREE.Matrix4();
@@ -234,8 +237,10 @@ export class NestView {
     this.camera = new THREE.PerspectiveCamera(36, 1, 4, 4000);
     this.scene.background = new THREE.Color('#9bc7e6');
     this.scene.fog = new THREE.Fog('#1a1009', 900, 1800);
-    this.hemi = new THREE.HemisphereLight('#ffe8c8', '#3a2a1c', 1.1);
-    this.key = new THREE.DirectionalLight('#fff0d8', 1.1);
+    // Build 75 (Mark: "the nest is all a little flat… each room comes with a little bit of lighting"): dimmer earth,
+    // so each room's lamp is a pool of light.
+    this.hemi = new THREE.HemisphereLight('#ffe8c8', '#3a2a1c', 0.5);
+    this.key = new THREE.DirectionalLight('#fff0d8', 0.55);
     this.key.position.set(-0.3, 0.6, 1);
     this.scene.add(this.hemi, this.key);
 
@@ -292,6 +297,9 @@ export class NestView {
     this.overlay = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.85, depthWrite: false }, { snap: false }));
     // Construction dust: a cloud over a room while it's built, which clears when it's done.
     this.dust = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false }));
+    // Build 75: the fog below the topsoil, over ground you haven't dug near.
+    this.fog = new Crowd(this.dyn, psxBasic({ vertexColors: true, transparent: true, opacity: 0.9, depthWrite: false }, { snap: false }));
+    this.fogVer = -1;
     this.clearing = [];
     this.knownRooms = null;
     this.lastProg = new Map();
@@ -306,8 +314,8 @@ export class NestView {
     // Her crown rides on her head (build 20.2).
     this.queenMesh.add(new THREE.Mesh(outfitGeometry('queen'), psx({ vertexColors: true })));
     this.roomLights = [];
-    for (let i = 0; i < 8; i++) {
-      const l = new THREE.PointLight('#ffb870', 0, 140, 1.4);
+    for (let i = 0; i < 10; i++) {
+      const l = new THREE.PointLight('#ffb870', 0, 200, 1.1);
       this.scene.add(l);
       this.roomLights.push(l);
     }
@@ -492,13 +500,21 @@ export class NestView {
     this._rebuildPanels(n.rooms);
     this._water(n.rooms, col);
     const put = (geo, p, sc, color, rot) => this._put(geo, p, sc, color, rot);
+    // Each room's lamp (build 75): a glowing cap at the ceiling, lit by its own warm light. The lights go to the
+    // rooms nearest the view.
+    const tx = this.target.x, ty = this.target.y, lit = n.rooms.map((r, i) => [i, Math.hypot((r.x0 + (r.w || 4) / 2) * T - tx, -(r.y0 + 1.5) * T - ty)]).sort((p, q) => p[1] - q[1]).slice(0, this.roomLights.length).map((p) => p[0]);
     n.rooms.forEach((r, i) => {
       const rw = r.w || 4, rh = r.h || 3;
       dressRoom(r, { T, DEPTH, t, col, put, tier: SIM.soilTier(r.y0 + rh - 1), ceil: roomCeiling(r) });
-      if (i < this.roomLights.length) {
-        const l = this.roomLights[i];
-        l.intensity = 1.4 + 0.12 * Math.sin(t * 9 + i * 2);
-        l.position.set((r.x0 + rw / 2) * T, -(r.y0 + 0.8) * T, -DEPTH * 0.3);
+      const lamp = LAMP[r.key] || LAMP.default, lx = (r.x0 + rw / 2) * T, ly = -(r.y0 + 0.75) * T, f = 1 + 0.06 * Math.sin(t * 7 + i * 2) + 0.04 * Math.sin(t * 13 + i);
+      this.dust.pushAt('puff', PUFF, tmpV.set(lx, ly, -DEPTH * 0.2), Q_ID, 4.2 * f, lamp); // its glow
+      this._put(NEST.egg, [lx, ly, -DEPTH * 0.2], [1.5 * f, 1.2, 1.5 * f], '#fff4d0');
+      this._put(NEST.egg, [lx, ly + 6, -DEPTH * 0.2], [0.5, 9, 0.5], '#4a3020'); // the root it hangs from
+      const li = lit.indexOf(i);
+      if (li >= 0) {
+        const l = this.roomLights[li];
+        l.color.set(lamp); l.intensity = 3.2 * f;
+        l.position.set(lx, -(r.y0 + 1.1) * T, -DEPTH * 0.15);
       }
       this.labels.push({ text: ROOMS[r.key].name, x: (r.x0 + rw / 2) * T, y: -r.y0 * T - 2, z: 0, kind: 'room' });
     });
@@ -533,12 +549,13 @@ export class NestView {
       const pr = Math.min(1, j.progress / ROOMS[j.room].work);
       this._fill(j.x0 * T + 4, (j.y0 + j.h) * T - 7, j.w * T - 8, 3, '#000000');
       this._fill(j.x0 * T + 4, (j.y0 + j.h) * T - 7, (j.w * T - 8) * pr, 3, '#ffd34d', 0.7);
-      this.labels.push({ text: ROOMS[j.room].name + ' ' + Math.round(pr * 100) + '%', x: (j.x0 + j.w / 2) * T, y: -j.y0 * T - 2, z: 0, kind: 'room' });
+      this.labels.push({ text: ROOMS[j.room].name + (j.wait ? ': digging out' : ' ' + Math.round(pr * 100) + '%'), x: (j.x0 + j.w / 2) * T, y: -j.y0 * T - 2, z: 0, kind: 'room' }); // build 74: a plan waits to be dug
     }
     // Building: a cloud of dust hides the room while builders work, with
     // clods of dirt flying out of it. When the room is finished the cloud
     // swells and clears, and there it is.
     for (const j of col.buildQueue) {
+      if (j.wait) continue;
       const seed = j.x0 * 31 + j.y0 * 17, busy = j.progress > 0;
       this._cloud(j.x0, j.y0, j.w, j.h, seed, t, busy ? 1 : 0.35, 1);
       if (busy) for (let k = 0; k < 4; k++) {
@@ -638,6 +655,7 @@ export class NestView {
       }
     }
     this._seams(s, t);
+    this._fogDraw(s);
     this.crowd.end();
     this.dust.end();
     this.props.end();
@@ -656,7 +674,7 @@ export class NestView {
     // Build 43: the sky above the cutaway follows the day; underground it's always lamplit.
     const L = SIM.daylight(s);
     this.scene.background.set('#121a32').lerp(this._sky || (this._sky = new THREE.Color()), 0).lerp(this._sky.set(s.rain.on ? '#6f7f8f' : '#9bc7e6'), L);
-    this.hemi.intensity = (s.rain.on ? 0.8 : 1.1) * (0.8 + 0.2 * L);
+    this.hemi.intensity = (s.rain.on ? 0.4 : 0.5) * (0.8 + 0.2 * L); // build 75: dimmer, so the rooms' lamps show
 
     // Camera: follow the player or the queen; drag pans vertically.
     const a = pa && P.inNest ? pa : null;
@@ -709,16 +727,43 @@ export class NestView {
     }
   }
 
+  // Build 75 (Mark: "a fog that hides everything underneath… more discovery"): below the topsoil, ground more than
+  // three cells from any tunnel is dark, shading in over two cells. It lifts as you dig and stays lifted.
+  _fogDraw(s) {
+    const cells = s.nest.cells, top = SOIL_TOP[1];
+    if (this.fogVer !== s.nest.ver) {
+      this.fogVer = s.nest.ver;
+      const d = new Uint8Array(NW * NH).fill(255), q = [];
+      for (let i = 0; i < NW * NH; i++) if (cells[i]) { d[i] = 0; q.push(i); }
+      for (let k = 0; k < q.length; k++) { const i = q[k], x = i % NW, y = (i - x) / NW, nd = d[i] + 1; if (nd > 6) continue;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= NW || ny >= NH) continue; const j = ny * NW + nx; if (d[j] > nd) { d[j] = nd; q.push(j); } } }
+      this.fogD = d; this.fogRuns = [];
+      const tone = (v) => (v <= 3 ? 0 : v === 4 ? 1 : v === 5 ? 2 : 3);
+      for (let y = top; y < NH; y++) { let x0 = 0, k0 = tone(d[y * NW]);
+        for (let x = 1; x <= NW; x++) { const k = x < NW ? tone(d[y * NW + x]) : -1; if (k !== k0) { if (k0) this.fogRuns.push([x0 === 0 ? -60 : x0, x === NW ? NW + 60 : x, y, FOG[k0]]); x0 = x; k0 = k; } } }
+      this.fogRuns.push([-60, NW + 60, NH, FOG[3], 60]); // and the ground beyond the cutaway's edges and floor
+    }
+    this.fog.begin();
+    for (const [x0, x1, y, c, h = 1] of this.fogRuns) {
+      tmpV.set(((x0 + x1) / 2) * T, -(y + h / 2) * T, 6); // in front of the buried stones
+      tmpM.compose(tmpV, Q_ID, tmpS.set((x1 - x0) * T, h * T + 0.5, 1));
+      this.fog.push('q', PROPS.quad, tmpM, c);
+    }
+    this.fog.end();
+  }
+  fogged(x, y) { return y >= SOIL_TOP[1] && this.fogD && this.fogD[y * NW + x] > 5; }
+
   // Section names and prices on the shut ground; a glint where a bedrock prize lies.
   _ground(s, t) {
     const open = s.nest.open || {}, B = s.nest.breach, c = s.colony;
     for (const S of SIM.NEST_SECTIONS) {
       if (open[S.key]) continue;
+      { let seen = false; for (let y = S.y0; y <= S.y1 && !seen; y++) for (let x = S.x0; x <= S.x1; x++) if (!this.fogged(x, y)) { seen = true; break; } if (!seen) continue; } // build 75: under the fog, unknown
       const cost = Object.entries(S.cost).map(([k, v]) => ({ food: '🌾', grit: '🪨', sugar: '🍯', genes: '🧬' }[k] || k) + v).join(' ');
       const text = B && B.key === S.key ? `⛏ breaking in… ${Math.floor((B.progress / S.work) * 100)}%` : `🔒 ${S.name.replace(/^the /, '')} · ${cost}${S.curios ? ' · ' + S.curios + ' curios' : ''}`;
       this.labels.push({ text, x: ((S.x0 + S.x1 + 1) / 2) * T, y: -((S.y0 + S.y1 + 1) / 2) * T, z: 0, kind: 'section' });
     }
-    for (const P of SIM.BEDROCK_PRIZES) if (!(c.prizes || {})[P.key] && Math.sin(t * 2 + P.x) > 0.2) this.labels.push({ text: '✦', x: (P.x + 0.5) * T, y: -(P.y + 0.5) * T, z: 0, kind: 'glint' });
+    for (const P of SIM.BEDROCK_PRIZES) if (!(c.prizes || {})[P.key] && !this.fogged(P.x, P.y) && Math.sin(t * 2 + P.x) > 0.2) this.labels.push({ text: '✦', x: (P.x + 0.5) * T, y: -(P.y + 0.5) * T, z: 0, kind: 'glint' });
   }
 
   // Screen NDC → nest cell [cx, cy] on the front face.

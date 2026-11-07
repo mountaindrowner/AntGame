@@ -3,7 +3,7 @@ import { EVO_BY, UPGRADES } from './growth.js';
 import { CASTES, CASTE_EVO, CASTE_ROOM, QUEEN_UP, ROOMS, SOIL, T, roomCap, roomCount, roomLevel, soilTier } from './core.js';
 import { exitNest, payCost, roomsChanged } from './colony.js';
 import { mkAnt } from './world.js';
-import { roomOf, roomPlan, roomSlotIndex, snapPlan } from './nest.js';
+import { growRoom, roomOf, roomPlan, roomSlotIndex, snapPlan } from './nest.js';
 import { crewCap, eggCost, has, picked, roomCost, upgradeCaste } from './progress.js';
 import { dRoomBuilt } from './daughters.js';
 
@@ -41,12 +41,12 @@ export function roomLock(s, room){
 // Room levels (build 23): why this room kind can't go up a level now, or ''.
 export function pickLineage(s, k){ const c = s.colony; if (!has(s, 'lineage') || c.lineage || !['acid', 'trapjaw', 'bullet'].includes(k)) return false; c.lineage = k; s.player.msg = 'Your line is ' + { acid: 'Acid', trapjaw: 'Trap-jaw', bullet: 'Bullet' }[k] + ', for good.'; return true; }
 export function roomUpLock(s, key){ const R = ROOMS[key], n = roomLevel(s, key); if (!R.lv) return 'no levels'; if (!roomCount(s, key)) return 'build one first'; if (key === 'fungus' && n === 2 && !dRoomBuilt(s, 'greenhouse')) return 'needs the Garden’s Greenhouse'; /* build 50 */ if (n > R.lv.length) return 'top level'; return ''; }
-export function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; roomsChanged(s); s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone'); return true; }
+export function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const c = s.colony, n = roomLevel(s, key); if (!payCost(c, ROOMS[key].lv[n - 1].cost)) return false; if (!c.roomLv) c.roomLv = {}; c.roomLv[key] = n + 1; let grew = 0; for (const r of s.nest.rooms) if (r.key === key && !r.grow && growRoom(s, r)) grew++; roomsChanged(s); /* build 75: and it grows a column */ s.player.msg = `${ROOMS[key].name} is now level ${['', 'I', 'II', 'III'][n + 1]}: ${ROOMS[key].lv[n - 1].fx.replace(/^./, ch => ch.toLowerCase())}.${grew ? ' Builders dig it a column wider.' : ''}`; s.events.push('roomdone'); return true; }
 // Build 40: cancel every room still waiting to be built. Not started, all its cost back; started, half.
 export function cancelBuilds(s){
   const c = s.colony; let n = 0;
   for (const j of c.buildQueue){ const cost = j.paid || roomCost(s, j.room, roomCount(s, j.room)), k2 = j.progress > 0 ? 0.5 : 1; for (const k in cost){ const back = Math.floor(cost[k]*k2); if (k === 'food') c.store = Math.min(c.cap, c.store + back); else c[k] = (c[k] || 0) + back; } n++; }
-  c.buildQueue.length = 0; s.nest.digOrders = s.nest.digOrders.filter(o => !o.plan || o.progress > 0); for (const o of s.nest.digOrders) delete o.plan; /* build 74: a plan's digs go with it (ones begun are finished) */ c.water = Math.min(c.water, c.waterCap); return n; // (build 47: refunds never past the caps)
+  c.buildQueue.length = 0; const growing = o => s.nest.rooms.some(r => r.grow === o.x && o.y >= r.y0 && o.y < r.y0 + (r.h || 3)); s.nest.digOrders = s.nest.digOrders.filter(o => !o.plan || o.progress > 0 || growing(o)); for (const o of s.nest.digOrders) if (!growing(o)) delete o.plan; /* build 74: a plan's digs go with it (ones begun are finished) */ c.water = Math.min(c.water, c.waterCap); return n; // (build 47: refunds never past the caps)
 }
 // Build 74: a room goes where you put it (at: its top-left), or snapped round a cell, in a closed chamber with
 // one or two doorways (roomPlan). On solid soil it's a plan: its cells become dig orders and it waits until dug.
@@ -62,6 +62,11 @@ export function queueRoom(s, room, cell, at){
   s.nest.fillOrders = s.nest.fillOrders.filter(o => !mine(o.x, o.y)); // build 40: a room's ground isn't filled in
   return true;
 }
+// Build 75 (Phase 4: "faster passages, an upgrade"): builders pack and smooth the galleries; every ant walks
+// 40% faster in the nest. Bought once, from the Build menu, with a Workshop.
+export const PASSAGES = { cost: { food: 30, grit: 40 }, speed: 1.4 };
+export function passagesLock(s){ if (s.colony.passages) return 'done'; if (!roomOf(s, 'workshop')) return 'needs a Workshop'; return ''; }
+export function buyPassages(s){ if (passagesLock(s) || !payCost(s.colony, PASSAGES.cost)) return false; s.colony.passages = true; s.player.msg = 'Packed passages: your ants walk the nest 40% faster.'; s.events.push('roomdone'); return true; }
 // The old "Train foragers": the Forager's next level, taking the first pick if it has one.
 export function upgradeForage(s){ const U = UPGRADES.forager[s.colony.forage || 0]; return !!U && upgradeCaste(s, 'forager', U.picks ? U.picks[0][0] : undefined); }
 export function upgradeQueen(s){ const q = s.queen, c = s.colony; const cost = QUEEN_UP[q.level]; if (!cost || !payCost(c, cost)) return false; q.level++; return true; }

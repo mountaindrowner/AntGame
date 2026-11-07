@@ -2,6 +2,33 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: Phase 4, the nest (build 74)
+
+Mark's answers: "Only in a closed chamber and hallway", "Place myself and yes drag to dig", "If we can birth it as different ants it should have those abilities", "Yes crew and water". Each piece is reasoned out in [`PHASE4.md`](PHASE4.md), then built.
+- **Rooms need walls and a way in:**
+  - every cell touching a room's footprint must be dirt, except one or two doorways (tunnel cells out to a hallway); no shared walls between rooms;
+  - a dig that would open a third way into a room is refused ("that's a room's wall"); the queen's chamber is the hub and exempt;
+  - rooms already built stay as they are.
+- **You place rooms:**
+  - a ghost follows the cursor: green fits, red says why, wall outlined, doorways gold, cells to dig marked; it snaps to the spot needing the least digging;
+  - on dirt it's a plan: its cells and a doorway become dig orders, builders dig it out, then build it; cancel takes the digs back;
+  - touch: tap to put the ghost, tap inside it to place; right-click or Esc stops.
+- **Drag to dig:** a mouse stroke from soil paints dig orders (joined cell by cell); from a dig order, erases; from a tunnel or with the right button, pans. Touch: hold, then drag. The limit goes from 16 to 40 (a plan's digs don't count).
+- **Your ant plays its kind:**
+  - builder: digs the order beside it and builds the room it stands in at twice a builder's pace, walks to a dig you tap, and raises outposts with the work of two;
+  - nurse: two nurses by the eggs, and heals your crew round it when not fighting;
+  - medic: heals your crew twice as fast, fighting or not, and cures the fungus;
+  - forager carries 8 (12 with Big jaws) and is a fifth faster on trails; harvester carries seed in double loads; replete carries 12 food;
+  - the rebirth choice now also offers medic, harvester, replete and major, each once it can be laid; your card says what your kind does.
+
+  The numbers are balance, Mark's to tune.
+- **A crew gathers:** when you pick something up, each crew ant near you takes a load of the same kind from the nearest pile within eight tiles (spread over the piles), carries it with you, and delivers when you're home. A crew that breaks up carries its loads home.
+- **Rooms grow when levelled:** a room going up a level grows a column, on whichever side keeps its wall and doorways; builders dig it out. If neither side can, only the numbers change. The six basic rooms have no levels; giving them levels is Mark's call.
+- **Light in the rooms:** the earth is dimmer, and each room has a lamp (a glowing bulb on a root, coloured by the room) with a flickering pool of light; the ten rooms nearest the view are lit.
+- **Fog below the topsoil:** ground more than three cells from a tunnel is dark, shading in over two, and lifts as you dig. Shut sections' names and bedrock glints show only once you've dug near.
+- **Packed passages:** bought once in the Build menu (30 🌾, 40 🪨, needs a Workshop): every ant walks the nest 40% faster. The cost is Mark's to tune.
+- The bot places room plans; tests in `chambers.test.js` and `castes.test.js`.
+
 ## Nov 7: Phase 3, creatures (build 73)
 
 Each piece is reasoned out in [`PHASE3.md`](PHASE3.md), then built:

@@ -11,7 +11,7 @@ import { DUTIES, chooseDuty, doorAlarm, fungusCap, workers } from './jobs.js';
 import { outside } from './hazards.js';
 import { spark } from './combat.js';
 import { CORD } from './events.js';
-import { antCount, eggLock } from './commands.js';
+import { PASSAGES, antCount, eggLock } from './commands.js';
 
 export const queenCap = (lvl, s) => Math.min(NEST_CAP + (s && has(s, 'greatmound') ? 50 : 0), 20 + 20*lvl + (s && has(s, 'deephalls') ? 20 : 0) + (s && has(s, 'greatmound') ? 50 : 0)); // build 51: the Great Mound, +50
 export function deposit(s, a){
@@ -255,7 +255,7 @@ export function tickInside(s, a, dt){
   }
   if (a.state === 'in' && a.goal == null){ const [tx,ty] = roomTarget(s, a); a.ntx = tx; a.nty = ty; a.goal = 'idle'; }
   // walk inside; work only counts once the builder stands on its own cell
-  const arrived = nestStep(s, a, C.speed*0.8, dt);
+  const arrived = nestStep(s, a, C.speed*0.8*(c.passages ? PASSAGES.speed : 1), dt); // build 75: packed passages
   a.atWork = a.state === 'build' && arrived && Math.floor(a.nx) === a.ntx && Math.floor(a.ny) === a.nty;
   // A hauler at the top of the shaft takes a load of dirt out.
   if (a.task === 'h' && a.atWork){ a.task = null; a.taskCell = null;

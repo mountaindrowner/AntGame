@@ -80,3 +80,21 @@ test('a builder you play digs: twice a builder’s pace, no builders needed', ()
   assert.ok(cell(s, x0, y), 'dug');
   assert.ok(t < need * 0.6, `took ${t.toFixed(1)} s of ${need}`);
 });
+
+test('a room going up a level grows a column, dug out by the builders', () => {
+  const { s, run, r } = founded(2); const x0 = r.x0 + r.w + 1;
+  carve(s, r.x0 + r.w, r.y0 + 1, 1, 1); carve(s, x0, r.y0, 4, 3);
+  s.nest.rooms.push({ key: 'fungus', x0, y0: r.y0, w: 4, h: 3 }); for (let y = r.y0; y < r.y0 + 3; y++) for (let x = x0; x < x0 + 4; x++) s.nest.cells[y * NW + x] = 2;
+  s.colony.evo.fungus = true; Object.assign(s.colony, { store: 150, cap: 150, sugar: 50 });
+  assert.ok(SIM.upgradeRoom(s, 'fungus'), 'levelled');
+  const room = SIM.roomOf(s, 'fungus'); assert.equal(room.grow, x0 + 4, 'grows to the right');
+  run(120);
+  assert.equal(room.w, 5); assert.equal(room.grow, null); assert.equal(cell(s, x0 + 4, r.y0 + 1), 2);
+});
+
+test('packed passages: the nest walked 40% faster, once, with a Workshop', () => {
+  const { s } = founded();
+  assert.match(SIM.passagesLock(s), /Workshop/);
+  s.nest.rooms.push({ key: 'workshop', x0: 1, y0: 40, w: 5, h: 4 }); Object.assign(s.colony, { store: 99, grit: 99 });
+  assert.ok(SIM.buyPassages(s)); assert.equal(SIM.passagesLock(s), 'done'); assert.equal(SIM.buyPassages(s), false);
+});

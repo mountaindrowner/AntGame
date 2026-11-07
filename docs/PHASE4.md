@@ -1,4 +1,4 @@
-# Phase 4: the nest as a place, thought through (builds 74–75)
+# Phase 4: the nest as a place, thought through (build 74)
 
 Playtest 3's fourth phase ([`PLAYTEST-3.md`](PLAYTEST-3.md)). Mark's decisions, after build 73:
 
@@ -14,7 +14,7 @@ Each piece has:
 - **Others:** how other games, or nature, do it.
 - **Design:** what the build does.
 
-Build 74 does the pieces that change how you play: 1, 2, 3, 8 and 9. Build 75 does the look: 4, 5, 6 and 7.
+Build 74 does all nine.
 
 ## 1. Rooms need walls and a way in
 
@@ -96,9 +96,9 @@ Build 74 does the pieces that change how you play: 1, 2, 3, 8 and 9. Build 75 do
 - **Others:**
   - Clash of Clans and Age of Empires: each level of a building has its own look, bigger and richer.
   - Dungeon Keeper: a room's power is its size.
-- **Design (build 75):**
+- **Design:**
   - **A level adds a column.** When a room goes up a level, builders dig it one cell wider, on whichever side keeps the wall and the door. If neither side can, the room stays its size and only its look changes.
-  - **And dressing:** more of what makes it that room (more fungus, more aphids, more beds), drawn fuller.
+  - **And dressing:** the room's dressing spreads to fill the wider room.
   - **The basic rooms:** giving them levels too is a balance change, so it's Mark's call. Until then, they grow by copies.
 
 ## 5. Light in the rooms
@@ -110,9 +110,9 @@ Build 74 does the pieces that change how you play: 1, 2, 3, 8 and 9. Build 75 do
   - Dungeon Keeper: torches on walls, dark between.
   - Don't Starve and Darkest Dungeon: light as mood.
   - Real ants have no light; but glow-worms and fungus glow, which fits the game's green glow.
-- **Design (build 75):**
+- **Design:**
   - **Darker earth and tunnels,** less light from above.
-  - **A lamp in each room,** chosen by the room (a glowing fungus cap, a glow-worm, a lit honey drop), with a warm pool of light that flickers.
+  - **A lamp in each room,** a glowing bulb hanging from a root, its colour chosen by the room (green in the fungus garden, amber in the honeypot vault, cool in the cistern and infirmary), with a pool of light that flickers. Ten rooms are lit at a time: the ten nearest the view.
   - **Passages lit faintly,** so you can still see your ants.
 
 ## 6. Fog below the first layer
@@ -124,10 +124,10 @@ Build 74 does the pieces that change how you play: 1, 2, 3, 8 and 9. Build 75 do
   - Fog of war in every strategy game.
   - Terraria and Minecraft: what's under the ground is dark until you get there.
   - Dungeon Keeper: unexplored rock is just rock.
-- **Design (build 75):**
-  - **Below the topsoil, the earth is dark** except within four cells of your tunnels.
+- **Design:**
+  - **Below the topsoil, the earth is dark** except within three cells of your tunnels, shading in over the next two, and on past the cutaway's edges.
   - **The fog lifts as you dig** and stays lifted.
-  - Shut sections show their outline and name only once you've dug near them.
+  - Shut sections show their name and price, and bedrock prizes their glint, only once you've dug near them.
 
 ## 7. Faster passages
 
@@ -137,7 +137,7 @@ Build 74 does the pieces that change how you play: 1, 2, 3, 8 and 9. Build 75 do
 - **Others:**
   - Roads in every city builder (Age of Empires 4, Anno, Settlers) speed workers.
   - Real ants pack and smooth their main galleries.
-- **Design (build 75):**
+- **Design:**
   - **Packed passages,** bought once in the Build menu (needs a Workshop): every ant in the nest walks 40% faster.
   - Its cost is Mark's to tune.
 

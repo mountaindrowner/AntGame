@@ -84,9 +84,32 @@ export function snapPlan(s, key, cx, cy){
     const sc = p.dig.length*10 + Math.abs(x0 + (R.w - 1)/2 - cx) + Math.abs(y0 + (R.h - 1)/2 - cy); if (sc < bs){ bs = sc; best = p; } }
   return best || roomPlan(s, key, cx - Math.floor((R.w - 1)/2), cy - Math.floor((R.h - 1)/2));
 }
+// Build 75 (Mark: "the hatchery would upgrade in the way it looks… a little bit of space"): a room going up a level
+// grows a column, on whichever side keeps its wall and its one or two ways in; the builders dig it out.
+export function growPlan(s, r){
+  const n = s.nest, w = r.w || 4, h = r.h || 3;
+  for (const side of [1, -1]){
+    const cx = side > 0 ? r.x0 + w : r.x0 - 1, x0 = side > 0 ? r.x0 : r.x0 - 1; if (cx < 1 || cx >= NW - 1) continue;
+    let ok = true; const dig = [];
+    for (let y = r.y0; y < r.y0 + h && ok; y++){ const v = n.cells[nidx(cx, y)]; if (v === 2 || cellLocked(s, cx, y) || isGlowRock(cx, y) || (!v && digAllowed(s, y, cx)) || s.colony.buildQueue.some(j => inRect(j, cx, y))) ok = false; else if (!v) dig.push([cx, y]); }
+    if (!ok) continue;
+    let open = 0;
+    for (const [x, y] of ringOf(x0, r.y0, w + 1, h)){ if (x < 0 || y < 0 || x >= NW || y >= NH) continue; const v = n.cells[nidx(x, y)];
+      if (v === 2 || s.colony.buildQueue.some(j => inRect(j, x, y))){ ok = false; break; } if (v || orderAt(s, x, y)) open++; }
+    if (ok && open >= 1 && open <= 2) return { side, cx, dig };
+  }
+  return null;
+}
+export function growRoom(s, r){
+  const g = growPlan(s, r); if (!g) return false;
+  r.grow = g.cx; for (const [x, y] of g.dig) if (!orderAt(s, x, y)) s.nest.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true });
+  return true;
+}
 // The first room in the queue that's dug out and ready to build (a plan waits for its digs).
 export function readyJob(s){ return s.colony.buildQueue.find(j => !j.wait) || null; }
 export function tickPlans(s){
+  for (const r of s.nest.rooms) if (r.grow != null){ let dug = true; for (let y = r.y0; y < r.y0 + (r.h || 3); y++) if (!s.nest.cells[nidx(r.grow, y)]){ dug = false; break; }
+    if (dug){ for (let y = r.y0; y < r.y0 + (r.h || 3); y++) s.nest.cells[nidx(r.grow, y)] = 2; if (r.grow < r.x0) r.x0--; r.w = (r.w || 4) + 1; r.grow = null; s.nest.ver++; s.player.msg = `${ROOMS[r.key].name} grew: room to spare.`; } }
   for (const j of s.colony.buildQueue) if (j.wait){ let dug = true;
     for (let y = j.y0; y < j.y0 + j.h && dug; y++) for (let x = j.x0; x < j.x0 + j.w; x++) if (!s.nest.cells[nidx(x, y)]){ dug = false; break; }
     if (dug && j.door) dug = !!s.nest.cells[nidx(j.door[0], j.door[1])];

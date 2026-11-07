@@ -51,7 +51,9 @@ A first pass of each is in the game (build 68). Each gets a second look: how it 
 4. **The foot stomps.** "The foot should have more of a stomp." More shake, dust and weight.
 5. **Hovering an ant outlines it.** "It should be able to outline every ant that you see."
 
-### Phase 4: the nest as a place (Mark's decisions first)
+### Phase 4: the nest as a place
+
+Mark's answers: rooms only in a closed chamber with a hallway; he places them himself; drag to dig; your ant plays its kind; a crew gathers. Thought through in [`PHASE4.md`](PHASE4.md). **Done in build 74.**
 
 1. **Rooms need walls and a way in.** "Any smart player is just gonna dig out every bit of dirt… it needs walls, it needs an entrance." Does a room only work inside a closed chamber, or does open digging cost something?
 2. **Choose where a room goes.** "It just places in the nearest space."
@@ -85,5 +87,5 @@ A first pass of each is in the game (build 68). Each gets a second look: how it 
 - **The dirt pile on top** is the spoil your builders carry out of the nest. It's only for looks today; nothing uses it.
 - **The "protein" bodies after a swarm** are winged queens and males that died in the nuptial swarm. Their card now says so (it said "Meat").
 - **The map's bottom right:** the zoom buttons. In the yard, that corner is Fire Ant Country (its crest and pin).
-- **Can a builder you play dig?** No. Your taps queue digs for the builders. Phase 4.
-- **Can a recruited crew carry water?** No; a crew follows and fights. Phase 4.
+- **Can a builder you play dig?** Yes, from build 74: it digs and builds at twice a builder's pace.
+- **Can a recruited crew carry water?** Yes, from build 74: when you pick something up, your crew takes a load each and delivers with you.
