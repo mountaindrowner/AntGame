@@ -62,7 +62,9 @@ test('pointing at a rival ant: the crew kills it', () => {
   const W = s.world.W || SIM.W, ok = (x, y) => !s.world.blocked[y * W + x];
   let gx = Math.floor(me.x / T) + 6, gy = Math.floor(me.y / T);
   for (let d = 0; d < 6 && !ok(gx, gy); d++) for (const [dx, dy] of [[0, d], [0, -d], [d, 0], [-d, 0]]) if (ok(gx + dx, gy + dy)) { gx += dx; gy += dy; break; }
-  Object.assign(r, { state: 'patrol', x: (gx + 0.5) * T, y: (gy + 0.5) * T, tx: gx, ty: gy, hp: 10, flee: 0 });
+  // A rival soldier, which stands and fights. (A worker runs from a crew, by design; with you standing still the chase
+  // could end at the leash, about one run in twelve. Build 79.)
+  Object.assign(r, { caste: 'soldier', state: 'patrol', x: (gx + 0.5) * T, y: (gy + 0.5) * T, tx: gx, ty: gy, hp: 10, flee: 0 });
   assert.ok(SIM.crewAttack(s, r.x, r.y));
   const dead = step(s, 30, () => { P.tx = me.x; P.ty = me.y; return r.state === 'dead' || !s.ants.includes(r); });
   assert.ok(dead, 'the rival ant is dead');
