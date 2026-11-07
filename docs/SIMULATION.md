@@ -119,3 +119,22 @@ All twelve colonies ran. The one standard colony that survived (sensible, seed 1
 - **The queen's founding reserves.** A real founding queen raises her first workers from her own body, without food. While the colony has no workers, she could lay one forager a minute for free, up to four.
 - **Eggs paid with meat when food is short.** Real larvae are fed protein.
 - **A breather after a raid on the queen.** No raid on her for 5 minutes after one, or have her heal three times faster while no raider is in the nest.
+
+## With guards at the door (build 81)
+
+The four military colonies ran again for 4 hours, with the default two guards posted.
+
+| | Build 80 | Build 81 |
+|---|---|---|
+| Queen killed in the first 4 hours | 4 of 4 | **2 of 4** |
+| Lowest queen health in the survivors | — | 96 and 59 |
+
+- **The guards work while there are fighters to post.** Raids took food at the door instead of reaching the queen.
+- **Both losses came after the colony ran out of fighters entirely:**
+  - one when a raid killed its 15 fighters in about four minutes;
+  - one when its 8 fighters went at once with no meat in the store.
+  - With nobody left to post, the door was open again.
+- **What's left is meat and big raids, not the door:**
+  - Fighters starve without meat (88–106 "no meat" deaths in those two colonies).
+  - Two guards can't hold a big war party.
+  - The fixes to try are the ones above: a breather after a raid on the queen, or eggs paid with meat. You can also post more guards.
