@@ -85,13 +85,13 @@ A bot isn't a player: it never uses abilities or crew orders, rarely finds the r
 
 ## After build 80: the same runs on the new rules
 
-Eleven of the twelve colonies have finished; the last standard one (sensible, seed 11) was still running when this was written.
+All twelve colonies ran. The one standard colony that survived (sensible, seed 11) lasted the full 8 hours at 60 ants with two zones.
 
 | | Build 79 | Build 80 |
 |---|---|---|
 | Income for each food eaten, at 50+ ants (median) | 0.92 | **1.01** |
 | Time below break-even | 58% | 49% |
-| Standard: queen killed | 6 of 8, at 2–5 h | **7 of 7**, at 2.5–4 h |
+| Standard: queen killed | 6 of 8, at 2–5 h | **7 of 8**, at 2.5–4 h |
 | Standard: three zones (Patio, Flowerbed, Garden) by | 30 min–3.5 h | 50 min–3 h, in 6 of 7 |
 | "No meat" deaths | 831 | 630 |
 | Competent: collapsed to a single ant | 4 of 4 | 4 of 4 |
