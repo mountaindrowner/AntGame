@@ -7,7 +7,7 @@ import { bedrockGlow, bedrockPrize, builderTaskValid, carveRoom, dig, gainGlow, 
 import { GRAIN, advise, discover, gainGenes, gainXp, has, hatchCapOf, inBand, jobMul, lvl, maxHp, picked, promo, qtrait, storeCap, workOf, youHp } from './progress.js';
 import { DSPOTS, LARDER_FOOD, LARDER_FULL, LARDER_RATE, dRoomBuilt, daughterOf, farPop, joined, killFar } from './daughters.js';
 import { heldFx, prizeFx, setDone, waterCapOf } from './outposts.js';
-import { DUTIES, chooseDuty, doorAlarm, fungusCap, workers } from './jobs.js';
+import { DUTIES, chooseDuty, doorAlarm, fungusCap, tickDoorGuard, workers } from './jobs.js';
 import { outside } from './hazards.js';
 import { spark } from './combat.js';
 import { CORD } from './events.js';
@@ -82,6 +82,7 @@ export function costText(cost){ return Object.entries(cost).map(([k,v]) => v+' '
 export function tickColony(s, c, dt){
   if (!c.team && s.queen.placed){ tickBreach(s, dt); tickNestFinds(s, dt); }
   if (!c.team) advise(s, dt);
+  if (!c.team) tickDoorGuard(s, dt); // build 81: guards posted at the door
   c.secAcc += dt; while (c.secAcc >= 1){ c.secAcc -= 1; c.delivered.pop(); c.delivered.unshift(0); c.eaten.pop(); c.eaten.unshift(0); }
   let eat = 0; for (const a of s.ants) if (a.state !== 'dead' && a.team === c.team) eat += CASTES[a.caste].eat;
   if (!c.team) for (const d of s.daughters || []) for (const k in d.pop || {}) eat += CASTES[k].eat*d.pop[k]; // (build 46: a far daughter's ants still eat)

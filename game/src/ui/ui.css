@@ -57,6 +57,10 @@ button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 #sheet .jobrow .jt .si svg { width: 22px; height: 22px; }
 #sheet .jobrow .jt i { font-style: normal; font-size: 14px; color: var(--mute); margin-left: auto; text-align: right; }
 #sheet .jobs { display: flex; flex-wrap: wrap; gap: 6px; }
+#sheet .doorguard .dg { display: flex; align-items: center; gap: 10px; }
+#sheet .doorguard .dg button { min-width: 40px; min-height: 36px; padding: 0 10px; font-size: 20px; font-weight: 700; border-radius: 10px; }
+#sheet .doorguard .dg > b { font-size: 20px; min-width: 1.4em; text-align: center; }
+#sheet .doorguard .dg span { font-size: 13px; color: var(--mute); line-height: 1.3; }
 #sheet .job { display: inline-flex; border-radius: 999px; overflow: hidden; border: 2px solid var(--ink, #2a1a0e); background: #fffaf0; }
 #sheet .job button { border: 0; border-radius: 0; background: transparent; padding: 6px 10px; font-size: 15px; min-height: 0; }
 #sheet .job button em { font-style: normal; font-weight: 700; display: inline-block; min-width: 1.2em; margin-right: 4px; color: var(--accent, #3e7a2a); }

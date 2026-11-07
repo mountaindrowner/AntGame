@@ -54,7 +54,7 @@ export function setOrder(s, key, order){ if (!ORDERS.includes(order)) return fal
 // Who would answer a muster now: per colony, how many fighters.
 export function musterRoll(s){
   const out = [], isF = a => CASTES[a.caste].fight >= 3;
-  const main = s.ants.filter(a => !a.team && !a.dh && !a.isPlayer && !a.follow && isF(a) && (a.state === 'in' || a.state === 'patrol' || a.state === 'fight' || a.state === 'explore' || a.state === 'return'));
+  const main = s.ants.filter(a => !a.team && !a.dh && !a.isPlayer && !a.follow && a.post == null && isF(a) && (a.state === 'in' || a.state === 'patrol' || a.state === 'fight' || a.state === 'explore' || a.state === 'return'));
   out.push({ key: 'main', name: 'Your nest', order: orderOf(s, 'main'), have: main.length, send: Math.floor(main.length*ORDER_SHARE[orderOf(s, 'main')]), ants: main });
   for (const d of s.daughters || []){ if (d.state !== 'ready') continue; const real = daughterAnts(s, d).filter(a => !a.follow && isF(a) && a.state !== 'muster'), abs = Object.entries(d.pop || {}).filter(([k]) => CASTES[k].fight >= 3).reduce((t, [, n]) => t + n, 0);
     const have = real.length + abs, o = orderOf(s, d.key); out.push({ key: d.key, name: DAUGHTERS[d.key].short, order: o, have, send: Math.floor(have*ORDER_SHARE[o]), ants: real, d }); }

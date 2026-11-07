@@ -2,6 +2,24 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: guards at the door (build 81)
+
+Mark: "Maybe as a part of the jobs set, we can leave some soldiers at the entrance of the nest."
+- **Today:** fighters already had a "Guard the door" job, but it didn't keep the door guarded.
+  - A guard wandered up to 9 tiles out for 25 seconds, then went inside to rest, so the door was often empty.
+  - The queen only counts fighters within 4 tiles of the door.
+  - Recruit by the door took the guards first.
+  - That's how the simulated queens died with soldiers alive.
+- **Now: "Guards at the door" on the Jobs page.**
+  - A − / + number, 0 to 8, two to start.
+  - That many fighters stand a ring two tiles round the entrance, facing out, day and night and in the rain.
+  - They fight what comes close and go back to their spot.
+  - They don't answer Recruit or a muster.
+  - One that dies is replaced from the fighters at home: soldiers and majors before venom ants.
+  - Turning off a kind's "Guard the door" job stands its guards down.
+  - Raiders can't reach the queen past them.
+- **The old patrols stay:** fighters whose first job is guard still patrol near the door, half of them at least.
+
 ## Nov 7: the balance changes re-simulated, and performance (build 80)
 
 - **The six changes** (more food per trip; room upkeep scaling with the colony; workers at home halving raiders' bite; Trophic eggs with the Barracks; eating at outposts; Store II without a full store) re-ran in the same 12 colonies. The full results are in [`SIMULATION.md`](SIMULATION.md).

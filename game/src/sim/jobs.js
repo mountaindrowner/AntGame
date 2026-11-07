@@ -1,6 +1,6 @@
 // Jobs (build 17): each kind of ant works down its own list of duties, the first that needs doing.
-import { CASTES, QUEEN_UP, ROOMS, ROOM_KEYS, SPOIL_MAX, T, heavy, idx, roomCount, roomLevel } from './core.js';
-import { forageRange } from './world.js';
+import { CASTES, QUEEN_UP, ROOMS, ROOM_KEYS, SHAFT, SPOIL_MAX, T, heavy, idx, roomCount, roomLevel } from './core.js';
+import { forageRange, walk } from './world.js';
 import { roomOf, wet } from './nest.js';
 import { has, picked } from './progress.js';
 import { nearAlarm } from './raids.js';
@@ -125,4 +125,55 @@ export function dutyCounts(s){
     o.n++; const busy = a.follow ? 'crew' : a.state === 'build' ? 'build' : a.state === 'spoil' ? 'build' : a.state === 'in' ? (a.caste === 'nurse' && a.duty === 'nurse' ? 'nurse' : null) : a.duty || null;
     if (busy) o[busy] = (o[busy] || 0) + 1; else o.idle++; }
   return out;
+}
+
+// ---------- Build 81: guards posted at the door ----------
+// Mark: "as a part of the jobs set, we can leave some soldiers at the entrance of the nest." You set how many on the
+// Jobs page (0 to 8, two to start). Posted fighters stand a ring round the entrance, day and night, rain or not, facing
+// out; they fight what comes close and go back to their spot. They don't answer Recruit or a muster, so the door is
+// never emptied by accident. One that dies is replaced from the fighters at home.
+export const DOOR_GUARD_MAX = 8;
+export const doorGuardWanted = (s) => { const n = s.colony.doorGuard; return n == null ? 2 : n; };
+export function setDoorGuard(s, n){ s.colony.doorGuard = Math.max(0, Math.min(DOOR_GUARD_MAX, Math.round(n))); tickDoorGuard(s, true); return s.colony.doorGuard; }
+const postable = (a) => !a.team && !a.isPlayer && !a.dh && a.state !== 'dead' && CASTES[a.caste].fight >= 3 && !a.follow && !a.muster && !a.zombie;
+const guardOn = (s, a) => jobsOf(s, a.caste).some(([d, on]) => d === 'guard' && on);
+export const posted = (s) => s.ants.filter((a) => a.post != null && postable(a));
+// The spots round the door: walkable tiles two out, spread round the circle (a slot's spot is fixed while n is).
+export function doorPost(s, slot, n){
+  const c = s.colony, k = s.doorPosts && s.doorPosts.n === n && s.doorPosts.ex === c.ex && s.doorPosts.ey === c.ey ? s.doorPosts : null;
+  if (k) return k.at[slot] || k.at[0];
+  const at = [];
+  for (let i = 0; i < n; i++){
+    const ang = -Math.PI/2 + i*2*Math.PI/n; let best = null, bd = 1e9;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++){ const r = Math.hypot(dx, dy); if (r < 1.5 || r > 3.2) continue; const x = c.ex + dx, y = c.ey + dy; if (!walk(s, x, y) || at.some((p) => p[0] === x && p[1] === y)) continue;
+      const da = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - ang), Math.cos(Math.atan2(dy, dx) - ang))), d = da*3 + Math.abs(r - 2); if (d < bd){ bd = d; best = [x, y]; } }
+    at.push(best || [c.ex, c.ey + 1]);
+  }
+  s.doorPosts = { n, ex: c.ex, ey: c.ey, at };
+  return at[slot] || at[0];
+}
+// Once a second: post fighters at home until there are as many as you asked for; stand extras down.
+export function tickDoorGuard(s, dt){
+  if (dt !== true){ s.postT = (s.postT || 0) + dt; if (s.postT < 1) return; s.postT = 0; }
+  if (!s.queen.placed || s.lost) return;
+  const want = doorGuardWanted(s), on = posted(s);
+  for (const a of s.ants) if (a.post != null && !postable(a)) a.post = null; // (went with you, mustered, or died)
+  // Too many (you lowered it, or turned their guard duty off): the highest slots stand down.
+  on.sort((a, b) => a.post - b.post);
+  for (const a of on) if (a.post >= want || !guardOn(s, a)){ a.post = null; if (a.state === 'patrol') a.explore = 20; }
+  let have = posted(s); if (have.length >= want) return;
+  const free = []; for (let i = 0; i < want; i++) if (!have.some((a) => a.post === i)) free.push(i);
+  // At home or near the door, soldiers and majors before the venom ants (who are hunters).
+  const order = (a) => (a.caste === 'venom' ? 1 : 0) + (a.state === 'in' ? 0 : 0.5);
+  const c = s.colony, cand = s.ants.filter((a) => postable(a) && a.post == null && guardOn(s, a) && (a.state === 'in' && a.goal !== 'exit' || a.state === 'patrol' && Math.hypot(a.tx - c.ex, a.ty - c.ey) < 12)).sort((a, b) => order(a) - order(b));
+  for (const a of cand){ const i = free.shift(); if (i == null) break; a.post = i; a.duty = 'guard';
+    if (a.state === 'in'){ a.goal = 'exit'; a.exitTo = 'patrol'; a.ntx = SHAFT; a.nty = 0; a.rest = 0; } }
+}
+// A posted guard's step outside (tick.js): to its spot, then stand there facing out. True while it's handled here.
+export function stepPost(s, a){
+  if (a.post == null || a.team) return false;
+  const want = doorGuardWanted(s), [px, py] = doorPost(s, a.post, Math.max(want, a.post + 1)), c = s.colony;
+  a.explore = 0;
+  if (a.tx === px && a.ty === py && Math.hypot(a.x - (px + 0.5)*T, a.y - (py + 0.5)*T) < 1.5){ const dx = px - c.ex, dy = py - c.ey, d = Math.hypot(dx, dy) || 1; a.dx = dx/d; a.dy = dy/d; a.atPost = true; return 'stand'; }
+  a.atPost = false; return [px, py];
 }

@@ -423,6 +423,13 @@ export function createUI(app) {
     const show = Object.keys(SIM.JOBS0).filter((k) => counts[k] || k === 'forager' || k === 'builder' || !SIM.eggLock(s, k));
     let h = `<div class="row head"><strong>Jobs</strong><button class="x" data-close="1">Close</button></div>`;
     h += `<div class="note">Each kind of ant does the first job on its list that needs doing, then the next. Tap a job to put it first; ✕ turns it off.</div>`;
+    // Build 81: guards posted at the door (Mark: "leave some soldiers at the entrance of the nest").
+    const fighters = s.ants.filter((a) => !a.team && !a.isPlayer && !a.dh && a.state !== 'dead' && CASTES[a.caste].fight >= 3).length;
+    if (fighters || SIM.roomOf(s, 'barracks')) {
+      const want = SIM.doorGuardWanted(s), at = SIM.posted(s), there = at.filter((a) => a.atPost).length;
+      const said = !want ? 'none: the door is left to the patrols' : at.length < want ? `${at.length} of ${want}: ${fighters ? 'the rest are out or with you' : 'lay Soldiers to fill the posts'}` : there < want ? `${want} posted, ${want - there} on the way` : `${want} standing guard`;
+      h += `<div class="jobrow doorguard"><div class="jt">${sicon('soldier')}<b>Guards at the door</b><i>${said}</i></div><div class="dg"><button data-doorguard="-1" ${want <= 0 ? 'disabled' : ''} title="One fewer">−</button><b>${want}</b><button data-doorguard="1" ${want >= SIM.DOOR_GUARD_MAX ? 'disabled' : ''} title="One more">+</button><span>Fighters who stand round the entrance day and night and fight what comes close. They don't join your crew or a muster. Raiders can't reach the queen past them.</span></div></div>`;
+    }
     for (const k of show) {
       const o = counts[k] || { n: 0, idle: 0 }, L = SIM.jobsOf(s, k);
       const doing = L.filter(([d]) => o[d]).map(([d]) => `${D[d].icon} ${o[d]}`).concat(o.crew ? [`⭐ ${o.crew} with you`] : []).concat(o.idle ? [`${o.idle} resting`] : []).join(' · ');
@@ -431,7 +438,7 @@ export function createUI(app) {
       for (const [d, on] of L) h += `<span class="job${on ? '' : ' off'}"><button data-jobfirst="${k}:${d}" title="Put ${D[d].name.toLowerCase()} first"><em>${on ? ++rank : '–'}</em>${D[d].icon} ${D[d].name}</button><button class="jx" data-jobtoggle="${k}:${d}" title="${on ? 'Turn off' : 'Turn on'}">${on ? '✕' : '✓'}</button></span>`;
       h += `</div></div>`;
     }
-    h += `<div class="note">In the rain nobody goes out to gather. Fighters on guard keep at least two, or half of them, by the door; the rest hunt or forage.</div>`;
+    h += `<div class="note">In the rain nobody goes out to gather. Besides the guards at the door, fighters whose first job is guard patrol near it (half of them at least); the rest hunt or forage.</div>`;
     return h;
   }
   // What each kind of ant is for, under its egg (build 15: "what is a nurse for?").
@@ -982,6 +989,7 @@ export function createUI(app) {
     if (b.dataset.wait) { app.rebirthAsked = true; closeMenu(); return; }
     if (b.dataset.rebirth) { P().rebirth = b.dataset.rebirth; const q = s.colony.eggQueue, i = q.indexOf('forager'); if (i >= 0 && !s.colony.eggs.length) q[i] = b.dataset.rebirth; app.rebirthAsked = true; closeMenu(); return; }
     if (b.dataset.jobfirst) { const [k, d] = b.dataset.jobfirst.split(':'); SIM.setJobFirst(s, k, d); renderSheet(); return; }
+    if (b.dataset.doorguard) { SIM.setDoorGuard(s, SIM.doorGuardWanted(s) + Number(b.dataset.doorguard)); renderSheet(); return; }
     if (b.dataset.jobtoggle) { const [k, d] = b.dataset.jobtoggle.split(':'); SIM.toggleJob(s, k, d); renderSheet(); return; }
     if (b.dataset.cleardigs) { const n = SIM.cancelBuilds(s); s.nest.digOrders = s.nest.digOrders.filter((o) => o.plan); s.nest.fillOrders.length = 0; /* build 79: a growing room's digs stay (they're all that's left flagged) */ if (n) flash(`${n} room${n === 1 ? '' : 's'} cancelled, cost refunded (half if building had begun).`, /cancelled/, 3000); renderSheet(); return; }
     if (b.dataset.breach) { if (SIM.startBreach(s, b.dataset.breach)) { sfx.play('evolve'); closeMenu(); app.view = 'nest'; } else renderSheet(); return; }

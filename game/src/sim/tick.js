@@ -9,7 +9,7 @@ import { daughterOf, tickDaughters } from './daughters.js';
 import { WILD_SIDE, tickWild } from './wilds.js';
 import { wakeRival } from './state.js';
 import { prizeFx, tickOutposts } from './outposts.js';
-import { DUTIES, chooseDuty, preyNear, woodGoal } from './jobs.js';
+import { DUTIES, chooseDuty, preyNear, stepPost, woodGoal } from './jobs.js';
 import { rivalBrain, tickMyRaid } from './raids.js';
 import { CAT_REACH, LEG_HP, SPIDER_REACH, legSlot, spiderEnter, spiderRoute, stepCat, stepSpider } from './spider.js';
 import { ATTACK_LEASH, HOLD_R, attackReach, attackTarget, stepPlayer, tickAttack, tickZones } from './player.js';
@@ -229,6 +229,11 @@ export function tick(s, dt){
       const sp = s.spoilAt;
       if (Math.hypot(a.x - (sp.x+0.5)*T, a.y - (sp.y+0.5)*T) < 1.2*T){ s.spoilPile = (s.spoilPile||0) + (a.loads || 1); gainXp(s, a, a.loads || 1); a.loads = 0; a.carry = 0; a.kind = null; a.itype = null; a.state = 'return'; continue; }
       if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)) chooseToward(s, a, (sp.x+0.5)*T, (sp.y+0.5)*T);
+      continue;
+    }
+    if (a.state === 'patrol' && a.post != null && !a.team){ // build 81: a guard posted at the door
+      const p = stepPost(s, a); if (p === 'stand') continue;
+      if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt) && (a.tx !== p[0] || a.ty !== p[1])) chooseToward(s, a, (p[0]+0.5)*T, (p[1]+0.5)*T);
       continue;
     }
     if (a.state === 'explore' || a.state === 'patrol'){
