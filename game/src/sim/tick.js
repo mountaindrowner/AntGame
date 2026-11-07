@@ -200,10 +200,17 @@ export function tick(s, dt){
       continue;
     }
     if (a.state === 'follow'){
-      if (!P.ant || P.inNest){ if (a.recall) continue; a.follow = false; a.state = 'explore'; continue; }
+      if (!P.ant || P.inNest){ if (a.recall) continue; a.follow = false; a.fetch = null; a.state = a.carry ? 'return' : 'explore'; continue; }
       const pd = Math.hypot(a.x - P.ant.x, a.y - P.ant.y), tg = attackTarget(s);
       if (a.recall && pd < 3*T) a.recall = false;
-      if (pd > (a.recall ? 400 : tg ? ATTACK_LEASH + 10 : 16)*T){ a.follow = false; a.state = 'explore'; continue; }
+      if (pd > (a.recall ? 400 : tg ? ATTACK_LEASH + 10 : 16)*T){ a.follow = false; a.fetch = null; a.state = a.carry ? 'return' : 'explore'; continue; }
+      // Build 74: gathering with you (you picked something up), then delivering when you're home.
+      if (a.carry && Math.hypot(a.tx - s.world.ex, a.ty - s.world.ey) < 1.6) deposit(s, a);
+      if (a.fetch){ const F = a.fetch, gx = (F.x + 0.5)*T, gy = (F.y + 0.5)*T;
+        if (tg || a.carry) a.fetch = null;
+        else if (Math.hypot(a.x - gx, a.y - gy) < 0.7*T){ const it = s.items.find(x => x.x === F.x && x.y === F.y && x.kind === F.kind && !heavy(x) && !x.carried && x.amt > 0);
+          if (it){ const take = Math.min(carryCap(s, a, it), it.amt); it.amt -= take; a.carry = take; a.kind = it.kind; a.itype = it.type; a.ireg = s.world.area[idx(it.x, it.y)]; } a.fetch = null; }
+        else { if (stepTo(a, a.tx, a.ty, 95, dt)) chooseToward(s, a, gx, gy); continue; } }
       if (tg){ // build 26: charging what you pointed at
         if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }
         const td = Math.hypot(a.x - tg.x, a.y - tg.y);

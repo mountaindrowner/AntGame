@@ -39,7 +39,7 @@ function antCard(s, a) {
   const next = RANKS[rankOf(a) + 1], xp = Math.floor(a.xp || 0);
   const icon = a.isPlayer ? '⭐' : rankOf(a) >= 4 ? '🏆' : rankOf(a) >= 3 ? '🎖' : '🐜';
   const name = a.name ? `${a.name}${a.title ? ' ' + a.title : ''}` : a.isPlayer ? 'You' : C.name;
-  return [icon, name, `${R.name} ${C.name}${a.isPlayer && a.name ? ' (you)' : ''}, ${job}. ${xp} xp${next && !a.legend ? ` (${next.name} at ${next.xp})` : ''}. ${WHAT[a.caste] || ''}`];
+  return [icon, name, `${R.name} ${C.name}${a.isPlayer && a.name ? ' (you)' : ''}, ${job}. ${xp} xp${next && !a.legend ? ` (${next.name} at ${next.xp})` : ''}. ${a.isPlayer && SIM.YOU_AS[a.caste] ? 'You: ' + SIM.YOU_AS[a.caste].replace(/^./, (ch) => ch.toLowerCase()) + '.' : WHAT[a.caste] || ''}`];
 }
 
 // The small creatures (build 16).

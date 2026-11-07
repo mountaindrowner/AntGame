@@ -52,7 +52,7 @@ export function tickOutposts(s, dt){
   for (const o of s.outposts){
     if (o.done) continue;
     // You and any of your ants close by pile the pebbles.
-    let n = 0; for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x/T - o.x - 0.5, a.y/T - o.y - 0.5) < 3) n++;
+    let n = 0; for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x/T - o.x - 0.5, a.y/T - o.y - 0.5) < 3) n += a.isPlayer && a.caste === 'builder' ? 2 : 1; // build 74: a builder you play, twice
     o.work += n*dt;
     if (o.work >= OUTPOST.work){ o.done = true; reveal(s, o.x, o.y, OUTPOST.see); outpostsChanged(s); s.events.push('outpost'); P.msg = `Outpost raised in ${AREAS[o.region].name.replace(/^The /, 'the ')}. Foragers range from here now.`; }
   }

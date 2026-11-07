@@ -39,7 +39,7 @@ export const EXPL = {
   curio: ['✦ Curios', 'Every region hides one lost thing (a marble, a coin, a button…) that glints. Walk up to it for the stash round it and a 🧬 Gene; every fifth pays three more. The yard map shows which you have found.'],
   grit: ['Stone', 'Builders fetch pebbles. Stone pays for rooms and queen upgrades.'],
   queen: ['', 'Tap a caste to lay an egg. A Hatchery lets her lay more at once.'],
-  build: ['', 'Each room needs a dug pocket its size. You pay now; Builders finish it.'],
+  build: ['', 'A room is a chamber: dirt all round, one or two ways in. Put it where you like; you pay now, Builders dig and build it.'],
   soil: ['Soil', 'Deeper is harder. Packed soil needs a Workshop; clay also needs a queen upgrade.'],
   outpost: ['An outpost', 'Foragers now range round it as they do round the nest, and along the road back home. Trails beside it never fade. Hold its region: beat any guardian there and the region’s prize is yours.'],
   held: ['A region held', 'An outpost stands here and nothing guards it: its prize is yours for as long as the outpost does. Feet and the mower can knock outposts flat.'],
@@ -57,7 +57,7 @@ export const HELP_PAGES = [
 <div class="h"><b>Your ant</b> ❤ is your health, 🍖 your hunger. Eat at the nest, or stand beside a forager carrying food. A red edge means you're hurt. When you die, choose what to come back as.</div>
 <div class="h"><b>Buttons</b> Every button has its name on it. Hold one to hear more. ⋯ in the top bar shows the colony's numbers.</div>`],
   ['Colony', `
-<div class="h"><b>The nest</b> Tap <b>Nest</b> (top right). Tap dirt beside a tunnel to order digging. <b>Build</b> places a room in a pocket you've dug. Tap the queen for eggs.</div>
+<div class="h"><b>The nest</b> Tap <b>Nest</b> (top right). Tap or drag across dirt beside a tunnel to order digging. <b>Build</b> places a room where you put it: a chamber with dirt round it and a doorway to a tunnel. Tap the queen for eggs.</div>
 <div class="h"><b>Ants</b> Forager: gathers. Builder: digs, builds, hauls dirt out, holds tunnels up. Nurse: faster eggs. Soldier: guards the door. Venom ant: kills spiders. Evolve new rooms and each trains its own ant: Gardeners (Fungus garden: leaves become food), Ranchers (Aphid barn: 🍯 underground), Medics (Infirmary: heal, cure Cordyceps), Harvesters (Granary: seed in double loads). Each of those rooms goes up to level III from the Build list.</div>
 <div class="h"><b>Rooms</b> Hatchery: more eggs at once. Food store: more food. Cistern: more water. Nursery: Nurses. Barracks: Soldiers. Workshop: deeper digging. Egg larder (from Trophic eggs): turns food into 🥩 meat while the store is over a quarter full. You can build one of each per queen level; extras cost more, and every room eats a little food to run.</div>
 <div class="h"><b>New ground</b> Your nest starts in the middle. The ground either side, and the deep rock below, open a section at a time: tap it, pay, and builders break through the wall. Something is always hidden behind it. Deeper sections need curios found in the yard.</div>
@@ -114,8 +114,8 @@ export const INTRO = [
   { text: 'Find a crumb, press Pick up, bring it to the hole.', done: s => s.colony.delivered.reduce((a,b)=>a+b,0) > 0 },
   { text: 'Good. Fill the store (🌾 top left): food is everything. Watch ❤ health and 🍖 hunger too.', done: s => (s.colony.foodTotal || 0) >= 15 || s.colony.store >= s.colony.cap, skip: true },
   { text: 'Tap Nest (top right), tap the queen, and lay a Builder.', done: s => s.ants.some(a => a.caste === 'builder' && !a.team) || s.colony.eggQueue.includes('builder') || s.colony.eggs.some(e => e.caste === 'builder'), skip: true },
-  { text: 'In the nest, tap dirt beside a tunnel to dig. A Hatchery needs a 4×3 pocket.', done: s => s.nest.digOrders.length > 0 || (s.colony.dug || 0) >= 4, skip: true },
-  { text: 'When the pocket is dug, press Build, pick Hatchery, and tap the green spot.', done: s => s.nest.rooms.some(r => r.key === 'hatchery') || s.colony.buildQueue.length > 0, skip: true },
+  { text: 'In the nest, drag across the dirt beside a tunnel to dig.', done: s => s.nest.digOrders.length > 0 || (s.colony.dug || 0) >= 4, skip: true },
+  { text: 'Press Build and pick Hatchery. Move it beside a tunnel, with dirt round it: green fits. Click to place; builders dig it out.', done: s => s.nest.rooms.some(r => r.key === 'hatchery') || s.colony.buildQueue.length > 0, skip: true },
   { text: 'Lay Foragers: they bring food in on their own while you explore.', done: s => s.ants.filter(a => a.caste === 'forager' && !a.team && !a.isPlayer).length >= 3, skip: true },
   { text: 'Outside, hold Recruit by the nest to call a crew. Lead them to a treat or a caterpillar.', done: s => followers(s) >= 3 || (s.colony.treats || 0) > 0, skip: true },
   { text: 'With a crew, rest the mouse on a bug or a rival ant: your crew attacks it.', done: s => !!s.seen.attacked, skip: true },

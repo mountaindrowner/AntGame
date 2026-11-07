@@ -41,9 +41,11 @@ test('a fill order can never land in a room; a room cancels the fills on its gro
 test('rooms waiting to be built can be cancelled, cost back', () => {
   const s = founded(), c = s.colony; rich(c);
   const r = s.queen.room, x0 = r.x0 + r.w;
-  for (let y = r.y0; y < r.y0 + 3; y++) for (let x = x0; x < x0 + 5; x++) s.nest.cells[y * SIM.NW + x] = 1;
+  // Build 74: a closed chamber, its doorway a cell off the queen's.
+  s.nest.cells[(r.y0 + 1) * SIM.NW + x0] = 1;
+  for (let y = r.y0; y < r.y0 + 3; y++) for (let x = x0 + 1; x < x0 + 5; x++) s.nest.cells[y * SIM.NW + x] = 1;
   c.store = 18; const food = c.store, grit = c.grit; // (under the cap: a refund can't go past it)
-  assert.ok(SIM.queueRoom(s, 'hatchery', [x0 + 1, r.y0 + 1]), 'queued');
+  assert.ok(SIM.queueRoom(s, 'hatchery', [x0 + 2, r.y0 + 1]), 'queued');
   assert.ok(c.store < food);
   assert.equal(SIM.cancelBuilds(s), 1);
   assert.equal(c.buildQueue.length, 0);

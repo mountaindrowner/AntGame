@@ -1,9 +1,9 @@
 // What the UI asks for: recruiting, eggs, rooms, upgrades, and the numbers it shows (stats).
 import { EVO_BY, UPGRADES } from './growth.js';
-import { CASTES, CASTE_EVO, CASTE_ROOM, QUEEN_UP, ROOMS, T, roomCap, roomCount, roomLevel } from './core.js';
+import { CASTES, CASTE_EVO, CASTE_ROOM, QUEEN_UP, ROOMS, SOIL, T, roomCap, roomCount, roomLevel, soilTier } from './core.js';
 import { exitNest, payCost, roomsChanged } from './colony.js';
 import { mkAnt } from './world.js';
-import { findRoomRect, roomOf, roomSlotIndex } from './nest.js';
+import { roomOf, roomPlan, roomSlotIndex, snapPlan } from './nest.js';
 import { crewCap, eggCost, has, picked, roomCost, upgradeCaste } from './progress.js';
 import { dRoomBuilt } from './daughters.js';
 
@@ -18,7 +18,7 @@ export function recruit(s, n){
   for (const o of cands){ if (got >= n) break; if (o.state === 'in'){ o.x = (w.ex+0.5)*T; o.y = (w.ey+0.5)*T; o.tx = w.ex; o.ty = w.ey; } o.follow = true; o.state = 'follow'; o.goal = null; got++; }
   return got;
 }
-export function release(s){ let n = 0; for (const o of s.ants){ if (o.follow){ o.follow = false; o.state = 'explore'; o.explore = 0; o.rest = 0; n++; } } return n; }
+export function release(s){ let n = 0; for (const o of s.ants){ if (o.follow){ o.follow = false; o.fetch = null; o.state = o.carry ? 'return' : 'explore'; o.explore = 0; o.rest = 0; n++; } } return n; }
 export function queueEgg(s, caste){
   const c = s.colony, C = CASTES[caste]; if (!C || !s.queen.placed) return false;
   if (caste === 'soldier' && roomSlotIndex(s,'barracks') < 0) return false;
@@ -46,15 +46,20 @@ export function upgradeRoom(s, key){ if (roomUpLock(s, key)) return false; const
 export function cancelBuilds(s){
   const c = s.colony; let n = 0;
   for (const j of c.buildQueue){ const cost = j.paid || roomCost(s, j.room, roomCount(s, j.room)), k2 = j.progress > 0 ? 0.5 : 1; for (const k in cost){ const back = Math.floor(cost[k]*k2); if (k === 'food') c.store = Math.min(c.cap, c.store + back); else c[k] = (c[k] || 0) + back; } n++; }
-  c.buildQueue.length = 0; c.water = Math.min(c.water, c.waterCap); return n; // (build 47: refunds never past the caps)
+  c.buildQueue.length = 0; s.nest.digOrders = s.nest.digOrders.filter(o => !o.plan || o.progress > 0); for (const o of s.nest.digOrders) delete o.plan; /* build 74: a plan's digs go with it (ones begun are finished) */ c.water = Math.min(c.water, c.waterCap); return n; // (build 47: refunds never past the caps)
 }
-export function queueRoom(s, room, cell){
-  const c = s.colony, R = ROOMS[room]; if (!R || !s.queen.placed || !cell) return false;
+// Build 74: a room goes where you put it (at: its top-left), or snapped round a cell, in a closed chamber with
+// one or two doorways (roomPlan). On solid soil it's a plan: its cells become dig orders and it waits until dug.
+export function queueRoom(s, room, cell, at){
+  const c = s.colony, R = ROOMS[room]; if (!R || !s.queen.placed || !(cell || at)) return false;
   if (roomLock(s, room)) return false;
-  const rect = findRoomRect(s, cell[0], cell[1], R.w, R.h); if (!rect) return false;
+  const plan = at ? roomPlan(s, room, at[0], at[1]) : snapPlan(s, room, cell[0], cell[1]); if (!plan.ok) return false;
   if (!payCost(c, roomCost(s, room))) return false;
-  c.buildQueue.push({ room, x0: rect.x0, y0: rect.y0, w: R.w, h: R.h, progress: 0, x: rect.x0+1, y: rect.y0+1, paid: roomCost(s, room, roomCount(s, room)) });
-  s.nest.fillOrders = s.nest.fillOrders.filter(o => !(o.x >= rect.x0 && o.x < rect.x0 + R.w && o.y >= rect.y0 && o.y < rect.y0 + R.h)); // build 40: a room's ground isn't filled in
+  const door = plan.dig.find(([x, y]) => plan.door.some(d => d[0] === x && d[1] === y)) || null;
+  c.buildQueue.push({ room, x0: plan.x0, y0: plan.y0, w: R.w, h: R.h, progress: 0, x: plan.x0+1, y: plan.y0+1, paid: roomCost(s, room, roomCount(s, room)), ...(plan.dig.length ? { wait: true, door } : {}) });
+  for (const [x, y] of plan.dig) if (!s.nest.digOrders.some(o => o.x === x && o.y === y)) s.nest.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true });
+  const mine = (x, y) => (x >= plan.x0 && x < plan.x0 + R.w && y >= plan.y0 && y < plan.y0 + R.h) || (door && door[0] === x && door[1] === y);
+  s.nest.fillOrders = s.nest.fillOrders.filter(o => !mine(o.x, o.y)); // build 40: a room's ground isn't filled in
   return true;
 }
 // The old "Train foragers": the Forager's next level, taking the first pick if it has one.

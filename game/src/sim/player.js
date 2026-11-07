@@ -4,7 +4,7 @@ import { CASTES, FOODS, H, NH, NW, SHAFT, SURF, T, W, heavy, idx, nidx, rspec } 
 import { addSugar, deposit, killAnt } from './colony.js';
 import { findPath, itemAt, raiseAlarm, walk } from './world.js';
 import { carveRoom, dig, nestStep } from './nest.js';
-import { bite, discover, gainXp, has, maxHp, picked, storeCap, youHp, youL, youPace } from './progress.js';
+import { GRAIN, bite, discover, gainXp, has, maxHp, picked, storeCap, youHp, youL, youPace } from './progress.js';
 import { heldFx } from './outposts.js';
 import { endRaid } from './raids.js';
 import { CAT_REACH, SPIDER_REACH } from './spider.js';
@@ -34,7 +34,8 @@ export function stepPlayer(s, a, dt, enemiesNear){
   if (a.knockT > 0){ knock(s, a, dt); P.pathKey = -1; return; }
   let moving = false;
   // Lifting a treat: the crew sets the pace, and too small a crew drops it.
-  let speed = youPace(s)*SURF*(a.slowT > 0 ? 0.5 : 1)*(a.webT > s.t ? 0 : 1)*(has(s, 'highways') && s.trail[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))] >= 0.3 ? 1.25 : 1);
+  const onTrail = s.trail[idx(Math.max(0, Math.min(W-1, a.tx)), Math.max(0, Math.min(H-1, a.ty)))] >= 0.3;
+  let speed = youPace(s)*SURF*(a.slowT > 0 ? 0.5 : 1)*(a.webT > s.t ? 0 : 1)*(has(s, 'highways') && onTrail ? 1.25 : 1)*(a.caste === 'forager' && onTrail ? 1.2 : 1); // build 74: a forager you play is a fifth faster on trails
   if (a.slowT > 0) a.slowT -= dt;
   if (P.big){ const crew = crewAt(s), need = FOODS[P.big.type].crew;
     if (crew < need){ dropBig(s); P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`; }
@@ -66,6 +67,7 @@ export function stepPlayer(s, a, dt, enemiesNear){
   else P.starving = false;
   if (moving && (P.mark || a.carry)){ const i = idx(a.tx, a.ty); s.trail[i] = Math.min(5, s.trail[i] + 2.5*dt); s.hot.add(i); }
   if (a.carry && nearHome){ deposit(s, a); }
+  youTend(s, a, dt);
   if (P.big && nearHome) deliverBig(s);
   // fight: player bites enemies / cat adjacent
   const pm = Math.max(youHp(s), maxHp(s, a)), yb = youL(s) >= 3 ? 1.5 : 1;
@@ -105,7 +107,43 @@ export function doAction(s){
     if (crew >= need){ P.big = f; f.carried = true; P.msg = 'Lifted! Walk it home; your crew carries it with you.'; }
     else P.msg = `Too heavy: ${crew} of ${need} ants. Recruit more.`;
     return; }
-  if (f){ const take = Math.min(picked(s, 'you', 'bigjaws') ? 8 : 5, f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; }
+  if (f){ const take = Math.min(youLoad(s, a, f), f.amt); f.amt -= take; a.carry = take; a.kind = f.kind; a.itype = f.type; crewGather(s, a, f); }
+}
+// What your ant can do as each kind (build 74), for the rebirth choice and your card.
+export const YOU_AS = {
+  forager: 'Carries 8 a load, a fifth faster on trails', builder: 'Digs and builds itself, at twice a builder; raises outposts fast',
+  nurse: 'Two nurses by the eggs; heals your crew', medic: 'Heals your crew fast, even fighting; cures the fungus',
+  harvester: 'Carries seed in double loads', replete: 'Carries 12 food in its crop',
+  soldier: 'Bites three times as hard as a forager', venom: 'Bites eight times as hard: kills big things', major: 'Bites five times as hard; very tough', supermajor: 'Bites ten times as hard; a tank',
+};
+// Build 74 (Mark: "if we can birth it as different ants it should have those abilities, or what else is it for?"):
+// your load by your kind. A forager carries 8 (12 with Big jaws), a harvester seed in double loads, a replete 12 food in its crop.
+export function youLoad(s, a, f){
+  const big = picked(s, 'you', 'bigjaws'); let n = a.caste === 'forager' ? (big ? 12 : 8) : big ? 8 : 5;
+  if (f && f.kind === 'food'){ if (a.caste === 'harvester' && GRAIN[f.type]) n *= 2; if (a.caste === 'replete') n = Math.max(n, 12); }
+  return n;
+}
+// A nurse you play heals the crew round you when it isn't fighting; a medic twice as fast, fighting or not, and
+// it cures Cordyceps near it.
+function youTend(s, a, dt){
+  const k = a.caste === 'nurse' ? 0.25 : a.caste === 'medic' ? 0.5 : 0; if (!k) return;
+  for (const o of s.ants){ if (o === a || o.team || !o.follow || !outside(o) || Math.abs(o.x - a.x) > 3*T || Math.abs(o.y - a.y) > 3*T) continue;
+    if (a.caste === 'nurse' && o.hitT > s.t - 2) continue;
+    const m = maxHp(s, o); if (o.hp < m) o.hp = Math.min(m, o.hp + k*dt);
+    if (a.caste === 'medic' && (o.hspore || (o.infect != null && !o.zombie)) && Math.random() < dt*0.3){ o.hspore = null; o.infect = null; } }
+}
+// Build 74 (Mark: "none of your ants got water"): when you pick something up, each ant of your crew close by takes a
+// load of the same kind from the nearest pile within eight tiles, carries it with you, and delivers when you do.
+export const GATHER_R = 8;
+function crewGather(s, a, f){
+  const piles = s.items.filter(x => x.kind === f.kind && !heavy(x) && !x.carried && x.amt > 0 && Math.abs(x.x - a.tx) <= GATHER_R && Math.abs(x.y - a.ty) <= GATHER_R);
+  if (!piles.length) return 0; let n = 0;
+  for (const o of s.ants){ if (o.team || !o.follow || o.state !== 'follow' || o.carry || o.fetch || Math.hypot(o.x - a.x, o.y - a.y) > 6*T) continue;
+    let best = null, bd = Infinity; for (const x of piles){ if ((x.claim || 0)*5 >= x.amt) continue; const d = Math.hypot(x.x - o.x/T, x.y - o.y/T); if (d < bd){ bd = d; best = x; } } // a load each, so they spread over the piles
+    if (!best) break; best.claim = (best.claim || 0) + 1; o.fetch = { x: best.x, y: best.y, kind: f.kind }; n++; }
+  for (const x of piles) delete x.claim;
+  if (n && !s.seen.gather){ s.seen.gather = true; s.player.msg = `Your crew gathers too: ${n} go for ${f.kind === 'water' ? 'water' : 'a load each'}, and they deliver when you do.`; }
+  return n;
 }
 // You plus every recruited ant within three tiles.
 // Build 26: attack on purpose (Mark: "you recruit everybody and then you attack on purpose... you hover

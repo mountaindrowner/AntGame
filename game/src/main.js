@@ -20,7 +20,6 @@ import { GROUND_TINT } from './render/views/yardScenery.js';
 import './ui/ui.css';
 import './ui/themes.css'; // UI themes, picked under Options → Look
 
-const { NW, NH } = SIM;
 const STEP = 0.05; // the sim's fixed tick (20 Hz)
 
 const canvas = document.getElementById('c');
@@ -57,16 +56,15 @@ const app = {
     this.panY = 0; this.panX = 0;
     ui.closeMenu();
   },
-  // Cells where a w×h room fits (green highlight), and whether any do.
-  placeCells(w, h) {
-    const set = new Set(), s = this.s;
-    for (let y = 1; y < NH; y++) for (let x = 1; x < NW - 1; x++) {
-      if (s.nest.cells[y * NW + x] !== 1) continue;
-      if (SIM.findRoomRect(s, x, y, w, h)) set.add(y * NW + x);
-    }
-    return set;
+  // Build 74: the room being placed, as a plan under the cursor (or where a touch put it): its footprint, wall,
+  // doorways, the cells to dig, and whether it fits (with why not). Worked out again only when something changes.
+  ghostPlan() {
+    const p = this.placing; if (!p || p.kind !== 'room') return null;
+    const c = this.ghostCell || this.nestHover, s = this.s; if (!c) return null;
+    const k = p.key + c + ':' + s.nest.ver + ':' + s.nest.digOrders.length + ':' + s.colony.buildQueue.length + ':' + s.nest.rooms.length;
+    if (this._ghostK !== k) { this._ghostK = k; this._ghost = SIM.snapPlan(s, p.key, c[0], c[1]); }
+    return this._ghost;
   },
-  anyFit(w, h) { return this.placeCells(w, h).size > 0; },
 };
 
 const views = { surface: new SurfaceView(), nest: new NestView() };

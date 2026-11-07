@@ -567,8 +567,22 @@ export class NestView {
     // Placement tools.
     const placing = app.placing;
     if (placing && placing.kind === 'room') {
-      const R = ROOMS[placing.key];
-      for (const i of app.placeCells(R.w, R.h)) this._fill((i % NW) * T + 1, Math.floor(i / NW) * T + 1, T - 2, T - 2, '#78dc6e', 0.8);
+      // Build 74: the ghost. Green fits, red doesn't (and says why); its wall outlined, doorways gold, the
+      // cells still to dig marked.
+      const g = app.ghostPlan();
+      if (g) {
+        const ok = g.ok, pulse = 0.5 + 0.5 * Math.sin(t * 5);
+        for (let y = g.y0; y < g.y0 + g.h; y++) for (let x = g.x0; x < g.x0 + g.w; x++) {
+          if (x < 0 || y < 0 || x >= NW || y >= NH) continue;
+          this._fill(x * T + 1, y * T + 1, T - 2, T - 2, ok ? '#5cc85a' : '#d8503c', 0.8);
+        }
+        for (const [x, y] of g.dig) if (!(g.door.some((d) => d[0] === x && d[1] === y))) this._fill(x * T + T / 2 - 1.6, y * T + T / 2 - 1.6, 3.2, 3.2, ok ? '#e8ffd8' : '#ffd8d0', 0.85);
+        for (const [x, y] of g.wall) if (x >= 0 && y >= 0 && x < NW && y < NH) this._outline(x * T + 2.5, y * T + 2.5, T - 5, T - 5, ok ? '#a8e090' : '#e89080', 0.6);
+        for (const [x, y] of g.door) this._fill(x * T + 2, y * T + 2, T - 4, T - 4, '#ffcf3a', 0.85 + 0.01 * pulse);
+        this._outline(g.x0 * T, g.y0 * T, g.w * T, g.h * T, ok ? '#c8ffb0' : '#ffb0a0', 1.2 + 0.4 * pulse);
+        const R = ROOMS[placing.key];
+        this.labels.push({ text: ok ? `${R.name}${g.dig.length ? ` · ${g.dig.length} to dig` : ''} · click to place` : g.why.replace(/^./, (ch) => ch.toUpperCase()), x: (g.x0 + g.w / 2) * T, y: -(g.y0 + g.h) * T - T * 0.9, z: 0, kind: ok ? 'place' : 'warn' });
+      }
     }
     if (placing && placing.kind === 'remove') {
       for (const r of n.rooms) if (r.key !== 'queen') this._outline(r.x0 * T + 1, r.y0 * T + 1, (r.w || 4) * T - 2, (r.h || 3) * T - 2, '#ff7850', 1.4);

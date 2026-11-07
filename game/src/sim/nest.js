@@ -34,6 +34,74 @@ export function findRoomRect(s, cx, cy, w, h){
   }
   return null;
 }
+// ---------- build 74: rooms need walls and a way in ----------
+// Mark: "only in a closed chamber and hallway". Every cell touching a room's footprint (its wall) is solid dirt
+// but one or two doorways: tunnel cells out to a hallway. A plan can sit on solid soil: its cells, and a doorway
+// to the nearest tunnel when it needs one, become dig orders, and the builders dig it out before they build it.
+export const DIG_ORDERS = 40; // the player's own (build 74: was 16); a plan's digs don't count
+function ringOf(x0, y0, w, h){
+  const out = [];
+  for (let x = x0; x < x0 + w; x++){ out.push([x, y0 - 1, 0, -1]); out.push([x, y0 + h, 0, 1]); }
+  for (let y = y0; y < y0 + h; y++){ out.push([x0 - 1, y, -1, 0]); out.push([x0 + w, y, 1, 0]); }
+  return out;
+}
+const inRect = (r, x, y) => x >= r.x0 && x < r.x0 + (r.w || 4) && y >= r.y0 && y < r.y0 + (r.h || 3);
+const orderAt = (s, x, y) => s.nest.digOrders.find(o => o.x === x && o.y === y) || null;
+// What it takes to put a `key` room with its top-left at x0, y0: { ok, why, dig: cells to dig, door, wall }.
+export function roomPlan(s, key, x0, y0){
+  const R = ROOMS[key], n = s.nest, w = R.w, h = R.h, jobs = s.colony.buildQueue;
+  const out = { key, x0, y0, w, h, ok: false, why: '', dig: [], door: [], wall: [] };
+  if (x0 < 1 || y0 < 1 || x0 + w > NW - 1 || y0 + h > NH){ out.why = 'too near the edge'; return out; }
+  const soilWhy = (x, y) => cellLocked(s, x, y) ? 'shut ground: break into it first' : isGlowRock(x, y) ? 'a glowing rock is in the way' : (digAllowed(s, y, x) ? 'that soil ' + digAllowed(s, y, x) : '');
+  for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++){
+    const v = n.cells[nidx(x, y)];
+    if (v === 2 || jobs.some(j => inRect(j, x, y))){ out.why = 'another room is here'; return out; }
+    if (!v && !orderAt(s, x, y)){ const why = soilWhy(x, y); if (why){ out.why = why; return out; } out.dig.push([x, y]); }
+  }
+  const outside = [];
+  for (const [x, y, dx, dy] of ringOf(x0, y0, w, h)){
+    if (x < 0 || y < 0 || x >= NW || y >= NH){ out.wall.push([x, y]); continue; }
+    const v = n.cells[nidx(x, y)];
+    if (v === 2 || jobs.some(j => inRect(j, x, y))){ out.why = 'it would share a wall with another room: leave dirt between'; return out; }
+    if (v || orderAt(s, x, y)) out.door.push([x, y]); else { out.wall.push([x, y]); outside.push([x, y, x + dx, y + dy]); }
+  }
+  if (out.door.length > 2){ out.why = 'too open: a room needs walls, with one or two ways in'; return out; }
+  if (!out.door.length){ // a doorway through the wall to the nearest hallway
+    let pick = null;
+    for (const [x, y, bx, by] of outside){ if (bx < 0 || by < 0 || bx >= NW || by >= NH || n.cells[nidx(bx, by)] !== 1 || soilWhy(x, y)) continue;
+      const near = reachable(s, bx, by); if (!pick || (near && !pick.near)) pick = { x, y, near }; }
+    if (!pick){ out.why = 'no way in: put it beside a tunnel'; return out; }
+    out.door.push([pick.x, pick.y]); out.dig.push([pick.x, pick.y]); out.wall = out.wall.filter(([x, y]) => x !== pick.x || y !== pick.y);
+  }
+  out.ok = true; return out;
+}
+// Of the places that would hold the room over a cell, the one needing the least digging (nearest the middle on a tie);
+// with none, the one centred on the cell, with its reason.
+export function snapPlan(s, key, cx, cy){
+  const R = ROOMS[key]; let best = null, bs = Infinity;
+  for (let y0 = cy - R.h + 1; y0 <= cy; y0++) for (let x0 = cx - R.w + 1; x0 <= cx; x0++){
+    const p = roomPlan(s, key, x0, y0); if (!p.ok) continue;
+    const sc = p.dig.length*10 + Math.abs(x0 + (R.w - 1)/2 - cx) + Math.abs(y0 + (R.h - 1)/2 - cy); if (sc < bs){ bs = sc; best = p; } }
+  return best || roomPlan(s, key, cx - Math.floor((R.w - 1)/2), cy - Math.floor((R.h - 1)/2));
+}
+// The first room in the queue that's dug out and ready to build (a plan waits for its digs).
+export function readyJob(s){ return s.colony.buildQueue.find(j => !j.wait) || null; }
+export function tickPlans(s){
+  for (const j of s.colony.buildQueue) if (j.wait){ let dug = true;
+    for (let y = j.y0; y < j.y0 + j.h && dug; y++) for (let x = j.x0; x < j.x0 + j.w; x++) if (!s.nest.cells[nidx(x, y)]){ dug = false; break; }
+    if (dug && j.door) dug = !!s.nest.cells[nidx(j.door[0], j.door[1])];
+    if (dug) j.wait = false; }
+}
+// A dig here would open a third way into a room (built or planned): its wall stays a wall. The queen's chamber,
+// dug by her, is the hub and is exempt.
+export function wallOf(s, x, y){
+  for (const r of [...s.nest.rooms, ...s.colony.buildQueue]){ if (r.key === 'queen') continue; const w = r.w || 4, h = r.h || 3;
+    const side = (x >= r.x0 && x < r.x0 + w && (y === r.y0 - 1 || y === r.y0 + h)) || (y >= r.y0 && y < r.y0 + h && (x === r.x0 - 1 || x === r.x0 + w));
+    if (!side) continue;
+    let open = 0; for (const [rx, ry] of ringOf(r.x0, r.y0, w, h)) if (rx >= 0 && ry >= 0 && rx < NW && ry < NH && (s.nest.cells[nidx(rx, ry)] || orderAt(s, rx, ry))) open++;
+    if (open >= 2) return r; }
+  return null;
+}
 export function toggleFillOrder(s, x, y){
   const n = s.nest; if (x<1||y<1||x>=NW-1||y>=NH) return 'edge';
   const i = n.fillOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ n.fillOrders.splice(i,1); return 'removed'; }
@@ -142,10 +210,11 @@ export function tickNestFinds(s, dt){
 }
 export function toggleDigOrder(s, x, y){
   const n = s.nest; if (x<1||y<1||x>=NW-1||y>=NH) return 'edge';
-  const i = n.digOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ n.digOrders.splice(i,1); return 'removed'; }
+  const i = n.digOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ if (n.digOrders[i].plan) return 'planned'; n.digOrders.splice(i,1); return 'removed'; }
   if (n.cells[nidx(x,y)]) return 'dug'; let adj = isDugNeighbor(s, x, y);
   if (!adj){ const o = n.digOrders.find(o => Math.abs(o.x-x)+Math.abs(o.y-y) === 1); if (o) adj = [o.x, o.y]; } if (!adj) return 'not adjacent';
-  const why = digAllowed(s, y, x); if (why) return why; if (n.digOrders.length >= 16) return 'too many';
+  const why = digAllowed(s, y, x); if (why) return why; if (n.digOrders.filter(o => !o.plan).length >= DIG_ORDERS) return 'too many';
+  if (s.colony.buildQueue.some(j => inRect(j, x, y))) return 'planned'; if (wallOf(s, x, y)) return 'wall';
   const glow = isGlowRock(x, y); /* build 52: a glowing rock: 25 minutes' work, however many dig */
   if (glow) s.player.msg = '🟢 A glowing rock. Prising it out takes about 25 minutes, however many builders work it.';
   n.digOrders.push({ x, y, ax: adj[0], ay: adj[1], progress: 0, need: glow ? GLOW_NEED : SOIL[soilTier(y)].work, ...(glow ? { glow: true } : {}) }); return 'added';
@@ -160,7 +229,7 @@ function taskSpot(s, a, task){
   const k = task[0];
   if (k === 'h') return reachable(s, SHAFT, 0) ? [SHAFT, 0] : null;
   if (k === 'j'){
-    const job = s.colony.buildQueue[0]; if (!job) return null;
+    const job = readyJob(s); if (!job) return null;
     // Spread the crew along the room's floor.
     const crew = s.ants.filter(b => b !== a && b.task === 'j').length;
     const x = job.x0 + Math.min(job.w-1, 1 + crew*2 % job.w), y = job.y0 + job.h - 1;
@@ -176,8 +245,10 @@ function taskSpot(s, a, task){
     const f = nestField(s, nx, ny); if (mine >= 0 && f[mine] < 9999) return [nx, ny]; if (!fallback && f[nidx(SHAFT,0)] < 9999) fallback = [nx, ny]; }
   return fallback;
 }
+// Where to stand to dig a cell (build 74: your builder walks there).
+export function digSpot(s, x, y){ return taskSpot(s, s.player.ant, 'd' + x + ',' + y); }
 function taskExists(s, task){
-  const k = task[0]; if (k === 'j') return s.colony.buildQueue.length > 0;
+  const k = task[0]; if (k === 'j') return !!readyJob(s);
   if (k === 'h') return (s.nest.spoil||0) > 0;
   if (k === 'd' && (s.nest.spoil||0) >= SPOIL_MAX) return false; // go haul instead
   const [x, y] = task.slice(1).split(',').map(Number);
@@ -202,7 +273,7 @@ export function pickBuilderTask(s, a){
       const d = Math.abs(spot[0]-cx) + Math.abs(spot[1]-cy); if (d < pd){ pd = d; pick = { t, spot, goal }; } }
     return pick;
   };
-  const job = s.colony.buildQueue[0];
+  const job = readyJob(s);
   const room = job && (claimed.get('j')||0) < ROOM_CREW ? (() => { const spot = taskSpot(s, a, 'j'); return spot ? { t: 'j', spot, goal: 'job' } : null; })() : null;
   const spoil = s.nest.spoil || 0, full = spoil >= SPOIL_MAX;
   const haul = spoil > (claimed.get('h')||0) && reachable(s, SHAFT, 0) ? { t: 'h', spot: [SHAFT, 0], goal: 'haul' } : null;

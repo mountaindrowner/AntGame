@@ -405,7 +405,7 @@ export function createUI(app) {
   // Your ant died: come back as one of your named ants, or wait for an egg.
   function rebornChoices() { return app.s.ants.filter((a) => !a.team && a.state !== 'dead' && !a.isPlayer && rankOf(a) >= 3).sort((a, b) => (b.xp || 0) - (a.xp || 0)).slice(0, 4); }
   // Or hatch again as any kind of ant you've unlocked.
-  const REBORN_AS = { forager: 'Fast, carries food', builder: 'Digs; slow outside', nurse: 'Stays home', soldier: 'Bites hard; a fighter', venom: 'Kills big things' };
+  const REBORN_AS = Object.fromEntries(['forager', 'builder', 'nurse', 'medic', 'harvester', 'replete', 'soldier', 'major', 'venom'].map((k) => [k, SIM.YOU_AS[k]])); // build 74: each plays as its kind
   function renderReborn() {
     const s = app.s, list = rebornChoices();
     const why = { spider: 'The spider got you.', rival: 'A rival soldier got you.', war: 'Killed in a fight.', antlion: 'An antlion dragged you under.', mower: 'The mower got you.', foot: 'A foot came down on you.', bird: 'A robin snapped you up.', toad: 'The toad’s tongue got you.', acorn: 'An acorn fell on you.', spray: 'The bug spray got you.', fireants: 'Fire ants stung you to death.', hunger: 'You starved: eat at the nest.' }[P().deathCause] || 'Your ant is gone.';
@@ -483,12 +483,12 @@ export function createUI(app) {
     } else if (app.menu === 'catalog') {
       const builders = s.ants.filter((a) => a.caste === 'builder').length;
       h += `<div class="row head"><strong>Build</strong><button class="x" data-close="1">Close</button></div>`;
-      h += `<div class="note">Pick a room, then tap a green spot in the nest to place it. ${builders} builder${builders === 1 ? '' : 's'}. Dug cells: ${SIM.dugCount(s)}. Dig orders: ${s.nest.digOrders.length}, fill orders: ${s.nest.fillOrders.length}.</div>`;
+      h += `<div class="note">Pick a room, then place it in the nest: green where it fits. A room needs dirt all round and one or two ways in; on dirt, builders dig it out first. ${builders} builder${builders === 1 ? '' : 's'}. Dug cells: ${SIM.dugCount(s)}. Dig orders: ${s.nest.digOrders.length}, fill orders: ${s.nest.fillOrders.length}.</div>`;
       h += `<div class="note">You can build ${SIM.roomCap(s)} of each room (one per queen level); each extra costs half again more. Rooms eat food to run: ½ 🌾 a minute for the first of a kind, 1 for each extra. Now: ${SIM.roomUpkeep(s)} 🌾 a minute.</div><div class="btns">`;
       for (const k of ROOM_KEYS) {
         const R = ROOMS[k];
         const n = SIM.roomCount(s, k), lock = SIM.roomLock(s, k);
-        const rc = SIM.roomCost(s, k), fits = app.anyFit(R.w, R.h), pay = SIM.canPay(c, rc);
+        const rc = SIM.roomCost(s, k), fits = true, pay = SIM.canPay(c, rc);
         // A cost above the food cap can never be paid: say what unlocks it.
         const overCap = (rc.food || 0) > c.cap;
         const status = lock ? (n && lock !== 'being built' ? 'built · ' + lock : lock) : overCap ? `needs more food cap (${c.cap})` : !fits ? 'no ' + R.w + '×' + R.h + ' pocket dug yet' : !pay ? 'short on: ' + SIM.costText(rc) : n ? `ready: a ${['', 'second', 'third', 'fourth', 'fifth'][n] || 'another'} one` : 'ready to place';
@@ -712,7 +712,7 @@ export function createUI(app) {
     const s = app.s, c = s.colony, a = P().ant, q = s.queen;
     // (Build 69: news and warnings, P.msg, go to the feed; this line is for how-to and where you are.)
     if (app.placing && app.view === 'nest') {
-      if (app.placing.kind === 'room') { const R = ROOMS[app.placing.key]; return `Placing ${R.name} (${R.w}×${R.h}). Tap a green cell. Cancel to stop.`; }
+      if (app.placing.kind === 'room') { const R = ROOMS[app.placing.key]; return `Placing ${R.name} (${R.w}×${R.h}). Green fits; click to place. Right-click or Esc to stop.`; }
       if (app.placing.kind === 'fill') return 'Fill: tap tunnel cells to pack them back. Cancel to stop.';
       return 'Remove: tap a room to tear it out. Cancel to stop.';
     }
@@ -734,7 +734,7 @@ export function createUI(app) {
     if (learning && !c.eggQueue.length && !c.eggs.length && c.store >= Math.max(4, c.cap * 0.15)) return 'Food in store. Tap Nest, tap the queen, lay an egg.';
     if (s.ants.filter((x) => x.caste === 'builder').length === 0 && c.store >= 10) return 'Lay a Builder egg. Builders dig rooms.';
     if (SIM.eggLock(s, 'soldier') && c.protein < 5 && s.cat) return 'Soldiers need protein. Hunt the caterpillar with a crew.';
-    if (SIM.eggLock(s, 'soldier') && c.protein >= 5) return 'You have protein. Dig a 6×3 pocket and build a Barracks.';
+    if (SIM.eggLock(s, 'soldier') && c.protein >= 5) return 'You have protein. Build a Barracks (6×3) beside a tunnel.';
     return '';
   }
   // Build 19: the event under way, as a chip in the top bar.
@@ -1101,7 +1101,7 @@ export function createUI(app) {
   el.menu.addEventListener('click', () => { closeMenu(); if (evo.isOpen) evo.close(); app.openTitle(); });
   window.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape' || document.body.classList.contains('cine-on')) return;
-    if (evo.isOpen) evo.close(); else if (mapView.isOpen) mapView.close(); else if (app.menu) closeMenu(); else if (!app.titleOpen) app.openTitle();
+    if (evo.isOpen) evo.close(); else if (mapView.isOpen) mapView.close(); else if (app.menu) closeMenu(); else if (app.placing) { app.placing = null; app.ghostCell = null; } else if (!app.titleOpen) app.openTitle();
   });
   // A small "Saved ✓" when the game autosaves.
   function saved() { const e = $('saved'); e.classList.add('on'); clearTimeout(saved.t); saved.t = setTimeout(() => e.classList.remove('on'), 1400); }

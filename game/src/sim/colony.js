@@ -3,7 +3,7 @@
 import { FAMILY, RANKS, rankOf } from './growth.js';
 import { CASTES, CASTE_ROOM, CHITIN_OF, FOODS, H, NEST_CAP, RIVALS, ROOMS, SHAFT, SPOIL_MAX, T, W, idx, nidx, roomCount, roomLevel, roomUpkeep, rspec } from './core.js';
 import { chooseExplore, chooseToward, colonyOf, itemAt, mkAnt } from './world.js';
-import { bedrockGlow, bedrockPrize, builderTaskValid, carveRoom, dig, gainGlow, nestStep, pickBuilderTask, reachable, roomOf, tickBreach, tickNestFinds } from './nest.js';
+import { bedrockGlow, bedrockPrize, builderTaskValid, carveRoom, dig, gainGlow, nestStep, pickBuilderTask, reachable, readyJob, roomOf, tickBreach, tickNestFinds, tickPlans } from './nest.js';
 import { GRAIN, advise, discover, gainGenes, gainXp, has, hatchCapOf, inBand, jobMul, lvl, maxHp, picked, promo, qtrait, storeCap, workOf, youHp } from './progress.js';
 import { DSPOTS, LARDER_FOOD, LARDER_FULL, LARDER_RATE, dRoomBuilt, daughterOf, farPop, joined, killFar } from './daughters.js';
 import { heldFx, prizeFx, setDone, waterCapOf } from './outposts.js';
@@ -99,6 +99,7 @@ export function tickColony(s, c, dt){
     let rate = 1;
     if (!c.team){ const nurses = s.ants.filter(a => a.caste==='nurse' && a.team===0 && (a.state==='in'||a.state==='build')).slice(0, (lvl(s, 'nurse') >= 2 ? 6 : 3) + 3*Math.max(0, roomCount(s, 'nursery') - 1));
       for (const a of nurses) rate += 0.12*jobMul(a)*(promo(s, a, 'gentle') ? 1.3 : 1);
+      if (youNurse(s)) rate += 0.24; // build 74: a nurse you play, by the eggs, is two nurses
       if (s.ants.some(a => !a.team && a.caste !== 'nurse' && a.state === 'in' && promo(s, a, 'gentle'))) rate *= 1.1; // build 40: a Gentle medic, rancher, replete or undertaker helps a little too
       if (nurses.length && lvl(s, 'nurse') >= 1) rate *= 1.15;
       if (nurses.length && lvl(s, 'nurse') >= 3) rate *= 1.3;
@@ -169,14 +170,21 @@ export function tickColony(s, c, dt){
     // Construction only advances for builders standing at their own job.
     const crewOf = key => s.ants.filter(a => a.caste==='builder' && a.team===0 && a.state==='build' && a.atWork && a.task === key);
     const atWork = key => crewOf(key).reduce((t, a) => t + workOf(s, a, key[0]), 0);
-    if (c.buildQueue.length){ const job = c.buildQueue[0]; const builders = atWork('j');
+    tickPlans(s); const job = readyJob(s); // build 74: a planned room waits until it's dug out
+    if (job){ const builders = atWork('j') + youBuild(s, job);
       job.progress += builders*ws*dt; const R = ROOMS[job.room];
-      if (job.progress >= R.work){ for (const a of crewOf('j')) gainXp(s, a, 3); c.buildQueue.shift(); finishRoom(s, job); } }
+      if (job.progress >= R.work){ for (const a of crewOf('j')) gainXp(s, a, 3); c.buildQueue.splice(c.buildQueue.indexOf(job), 1); finishRoom(s, job); } }
     for (let i=s.nest.fillOrders.length-1;i>=0;i--){ const o = s.nest.fillOrders[i]; if (s.nest.cells[nidx(o.x,o.y)] === 2){ s.nest.fillOrders.splice(i, 1); continue; } /* never into a room */ const b = atWork('f'+o.x+','+o.y); o.progress += b*ws*dt; if (o.progress >= o.need){ const occupied = s.ants.some(a => !a.team && (a.state==='in'||a.state==='build'||a.state==='nest') && Math.floor(a.nx)===o.x && Math.floor(a.ny)===o.y); if (!occupied){ for (const a of crewOf('f'+o.x+','+o.y)) gainXp(s, a, 1); s.nest.cells[nidx(o.x,o.y)] = 0; s.nest.ver++; s.nest.fillOrders.splice(i,1); } } }
     const full = (s.nest.spoil||0) >= SPOIL_MAX; // dirt waiting to go out: digging stops
-    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y); o.progress += o.glow ? Math.min(b*ws, 1)*(joined(s, 'quarry') ? 1.25 : 1)*dt : b*ws*dt; /* build 52: glowrock comes out at its own pace */ if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); bedrockGlow(s, o.y); if (o.glow) gainGlow(s, 1, 'dug'); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
+    for (let i=s.nest.digOrders.length-1;i>=0;i--){ const o = s.nest.digOrders[i]; if (full) break; const b = atWork('d'+o.x+','+o.y) + youDig(s, o); o.progress += o.glow ? Math.min(b*ws, 1)*(joined(s, 'quarry') ? 1.25 : 1)*dt : b*ws*dt; /* build 52: glowrock comes out at its own pace */ if (o.progress >= o.need){ for (const a of crewOf('d'+o.x+','+o.y)) gainXp(s, a, 1); c.dug++; dig(s, o.x, o.y); bedrockPrize(s, o.x, o.y); bedrockGlow(s, o.y); if (o.glow) gainGlow(s, 1, 'dug'); s.nest.digOrders.splice(i,1); s.nest.spoil = (s.nest.spoil||0) + 1; } }
   }
 }
+// Build 74 (Mark: "what's the point of your ant being a builder if he cannot dig himself?"): a builder you play
+// digs the order beside it and builds the room it stands in, at twice a builder's pace.
+function youNurse(s){ const P = s.player, a = P.ant; if (!a || !P.inNest || P.nestKey || a.caste !== 'nurse') return false; const r = roomOf(s, 'hatchery') || s.queen.room, x = Math.floor(a.nx), y = Math.floor(a.ny); return !!r && x >= r.x0 - 1 && x <= r.x0 + (r.w || 4) && y >= r.y0 - 1 && y <= r.y0 + (r.h || 3); }
+function youBuilder(s){ const P = s.player, a = P.ant; return a && P.inNest && !P.nestKey && a.caste === 'builder' ? a : null; }
+function youBuild(s, job){ const a = youBuilder(s); if (!a) return 0; const x = Math.floor(a.nx), y = Math.floor(a.ny); return x >= job.x0 && x < job.x0 + job.w && y >= job.y0 && y < job.y0 + job.h ? 2 : 0; }
+function youDig(s, o){ const a = youBuilder(s); if (!a) return 0; const x = Math.floor(a.nx), y = Math.floor(a.ny); if (Math.abs(x - o.x) + Math.abs(y - o.y) !== 1) return 0; if (o.progress + 0.05 >= o.need) gainXp(s, a, 1); return o.glow ? 1 : 2; }
 function finishRoom(s, job){
   carveRoom(s, job, job.room);
   s.player.msg = `${ROOMS[job.room].name} finished: ${ROOMS[job.room].desc.replace(/^./, ch => ch.toLowerCase())}.`; s.events.push('roomdone');

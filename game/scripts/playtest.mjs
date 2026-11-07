@@ -86,53 +86,27 @@ const ORDER = {
   cheese: ['hatchery', 'store', 'cistern'],
   idle: ['hatchery', 'store'],
 };
-let pocket = null; // { key, x0, y0, w, h }
+// Build 74: rooms go in closed chambers, placed as plans the builders dig out (Build → place the ghost).
+let planT = -99;
 function roomPlan() {
   const keys = ORDER[strategy] || ORDER.sensible;
   // A room costing more food than the store can hold has to wait for a Food store.
   const next = keys.find((k) => !SIM.roomOf(s, k) && !SIM.roomLock(s, k) && (!SIM.ROOMS[k].evo || established()) && !c.buildQueue.some((j) => j.room === k) && (SIM.ROOMS[k].cost.food || 0) <= c.cap);
-  if (!next) return;
+  if (!next || !caste('builder') || c.buildQueue.length || s.t - planT < 10) return;
   const R = SIM.ROOMS[next];
-  // A fitting pocket already dug? Place it when affordable (Build → tap a green cell).
-  for (let y = 1; y < SIM.SOIL_TOP[1]; y++) for (let x = 1; x < NW - 1; x++) {
-    const r = SIM.findRoomRect(s, x, y, R.w, R.h);
-    if (r) {
-      if (SIM.canPay(c, R.cost) && SIM.queueRoom(s, next, [x, y])) { note(`placed ${next}`); pocket = null; }
-      return;
-    }
-  }
-  if (!caste('builder')) return;
-  if (!pocket || pocket.key !== next) pocket = choosePocket(next, R);
-  if (!pocket) return;
-  // Tap the pocket's cells as dig orders, nearest-to-tunnel first.
-  for (let y = pocket.y0; y < pocket.y0 + pocket.h; y++) for (let x = pocket.x0; x < pocket.x0 + pocket.w; x++) {
-    if (s.nest.digOrders.length >= 8) return;
-    if (!s.nest.cells[y * NW + x] && !s.nest.digOrders.some((o) => o.x === x && o.y === y)) SIM.toggleDigOrder(s, x, y);
-  }
-}
-function choosePocket(key, R) {
-  const n = s.nest, q = s.queen.room;
-  let best = null, bd = Infinity;
+  if (!SIM.canPay(c, SIM.roomCost(s, next))) return;
+  planT = s.t;
+  const q = s.queen.room; let best = null, bd = Infinity;
   for (let y0 = 1; y0 + R.h <= SIM.SOIL_TOP[1]; y0++) for (let x0 = 1; x0 + R.w <= NW - 1; x0++) {
-    let ok = true, touch = false;
-    for (let y = y0 - 1; y <= y0 + R.h && ok; y++) for (let x = x0 - 1; x <= x0 + R.w; x++) {
-      const inside = y >= y0 && y < y0 + R.h && x >= x0 && x < x0 + R.w;
-      const v = n.cells[y * NW + x];
-      if (inside && (v || SIM.cellLocked(s, x, y))) { ok = false; break; } // (build 42: not into shut ground)
-      if (!inside && v === 2) { ok = false; break; } // keep a wall between rooms
-      if (!inside && v === 1 && (x >= x0 && x < x0 + R.w || y >= y0 && y < y0 + R.h)) touch = true;
-    }
-    if (!ok || !touch) continue;
-    const d = Math.abs(x0 - q.x0) + Math.abs(y0 - q.y0) * 1.5;
-    if (d < bd) { bd = d; best = { key, x0, y0, w: R.w, h: R.h }; }
+    const p = SIM.roomPlan(s, next, x0, y0); if (!p.ok) continue;
+    const d = p.dig.length * 2 + Math.abs(x0 - q.x0) + Math.abs(y0 - q.y0) * 1.5;
+    if (d < bd) { bd = d; best = p; }
   }
-  if (!best) {
-    // No pocket touches a tunnel yet: run a corridor along the chamber floor.
-    const y = q.y0 + q.h - 1;
-    for (let x = q.x0 + q.w; x < NW - 2 && s.nest.digOrders.length < 6; x++) if (!n.cells[y * NW + x]) SIM.toggleDigOrder(s, x, y);
-    for (let x = q.x0 - 1; x > 1 && s.nest.digOrders.length < 10; x--) if (!n.cells[y * NW + x]) SIM.toggleDigOrder(s, x, y);
-  }
-  return best;
+  if (best) { if (SIM.queueRoom(s, next, null, [best.x0, best.y0])) note(`placed ${next}`); return; }
+  // Nowhere beside a tunnel: run a corridor along the chamber floor.
+  const y = q.y0 + q.h - 1, n = s.nest;
+  for (let x = q.x0 + q.w; x < NW - 2 && n.digOrders.length < 6; x++) if (!n.cells[y * NW + x]) SIM.toggleDigOrder(s, x, y);
+  for (let x = q.x0 - 1; x > 1 && n.digOrders.length < 10; x--) if (!n.cells[y * NW + x]) SIM.toggleDigOrder(s, x, y);
 }
 // Build 25.1: two of each evolved room's ant once its room stands, and majors as a quarter of the army.
 const EXTRA = ['medic', 'harvester', 'gardener', 'rancher', 'undertaker', 'replete', 'major'];
