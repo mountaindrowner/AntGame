@@ -12,6 +12,7 @@ Broken into six phases in [`PLAYTEST-3.md`](PLAYTEST-3.md), worked piece by piec
 
 **Proposed, waiting on Mark**
 - **Phase 2, the house:** the Takeover (build 58) opens its back door. Needs a design document (the grand arc, the "radioactive waste").
+  - **A rule for it (Mark, playtest 3):** "We don't want them eating people or kids or anything." People are a force of nature (feet, the mower, spray, the trash), never prey: ants take people's food, never people.
 - **Balance levers from the stress run (build 47), Mark's call:**
   - meat is the late-game ceiling (the Egg larder and the Blue Butterfly Pact help, by design not fully);
   - forager return about 2.5× upkeep (real ants 4–9×), so about 40% of a colony must forage;

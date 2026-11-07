@@ -2,6 +2,17 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: Phase 6, save slots (build 76)
+
+Mark: "It auto saves? Yeah, that's good. But it'd be good to have, like, save files, like different options. So you can have different nests." Thought through in [`PHASE6.md`](PHASE6.md):
+- **Three colonies,** each autosaved as before. On the title screen, **Continue** returns to the one you last played (its name under the button), and **Colonies** shows a card for each: its name, day, ants, queen level, time played and when last played, with Play, Rename and Delete. An empty slot offers **New colony** or **Import**.
+- **New colony no longer wipes your nest:** you pick a slot, and only a full one asks before it's overwritten ("Start over" on the one you're playing).
+- **Save files:** **Export** downloads the colony as a `.underfoot.json` file (its map photos come back as you explore); **Import** loads one into an empty slot, checked first, so a bad file changes nothing.
+- **Storage:** the colony being played stays where it was (localStorage, with its backup and map), so the autosave is unchanged and your old save is Colony 1. The other two wait in IndexedDB, which has room for them and their maps. A switch saves, swaps and reloads, and nothing is saved while it does.
+- A new colony in a slot skips the intro film (it plays once per player).
+- **Recorded for the house phase:** the ants never eat people ("we don't want them eating people or kids or anything"), in `BACKLOG.md`. The ant religion stays noted, not planned.
+- Tests in `slots.test.js`; the swap, rename, export and import were run in the browser.
+
 ## Nov 7: Phase 5, the yard and the air (build 75)
 
 Mark's notes: the sand bucket "looks weird… it's not hollow"; "you wouldn't find tiny little apple cores the same size as an ant, but you might find a larger apple core somewhere"; the night glow "would be an evolution… something minor"; "make sure that rain fades in"; the spoil heap: "maybe builders can use it to fill holes". Each piece is reasoned out in [`PHASE5.md`](PHASE5.md), then built:

@@ -736,3 +736,19 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #raidcard .rs-end { text-align: center; } #raidcard .rs-end .big { font: 400 24px "Bungee", Impact, sans-serif; color: #ffd34d; } #raidcard .rs-end.won .big { color: #a6f08a; } #raidcard .rs-end.lost .big { color: #ff8a6a; }
 #raidcard .rs-end .sub { color: #c9b78f; margin-bottom: 6px; } #raidcard .rs-end .stats { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; color: #e8dcc4; } #raidcard .rs-end .stats b { color: #fff; }
 #raidcard .rs-end .warn { margin-top: 4px; color: #ff8a6a; font-weight: 700; }
+/* Build 76: the colonies (save slots) on the title screen. */
+#title .t-slots { display: flex; flex-direction: column; gap: 10px; width: min(380px, 92vw); align-self: center; }
+#title .t-menu:has(.t-slots) { width: min(380px, 92vw); }
+#title .t-slot { text-align: left; padding: 10px 12px; border: 3px solid #000; border-radius: 12px; background: #f4ecd8; color: #1d1710; box-shadow: 4px 4px 0 #000; }
+#title .t-slot.on { background: #fff4c4; border-color: #6a4a00; }
+#title .t-slot.empty { background: rgba(244, 236, 216, 0.55); border-style: dashed; box-shadow: none; }
+#title .t-slot-name { font-size: 16px; display: flex; gap: 8px; align-items: center; }
+#title .t-slot-name i { font-style: normal; font-size: 11px; background: #2f7a3a; color: #fff; padding: 2px 6px; border-radius: 6px; }
+#title .t-slot-name input { flex: 1; min-width: 0; font: 600 15px ui-rounded, system-ui, sans-serif; padding: 6px 8px; border: 2px solid #000; border-radius: 8px; }
+#title .t-slot-sum { margin-top: 4px; font: 13px/1.35 ui-rounded, system-ui, sans-serif; color: #4a3e2c; }
+#title .t-slot-btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+#title .t-slot-btns .t-opt { min-height: 34px; color: #f4ecd8; }
+#title .t-slot-btns .t-opt.on { color: #1d1710; }
+#title .t-playing { margin-top: -4px; font-size: 13px; }
+#title:has(.t-slots) { justify-content: flex-start; overflow-y: auto; gap: 2vh; } /* (short screens scroll) */
+#title:has(.t-slots) .t-logo .big { font-size: clamp(28px, 8vw, 64px); }

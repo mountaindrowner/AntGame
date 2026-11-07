@@ -4,6 +4,7 @@
 // in localStorage (app.opts), apart from the saved colony.
 import { ICONS } from './icons.js';
 import { sfx } from '../audio/sfx.js';
+import { slotMeta, slotOf, renameSlot } from '../game/slots.js';
 
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
@@ -17,10 +18,11 @@ function saveOptions(o) { try { localStorage.setItem(OPTS_KEY, JSON.stringify(o)
 
 // UI themes (themes.css): the key on <html data-skin>, and its name.
 const SKINS = [['classic', 'Classic'], ['homestead', 'Homestead'], ['cellar', 'Cellar'], ['island', 'Island Phone'], ['townhall', 'Town Hall'], ['ledger', 'Lantern & Ledger'], ['crypt', 'Crypt'], ['station', 'Field Station'], ['tablet', 'Keeper Tablet']];
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const btn = (act, icon, label, cls = '') => `<button class="t-btn ${cls}" data-t="${act}">${ICONS[icon]}<span>${label}</span></button>`;
 
 export class TitleMenu {
-  // hooks: { help(), film(), applyOptions() }
+  // hooks: { help(), film(), applyOptions(), switchTo(id), newColony(id), deleteSlot(id), exportFile(), importFile(file, id) }
   constructor(app, hooks) {
     this.app = app;
     this.hooks = hooks;
@@ -58,9 +60,33 @@ export class TitleMenu {
   }
 
   _main() {
-    this._page((this.started ? btn('continue', 'play', 'Continue', 'primary') + btn('new', 'plus', 'New colony') : btn('new', 'play', 'Play', 'primary'))
+    const m = slotMeta(), name = slotOf(m, m.active).name;
+    this._page((this.started ? btn('continue', 'play', 'Continue', 'primary') + `<div class="t-note t-playing">${esc(name)}</div>` : btn('new', 'play', 'Play', 'primary'))
+      + btn('colonies', 'nest', 'Colonies')
       + btn('help', 'help', 'How to play') + btn('options', 'gear', 'Options') + btn('film', 'film', 'Watch the intro'));
   }
+
+  // Build 76 (Mark: "save files… so you can have different nests"): three colonies, each a card.
+  _colonies(renaming, note) {
+    const m = slotMeta(), ago = (at) => { if (!at) return ''; const d = (Date.now() - at) / 60000; return d < 2 ? 'just now' : d < 60 ? Math.round(d) + ' min ago' : d < 1440 ? Math.round(d / 60) + ' h ago' : Math.round(d / 1440) + ' days ago'; };
+    const hm = (t) => { const h = Math.floor(t / 3600), mm = Math.floor((t % 3600) / 60); return h ? `${h} h ${mm} min` : `${mm} min`; };
+    let h = note ? `<div class="t-note">${note}</div>` : '';
+    for (const sl of m.list) {
+      const on = sl.id === m.active, S = sl.sum;
+      h += `<div class="t-slot${on ? ' on' : ''}${sl.empty ? ' empty' : ''}">`;
+      if (renaming === sl.id) h += `<div class="t-slot-name"><input id="t-rename" maxlength="28" value="${esc(sl.name)}"><button class="t-opt on" data-t="renamed:${sl.id}">OK</button></div>`;
+      else h += `<div class="t-slot-name">${esc(sl.empty ? 'Empty' : sl.name)}${on ? ' <i>playing</i>' : ''}</div>`;
+      if (!sl.empty) h += `<div class="t-slot-sum">${S ? `Day ${S.day} · ${S.ants} ants · queen level ${S.queen}${S.lost ? ' · lost' : ''}<br>${hm(S.t)} played${sl.at ? ' · ' + ago(sl.at) : ''}` : 'Just begun'}</div>`;
+      h += `<div class="t-slot-btns">`;
+      if (sl.empty) h += `<button class="t-opt on" data-t="slotnew:${sl.id}">New colony</button><button class="t-opt" data-t="import:${sl.id}">Import</button>`;
+      else if (on) h += `<button class="t-opt on" data-t="continue">Play</button><button class="t-opt" data-t="rename:${sl.id}">Rename</button><button class="t-opt" data-t="export">Export</button><button class="t-opt" data-t="slotnew:${sl.id}">Start over</button>`;
+      else h += `<button class="t-opt on" data-t="slot:${sl.id}">Play</button><button class="t-opt" data-t="rename:${sl.id}">Rename</button><button class="t-opt" data-t="slotdel:${sl.id}">Delete</button>`;
+      h += `</div></div>`;
+    }
+    this._page(`<div class="t-slots">${h}</div><div class="t-note">Every colony saves itself as you play. Export saves one as a file; Import loads one into an empty slot.</div>` + btn('back', 'back', 'Back'));
+    const inp = this.el.querySelector('#t-rename'); if (inp) { inp.focus(); inp.select(); inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this._act('renamed:' + renaming); e.stopPropagation(); }); }
+  }
+  _confirm(text, yes, yesLabel) { this._page(`<div class="t-note">${text}</div>${btn(yes, 'plus', yesLabel, 'primary')}${btn('colonies', 'back', 'Back')}`); }
 
   _options() {
     const o = this.app.opts, pick = (k, v, label) => `<button class="t-opt${o[k] === v ? ' on' : ''}" data-t="opt:${k}:${v}">${label}</button>`;
@@ -75,11 +101,26 @@ export class TitleMenu {
 
   _act(a) {
     const app = this.app;
+    const [verb, arg] = a.split(':'), id = +arg;
     if (a === 'continue') this.close();
-    else if (a === 'new') {
-      if (!this.started) { this.close(); return; }
-      this._page(`<div class="t-note">Start a new colony? This one is lost for good.</div>${btn('reset', 'plus', 'New colony', 'primary')}${btn('back', 'back', 'Keep this one')}`);
-    } else if (a === 'reset') { app.reset(); this.close(); }
+    else if (a === 'new') { if (!this.started) { this.close(); return; } this._colonies(); }
+    else if (a === 'colonies') this._colonies();
+    else if (verb === 'slot') this.hooks.switchTo(id);
+    else if (verb === 'slotnew') {
+      const sl = slotOf(slotMeta(), id);
+      if (sl.empty) this.hooks.newColony(id);
+      else this._confirm(`Start a new colony in place of ${esc(sl.name)}? It is lost for good.`, 'slotnew!:' + id, 'Start over');
+    } else if (verb === 'slotnew!') this.hooks.newColony(id);
+    else if (verb === 'slotdel') this._confirm(`Delete ${esc(slotOf(slotMeta(), id).name)}? It is lost for good.`, 'slotdel!:' + id, 'Delete');
+    else if (verb === 'slotdel!') this.hooks.deleteSlot(id).then(() => this._colonies());
+    else if (verb === 'rename') this._colonies(id);
+    else if (verb === 'renamed') { const inp = this.el.querySelector('#t-rename'); renameSlot(id, inp ? inp.value : ''); this._colonies(); }
+    else if (a === 'export') this.hooks.exportFile();
+    else if (verb === 'import') {
+      const f = document.createElement('input'); f.type = 'file'; f.accept = '.json,application/json';
+      f.onchange = () => { if (f.files[0]) this.hooks.importFile(f.files[0], id).then(() => this._colonies('', 'Imported.'), (e) => this._colonies('', esc(String(e && e.message || e)))); };
+      f.click();
+    }
     else if (a === 'help') { this.close(); this.hooks.help(); }
     else if (a === 'film') { this.close(); this.hooks.film(); }
     else if (a === 'options') this._options();

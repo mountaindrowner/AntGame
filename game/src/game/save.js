@@ -32,9 +32,13 @@ export function loadGame() {
   return SIM.create(NEW_GAME_SEED);
 }
 
-let prevAt = 0;
+let prevAt = 0, frozen = false;
+// Build 76: while colonies are being swapped (and the page reloads), nothing is saved over the new one.
+export function freezeSaves() { frozen = true; }
+export function unfreezeSaves() { frozen = false; }
 // Returns true when the save was written.
 export function saveGame(s) {
+  if (frozen) return false;
   try {
     // Once a minute, the save before this one is kept as a backup.
     const now = Date.now();
@@ -67,6 +71,7 @@ const MAP_KEY = SAVE_KEY + '-map';
 // Build 65: one small JPEG per region ({ v: 2, regions: { index: data URL } }), each made once when the region
 // is photographed. Encoding the whole 1600×1120 map at every autosave stalled the game.
 export function saveMap(regions) {
+  if (frozen) return;
   try { localStorage.setItem(MAP_KEY, JSON.stringify({ v: 2, regions })); } catch (e) { /* storage full or blocked */ }
 }
 export function loadMap() {

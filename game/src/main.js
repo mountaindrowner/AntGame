@@ -13,7 +13,8 @@ import { soundWatch, tapSounds } from './audio/watch.js';
 import { music } from './audio/music.js';
 import { LabelLayer } from './ui/labels.js';
 import { attachPointer } from './input/pointer.js';
-import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED, loadProblem } from './game/save.js';
+import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED, loadProblem, freezeSaves, unfreezeSaves } from './game/save.js';
+import { switchTo, newColonyIn, deleteSlot, exportFile, importFile, slotMeta, slotOf, touchActive, takeNewColonyFlag } from './game/slots.js';
 import { Cinematic, renderScoreWav } from './intro/cinematic.js';
 import { uiScale } from './config.js';
 import { GROUND_TINT } from './render/views/yardScenery.js';
@@ -27,6 +28,7 @@ const pipeline = new PS1Pipeline(canvas);
 useSnapUniforms(pipeline.uniforms);
 
 const s0 = loadGame();
+if (takeNewColonyFlag() && !s0.queen.placed) s0.seen.film = true; // build 76: a new colony in a slot skips the film (it's had its showing)
 // Build 40: say so when a save couldn't be loaded (it is kept aside, never overwritten).
 if (loadProblem) s0.player.msg = loadProblem.recovered ? 'Your last save could not be loaded, so the backup from a minute before it was. (The unreadable one is kept.)' : 'Your saved colony could not be loaded. It has been kept aside, and a new colony started.';
 // Everything the UI, input and views share.
@@ -203,6 +205,12 @@ const title = new TitleMenu(app, {
   help: () => ui.openHelp(),
   film: () => app.playFilm(),
   applyOptions,
+  // Build 76: colonies. A switch saves the one you're in, swaps them over and reloads; nothing is saved after.
+  switchTo: async (id) => { if (saveGame(app.s)) touchActive(app.s); saveMapIfNew(); freezeSaves(); if (await switchTo(id)) location.reload(); else unfreezeSaves(); },
+  newColony: async (id) => { if (saveGame(app.s)) touchActive(app.s); saveMapIfNew(); freezeSaves(); if (await newColonyIn(id)) location.reload(); else unfreezeSaves(); },
+  deleteSlot: (id) => deleteSlot(id),
+  exportFile: () => { saveGame(app.s); exportFile(app.s, slotOf(slotMeta(), slotMeta().active).name); },
+  importFile: async (file, id) => { const active = slotMeta().active === id; if (active) freezeSaves(); try { await importFile(file, id); } catch (e) { if (active) unfreezeSaves(); throw e; } if (active) location.reload(); },
 });
 app.openTitle = () => title.open();
 // Graphics: Auto starts sharp and may step down; Sharp and Fast are fixed.
@@ -406,7 +414,7 @@ function frame(now) {
   hudT += dt;
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }
   saveT += dt;
-  if (saveT > 10) { saveT = 0; const ok = saveGame(app.s); saveMapIfNew(); if (ok && !app.titleOpen && app.s.queen.placed) ui.saved(); }
+  if (saveT > 10) { saveT = 0; const ok = saveGame(app.s); saveMapIfNew(); if (ok) touchActive(app.s); if (ok && !app.titleOpen && app.s.queen.placed) ui.saved(); }
   requestAnimationFrame(frame);
 }
 

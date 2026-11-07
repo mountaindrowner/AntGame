@@ -77,6 +77,8 @@ Mark's answers: rooms only in a closed chamber with a hallway; he places them hi
 
 ### Phase 6: bigger systems and later
 
+**Done in build 76** (save slots), thought through in [`PHASE6.md`](PHASE6.md). The no-eating-people rule is recorded for the house phase.
+
 1. **Save slots.** "Different save files… so you can have different nests."
 2. **Phase 2 notes:** the ants shouldn't eat people.
 3. **An ant religion:** noted, not planned.
