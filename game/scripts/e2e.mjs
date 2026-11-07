@@ -411,6 +411,10 @@ try {
   const bar = await page.$eval('#bossbar', (e) => (e.classList.contains('hidden') ? '' : e.textContent)).catch(() => '');
   console.log('boss bar'.padEnd(22), '|', bossOk, bar.slice(0, 60));
   if (!/Hornworm/.test(bar)) errors.push('test: walking up to the hornworm showed no boss bar');
+  // Build 78: walking up to it awake plays its introduction (ended here so the run goes on).
+  const intro = await sim(() => { const b = window.UNDERFOOT.bossIntro, was = b.playing || !!b.seen; b.end(); return was; });
+  console.log('boss introduction'.padEnd(22), '|', intro);
+  if (!intro) errors.push('test: the hornworm had no introduction');
   await shot('boss-hornworm');
   await sim(() => { const { app } = window.UNDERFOOT, s = app.s; s.event = null; const a = s.player.ant; if (a) { a.x = (s.world.ex + 2.5) * 16; a.y = (s.world.ey + 2.5) * 16; a.tx = s.world.ex + 2; a.ty = s.world.ey + 2; } });
   await page.click('#banner', { force: true, timeout: 2000 }).catch(() => {});

@@ -132,6 +132,9 @@ export function tickBosses(s, dt){
     const wildOk = !B.wild || b.mode === 'fight' || musterHere(s, b, B); if (!wildOk) near = null; // build 54: a wild boss wakes only for a big enough muster
     if (key === 'robin'){ b.asleep = isNight(s) && b.mode === 'idle'; if (b.asleep) near = null; } // build 43: asleep on its roost till something bites it
     if (b.mode === 'idle' && (near || s.t - (b.hitT ?? -9) < 1)){ b.mode = 'fight'; b.leaveT = 0; b.wakeAt = s.t; b.cost0 = deathTotal(c); s.events.push('bossawake'); }
+    // Build 78 (Mark: "everything stops and the ants turn their attention to the boss"): the first time you're within
+    // fighting range of it awake, its introduction (the UI freezes the game and plays it; docs/BOSS-INTROS.md).
+    if (b.mode === 'fight' && !b.shown && playerNear(s, b.x, b.y, 22)){ b.shown = true; s.introSeq = { kind: 'boss', key, x: b.x, y: b.y, t: s.t }; }
     if (b.mode === 'fight'){
       if (!nearAnt(s, b, 30*T)){ b.leaveT += dt; if (b.leaveT > 8){ b.mode = 'idle'; b.atk = null; b.charge = null; b.roll = null; } } else b.leaveT = 0;
     } else if (b.hp < b.maxHp) b.hp = Math.min(b.maxHp, b.hp + 2*dt); // left alone, it heals

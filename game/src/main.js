@@ -8,6 +8,7 @@ import { NestView } from './render/views/nestView.js';
 import { createUI } from './ui/ui.js';
 import { Callout } from './ui/callout.js';
 import { TitleMenu, loadOptions } from './ui/title.js';
+import { BossIntro } from './ui/bossIntro.js';
 import { sfx } from './audio/sfx.js';
 import { soundWatch, tapSounds } from './audio/watch.js';
 import { music, renderMusicWav } from './audio/music.js';
@@ -201,6 +202,8 @@ app.playFilm = () => {
 };
 
 // The title screen and main menu (ui/title.js), over the live yard.
+// Build 78: bosses' and champions' introductions (ui/bossIntro.js).
+const bossIntro = new BossIntro(app, { shake: (k) => { views.surface.shake = Math.max(views.surface.shake, k); } });
 const title = new TitleMenu(app, {
   help: () => ui.openHelp(),
   film: () => app.playFilm(),
@@ -329,6 +332,7 @@ function frame(now) {
   // Build 71: in a big fight near you, the camera eases in a little (15%), and back out after; not if you've
   // zoomed by hand in the last few seconds.
   { const want = app.battle && performance.now() - (app.zoomTouchedAt || -1e9) > 4000 ? 1.15 : 1; app.battleZoom = (app.battleZoom || 1) + (want - (app.battleZoom || 1)) * Math.min(1, dt * 1.5); }
+  bossIntro.check(s); bossIntro.update(dt);
   let newEvents = [];
   const evSeen = s.events.length;
   if (!app.paused) {
@@ -337,7 +341,7 @@ function frame(now) {
     // New sim events this frame (before the HUD's explainers take them).
     newEvents = s.events.slice(evSeen);
     clock += dt;
-  } else acc = 0;
+  } else { acc = 0; if (app.intro) clock += dt; } // (build 78: in an introduction the sim holds still but the scene still moves)
   if (s.player.inNest !== wasInNest) {
     wasInNest = s.player.inNest;
     app.view = wasInNest ? 'nest' : 'surface';
@@ -431,4 +435,4 @@ requestAnimationFrame(frame);
 // For automated tests and debugging in the console.
 // filmStep(dt) advances the opening film by exactly dt and draws it, for recording.
 const filmStep = (dt) => { if (!cine) return false; clock += dt; views.surface.update(app, clock, pipeline.aspect); cine.step(dt); if (cine) cine.render(); return !!cine; };
-window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep };
+window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep, bossIntro };

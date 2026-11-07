@@ -752,3 +752,17 @@ body.evo-on #top, body.evo-on #bar, body.evo-on #bar2, body.evo-on #barn, body.e
 #title .t-playing { margin-top: -4px; font-size: 13px; }
 #title:has(.t-slots) { justify-content: flex-start; overflow-y: auto; gap: 2vh; } /* (short screens scroll) */
 #title:has(.t-slots) .t-logo .big { font-size: clamp(28px, 8vw, 64px); }
+/* Build 78: a boss's (or champion's) introduction: black bars, then its name slamming in. */
+#bossintro { position: fixed; inset: 0; z-index: 35; pointer-events: auto; cursor: pointer; }
+#bossintro.hidden { display: none; }
+#bossintro .bar { position: absolute; left: 0; right: 0; height: 13vh; background: #000; transition: transform 0.35s cubic-bezier(.2, .8, .3, 1); }
+#bossintro .bar.top { top: 0; transform: translateY(-100%); } #bossintro .bar.bot { bottom: 0; transform: translateY(100%); }
+#bossintro.on .bar { transform: none; } #bossintro.out .bar.top { transform: translateY(-100%); } #bossintro.out .bar.bot { transform: translateY(100%); }
+#bossintro .card { position: absolute; left: 50%; bottom: 16vh; transform: translateX(-50%) scale(2.4); opacity: 0; text-align: center; width: min(720px, 92vw); transition: transform 0.22s cubic-bezier(.2, 1.6, .4, 1), opacity 0.15s; }
+#bossintro.card-on .card { transform: translateX(-50%) scale(1); opacity: 1; } #bossintro.out .card { opacity: 0; transition: opacity 0.4s; }
+#bossintro .ic { font-size: 40px; filter: drop-shadow(0 3px 0 #000); }
+#bossintro .nm { font-family: "Bungee", Impact, sans-serif; font-size: clamp(30px, 7vw, 64px); color: #ffe7f4; letter-spacing: 0.04em; text-shadow: 4px 4px 0 #6a1040, 7px 8px 0 #000; }
+#bossintro .tt { font-family: "Bungee", Impact, sans-serif; font-size: clamp(13px, 2.4vw, 19px); color: #ffd84a; text-shadow: 2px 2px 0 #000; margin-top: 4px; }
+#bossintro .tp { font: 600 14px/1.35 ui-rounded, system-ui, sans-serif; color: #f4ecd8; text-shadow: 1px 1px 0 #000, 0 0 8px #000; margin-top: 8px; }
+#bossintro .skip { position: absolute; right: 16px; bottom: 3vh; font: 600 11px ui-rounded, system-ui, sans-serif; color: rgba(255, 255, 255, 0.55); }
+body.intro-on > *:not(#c):not(#bossintro) { visibility: hidden; } /* the whole HUD steps aside */

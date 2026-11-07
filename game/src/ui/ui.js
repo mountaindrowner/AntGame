@@ -775,7 +775,8 @@ export function createUI(app) {
   }
   function bossUi(s) {
     const B = s.bosses || {}, pa = P().ant, fx = pa && !P().inNest ? pa.x : (s.world.ex + 0.5) * T, fy = pa && !P().inNest ? pa.y : (s.world.ey + 0.5) * T;
-    if (s.bossIntro && s.bossIntro.t !== introSeen) { introSeen = s.bossIntro.t; const D = SIM.BOSSES[s.bossIntro.key]; showBanner('boss', s.bossIntro.key === 'hornworm' ? '🐛' : s.bossIntro.key === 'beetle' ? '🪲' : s.bossIntro.key === 'robin' ? '🐦' : s.bossIntro.key === 'crow' ? '🐦‍⬛' : s.bossIntro.key === 'hollow' ? '🍄' : s.bossIntro.key === 'hornets' ? '🐝' : s.bossIntro.key === 'blind' ? '🕳' : s.bossIntro.key === 'toad' || s.bossIntro.key === 'duke' ? '🐸' : s.bossIntro.key === 'mantis' ? '🦗' : s.bossIntro.key === 'widow' ? '🕷' : s.bossIntro.key === 'centipede' ? '🐛' : '🌀', D.name, D.tip, D.title); }
+    // (Build 78: a boss's name and how to beat it land in its introduction, ui/bossIntro.js, when the fight's near; approaching it, a line in the feed.)
+    if (s.bossIntro && s.bossIntro.t !== introSeen) introSeen = s.bossIntro.t;
     // Build 39: a zone taken; and once all 13 are, the end of Phase 1.
     if (s.zoneTaken && s.zoneTaken.t !== app.zoneSeen) { app.zoneSeen = s.zoneTaken.t; const Z = SIM.ZONES.find((z) => z.key === s.zoneTaken.key); if (Z) showBanner('win', '★', `Zone taken: ${Z.name}`, `${s.zoneTaken.n} of ${SIM.ZONES.length} zones. Open the map to see what’s left.`); }
     if (s.phase1 && !s.seen.phase1Shown) { s.seen.phase1Shown = true; showPhase1(s); }

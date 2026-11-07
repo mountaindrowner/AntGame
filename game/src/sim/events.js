@@ -108,6 +108,7 @@ function tickEvent(s, dt){
       return endEvent(s, `${ev.data.name} is dead! The war party breaks and runs.`);
     }
     if (ev.t >= ev.end || champ.state === 'in') endEvent(s, `${ev.data.name}'s war party is over.`);
+    else if (!ev.data.shown && s.player.ant && !s.player.inNest && Math.hypot(champ.x - s.player.ant.x, champ.y - s.player.ant.y) < 22*T){ ev.data.shown = true; s.introSeq = { kind: 'champ', id: champ.id, name: ev.data.name, x: champ.x, y: champ.y, t: s.t }; } // build 78: the champion's introduction
   } else if (ev.key === 'cordyceps') tickCordyceps(s, dt);
 }
 // Cordyceps: an infected ant works on for 15 s (nurses can cure it inside),

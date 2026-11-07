@@ -2,6 +2,22 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: boss introductions (build 78)
+
+Mark: "Little boss animations… everything stops and the ants turn their attention to the boss and the boss turns their attention… an introduction sequence when a boss is introduced, at least when they're in fighting range. Maybe the same thing with the big enemy ants." Thought through in [`BOSS-INTROS.md`](BOSS-INTROS.md):
+- **When:** the first time you're within 22 tiles of a boss that's awake and fighting, once per boss per colony. A war party's champion gets the same, the first time you come within 22 tiles of it.
+- **What happens (about three and a half seconds):**
+  - the game freezes (the scene keeps moving);
+  - black bars slide in and the whole HUD steps aside;
+  - every ant in sight turns to the boss with a small start (the champion turns to you), and the boss turns to you;
+  - the camera glides to it and eases in;
+  - it roars, a ring of dust bursts from it and the screen shakes;
+  - its name, title and how to beat it slam in;
+  - then the camera glides back and play resumes.
+- **Never in the way:** any click or key skips it, and it waits while you're in the nest, in a menu or on the title screen.
+- Approaching a sleeping boss now only gives its line in the feed and its ominous sound; the name card moved into the introduction, where the fight is.
+- Tests in `introductions.test.js`; the end-to-end run checks the hornworm's.
+
 ## Nov 7: songs, battle music and stingers (build 77)
 
 Mark: "A few songs for specific things… sound effects when there's a raid happening or a big fight. It slowly transitions to a battle song. Maybe successful noises if it's successful." Thought through in [`SOUND-POLISH.md`](SOUND-POLISH.md):

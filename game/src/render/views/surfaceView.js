@@ -525,6 +525,12 @@ export class SurfaceView {
           if (sw < 0.32) { const u = sw < 0.1 ? sw / 0.1 : 1 - (sw - 0.1) / 0.22, reach = a.swingK === 'crit' ? 0.9 : a.swingK === 'hard' ? 0.7 : a.swingK === 'miss' ? 0.3 : 0.5, L = reach * 6.5 * k * u;
             tmpV.x += a.lx * L; tmpV.z += a.ly * L; tmpV.y += 0.6 * k * u; } }
         const rl = s.t - (a.reelT ?? -9); if (rl < 0.25 && a.rx != null) { const R = (1 - rl / 0.25) * 3.2 * k; tmpV.x += a.rx * R; tmpV.z += a.ry * R; } }
+      // Build 78: an introduction: every ant in sight turns to the boss (the champion to you) with a small start.
+      { const I = app.intro; if (I && !a.climb && Math.abs(a.x - I.x) < 45 * T && Math.abs(a.y - I.y) < 45 * T) {
+        const me = s.player.ant, fx = a.id === I.id && me ? me.x : I.x, fz = a.id === I.id && me ? me.y : I.y;
+        if (Math.hypot(fx - a.x, fz - a.y) > 4) { tmpQ2.setFromAxisAngle(UP, Math.atan2(-(fz - a.y), fx - a.x)); tmpQ.slerp(tmpQ2, Math.min(1, I.t / 0.45)); }
+        const hop = (I.t - 0.15 - (a.id % 5) * 0.03) / 0.3; if (hop > 0 && hop < 1) tmpV.y += Math.sin(hop * Math.PI) * 2.6 * k;
+        if (a.id === I.id && I.t > 1 && I.t < 1.6) tmpV.y += Math.sin((I.t - 1) / 0.6 * Math.PI) * 3 * k; } }
       // Build 57: on the Oak's bark, head up, belly to the trunk's south face.
       if (a.climb > 0 && this.oakL) { const L = this.oakL, R = L.r * T * (1.1 - 0.28 * a.climb / 1800); tmpV.set(Math.max(L.x * T - R * 0.6, Math.min(L.x * T + R * 0.6, a.x)), a.climb + 4, L.y * T + R + 1.5); tmpQ.setFromAxisAngle(UP, Math.PI / 2).multiply(tmpQ3.setFromAxisAngle(ZAX, Math.PI / 2)); }
       // Bitten: a red flash. Knocked by a raindrop: it tumbles (build 16).
@@ -658,6 +664,9 @@ export class SurfaceView {
     this._caterpillar(s, t, fdt);
     this.bugs.begin(); this.fx.begin(); this.dustFx.begin();
     this._pits(s, t);
+    // Build 78: an introduction's roar: a ring of dust bursting out from it.
+    { const I = app.intro; if (I && I.t > 1 && I.t < 2) { const u = I.t - 1; tmpV.set(I.x, 1.4, I.y); this.fx.pushAt('ring', PROPS.ring, tmpV, tmpQ.identity(), 12 + u * 110, '#e8dcc0'); tmpV.y = 1.6; this.fx.pushAt('ring', PROPS.ring, tmpV, tmpQ.identity(), 8 + u * 70, '#ffffff');
+      for (let j = 0; j < 14; j++) { const a = j * 0.45, r = 10 + u * 80; tmpV.set(I.x + Math.cos(a) * r, 3 + u * 10, I.y + Math.sin(a) * r); this.fx.pushAt('dot', this.dotGeo, tmpV, tmpQ.identity(), 3 * (1 - u), '#c8b494'); } } }
     this._critters(s, t, fdt);
     this._fx(s, t, fdt);
     this._bosses(s, t, fdt);
@@ -692,7 +701,7 @@ export class SurfaceView {
     const fx = sf ? sf.x : a ? a.x : (w.ex + 0.5) * T, fy = sf ? sf.y : a ? a.y : (w.ey + 0.5) * T;
     const vfov = (this.camera.fov * Math.PI) / 180;
     const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
-    const across = (CAMERA.surfaceTilesAcross * T * fitWide(aspect)) / (app.zoomMul * (app.battleZoom || 1)); // (build 71: eased in a little in a big fight near you)
+    const across = (CAMERA.surfaceTilesAcross * T * fitWide(aspect)) / (app.zoomMul * (app.battleZoom || 1) * (app.introZoom || 1)); // (build 71: eased in a little in a big fight near you; 78: in an introduction)
     const dist = across / 2 / Math.tan(hfov / 2);
     // Keep the player centred in the space the HUD leaves free.
     const viewH = (across / aspect) / Math.sin(CAMERA.surfacePitch);

@@ -6,6 +6,9 @@ import SIM from '../src/sim/sim.js';
 import { EVO_BY } from '../src/sim/growth.js';
 import { spawnFood } from '../src/sim/world.js';
 
+let seed = 75; const rnd0 = Math.random; Math.random = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+test.after(() => { Math.random = rnd0; });
+
 const T = SIM.T;
 function founded(builders = 0) {
   const s = SIM.create(7), q = s.queen;
