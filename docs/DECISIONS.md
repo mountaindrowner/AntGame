@@ -2,6 +2,38 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: Phase 3, creatures (build 73)
+
+Each piece is reasoned out in [`PHASE3.md`](PHASE3.md), then built:
+- **Hunters are a real threat:**
+  - **Chitin armour:** a worker's bite does a quarter on a hunter, a soldier's or venom ant's in full, a major's half again, yours (already doubled) about a soldier's and a quarter. A crew of foragers barely scratches one.
+  - **No more walking off from a crowd:** with three or more on it, a hunter lashes out every 3.5 s.
+    - the jumping spider spins and bites everything next to it;
+    - the assassin bug stabs the biggest;
+    - the skink tail-whips and knocks them back.
+  - **Hurt below a third, it runs home** (to come back healed later) unless three or more surround it. The skink keeps its tail drop.
+  - **You're prey too:**
+    - the jumping spider bites for 4 (was 2.5);
+    - the assassin bug stabs you for 6 every 1.8 s (was 4 every 2.5 s);
+    - the wasp stings for 4 (was 3).
+
+  These are balance changes, Mark's to tune.
+- **The spider fight:**
+  - each ant fighting it holds one of its eight legs, a spot at that leg's foot that turns with it (a second ring past eight), so they ring it rather than pile under it;
+  - bites land on the leg held, and 22 cripples a leg;
+  - each crippled leg slows it 10%, and four stop its lunge; lamed, it limps; its card counts the crippled legs;
+  - its strikes are visible: a real lunge (thrust low, foreleg up), and a bite that rears and slams down with dust;
+  - with five or more on its legs, every 5 s it rears and stamps, knocking everyone back for a little, with a ring of dust, a stamp and a shake if you're near.
+- **The millipede runs:** bitten, it runs (three times its pace) away from the nearest ant. It curls only when cornered (three on it, or caught again as it runs). Curled, it oozes: biters take a little and workers back off. When the crowd thins it runs again.
+- **The foot stomps:**
+  - it hangs higher, then drops fast and squashes on landing;
+  - a shake by distance (strong close, felt far);
+  - a white shockwave ring, flung clods and a second, slower dust cloud;
+  - a deeper boom with a long rumble;
+  - a print left on the ground for 20 s;
+  - ants just outside it are knocked back.
+- **Hover an ant** and it wears a ring in its side's colour (gold you, green yours, red theirs), with a label: its name or kind (a rival's colony too) and its health.
+
 ## Nov 6: RTS combat (build 72)
 
 Mark: "Think of RTS games when it comes to combat, animations and obvious combat sounds and clashes." Reasoned out in [`PHASE2.md`](PHASE2.md), part 2:

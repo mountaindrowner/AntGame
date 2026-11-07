@@ -7,7 +7,7 @@ import { gainXp, has, picked } from './progress.js';
 import { WILD_SIDE } from './wilds.js';
 import { heldFx, hitOutpost, prizeFx } from './outposts.js';
 import { isNight, untilTurn } from './tick.js';
-import { LAWN_ZONE, ROT_ZONE, SIDE_ZONE, WET_ZONE } from './bosses.js';
+import { LAWN_ZONE, ROT_ZONE, SIDE_ZONE, WET_ZONE, shove } from './bosses.js';
 
 // The Lawn's mower: a warning, then a blade sweeping the whole Lawn north to
 // south, killing anything in the grass and shredding trails and seeds.
@@ -91,6 +91,8 @@ export function tickStrikes(s, dt){
         if (st.t > D.warn - 1) for (const a of s.ants) if (outside(a) && !a.isPlayer && a.id % 3 && underFoot(st, a.x/T, a.y/T, 1.3)){ a.flee = Math.max(a.flee, 1.2); a.fleeFrom = { x: st.x*T, y: st.y*T }; }
         if (st.t >= D.warn){ st.phase = 'hold'; st.hit = true;
           for (const a of s.ants) if (outside(a) && underFoot(st, a.x/T, a.y/T, 1)) killAnt(s, a, D.cause);
+          // Build 73: a foot's landing knocks back the ants just outside it, and leaves a print for a while.
+          if (st.kind === 'foot'){ for (const a of s.ants) if (a.state !== 'dead' && outside(a) && underFoot(st, a.x/T, a.y/T, 1.8)) shove(s, a, st.x*T, st.y*T, 1.4); const Pr = s.prints || (s.prints = []); Pr.push({ x: st.x, y: st.y, yaw: st.yaw, t: s.t }); if (Pr.length > 4) Pr.shift(); }
           // Ants that got out from under it learn something.
           for (const a of s.ants) if (outside(a) && !a.team && underFoot(st, a.x/T, a.y/T, 1.6)) gainXp(s, a, 10);
           if (s.cat && underFoot(st, s.cat.x/T, s.cat.y/T, 1)) s.cat.hp = 0;

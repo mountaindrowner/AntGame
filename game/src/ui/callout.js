@@ -73,7 +73,7 @@ export class Callout {
     // the food they stand on).
     const take = (x, y, r, card, h = 4, bias = 1) => { const d0 = Math.hypot(x - wx, y - wy) / r, d = d0 * bias; if (d0 < 1 && d < best.d) Object.assign(best, { d, card, at: { x, y, h } }); };
     for (const f of s.items) if (f.amt > 0) take(f.carried && f.px != null ? f.px : (f.x + 0.5) * T, f.carried && f.py != null ? f.py : (f.y + 0.5) * T, 1.6 * T, () => itemCard(f));
-    if (s.spider) take(s.spider.x, s.spider.y, 3.5 * T, () => ['🕷', 'Wolf spider', 'Run! Thirty ants or five Venom ants can kill it.'], 30);
+    if (s.spider) take(s.spider.x, s.spider.y, 3.5 * T, () => { const L = SIM.crippledLegs(s.spider); return ['🕷', 'Wolf spider', `${L ? `${L} of 8 legs crippled. ` : ''}Ring its legs: each ant takes one, and a leg bitten enough is crippled. Thirty ants or five Venom ants can kill it.`]; }, 30); // (build 73: its legs)
     if (s.cat) take(s.cat.x, s.cat.y, 3 * T, () => ['🐛', 'Caterpillar', 'Harmless. 40 protein if a crew brings it down.'], 14);
     for (const b of s.critters || []) take(b.x, b.y, 2 * T, () => bugCard(b), 10);
     // Build 19: bosses, Cordyceps stalks.

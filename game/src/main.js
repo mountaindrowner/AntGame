@@ -374,6 +374,11 @@ function frame(now) {
       if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue;
       out.push({ text: a.legend || a.title ? `★ ${a.name}` : a.name, x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: a.legend || a.title ? 'legend' : 'name' });
     }
+    // Build 73: the hovered ant's label: who it is and its health.
+    { const a = app.hoverAnt; if (a && a.state !== 'dead') { nameV.set(a.x, 14, a.y).project(cam);
+      if (nameV.z <= 1 && Math.abs(nameV.x) <= 1.05 && Math.abs(nameV.y) <= 1.05) { const C = SIM.CASTES[a.caste] || SIM.CASTES.forager, R = a.team ? SIM.RIVALS[a.team - 1] : null, mx = a.team ? C.hp : SIM.maxHp(s, a);
+        const who = a.isPlayer ? 'You' : a.name ? `${a.name}${a.title ? ' ' + a.title : ''} · ${C.name}` : R ? `${R.name.replace(/s$/, '')} ${C.name.toLowerCase()}` : C.name;
+        out.push({ text: `${who} · ${Math.max(0, Math.ceil(a.hp))}/${Math.round(mx)}`, x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: a.team ? 'hover-r' : 'hover' }); } } }
     // Build 71: a "!" over each ant answering the Defend call, for two seconds.
     for (const a of s.ants) { if (!(s.t - (a.defendMark ?? -9) < 2) || a.state === 'dead') continue; nameV.set(a.x, 10, a.y).project(cam);
       if (nameV.z > 1 || Math.abs(nameV.x) > 1.05 || Math.abs(nameV.y) > 1.05) continue; out.push({ text: '!', x: (nameV.x * 0.5 + 0.5) * cssW, y: (-nameV.y * 0.5 + 0.5) * cssH, kind: 'alert' }); }

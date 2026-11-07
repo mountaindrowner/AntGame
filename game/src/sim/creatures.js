@@ -109,7 +109,7 @@ function bugsAwake(s){
 }
 export function stepBugs(s, dt){
   spawnBugs(s, dt);
-  const P = s.player, yb = youL(s) >= 3 ? 1.5 : 1, awake = bugsAwake(s);
+  const yb = youL(s) >= 3 ? 1.5 : 1, awake = bugsAwake(s);
   for (const b of s.critters){
     // With no ant within about fifty tiles it waits where it is.
     if (!awake(b) && !b.carry){ if (b.kind === 'zombie' && (b.life += dt) > 120) b.gone = true; continue; } /* build 41: a wasp carrying an ant off flies on even with no one near; an infected ant rots away even alone */
@@ -121,14 +121,15 @@ export function stepBugs(s, dt){
         if (a.team || Math.abs(a.x - b.x) >= lim || Math.abs(a.y - b.y) >= lim || !outside(a)) continue;
         const fighter = CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer, d = Math.hypot(a.x - b.x, a.y - b.y);
         if (fighter && d < R*reachOf(s, a)){
-          const dmg = bite(s, a, 'bug')*dt*(a.isPlayer ? 2*yb : 1)*arm*(exposed(s, b) ? 1.5 : 1); b.hp -= a.caste === 'venom' && picked(s, 'venom', 'lethal') ? b.hp : dmg; gainXp(s, a, dmg/3); b.hitT = s.t; stingSlow(s, a, b);
+          const dmg = bite(s, a, 'bug')*dt*(a.isPlayer ? 2*yb : 1)*arm*(exposed(s, b) ? 1.5 : 1)*(B.hunter ? hunterArmour(a) : 1); b.hp -= a.caste === 'venom' && picked(s, 'venom', 'lethal') ? b.hp : dmg; gainXp(s, a, dmg/3); b.hitT = s.t; stingSlow(s, a, b);
           spark(s, a, (a.x + b.x)/2, (a.y + b.y)/2, 0);
-          if (b.kind === 'millipede'){ if (b.state !== 'curl'){ b.state = 'curl'; b.t = 0; if (playerNear(s, b.x, b.y, 14) && !s.seen.curl){ s.seen.curl = true; P.msg = 'The millipede curls into an armoured ball. Keep biting.'; } } b.curlT = 8; }
+          if (b.kind === 'millipede') millipedeBitten(s, b);
         } else if (d < 6*T && CASTES[a.caste].fight >= 3 && a.state === 'patrol'){ a.state = 'fight'; a.goal = 'bug'; a.bugId = b.id; }
       }
       if (b.hp <= 0){ bugDies(s, b); continue; }
     }
     if (b.stunned > s.t){ if (b.kind === 'wasp' && (b.carry || b.state !== 'rest')){ waspDrops(s, b); b.atk = null; b.state = 'rest'; b.restT = 4; if (playerNear(s, b.x, b.y, 16)) s.player.msg = 'Locked in your jaws, the wasp drops to the ground!'; } continue; } // build 38: held in a mandible lock (still bitten)
+    if (B.hunter && hunterTurns(s, b, B, dt)) continue; // build 73: cornered it lashes out; hurt it runs
     if (b.kind === 'ladybug') stepLadybug(s, b, B, dt);
     else if (b.kind === 'earwig') stepEarwig(s, b, B, dt);
     else if (b.kind === 'cricket') stepCricket(s, b, B, dt);
@@ -158,6 +159,29 @@ function bugDies(s, b){
 // Build 37: hunters. Each sees ants within 8 tiles; with five or more of your ants on top of it, it backs
 // off toward home for a few seconds. Their attacks are telegraphed (b.atk), drawn like a boss's.
 // After a kill a hunter stops to eat, 8 s, still and easy to bite.
+// Build 73 (Mark: hunters "have to be genuine threats, not just pathetic food sources"). Chitin armour: a
+// worker's bite does a quarter on a hunter, a soldier's or venom ant's in full, a major's half again; yours
+// (already doubled) comes to about a soldier's and a quarter.
+export function hunterArmour(a){ if (a.isPlayer) return 0.62; const f = CASTES[a.caste].fight; return a.caste === 'major' || a.caste === 'supermajor' ? 1.5 : f >= 3 ? 1 : 0.25; }
+// Cornered, it fights harder: three or more on it and every few seconds it lashes out. Hurt below a third, it
+// breaks off and runs home (gone, to come back healed later) unless it's held or surrounded by three. Returns
+// true if it acted.
+function hunterTurns(s, b, B, dt){
+  const P = s.player;
+  if (b.state === 'carry' || b.state === 'fly' || b.held || b.eatT > 0) return false;
+  const pinned = crowdOn(s, b, 1.2) >= 3; // surrounded, it can't break away
+  if (b.kind !== 'skink' && !b.runHome && !pinned && b.hp < b.maxHp/3){ b.runHome = 8; b.atk = null; b.dash = null; if (playerNear(s, b.x, b.y, 16)) P.msg = `Hurt, the ${B.name} runs for home! Finish it, or lock it in your jaws.`; }
+  if (b.runHome > 0){ b.runHome -= dt; b.state = 'walk'; const home = bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, B.speed*2.2 + 20, dt); if (home || b.runHome <= 0) b.gone = true; return true; }
+  if (crowdOn(s, b, 1.8) < 3){ b.lashCd = Math.max(b.lashCd || 0, 1.2); return false; }
+  b.lashCd = (b.lashCd || 0) - dt; if (b.lashCd > 0) return false;
+  b.lashCd = 3.5; b.lashAt = s.t; b.atk = null;
+  const near = s.ants.filter(a => !a.team && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < 2.2*T);
+  if (b.kind === 'jumper' || b.kind === 'wasp'){ for (const a of near){ hurtAnt(s, a, 3, b.kind); spark(s, null, a.x, a.y, 1); } }
+  else if (b.kind === 'assassin'){ const a = near.sort((p, q) => q.hp - p.hp)[0]; if (a){ hurtAnt(s, a, 5, 'assassin'); spark(s, null, a.x, a.y, 1); if (a.state !== 'dead') shove(s, a, b.x, b.y, 1.2); } }
+  else if (b.kind === 'skink'){ for (const a of near){ hurtAnt(s, a, 3, 'skink'); if (a.state !== 'dead') shove(s, a, b.x, b.y, 2); } }
+  if (near.some(a => a.state === 'dead')) hunterEats(s, b);
+  return false;
+}
 function hunterEats(s, b){ b.eatT = 8; b.state = 'eat'; b.atk = null; b.fullUntil = s.t + 8 + 90; } // then sated: it won't hunt for 90 s
 const crowdOn = (s, b, r) => { let n = 0; const R = r*T; for (const a of s.ants) if (!a.team && Math.abs(a.x - b.x) < R && Math.abs(a.y - b.y) < R && outside(a) && Math.hypot(a.x - b.x, a.y - b.y) < R) n++; return n; };
 // Leashed: it hunts only ants within 12 tiles of its home (it won't follow foragers back to your nest).
@@ -174,12 +198,12 @@ function stepJumper(s, b, B, dt){
     return; }
   if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.state = 'hop'; b.t = 0; b.hx0 = b.x; b.hy0 = b.y; b.hx1 = b.x + k.dx*k.len; b.hy1 = b.y + k.dy*k.len; return; }
   b.cd = (b.cd || 0) - dt; b.biteCd = (b.biteCd || 0) - dt;
-  if (crowdOn(s, b, 3) >= 5 || b.restT > 0){ if (!(b.restT > 0)) b.restT = 4; b.restT -= dt; b.state = 'walk'; if (bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, 40, dt)) b.restT = 0; if (b.leaps >= 4) b.leaps = 0; return; }
+  if (b.restT > 0){ b.restT -= dt; b.state = 'walk'; if (bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, 40, dt)) b.restT = 0; if (b.leaps >= 4) b.leaps = 0; return; }
   const tg = huntTarget(s, b, 8);
   if (!tg){ b.state = 'walk'; if (b.gx == null || bugMove(s, b, b.gx, b.gy, B.speed*0.6, dt)) bugWander(s, b, 6); return; }
   const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
   if (!b.warned && playerNear(s, b.x, b.y, 14)){ b.warned = true; P.msg = 'A jumping spider! When it crouches, it leaps: get out of its line.'; }
-  if (d < 1.4*T){ if (b.biteCd <= 0){ b.biteCd = 1.0; hurtAnt(s, a, 2.5, 'jumper'); spark(s, null, a.x, a.y, 1); b.pinchAt = s.t; if (a.state === 'dead') hunterEats(s, b); } return; }
+  if (d < 1.4*T){ if (b.biteCd <= 0){ b.biteCd = 1.0; hurtAnt(s, a, 4, 'jumper'); /* build 73: was 2.5 */ spark(s, null, a.x, a.y, 1); b.pinchAt = s.t; if (a.state === 'dead') hunterEats(s, b); } return; }
   if (b.cd <= 0 && d < 6*T){ b.atk = { kind: 'lane', x: b.x, y: b.y, dx: b.dx, dy: b.dy, len: Math.min(5*T, d + 0.4*T), w: 1.3*T, t: 0, at: 0.5 }; b.state = 'crouch'; return; }
   b.state = 'walk'; bugMove(s, b, a.x, a.y, B.speed, dt);
 }
@@ -198,10 +222,9 @@ function stepAssassin(s, b, B, dt){
     return; }
   if (b.atk){ const k = b.atk; k.t += dt; if (k.t < k.at) return; b.atk = null; b.stabAt = s.t;
     const a = s.ants.find(o => !o.team && outside(o) && Math.hypot(o.x - k.x, o.y - k.y) < k.r);
-    if (a){ if (a.isPlayer){ hurtAnt(s, a, 4, 'assassin'); b.cd = 2.5; } else { b.held = { id: a.id, hp0: b.hp }; if (playerNear(s, b.x, b.y, 16)) P.msg = 'The assassin bug has an ant on its beak! Bite it hard to make it let go.'; } }
+    if (a){ if (a.isPlayer){ hurtAnt(s, a, 6, 'assassin'); b.cd = 1.8; /* build 73: was 4 every 2.5 s */ } else { b.held = { id: a.id, hp0: b.hp }; if (playerNear(s, b.x, b.y, 16)) P.msg = 'The assassin bug has an ant on its beak! Bite it hard to make it let go.'; } }
     else b.cd = 2; return; }
   b.cd = (b.cd || 0) - dt;
-  if (crowdOn(s, b, 3) >= 6){ b.state = 'walk'; bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, B.speed*2, dt); return; }
   const tg = huntTarget(s, b, 7);
   if (!tg){ b.state = 'walk'; if (b.gx == null || bugMove(s, b, b.gx, b.gy, B.speed, dt)) bugWander(s, b, 5); return; }
   const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
@@ -218,7 +241,7 @@ function stepWasp(s, b, B, dt){
   const P = s.player;
   if (b.state === 'walk') b.state = 'fly'; // (spawned on the ground: up it goes)
   if (b.state === 'rest'){ b.restT -= dt; b.stingCd = (b.stingCd || 0) - dt;
-    const tg = huntTarget(s, b, 1.6); if (tg && b.stingCd <= 0){ b.stingCd = 1.2; hurtAnt(s, tg[0], 3, 'wasp'); spark(s, null, tg[0].x, tg[0].y, 1); b.stingAt = s.t; if (tg[0].state === 'dead'){ hunterEats(s, b); return; } }
+    const tg = huntTarget(s, b, 1.6); if (tg && b.stingCd <= 0){ b.stingCd = 1.2; hurtAnt(s, tg[0], 4, 'wasp'); /* build 73: was 3 */ spark(s, null, tg[0].x, tg[0].y, 1); b.stingAt = s.t; if (tg[0].state === 'dead'){ hunterEats(s, b); return; } }
     if (b.restT <= 0){ b.state = 'fly'; b.t = 0; } return; }
   if (b.state === 'carry'){ b.t += 0; b.carryT -= dt; const a = s.ants.find(o => o.id === b.carry); bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, 50, dt);
     if (!a || a.state !== 'away'){ b.carry = null; b.state = 'fly'; return; }
@@ -258,7 +281,6 @@ function stepSkink(s, b, B, dt){
     b.snapAt = s.t; let kill = false; for (const a of s.ants){ if (a.team || !outside(a) || Math.hypot(a.x - k.x, a.y - k.y) > k.r) continue; hurtAnt(s, a, 6, 'skink'); spark(s, null, a.x, a.y, 1); if (a.state === 'dead') kill = true; }
     b.cd = 1.4; if (kill) hunterEats(s, b); return; }
   b.cd = (b.cd || 0) - dt;
-  if (crowdOn(s, b, 3) >= 8){ b.state = 'walk'; bugMove(s, b, (b.hx + 0.5)*T, (b.hy + 0.5)*T, 50, dt); return; }
   const tg = huntTarget(s, b, 9);
   if (!tg){ b.state = 'walk'; if (b.gx == null || bugMove(s, b, b.gx, b.gy, B.speed*0.5, dt)) bugWander(s, b, 6); return; }
   const [a, d] = tg; b.dx = (a.x - b.x)/d; b.dy = (a.y - b.y)/d;
@@ -342,8 +364,25 @@ function bugHop(s, b, away, tiles){
 }
 // Millipede: harmless, slow, armoured. Bitten, it curls into a ball for a
 // while and takes a third of the damage.
+// Build 73 (Mark: "the millipede should probably try to run away, not just curl up and accept death"): bitten,
+// it runs; it curls only when cornered (three on it, or caught again as it runs), and curled it oozes poison:
+// biters take a little, workers back off. When the crowd thins it uncurls and runs again.
+function millipedeBitten(s, b){
+  const P = s.player;
+  if (b.state === 'curl'){ b.curlT = Math.max(b.curlT, 4); return; }
+  if (crowdOn(s, b, 1.8) >= 3 || (b.state === 'run' && b.t > 0.6)){ b.state = 'curl'; b.t = 0; b.curlT = 6;
+    if (playerNear(s, b.x, b.y, 14) && !s.seen.curl){ s.seen.curl = true; P.msg = 'Cornered, the millipede curls into an armoured ball and oozes poison. Keep biting.'; } return; }
+  if (b.state !== 'run'){ b.state = 'run'; b.t = 0; b.runT = 4; if (playerNear(s, b.x, b.y, 14) && !s.seen.millirun){ s.seen.millirun = true; P.msg = 'The millipede runs for it! Cut it off: cornered, it curls up.'; } }
+}
 function stepMillipede(s, b, B, dt){
-  if (b.state === 'curl'){ b.curlT -= dt; if (b.curlT <= 0){ b.state = 'walk'; b.t = 0; } return; }
+  if (b.state === 'curl'){ b.curlT -= dt;
+    for (const a of s.ants){ if (a.team || !outside(a) || Math.abs(a.x - b.x) > 2*T || Math.abs(a.y - b.y) > 2*T) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d > 2*T) continue;
+      if (CASTES[a.caste].fight >= 3 || a.follow || a.isPlayer){ if (d < B.reach*T) hurtAnt(s, a, 0.35*dt, 'millipede'); } else if (a.state !== 'fight') a.flee = Math.max(a.flee || 0, 1.5); }
+    if (b.curlT <= 0){ if (crowdOn(s, b, 1.8) >= 3) b.curlT = 1.5; else { b.state = 'run'; b.t = 0; b.runT = 3; } } return; }
+  if (b.state === 'run'){ b.runT -= dt; let n = null, nd = 8*T; for (const a of s.ants){ if (a.team || !outside(a)) continue; const d = Math.hypot(a.x - b.x, a.y - b.y); if (d < nd){ nd = d; n = a; } }
+    let fx = n ? b.x - n.x : b.dx || 1, fy = n ? b.y - n.y : b.dy || 0; if (Math.hypot(fx, fy) < 1){ const r = (b.id * 2.4) % 6.28; fx = Math.cos(r); fy = Math.sin(r); } // (on top of it: any way out)
+    const fm = Math.hypot(fx, fy); bugMove(s, b, b.x + fx/fm*3*T, b.y + fy/fm*3*T, B.speed*3, dt);
+    if (b.runT <= 0){ b.state = 'walk'; b.t = 0; } return; }
   if (b.gx == null || b.t > 14 || bugMove(s, b, b.gx, b.gy, B.speed, dt)){ bugWander(s, b, 5); b.t = 0; }
 }
 // Rain (build 16): drops knock ants about outside. Some lose what they carry.

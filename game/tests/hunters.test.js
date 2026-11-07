@@ -74,3 +74,12 @@ test('the skink: hurt to half it drops its tail (40 protein) and runs; it gets a
   step(s, 7);
   assert.ok(!s.critters.includes(b), 'got away');
 });
+
+test('build 73: chitin armour: a crew of foragers barely scratches a hunter; soldiers hurt it, and it lashes back', () => {
+  const run = (caste) => { const s = yard(); const [x, y] = open(s); const b = hunter(s, 'assassin', x, y); b.fullUntil = 1e9;
+    const crew = []; for (let i = 0; i < 4; i++) crew.push(ant(s, x + (i % 2 ? 1 : -1) * 0.9 * T, y + (i < 2 ? 0.6 : -0.6) * T, { caste, hp: 200, follow: true, state: 'follow' }));
+    const hp0 = b.hp; step(s, 3, () => { for (const a of crew) { a.x = b.x + (a.x > b.x ? 0.9 : -0.9) * T; a.y = b.y; } }); return { took: hp0 - b.hp, lashed: b.lashAt != null, hurt: crew.some((a) => a.hp < 200) }; };
+  const f = run('forager'), so = run('soldier');
+  assert.ok(so.took > f.took * 3, `soldiers ${so.took.toFixed(1)} vs foragers ${f.took.toFixed(1)}`);
+  assert.ok(f.lashed && f.hurt, 'crowded, it lashes out');
+});

@@ -53,15 +53,18 @@ test('a cricket hops away, tires after five hops, and a caught one is rich meat'
   assert.equal(s.colony.kills.cricket, 1);
 });
 
-test('a bitten millipede curls into an armoured ball', () => {
+test('build 73: a bitten millipede runs; cornered, it curls into an armoured ball', () => {
   const s = founded(), [x, y] = open(s, 'compost');
   const b = bug(s, 'millipede', x, y); you(s, x, y);
-  step(s, 0.5);
+  step(s, 0.3);
+  assert.equal(b.state, 'run', 'bitten by one, it runs');
+  step(s, 0.6); assert.ok(Math.hypot(b.x - px(x), b.y - px(y)) > 0.5 * SIM.T, 'and gets away from you');
+  // Cornered: three on it, it curls and stops.
+  b.state = 'walk'; for (let i = 0; i < 3; i++) s.ants.push({ ...s.player.ant, isPlayer: false, name: null, id: s.nextId++, caste: 'soldier', hp: 50, state: 'fight', follow: false, x: b.x + (i - 1) * 4, y: b.y + 6 });
+  s.player.ant.x = b.x; s.player.ant.y = b.y; step(s, 0.3);
   assert.equal(b.state, 'curl');
-  const hp0 = b.hp; step(s, 2, () => { s.player.ant.x = b.x; s.player.ant.y = b.y; });
-  const curled = hp0 - b.hp;
-  assert.ok(curled > 0 && curled < 2 * 2 * 0.5, `took ${curled.toFixed(2)} in 2 s curled`);
-  assert.ok(b.x === px(x) && b.y === px(y), 'curled, it does not move');
+  const at = [b.x, b.y]; step(s, 1.5);
+  assert.deepEqual([b.x, b.y], at, 'curled, it does not move');
 });
 
 test('a ladybug eats your aphids, and flies off when bitten to half', () => {

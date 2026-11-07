@@ -221,7 +221,7 @@ export class SurfaceView {
       for (let k = 0; k < 9; k++) { const a = k * 2.4, d = k ? 0.3 + (k % 3) * 0.22 : 0; const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42 + (k % 2) * 0.12, 1), puffMat.clone()); m.position.set(Math.cos(a) * d, 0.3 + (k % 4) * 0.12, Math.sin(a) * d); m.renderOrder = 4; g.add(m); }
       g.visible = false; this.dyn.add(g); return g;
     });
-    this.shadows = [0, 1, 2, 3, 4].map(() => {
+    this.shadows = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(() => { // (build 73: more, for the feet's prints)
       // Layer 5: shaped like what casts them (a sole, a bird), soft at the edge.
       const m = new THREE.Mesh(SHADOW_DISC, psxBasic({ color: '#0a0806', vertexColors: true, transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6 }));
       m.renderOrder = 2; m.visible = false; this.dyn.add(m); return m;
@@ -590,6 +590,12 @@ export class SurfaceView {
       const ring = rankRing(a);
       if (ring) { tmpV.set(a.x, 0.55, a.y); this.marks.pushAt('rank', PROPS.ring, tmpV, tmpQ.identity(), 6.5, ring); }
     }
+    // Build 73 (Mark: "it should be able to outline every ant that you see"): the ant under the mouse wears a
+    // ring in its side's colour (gold you, green yours, red theirs); the HUD labels it (main.js, app.hoverAnt).
+    { let best = null, bd = 1.3 * T; const m = app.mouseOn && app.mouseWorld;
+      if (m) for (const a of s.ants) { if (a.state === 'dead' || a.state === 'in' || a.state === 'build' || a.state === 'nest' || a.state === 'away' || Math.abs(a.x - m.x) > bd || Math.abs(a.y - m.y) > bd) continue; const d = Math.hypot(a.x - m.x, a.y - m.y); if (d < bd) { bd = d; best = a; } }
+      app.hoverAnt = best;
+      if (best) { const k = ((CASTES[best.caste] || CASTES.forager).r / 2.2) * ANT_SCALE.surface * (best.champion ? 2 : 1); tmpV.set(best.x, 0.7, best.y); this.marks.pushAt('ring', PROPS.ring, tmpV, tmpQ.identity(), 9.5 * k, best.isPlayer ? '#ffd34d' : best.team ? '#ff5a3a' : '#8fe07a'); tmpV.set(best.x, 0.75, best.y); this.marks.pushAt('ring', PROPS.ring, tmpV, tmpQ.identity(), 8 * k, '#fff4dc'); } }
     // Build 72: the fallen, RTS-style: a dead ant lies on its back, legs up, twitches for a moment, stays eight
     // seconds, then sinks away.
     for (const b of s.corpses || []) {
@@ -754,15 +760,20 @@ export class SurfaceView {
       const D = DROP[st.kind], B = HUNT[st.kind];
       if (st.kind === 'foot') {
         const k = Math.min(1, st.t / D.warn);
-        let y;
-        if (st.phase === 'warn') y = 1700 - 900 * k * k;
-        else if (st.phase === 'hold') y = Math.max(0, 800 * (1 - (st.t - D.warn) / 0.12));
+        // Build 73 (Mark: "the foot should have more of a stomp"): it hangs, then drops fast (eased in) and
+        // squashes on landing; the shake falls off with distance.
+        let y, sq = 1;
+        if (st.phase === 'warn') y = 1700 - 500 * k * k;
+        else if (st.phase === 'hold') { const h2 = (st.t - D.warn) / 0.09; y = Math.max(0, 1200 * (1 - Math.min(1, h2)) ** 2); const af = (st.t - D.warn - 0.09) / 0.2; if (af > 0 && af < 1) sq = 1 - 0.16 * Math.sin(af * Math.PI); }
         else y = 1700 * Math.min(1, (st.t - D.warn - D.hold) / D.lift) ** 2;
-        it.visible = true; it.position.set(x, y, z); it.rotation.set(0, -st.yaw, 0);
-        if (st.phase === 'hold' && !st.shook) { st.shook = true; if (Math.hypot(x - this.target.x, z - this.target.z) < 30 * T) this.shake = 0.35; }
+        it.visible = true; it.position.set(x, y, z); it.rotation.set(0, -st.yaw, 0); it.scale.set(0.5, 0.5 * sq, 0.5); // (the shoe model is drawn at half scale)
+        if (st.phase === 'hold' && !st.shook && st.t - D.warn > 0.08) { st.shook = true; const dd = Math.hypot(x - this.target.x, z - this.target.z) / T; this.shake = Math.max(this.shake, dd < 14 ? 0.7 : dd < 30 ? 0.4 : dd < 50 ? 0.15 : 0); }
+        // The shockwave, a fast white ring and clods flung up, as it lands.
+        { const ks = (st.t - D.warn - 0.08) / 0.5; if (st.phase !== 'warn' && ks > 0 && ks < 1) { tmpV.set(x, 1.2, z); this.fx.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), D.a * T * (0.9 + ks * 1.4), '#ffffff');
+            for (let j = 0; j < 14; j++) { const a = j * 0.449 + st.yaw, r = D.a * T * (0.6 + ks * 0.9), hh = 5 + ks * 40 - ks * ks * 46; if (hh > 0.5) { tmpV.set(x + Math.cos(a) * r, hh, z + Math.sin(a) * r * 0.55); this.fx.pushAt('bead', FOOD.bead, tmpV, tmpQ2.identity(), 3.2 * (1 - ks * 0.5), j % 2 ? '#5a4028' : '#8a6a44'); } } } }
         const near = 1 - Math.min(1, y / 1700);
         shade(x, z, st.yaw, D.a * T * (0.7 + 0.35 * near), D.b * T * (0.7 + 0.35 * near), 0.22 + 0.45 * near, SHADOW_SOLE);
-        if (st.phase !== 'warn') dust(x, z, -st.yaw, D.a * T, D.b * T * 1.15, (st.t - D.warn) / 1.1, 14, 26, '#c4b090');
+        if (st.phase !== 'warn') { dust(x, z, -st.yaw, D.a * T, D.b * T * 1.15, (st.t - D.warn) / 1.1, 14, 26, '#c4b090'); dust(x, z, -st.yaw, D.a * T * 1.3, D.b * T * 1.6, (st.t - D.warn - 0.25) / 1.8, 10, 34, '#b8a888'); } // (a second, slower cloud)
       } else if (st.kind === 'acorn') {
         // Falls from out of sight, spinning, and lands where the shadow was
         // (the sim then leaves an acorn there to eat).
@@ -807,6 +818,8 @@ export class SurfaceView {
       }
     }
     for (const k in pool) for (let i = n[k]; i < pool[k].length; i++) { const it = pool[k][i]; (it.group || it).visible = false; }
+    // Build 73: a foot's print, flattened into the ground for twenty seconds.
+    for (const pr of s.prints || []) { const age = s.t - pr.t; if (age < 0.1 || age > 20) continue; const D = DROP.foot; shade(pr.x * T, pr.y * T, pr.yaw, D.a * T * 0.95, D.b * T * 0.95, 0.32 * Math.min(1, (20 - age) / 4), SHADOW_SOLE); }
     for (let i = shadow; i < this.shadows.length; i++) this.shadows[i].visible = false;
   }
 
@@ -862,9 +875,14 @@ export class SurfaceView {
     const walking = t - h.moved < 0.2;
     const frame = Math.floor(h.phase * SPIDER_FRAMES) % SPIDER_FRAMES;
     let geo = this.spiderRest, y = SPIDER_FOOT, pitch = 0, breathe = Math.sin(t * 1.9), shiver = 0;
-    const bit = s.t - (sp.biteAt ?? -9);
-    if (bit < 0.35) { geo = this.spiderRear; pitch = 0.22 * Math.sin((bit / 0.35) * Math.PI); }
-    else if (walking) { geo = this.spiderWalk[frame]; y += Math.abs(Math.sin(h.phase * Math.PI * 2)) * 0.5; breathe = 0; if (mode === 'lunge') pitch = 0.1; }
+    const bit = s.t - (sp.biteAt ?? -9), stp = s.t - (sp.stompAt ?? -9);
+    let roll = 0;
+    // Build 73: the stomp (rears high, then stamps), the bite (rears, then slams down on its prey), and a real
+    // lunge (thrust forward and low, forelegs up).
+    if (stp < 0.6) { geo = this.spiderRear; const u = stp / 0.6; if (u < 0.55) { pitch = 0.4 * (u / 0.55); y += 3 * (u / 0.55); } else { const v = (u - 0.55) / 0.45; pitch = 0.4 * (1 - v) - 0.12 * Math.sin(v * Math.PI); y += 3 * (1 - v) - 0.6 * Math.sin(v * Math.PI); } breathe = 0; }
+    else if (bit < 0.45) { geo = this.spiderRear; const u = bit / 0.45; if (u < 0.35) { pitch = 0.3 * (u / 0.35); y += 1.4 * (u / 0.35); } else { const v = (u - 0.35) / 0.65; pitch = 0.3 * (1 - v) - 0.28 * Math.sin(v * Math.PI); y -= 0.5 * Math.sin(v * Math.PI); } breathe = 0; }
+    else if (walking) { geo = this.spiderWalk[frame]; y += Math.abs(Math.sin(h.phase * Math.PI * 2)) * 0.5; breathe = 0; if (mode === 'lunge') { geo = this.spiderUp; pitch = -0.17; y -= 0.5; }
+      const lame = SIM.crippledLegs(sp); if (lame >= 2) roll = Math.sin(h.phase * Math.PI * 2) * 0.05 * Math.min(4, lame); } // (lamed, it limps)
     else if (mode === 'crouch') { geo = this.spiderCrouch; y -= SPIDER_CROUCH; shiver = Math.sin(t * 60) * 0.25; breathe = 0; }
     else if (mode === 'eat') { geo = this.spiderRest; pitch = -0.2 + Math.sin(t * 7) * 0.05; y -= 0.6; breathe = 0; }
     else if (mode === 'rest') { geo = this.spiderCrouch; y -= SPIDER_CROUCH; breathe = Math.sin(t * (sp.full > 0 ? 0.9 : 1.4)) * 1.6; }
@@ -872,7 +890,7 @@ export class SurfaceView {
     m.geometry = geo;
     m.position.set(sp.x + shiver, y * S, sp.y);
     m.scale.set(S, S * (1 + 0.03 * breathe), S * (1 + 0.02 * breathe));
-    m.rotation.set(0, h.yaw, pitch);
+    m.rotation.set(roll, h.yaw, pitch);
     this._placeBar(this.bars[0], sp.x, sp.y, 62, sp.hp / sp.maxHp, '#e4524a');
   }
 
@@ -1105,6 +1123,11 @@ export class SurfaceView {
       tmpV.set(x, 10 + 8 * Math.sin(t * 0.8 + i), z);
       F.pushAt('bead', FOOD.bead, tmpV, tmpQ2.identity(), 2 + 1.6 * blink, blink > 0.7 ? '#fff27a' : '#e0c050');
     }
+    // Build 73: the spider's slam and stomp throw dust; a stomp near you shakes the view.
+    if (s.spider) { const sp = s.spider, bt = s.t - (sp.biteAt ?? -9), st = s.t - (sp.stompAt ?? -9);
+      if (bt > 0.25 && bt < 0.8) { const v = (bt - 0.25) / 0.55; tmpV.set(sp.x, 0.8, sp.y); F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), 10 + v * 22, '#c8b090'); }
+      if (st > 0.4 && st < 1.3) { const v = (st - 0.4) / 0.9; tmpV.set(sp.x, 0.9, sp.y); F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), 16 + v * 46, '#d8c4a0'); if (v < 0.6) { tmpV.set(sp.x, 1.1, sp.y); F.pushAt('ring', PROPS.ring, tmpV, tmpQ2.identity(), 8 + v * 30, '#ffffff'); }
+        if (sp.shookAt !== sp.stompAt && Math.hypot(sp.x - this.target.x, sp.y - this.target.z) < 25 * T) { sp.shookAt = sp.stompAt; this.shake = Math.max(this.shake, 0.3); } } }
     for (const h of s.hits || []) {
       // Build 72: a bite that lands throws chitin flecks and a puff of dust; a crit spreads a white ring, and one
       // near your ant kicks the view.

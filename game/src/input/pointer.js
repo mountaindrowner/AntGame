@@ -115,7 +115,7 @@ export function attachPointer(canvas, app, ui, views) {
 
   canvas.addEventListener('pointermove', (e) => {
     const p = ptrs.get(e.pointerId);
-    if (e.pointerType === 'mouse' && app.view === 'surface') { const w = surfacePoint(e); if (w) app.mouseWorld = w; } // build 32: where abilities aim
+    if (e.pointerType === 'mouse' && app.view === 'surface') { const w = surfacePoint(e); if (w) app.mouseWorld = w; app.mouseOn = true; } // build 32: where abilities aim (73: and what's hovered)
     if (!p) { if (e.pointerType === 'mouse') hoverAt(e); return; }
     p.x = e.clientX;
     p.y = e.clientY;
@@ -162,7 +162,7 @@ export function attachPointer(canvas, app, ui, views) {
     if (SIM.crewSize(app.s) || SIM.heldCount(app.s)) SIM.crewHold(app.s, w.x, w.y);
   });
   canvas.addEventListener('pointerup', up);
-  canvas.addEventListener('pointerleave', () => { if (hover) clearTimeout(hover.timer); hover = null; canvas.style.cursor = ''; });
+  canvas.addEventListener('pointerleave', () => { if (hover) clearTimeout(hover.timer); hover = null; canvas.style.cursor = ''; app.mouseOn = false; });
   canvas.addEventListener('pointercancel', up);
   // Desktop: wheel zooms.
   canvas.addEventListener('wheel', (e) => {

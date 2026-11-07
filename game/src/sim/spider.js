@@ -13,6 +13,18 @@ import { spark } from './combat.js';
 // and lunges at what wanders near; roaming, it stalks ants it sees, lunges,
 // and gives up after a few seconds, so a running ant can still get away.
 export const SPIDER_REACH = 1.4*T, CAT_REACH = 1.8*T;
+// Build 73 (Mark: "the ants shouldn't just go right under him. They should attack his legs. Each one of his legs
+// is a point of weakness"): each ant fighting the spider holds a leg, a spot at that leg's foot that turns with
+// it (eight, then a second ring); bites land on that leg; LEG_HP crippled it, and each crippled leg slows the
+// spider by a tenth; four, and it can't lunge.
+export const LEG_HP = 22;
+export function legSlot(s, a){
+  const sp = s.spider; if (!sp) return null; const S = sp.slots || (sp.slots = {});
+  let i = S[a.id]; if (i == null){ const used = new Set(Object.values(S)); for (i = 0; used.has(i); i++); S[a.id] = i; }
+  const face = sp.face ?? 0, ring = i < 8 ? 0 : 1, ang = face + (i % 8)*Math.PI/4 + Math.PI/8 + ring*Math.PI/8, r = (ring ? 1.3 : 1.05)*T;
+  return { x: sp.x + Math.cos(ang)*r, y: sp.y + Math.sin(ang)*r, leg: i % 8 };
+}
+export const crippled = sp => (sp.legHp || []).filter(v => v >= LEG_HP).length;
 const SPIDER = { windup: 0.25, ambush: 4*T, see: 5*T, passing: 1.5*T, lunge: 0.8, lungeSpeed: 100, chaseSpeed: 40, roamSpeed: 16, giveUp: 6, tired: 4, home: 60 };
 // For the first four minutes it keeps well away, so the opening is safe to learn.
 const spiderNearNest = (s, x, y) => Math.hypot(x/T - (s.world.ex+0.5), y/T - (s.world.ey+0.5)) < (s.t < 240 ? 12 : 6) || Math.hypot(x/T - (s.world.rx+0.5), y/T - (s.world.ry+0.5)) < 4;
@@ -111,8 +123,9 @@ export function stepSpider(s, dt){
     return; } }
   if (sp.slowT > 0) sp.slowT -= dt;
   if (sp.stunned > s.t) return; // build 32: held in a mandible lock
-  const speed = (target ? (sp.mode === 'lunge' ? SPIDER.lungeSpeed : SPIDER.chaseSpeed) : SPIDER.roamSpeed)*SURF*(sp.slowT > 0 ? 0.5 : 1)*(isNight(s) ? 1.2 : 1); /* (build 43: a night hunter) */ const ddx = gx - sp.x, ddy = gy - sp.y; if (Math.hypot(ddx, ddy) < 1) return;
-  const base = Math.atan2(ddy, ddx);
+  const lame = crippled(sp); if (sp.mode === 'lunge' && lame >= 4) sp.mode = 'chase'; // (four legs gone: no lunge)
+  const speed = (target ? (sp.mode === 'lunge' ? SPIDER.lungeSpeed : SPIDER.chaseSpeed) : SPIDER.roamSpeed)*SURF*(sp.slowT > 0 ? 0.5 : 1)*(isNight(s) ? 1.2 : 1)*(1 - 0.1*lame); /* (build 43: a night hunter; 73: lamed) */ const ddx = gx - sp.x, ddy = gy - sp.y; if (Math.hypot(ddx, ddy) < 1) return;
+  const base = Math.atan2(ddy, ddx); sp.face = base;
   // Steer around rocks: straight, then increasingly wide detours.
   for (const off of [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8]){
     const nx = sp.x + Math.cos(base+off)*speed*dt, ny = sp.y + Math.sin(base+off)*speed*dt;

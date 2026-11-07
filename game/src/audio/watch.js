@@ -18,7 +18,7 @@ export function soundWatch(app, views) {
   let p = null;
   const seenStrike = new WeakMap();
   const seenBug = new WeakMap(); // build 16: each small creature's last state
-  let spiderMode = null, sparks = 0, splashes = 0, corpseT = 0, wasBattle = false;
+  let spiderMode = null, sparks = 0, splashes = 0, corpseT = 0, wasBattle = false, spStomp = null;
   const seenBoss = {}; let introT = 0, bannerT = 0, downT = 0; // build 19
 
   function hear(s, events) {
@@ -133,6 +133,8 @@ export function soundWatch(app, views) {
     // Build 72: a duel's bite sounds as its dice went; other bites keep their tick.
     const SW = { miss: 'swMiss', hit: 'swHit', hard: 'swHard', crit: 'swCrit', lock: 'swLock' };
     for (const h of hits) if (h.t > sparks) { sparks = h.t; if (h.w && SW[h.w]) sfx.play(SW[h.w], { x: h.x, y: h.y }); else if (!h.k) sfx.play('hitTick', { x: h.x, y: h.y }); }
+    // Build 73: the spider's stomp lands with a stamp.
+    if (s.spider && s.spider.stompAt != null && s.spider.stompAt !== spStomp && s.t - s.spider.stompAt > 0.33) { spStomp = s.spider.stompAt; sfx.play('spiderStamp', { x: s.spider.x, y: s.spider.y }); }
     if (corpseT > s.t) corpseT = 0;
     for (const b of s.corpses || []) if (b.t > corpseT) { corpseT = b.t; sfx.play('antDies', { x: b.x, y: b.y }); }
     // A battle's din, by how many duels are near the camera; a war drum when one starts near you.

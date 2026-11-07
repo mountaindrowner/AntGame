@@ -11,13 +11,13 @@ import { wakeRival } from './state.js';
 import { prizeFx, tickOutposts } from './outposts.js';
 import { DUTIES, chooseDuty, preyNear, woodGoal } from './jobs.js';
 import { rivalBrain, tickMyRaid } from './raids.js';
-import { CAT_REACH, SPIDER_REACH, spiderEnter, spiderRoute, stepCat, stepSpider } from './spider.js';
+import { CAT_REACH, LEG_HP, SPIDER_REACH, legSlot, spiderEnter, spiderRoute, stepCat, stepSpider } from './spider.js';
 import { ATTACK_LEASH, HOLD_R, attackReach, attackTarget, stepPlayer, tickAttack, tickZones } from './player.js';
 import { outside, tickMower, tickPits, tickStings, tickStrikes } from './hazards.js';
 import { knock, playerNear, populateBugs, stepBugs, tickSplash } from './creatures.js';
-import { DUEL_ROUND, duelGangs, pinnedNow, spark, swing } from './combat.js';
+import { DUEL_ROUND, duelGangs, hurtAnt, pinnedNow, spark, swing } from './combat.js';
 import { exposed, stunned } from './abilities.js';
-import { tickBosses } from './bosses.js';
+import { shove, tickBosses } from './bosses.js';
 import { stepZombie, tickDirector } from './events.js';
 import { tickCurios } from './curios.js';
 
@@ -142,7 +142,7 @@ export function tick(s, dt){
     }
     if (a.state === 'fight'){
       let tx = null, ty = null;
-      if (a.goal === 'spider' && s.spider){ tx = s.spider.x; ty = s.spider.y; }
+      if (a.goal === 'spider' && s.spider){ const L = legSlot(s, a); tx = L.x; ty = L.y; } // build 73: its leg, not its belly
       else if (a.goal === 'bug'){ const b = s.critters.find(o => o.id === a.bugId); if (b && b.state !== 'fly' && Math.hypot(a.x - b.x, a.y - b.y) < 14*T){ tx = b.x; ty = b.y; } }
       else if (a.goal === 'cat'){ if (s.cat && Math.hypot(a.x - s.cat.x, a.y - s.cat.y) < 14*T){ tx = s.cat.x; ty = s.cat.y; } }
       else if (a.goal === 'boss'){ const b = s.bosses[a.bossKey]; if (b && !b.dead && b.mode === 'fight' && Math.hypot(a.x - b.x, a.y - b.y) < 20*T){ tx = b.x; ty = b.y; } }
@@ -151,7 +151,9 @@ export function tick(s, dt){
       else if (a.goal === 'defend'){ /* build 71: called home by Defend: run to the door, then fight whoever is there */ if (Math.hypot(a.tx - c.ex, a.ty - c.ey) < 3){ a.goal = 'enemy'; const e2 = enemiesNear(a, 6); if (e2.length){ tx = e2[0].x; ty = e2[0].y; } } else { tx = (c.ex + 0.5)*T; ty = (c.ey + 0.5)*T; } }
       else { const e2 = enemiesNear(a, 6); if (e2.length){ tx = e2[0].x; ty = e2[0].y; } else if (s.spider && Math.hypot(a.x-s.spider.x, a.y-s.spider.y) < 8*T){ tx = s.spider.x; ty = s.spider.y; } }
       if (tx == null){ a.state = a.carry ? 'return' : a.team ? 'return' : a.duty === 'hunt' ? 'hunt' : 'patrol'; a.explore = 0; continue; }
-      if (Math.hypot(a.x-tx, a.y-ty) > 0.9*T){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)) chooseToward(s, a, tx, ty); }
+      { const dd = Math.hypot(a.x-tx, a.y-ty);
+        if (a.goal === 'spider' && dd < 1.6*T){ if (dd > 1){ const m = Math.min(dd, paceOf(s, a, C.speed)*SURF*dt); a.x += (tx - a.x)/dd*m; a.y += (ty - a.y)/dd*m; a.dx = (tx - a.x)/dd; a.dy = (ty - a.y)/dd; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } else if (s.spider){ const ex = s.spider.x - a.x, ey = s.spider.y - a.y, em = Math.hypot(ex, ey) || 1; a.dx = ex/em; a.dy = ey/em; } } // (onto its leg, facing in)
+        else if (dd > 0.9*T){ if (stepTo(a, a.tx, a.ty, paceOf(s, a, C.speed), dt)) chooseToward(s, a, tx, ty); } }
       continue;
     }
     // Hunting (build 17): fighters range out after small game and the
@@ -251,6 +253,14 @@ export function tick(s, dt){
     const biters = [];
     for (const a of s.ants){ if (a.state==='dead' || a.state==='in' || a.state==='build' || a.state==='nest' || a.state==='away') continue; const d = Math.hypot(a.x-s.spider.x, a.y-s.spider.y); if (d < SPIDER_REACH*reachOf(s, a)){ if (d < SPIDER_REACH) near.push(a); if (a.state==='fight' || a.state==='follow' || a.isPlayer || a.state==='raid'){ const b = bite(s, a, 'spider'); power += b; biters.push(a); gainXp(s, a, b*0.5*dt/3); stingSlow(s, a, s.spider); } } }
     s.spider.hp -= power*0.5*dt*(exposed(s, s.spider) ? 1.5 : 1); s.spider.bite += dt;
+    // Build 73: each biter's bite lands on the leg it holds; enough and the leg is crippled. The spider's slots
+    // forget ants that left the fight.
+    { const sp = s.spider, L = sp.legHp || (sp.legHp = [0, 0, 0, 0, 0, 0, 0, 0]); for (const a of biters){ const i = sp.slots && sp.slots[a.id]; const leg = i != null ? i % 8 : (a.id % 8); const was = L[leg] >= LEG_HP; L[leg] += bite(s, a, 'spider')*0.5*dt; if (!was && L[leg] >= LEG_HP){ sp.crippledAt = s.t; if (playerNear(s, sp.x, sp.y, 20)) P.msg = `A leg crippled! (${L.filter(v => v >= LEG_HP).length} of 8)`; } }
+      if (sp.slots) for (const id in sp.slots){ const a = s.ants.find(o => o.id === +id); if (!a || a.state === 'dead' || !(a.goal === 'spider' && a.state === 'fight')) delete sp.slots[id]; }
+      // The stomp: five or more on its legs, and every five seconds it rears and stamps; everyone in reach is
+      // knocked back for a little.
+      sp.stompCd = (sp.stompCd ?? 2) - dt;
+      if (biters.length >= 5 && sp.stompCd <= 0 && !(sp.eatT > 0)){ sp.stompCd = 5; sp.stompAt = s.t; for (const a of near.concat(biters)){ if (a.state === 'dead' || a.knockT > 0) continue; hurtAnt(s, a, 1, 'spider'); if (a.state !== 'dead') shove(s, a, sp.x, sp.y, 1.6); } } }
     // Eating or full it only bites back when bitten.
     const sp = s.spider, calm = sp.eatT > 0 || sp.full > 0;
     if (biters.length) sp.hitT = s.t;

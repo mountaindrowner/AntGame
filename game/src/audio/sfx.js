@@ -193,7 +193,9 @@ const SOUNDS = {
   lost: { cool: 5, fn: (s, o, t) => { [69, 67, 65, 64, 60, 57].forEach((n, i) => s.blip(o, t + i * 0.35, N(n), 0.4, 0.2, 'sine')); return 2.4; } },
   // Visitors (sim strikes).
   footWarn: { cool: 1, always: true, fn: (s, o, t, d = 2) => { s.puff(o, t, d, 120, 0.4, 'lowpass', 900, d * 0.9); return d + 0.1; } },
-  stomp: { cool: 0.4, always: true, fn: (s, o, t) => { s.thump(o, t, 110, 30, 0.5, 1); s.puff(o, t, 0.3, 700, 0.6, 'lowpass', 150); return 0.6; } },
+  // Build 73: the foot lands heavier: a crack, a deep boom and a long rumble.
+  stomp: { cool: 0.4, always: true, fn: (s, o, t) => { s.puff(o, t, 0.04, 2400, 0.35, 'lowpass'); s.thump(o, t, 110, 30, 0.5, 1); s.thump(o, t + 0.01, 62, 22, 0.9, 0.9); s.puff(o, t, 0.3, 700, 0.6, 'lowpass', 150); s.puff(o, t + 0.15, 1.3, 260, 0.4, 'lowpass', 60, 0.4); return 1.5; } },
+  spiderStamp: { cool: 0.6, fn: (s, o, t) => { s.thump(o, t, 135, 42, 0.22, 0.7); s.puff(o, t, 0.12, 800, 0.4, 'lowpass', 200); return 0.3; } }, // build 73: the spider's stomp
   acornWarn: { cool: 1, always: true, fn: (s, o, t, d = 1.6) => { s.chirp(o, t, 1600, 400, d, 0.15, 'sine'); return d; } },
   acornHit: { cool: 0.4, fn: (s, o, t) => { s.blip(o, t, 260, 0.08, 0.5, 'square'); s.thump(o, t, 200, 80, 0.15, 0.5); return 0.2; } },
   sprayHiss: { cool: 1, always: true, fn: (s, o, t, d = 4) => { s.puff(o, t, d, 4000, 0.25, 'bandpass', 3000, 0.6); return d + 0.6; } },

@@ -43,6 +43,8 @@ A first pass of each is in the game (build 68). Each gets a second look: how it 
 
 ### Phase 3: creatures
 
+**Done in build 73**, each piece thought through first in [`PHASE3.md`](PHASE3.md).
+
 1. **Predators are a real threat.** "They have to be genuine threats, not just pathetic food sources." Jumping spiders, assassin bugs and wasps should kill an ant or more before they go down, and need your strongest ants or a real crew.
 2. **The spider fights visibly.** "He should definitely have some kind of attacking animations… the ants shouldn't just go right under him. They should attack his legs." A lunge, a rear and a slam; ants spread round its legs.
 3. **The millipede runs** before it curls up. "The millipede should probably try to run away, not just curl up and accept death."

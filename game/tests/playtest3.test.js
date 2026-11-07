@@ -61,3 +61,16 @@ test('build 71: Defend calls the next six nearest home, fighters first, with a c
   s.raidLive = true; // (no real raiders in this test: the game clears the flag after a moment)
   const before = called.length; assert.ok(SIM.callDefend(s) > 0, 'a second ring calls more'); assert.ok(s.ants.filter((a) => a.defendT > s.t).length > before);
 });
+
+test('build 73: the spider fight: ants take its legs in a ring, legs cripple and slow it, five on it make it stomp', () => {
+  const s = outside(); const T = SIM.T, me = s.player.ant;
+  s.spider = { x: me.x + 8 * T, y: me.y, hp: 1e6, maxHp: 1e6, bite: -1e9, legs: 0, route: [], face: 0, cost0: 0 };
+  const crew = []; for (let i = 0; i < 9; i++) { const a = { ...me, isPlayer: false, name: null, id: s.nextId++, follow: false, xp: 0, caste: 'soldier', hp: 500, state: 'fight', goal: 'spider', foeId: 0, x: s.spider.x - 3 * T + (i % 3) * 4, y: s.spider.y + (Math.floor(i / 3) - 1) * 6 }; a.tx = Math.floor(a.x / T); a.ty = Math.floor(a.y / T); s.ants.push(a); crew.push(a); }
+  for (let i = 0; i < 60; i++) { SIM.tick(s, 0.05); s.spider.bite = -1e9; s.spider.x = me.x + 8 * T; s.spider.y = me.y; }
+  const slots = new Set(crew.map((a) => s.spider.slots && s.spider.slots[a.id]));
+  assert.equal(slots.size, 9, 'each ant its own leg');
+  const pos = crew.map((a) => [Math.round(a.x), Math.round(a.y)].join()); assert.ok(new Set(pos).size >= 8, 'spread round it, not piled up');
+  for (let i = 0; i < 200; i++) { SIM.tick(s, 0.05); s.spider.bite = -1e9; s.spider.x = me.x + 8 * T; s.spider.y = me.y; }
+  assert.ok(SIM.crippledLegs(s.spider) >= 1, 'a leg crippled');
+  assert.ok(s.spider.stompAt != null, 'it stomped');
+});
