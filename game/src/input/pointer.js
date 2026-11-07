@@ -38,7 +38,7 @@ export function attachPointer(canvas, app, ui, views) {
   }
 
   // Why a dig order can't go here, said once a stroke.
-  const DIG_WHY = { 'not adjacent': 'Dig next to an existing tunnel (the faint dots).', 'too many': `${SIM.DIG_ORDERS} dig orders queued. Let the builders catch up.`, edge: 'Not at the edge.', planned: 'That\u2019s part of a planned room: cancel the room to change it.', wall: 'That\u2019s a room\u2019s wall: a room has one or two ways in.' };
+  const DIG_WHY = { 'not adjacent': 'Dig next to an existing tunnel (the faint dots).', 'too many': `${SIM.DIG_ORDERS} dig orders queued. Let the builders catch up.`, edge: 'Not at the edge.', caved: 'A cave-in: stand beside it and tap it to dig it out yourself, or your builders will mend it.', planned: 'That\u2019s part of a planned room: cancel the room to change it.', wall: 'That\u2019s a room\u2019s wall: a room has one or two ways in.' };
   const digWhy = (res) => { sfx.play('nope'); return DIG_WHY[res] || 'That soil ' + res + '.'; }; // build 77: a dull thud when it can't
   // A builder you play walks to the dig and does it (build 74).
   function builderGo(cx, cy) {
@@ -106,7 +106,7 @@ export function attachPointer(canvas, app, ui, views) {
     const s = app.s; if (!c || app.placing || s.phase !== 'play' || P().nestKey) return null;
     const [x, y] = c; if (x < 1 || y < 1 || x >= NW - 1 || y >= NH) return null;
     if (s.nest.digOrders.some((o) => o.x === x && o.y === y && !o.plan)) return 'erase';
-    if (s.nest.cells[y * NW + x] || SIM.cellLocked(s, x, y)) return null;
+    if (s.nest.cells[y * NW + x] || SIM.cellLocked(s, x, y) || s.repairs.some((r) => r.x === x && r.y === y)) return null; // (build 79: a cave-in: a tap mends it yourself)
     const q = s.queen; if (Math.abs(x - q.x) <= 1 && Math.abs(y - q.y) <= 1) return null;
     return 'dig';
   };
@@ -133,7 +133,7 @@ export function attachPointer(canvas, app, ui, views) {
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (ptrs.size === 2) {
       const [p1, p2] = [...ptrs.values()];
-      pinch = { d0: Math.hypot(p1.x - p2.x, p1.y - p2.y), z0: app.zoomMul };
+      pinch = { d0: Math.hypot(p1.x - p2.x, p1.y - p2.y), z0: app.zoomMul }; paint = null; // (build 79: a pinch ends a dig stroke)
       P().holding = false;
       drag = null;
       return;

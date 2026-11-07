@@ -1,6 +1,6 @@
 // What the UI asks for: recruiting, eggs, rooms, upgrades, and the numbers it shows (stats).
 import { EVO_BY, UPGRADES } from './growth.js';
-import { CASTES, CASTE_EVO, CASTE_ROOM, QUEEN_UP, ROOMS, SOIL, T, roomCap, roomCount, roomLevel, soilTier } from './core.js';
+import { CASTES, CASTE_EVO, CASTE_ROOM, NW, QUEEN_UP, ROOMS, SOIL, T, roomCap, roomCount, roomLevel, soilTier } from './core.js';
 import { exitNest, payCost, roomsChanged } from './colony.js';
 import { mkAnt } from './world.js';
 import { growRoom, roomOf, roomPlan, roomSlotIndex, snapPlan } from './nest.js';
@@ -55,10 +55,13 @@ export function queueRoom(s, room, cell, at){
   if (roomLock(s, room)) return false;
   const plan = at ? roomPlan(s, room, at[0], at[1]) : snapPlan(s, room, cell[0], cell[1]); if (!plan.ok) return false;
   if (!payCost(c, roomCost(s, room))) return false;
-  const door = plan.dig.find(([x, y]) => plan.door.some(d => d[0] === x && d[1] === y)) || null;
-  c.buildQueue.push({ room, x0: plan.x0, y0: plan.y0, w: R.w, h: R.h, progress: 0, x: plan.x0+1, y: plan.y0+1, paid: roomCost(s, room, roomCount(s, room)), ...(plan.dig.length ? { wait: true, door } : {}) });
-  for (const [x, y] of plan.dig) if (!s.nest.digOrders.some(o => o.x === x && o.y === y)) s.nest.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true });
-  const mine = (x, y) => (x >= plan.x0 && x < plan.x0 + R.w && y >= plan.y0 && y < plan.y0 + R.h) || (door && door[0] === x && door[1] === y);
+  const undug = (x, y) => !s.nest.cells[y*NW + x], doors = plan.door.map(d => [d[0], d[1]]);
+  const wait = plan.dig.length > 0 || doors.some(d => undug(d[0], d[1])) || (() => { for (let y = plan.y0; y < plan.y0 + R.h; y++) for (let x = plan.x0; x < plan.x0 + R.w; x++) if (undug(x, y)) return true; return false; })();
+  c.buildQueue.push({ room, x0: plan.x0, y0: plan.y0, w: R.w, h: R.h, progress: 0, x: plan.x0+1, y: plan.y0+1, paid: roomCost(s, room, roomCount(s, room)), doors, ...(wait ? { wait: true } : {}) });
+  // Its digs (build 79: a dig order of yours already on one of its cells or doorways becomes part of the plan too).
+  const want = [...plan.dig]; for (let y = plan.y0; y < plan.y0 + R.h; y++) for (let x = plan.x0; x < plan.x0 + R.w; x++) if (undug(x, y)) want.push([x, y]); for (const d of doors) if (undug(d[0], d[1])) want.push(d);
+  for (const [x, y] of want){ const o = s.nest.digOrders.find(o => o.x === x && o.y === y); if (o) o.plan = true; else s.nest.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true }); }
+  const mine = (x, y) => (x >= plan.x0 && x < plan.x0 + R.w && y >= plan.y0 && y < plan.y0 + R.h) || doors.some(d => d[0] === x && d[1] === y);
   s.nest.fillOrders = s.nest.fillOrders.filter(o => !mine(o.x, o.y)); // build 40: a room's ground isn't filled in
   return true;
 }

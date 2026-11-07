@@ -983,7 +983,7 @@ export function createUI(app) {
     if (b.dataset.rebirth) { P().rebirth = b.dataset.rebirth; const q = s.colony.eggQueue, i = q.indexOf('forager'); if (i >= 0 && !s.colony.eggs.length) q[i] = b.dataset.rebirth; app.rebirthAsked = true; closeMenu(); return; }
     if (b.dataset.jobfirst) { const [k, d] = b.dataset.jobfirst.split(':'); SIM.setJobFirst(s, k, d); renderSheet(); return; }
     if (b.dataset.jobtoggle) { const [k, d] = b.dataset.jobtoggle.split(':'); SIM.toggleJob(s, k, d); renderSheet(); return; }
-    if (b.dataset.cleardigs) { s.nest.digOrders.length = 0; s.nest.fillOrders.length = 0; const n = SIM.cancelBuilds(s); if (n) flash(`${n} room${n === 1 ? '' : 's'} cancelled, cost refunded (half if building had begun).`, /cancelled/, 3000); renderSheet(); return; }
+    if (b.dataset.cleardigs) { const n = SIM.cancelBuilds(s); s.nest.digOrders = s.nest.digOrders.filter((o) => o.plan); s.nest.fillOrders.length = 0; /* build 79: a growing room's digs stay (they're all that's left flagged) */ if (n) flash(`${n} room${n === 1 ? '' : 's'} cancelled, cost refunded (half if building had begun).`, /cancelled/, 3000); renderSheet(); return; }
     if (b.dataset.breach) { if (SIM.startBreach(s, b.dataset.breach)) { sfx.play('evolve'); closeMenu(); app.view = 'nest'; } else renderSheet(); return; }
     if (b.dataset.place) { app.placing = { kind: 'room', key: b.dataset.place }; closeMenu(); app.view = 'nest'; return; }
     if (b.dataset.tool) { app.placing = { kind: b.dataset.tool }; closeMenu(); app.view = 'nest'; return; }

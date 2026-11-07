@@ -102,17 +102,30 @@ export function growPlan(s, r){
 }
 export function growRoom(s, r){
   const g = growPlan(s, r); if (!g) return false;
-  r.grow = g.cx; for (const [x, y] of g.dig) if (!orderAt(s, x, y)) s.nest.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true });
+  r.grow = g.cx; for (const [x, y] of g.dig) if (orderAt(s, x, y)) orderAt(s, x, y).plan = true; else s.nest.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true });
   return true;
 }
+// A queued room's doorways (build 79: all of them, kept so a fill can't seal one; older saves kept only a dug one).
+export const jobDoors = (j) => j.doors || (j.door ? [j.door] : []);
 // The first room in the queue that's dug out and ready to build (a plan waits for its digs).
 export function readyJob(s){ return s.colony.buildQueue.find(j => !j.wait) || null; }
+// Build 79: a plan, or a growing room's new column, keeps a dig order on every cell it still needs, whatever erased,
+// filled or caved in one (QA: a plan could wait forever).
+function planOrder(s, x, y){
+  const n = s.nest; if (n.cells[nidx(x, y)] || s.repairs.some(r => r.x === x && r.y === y)) return; const o = orderAt(s, x, y); if (o){ o.plan = true; return; } // (a cave-in is mended by its repair)
+  if (cellLocked(s, x, y) || digAllowed(s, y, x)) return;
+  n.digOrders.push({ x, y, ax: x, ay: y, progress: 0, need: SOIL[soilTier(y)].work, plan: true });
+  n.fillOrders = n.fillOrders.filter(f => f.x !== x || f.y !== y);
+}
 export function tickPlans(s){
+  s.planT = (s.planT || 0) + 1; if (s.planT % 20 === 0){
+    for (const j of s.colony.buildQueue) if (j.wait){ for (let y = j.y0; y < j.y0 + j.h; y++) for (let x = j.x0; x < j.x0 + j.w; x++) planOrder(s, x, y); for (const d of jobDoors(j)) planOrder(s, d[0], d[1]); }
+    for (const r of s.nest.rooms) if (r.grow != null) for (let y = r.y0; y < r.y0 + (r.h || 3); y++) planOrder(s, r.grow, y); }
   for (const r of s.nest.rooms) if (r.grow != null){ let dug = true; for (let y = r.y0; y < r.y0 + (r.h || 3); y++) if (!s.nest.cells[nidx(r.grow, y)]){ dug = false; break; }
     if (dug){ for (let y = r.y0; y < r.y0 + (r.h || 3); y++) s.nest.cells[nidx(r.grow, y)] = 2; if (r.grow < r.x0) r.x0--; r.w = (r.w || 4) + 1; r.grow = null; s.nest.ver++; s.player.msg = `${ROOMS[r.key].name} grew: room to spare.`; } }
   for (const j of s.colony.buildQueue) if (j.wait){ let dug = true;
     for (let y = j.y0; y < j.y0 + j.h && dug; y++) for (let x = j.x0; x < j.x0 + j.w; x++) if (!s.nest.cells[nidx(x, y)]){ dug = false; break; }
-    if (dug && j.door) dug = !!s.nest.cells[nidx(j.door[0], j.door[1])];
+    if (dug) dug = jobDoors(j).every(d => s.nest.cells[nidx(d[0], d[1])]);
     if (dug) j.wait = false; }
 }
 // A dig here would open a third way into a room (built or planned): its wall stays a wall. The queen's chamber,
@@ -130,11 +143,13 @@ export function toggleFillOrder(s, x, y){
   const i = n.fillOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ n.fillOrders.splice(i,1); return 'removed'; }
   if (n.cells[nidx(x,y)] !== 1) return n.cells[nidx(x,y)] === 2 ? 'room' : 'dirt';
   if (x === SHAFT && y <= 1) return 'entrance'; if (n.fillOrders.length >= 16) return 'too many';
-  if (s.colony.buildQueue.some(j => x >= j.x0 && x < j.x0 + j.w && y >= j.y0 && y < j.y0 + j.h)) return 'room'; // build 40
+  if (s.colony.buildQueue.some(j => (x >= j.x0 && x < j.x0 + j.w && y >= j.y0 && y < j.y0 + j.h) || jobDoors(j).some(d => d[0] === x && d[1] === y))) return 'room'; // build 40 (79: and its doorways)
+  if (s.nest.rooms.some(r => r.grow === x && y >= r.y0 && y < r.y0 + (r.h || 3))) return 'room'; // build 79: a growing room's new column
   n.fillOrders.push({ x, y, progress: 0, need: SOIL[soilTier(y)].work }); return 'added';
 }
 export function removeRoom(s, x, y){
   const r = roomAt(s, x, y); if (!r || r.key === 'queen') return false; const c = s.colony;
+  if (r.grow != null){ const col = o => o.x === r.grow && o.y >= r.y0 && o.y < r.y0 + (r.h || 3); s.nest.digOrders = s.nest.digOrders.filter(o => !col(o) || o.progress > 0); for (const o of s.nest.digOrders) if (col(o)) delete o.plan; r.grow = null; } // build 79: its growing column goes with it
   s.nest.rooms.splice(s.nest.rooms.indexOf(r), 1); for (const [cx,cy] of rectCells(r)) s.nest.cells[nidx(cx,cy)] = 1; s.nest.ver++;
   const cost = roomCost(s, r.key, roomCount(s, r.key)); for (const k in cost){ const half = Math.floor(cost[k]/2); if (k === 'food') c.store = Math.min(c.cap, c.store + half); else c[k] += half; }
   if (!roomCount(s, r.key) && c.roomLv && c.roomLv[r.key]){ // build 40: the last one gone, its levels go with it (half their cost back)
@@ -231,10 +246,12 @@ export function tickNestFinds(s, dt){
   if (c.rootAphids){ c.aphidAcc = (c.aphidAcc || 0) + c.rootAphids*dt/60; if (c.aphidAcc >= 1){ c.aphidAcc -= 1; addSugar(s, 1); } }
   if (c.seeps){ c.seepAcc = (c.seepAcc || 0) + c.seeps*dt/20; if (c.seepAcc >= 1){ c.seepAcc -= 1; c.water = Math.min(c.waterCap, c.water + 1); } }
 }
+// Build 79: a cell a queued room (its footprint or doorways) or a growing room's column needs.
+function planned(s, x, y){ return s.colony.buildQueue.some(j => inRect(j, x, y) || jobDoors(j).some(d => d[0] === x && d[1] === y)) || s.nest.rooms.some(r => r.grow === x && y >= r.y0 && y < r.y0 + (r.h || 3)); }
 export function toggleDigOrder(s, x, y){
   const n = s.nest; if (x<1||y<1||x>=NW-1||y>=NH) return 'edge';
-  const i = n.digOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ if (n.digOrders[i].plan) return 'planned'; n.digOrders.splice(i,1); return 'removed'; }
-  if (n.cells[nidx(x,y)]) return 'dug'; let adj = isDugNeighbor(s, x, y);
+  const i = n.digOrders.findIndex(o => o.x===x && o.y===y); if (i >= 0){ if (n.digOrders[i].plan || planned(s, x, y)) return 'planned'; n.digOrders.splice(i,1); return 'removed'; }
+  if (n.cells[nidx(x,y)]) return 'dug'; if (s.repairs.some(r => r.x === x && r.y === y)) return 'caved'; let adj = isDugNeighbor(s, x, y); // (build 79: a cave-in is mended, not dug)
   if (!adj){ const o = n.digOrders.find(o => Math.abs(o.x-x)+Math.abs(o.y-y) === 1); if (o) adj = [o.x, o.y]; } if (!adj) return 'not adjacent';
   const why = digAllowed(s, y, x); if (why) return why; if (n.digOrders.filter(o => !o.plan).length >= DIG_ORDERS) return 'too many';
   if (s.colony.buildQueue.some(j => inRect(j, x, y))) return 'planned'; if (wallOf(s, x, y)) return 'wall';

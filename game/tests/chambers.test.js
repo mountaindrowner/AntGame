@@ -98,3 +98,23 @@ test('packed passages: the nest walked 40% faster, once, with a Workshop', () =>
   s.nest.rooms.push({ key: 'workshop', x0: 1, y0: 40, w: 5, h: 4 }); Object.assign(s.colony, { store: 99, grit: 99 });
   assert.ok(SIM.buyPassages(s)); assert.equal(SIM.passagesLock(s), 'done'); assert.equal(SIM.buyPassages(s), false);
 });
+
+test('build 79: a plan keeps the digs it needs, and its doorway can’t be filled', () => {
+  const { s, r } = founded(); const x0 = r.x0 + r.w; Object.assign(s.colony, { store: 20, water: 10, grit: 20 });
+  carve(s, x0, r.y0 + 2, 6, 1);
+  assert.ok(SIM.queueRoom(s, 'hatchery', [x0 + 2, r.y0 + 5]));
+  const j = s.colony.buildQueue[0], [dx, dy] = j.doors[0];
+  // An order lost (erased, filled, Clear orders): it comes back.
+  const before = s.nest.digOrders.length; s.nest.digOrders.splice(0, 3);
+  for (let i = 0; i < 40; i++) SIM.tick(s, 0.05);
+  assert.equal(s.nest.digOrders.length, before, 'the plan’s digs are back');
+  // The doorway, once dug, can't be filled.
+  s.nest.cells[dy * SIM.NW + dx] = 1; s.nest.ver++;
+  assert.equal(SIM.toggleFillOrder(s, dx, dy), 'room');
+});
+
+test('build 79: a cave-in is mended, not dug: no dig order on it', () => {
+  const { s, r } = founded(); const x = r.x0 + r.w, y = r.y0 + 2;
+  carve(s, x, y, 2, 1); s.nest.cells[y * SIM.NW + x + 1] = 0; s.repairs.push({ x: x + 1, y, ax: x, ay: y, progress: 0 });
+  assert.equal(SIM.toggleDigOrder(s, x + 1, y), 'caved');
+});
