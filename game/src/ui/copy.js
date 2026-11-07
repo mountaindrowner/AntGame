@@ -54,7 +54,7 @@ export const HELP_PAGES = [
   ['Basics', `
 <div class="h"><b>Your goal</b> Grow the colony, then take the yard: kill the rival queen on the Patio by holding her hole with eight fighters until she falls. Lose your own queen and it's over.</div>
 <div class="h"><b>Outside</b> Tap to walk, and hold to keep walking. Stand on food and press <b>Pick up</b>, then carry it to the dark hole. Your path home is a scent trail other ants follow.</div>
-<div class="h"><b>Your ant</b> ❤ is your health, 🍖 your hunger. Eat at the nest, or stand beside a forager carrying food. A red edge means you're hurt. When you die, choose what to come back as.</div>
+<div class="h"><b>Your ant</b> ❤ is your health, 🍖 your hunger. Eat at the nest or a finished outpost, or stand beside a forager carrying food. A red edge means you're hurt. When you die, choose what to come back as.</div>
 <div class="h"><b>Buttons</b> Every button has its name on it. Hold one to hear more. ⋯ in the top bar shows the colony's numbers.</div>`],
   ['Colony', `
 <div class="h"><b>The nest</b> Tap <b>Nest</b> (top right). Tap or drag across dirt beside a tunnel to order digging. <b>Build</b> places a room where you put it: a chamber with dirt round it and a doorway to a tunnel. Tap the queen for eggs.</div>

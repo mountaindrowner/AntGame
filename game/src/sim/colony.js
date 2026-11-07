@@ -14,10 +14,14 @@ import { CORD } from './events.js';
 import { PASSAGES, antCount, eggLock } from './commands.js';
 
 export const queenCap = (lvl, s) => Math.min(NEST_CAP + (s && has(s, 'greatmound') ? 50 : 0), 20 + 20*lvl + (s && has(s, 'deephalls') ? 20 : 0) + (s && has(s, 'greatmound') ? 50 : 0)); // build 51: the Great Mound, +50
+// Build 80 (docs/SIMULATION.md): the economy's margin. Your ants' food is worth a quarter more once it's home (they
+// chew and store it well); room upkeep scales with the colony's size; workers at home guard the queen a little.
+export const FOOD_YIELD = 1.25;
 export function deposit(s, a){
   const c = colonyOf(s, a);
   if (!a.team && a.carry > 0){ gainXp(s, a, 3); discover(s, a.itype || a.kind); }
   if (!a.team && a.kind === 'food' && a.caste === 'harvester' && GRAIN[a.itype] && roomLevel(s, 'granary') >= 3) a.carry = Math.round(a.carry*1.5); // ant bread
+  if (!a.team && a.kind === 'food') a.carry *= FOOD_YIELD; // build 80: your ants make more of what they bring (the numbers ran at 0.92 food in for 1 eaten)
   if (a.kind === 'food'){ const put = Math.min(Math.max(0, c.cap - c.store), a.carry); c.store += put; c.delivered[0] += put; if (!a.team){ c.foodTotal += put; if (c.store > (c.storePeak || 0)) c.storePeak = c.store;  if (a.isPlayer && put < a.carry) s.player.msg = put ? 'That filled the store. Spend food on eggs: Nest, then tap the queen.' : 'The store is full: this food is wasted. Spend some on eggs (Nest, then tap the queen), or build a Food store.'; }
     // Honeydew and bits of sweets are sugar too (build 18).
     if (!a.team && a.carry && a.itype === 'aphids') addSugar(s, (has(s, 'aphids') ? 3 : 1)*(prizeFx(s, a.ireg) === 'aphids' ? 2 : 1));
@@ -82,7 +86,7 @@ export function tickColony(s, c, dt){
   let eat = 0; for (const a of s.ants) if (a.state !== 'dead' && a.team === c.team) eat += CASTES[a.caste].eat;
   if (!c.team) for (const d of s.daughters || []) for (const k in d.pop || {}) eat += CASTES[k].eat*d.pop[k]; // (build 46: a far daughter's ants still eat)
   if (!c.team && has(s, 'longlived')) eat *= 0.75; // (build 47.2: far daughters' ants too, as near ones)
-  if (!c.team) eat += roomUpkeep(s); // rooms cost food to run (build 17)
+  if (!c.team) eat += roomUpkeep(s)*Math.min(1, antCount(s)/30); // rooms cost food to run (build 17); build 80: in proportion to the ants running them (full from 30), so a starving colony can climb back
   // Build 25.1: the later colonies also feed beyond what we model (the bins, the tree, their side
   // of the fence), so they need half what they eat from the yard.
   if (c.team > 1) eat *= 0.5;

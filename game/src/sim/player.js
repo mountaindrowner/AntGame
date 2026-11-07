@@ -60,7 +60,7 @@ export function stepPlayer(s, a, dt, enemiesNear){
   if (P.big){ P.big.x = a.tx; P.big.y = a.ty; P.big.px = a.x + a.dx*8; P.big.py = a.y + a.dy*8; }
   P.hunger -= (moving ? 1.3 : 0.3)*dt*(picked(s, 'you', 'stomach') ? 0.5 : 1);
   const nearHome = Math.hypot(a.tx - w.ex, a.ty - w.ey) < 1.6;
-  let fed = nearHome; if (!fed) for (const o of s.ants){ if (o !== a && !o.team && o.state === 'return' && o.carry && o.kind==='food' && Math.hypot(o.x-a.x, o.y-a.y) < 1.2*T){ fed = true; break; } }
+  let fed = nearHome || s.outposts.some(o => o.done && Math.abs(o.x - a.tx) <= 1.5 && Math.abs(o.y - a.ty) <= 1.5); /* build 80: an outpost is a waystation */ if (!fed) for (const o of s.ants){ if (o !== a && !o.team && o.state === 'return' && o.carry && o.kind==='food' && Math.hypot(o.x-a.x, o.y-a.y) < 1.2*T){ fed = true; break; } }
   if (fed && P.hunger < 100) P.hunger = Math.min(100, P.hunger + 20*dt);
   // Build 69: an empty stomach drains your health (about eight seconds from full) instead of killing you on
   // the spot, as in most survival games: time to get to food. It's still "You starved."

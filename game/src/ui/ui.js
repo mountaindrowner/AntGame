@@ -878,7 +878,7 @@ export function createUI(app) {
       const hungry = alive && hu < 30;
       if (hungry && now > (app.growlAt || 0)) { app.growlAt = now + (hu < 12 ? 4000 : 8000); sfx.play('growl'); const v = el.hungerBar.closest('.vital'); v.classList.remove('growl'); void v.offsetWidth; v.classList.add('growl'); }
       const stage = !alive ? app.hungerStage || 0 : hu < 12 ? 2 : hu < 30 ? 1 : 0;
-      if (stage > (app.hungerStage || 0)) shout(stage === 2 ? '🍖' : '🍖', stage === 2 ? 'Starving!' : 'Hungry', 'Eat at the nest, or stand beside a forager carrying food.', stage === 2 ? 'hard' : 'warn');
+      if (stage > (app.hungerStage || 0)) shout(stage === 2 ? '🍖' : '🍖', stage === 2 ? 'Starving!' : 'Hungry', 'Eat at the nest or a finished outpost, or stand beside a forager carrying food.', stage === 2 ? 'hard' : 'warn');
       app.hungerStage = stage; }
     el.hungerBar.style.backgroundColor = P().hunger < 35 ? '#e4524a' : ''; // (build 70: the colour only, so the gloss stays; '' is the theme's)
     const lbl = SIM.actionLabel(s) || 'Pick up';

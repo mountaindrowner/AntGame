@@ -158,9 +158,9 @@ export const EVO = [
   // Nest
   { key: 'hatchery2', branch: 'nest', name: 'Hatchery II', cost: { genes: 1, food: 30, grit: 10 }, fx: '4 eggs at once', need: 'hatchery', deed: ['Hatch 30 eggs', (s) => (s.colony.hatched || 0) >= 30] },
   { key: 'hatchery3', branch: 'nest', after: 'hatchery2', name: 'Hatchery III', cost: { genes: 1, food: 60, grit: 25 }, fx: '5 eggs at once', need: 'hatchery' },
-  { key: 'trophic', branch: 'nest', after: 'hatchery2', name: 'Trophic eggs', cost: { genes: 4, food: 60 }, fx: 'The Egg larder room: the queen lays food eggs, and the colony turns 🌾 food into 🥩 meat', deed: ['Have 10 fighters at once', (s) => s.ants.filter((a) => !a.team && a.state !== 'dead' && ['soldier', 'venom', 'major', 'supermajor', 'exploder'].includes(a.caste)).length >= 10] },
+  { key: 'trophic', branch: 'nest', name: 'Trophic eggs', cost: { genes: 2, food: 40 }, need: 'barracks', fx: 'The Egg larder room: the queen lays food eggs, and the colony turns 🌾 food into 🥩 meat' } /* build 80: with the Barracks, no deed, cheaper: meat at home early */,
   { key: 'brood', branch: 'nest', after: 'hatchery3', name: 'Brood chambers', cost: { genes: 6, sugar: 30 }, fx: 'Eggs cost 25% less' },
-  { key: 'store2', branch: 'nest', name: 'Store II', cost: { genes: 1, food: 100, grit: 20 }, fx: 'Holds 400 food', need: 'store', deed: ['Fill the store to 150', (s) => (s.colony.storePeak || 0) >= 150] },
+  { key: 'store2', branch: 'nest', name: 'Store II', cost: { genes: 1, food: 100, grit: 20 }, fx: 'Holds 400 food', need: 'store' }, // build 80: no "fill the store to 150" first
   { key: 'store3', branch: 'nest', after: 'store2', name: 'Store III', cost: { genes: 1, food: 300, grit: 50 }, fx: 'Holds 1,000 food', need: 'store' },
   { key: 'honeypot', branch: 'nest', after: 'store3', name: 'Honeypot vault', cost: { genes: 3, sugar: 20 }, fx: 'The Honeypot vault room, and Repletes: living food jars' },
   { key: 'granary', branch: 'nest', after: 'store2', name: 'Granary', cost: { genes: 3, grit: 30 }, fx: 'The Granary room, and Harvesters: seed in double loads' },

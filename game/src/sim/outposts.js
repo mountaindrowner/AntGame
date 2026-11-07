@@ -54,7 +54,7 @@ export function tickOutposts(s, dt){
     // You and any of your ants close by pile the pebbles.
     let n = 0; for (const a of s.ants) if (!a.team && outside(a) && Math.hypot(a.x/T - o.x - 0.5, a.y/T - o.y - 0.5) < 3) n += a.isPlayer && a.caste === 'builder' ? 2 : 1; // build 74: a builder you play, twice
     o.work += n*dt;
-    if (o.work >= OUTPOST.work){ o.done = true; reveal(s, o.x, o.y, OUTPOST.see); outpostsChanged(s); s.events.push('outpost'); P.msg = `Outpost raised in ${AREAS[o.region].name.replace(/^The /, 'the ')}. Foragers range from here now.`; }
+    if (o.work >= OUTPOST.work){ o.done = true; reveal(s, o.x, o.y, OUTPOST.see); outpostsChanged(s); s.events.push('outpost'); P.msg = `Outpost raised in ${AREAS[o.region].name.replace(/^The /, 'the ')}. Foragers range from here now, and you can eat here.`; }
   }
   // Holding: an outpost in the region, its guardian beaten.
   s.holdT = (s.holdT || 0) + dt; if (s.holdT < 1) return; s.holdT = 0;

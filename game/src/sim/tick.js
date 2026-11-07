@@ -42,6 +42,8 @@ function tickDay(s, dt){
     spawnDew(s, 2); }
 }
 function spawnDew(s, mul){ s.dew = true; s.dewTimer = 0; for (const [ai, n] of [[REGION.rock, 6], [REGION.lawn, 4], [REGION.flowerbed, 4], [REGION.clover, 3], [REGION.dandelions, 3]]) for (let i = 0; i < n*mul; i++) spawnInArea(s, ai, 'water', 'dew', 8); s.events.push('dew'); if (!s.player.msg && mul === 1) s.player.msg = 'Dew is out: water for a minute.'; } // (dawn's dew: the clock says so)
+// Build 80: your workers inside the nest, who stand round the queen when raiders break in (they halve the harm).
+const homeGuards = (s) => { const n = s.homeGuardN; if (n && n.t === s.t) return n.n; let k = 0; for (const o of s.ants) if (!o.team && !o.isPlayer && (o.state === 'in' || o.state === 'build')) k++; s.homeGuardN = { t: s.t, n: k }; return k; };
 export function tick(s, dt){
   s.t += dt; const w = s.world, c = s.colony, P = s.player;
   // Messages fade after a while instead of sticking until the next one.
@@ -174,7 +176,7 @@ export function tick(s, dt){
       if (Math.hypot(a.x-gx, a.y-gy) < 1.5*T){ const guarded = s.ants.some(o => !o.team && o.state!=='dead' && CASTES[o.caste].fight >= 3 && (o.state==='patrol'||o.state==='fight') && Math.hypot(o.tx-c.ex, o.ty-c.ey) < 4) || (picked(s, 'nurse', 'broodguard') && s.ants.some(o => !o.team && o.caste === 'nurse' && (o.state === 'in' || o.state === 'build')));
         // Unguarded, raiders push into the nest and go for the queen.
         a.raidT = (a.raidT||0) + dt; raiseAlarm(s, c.ex, c.ey, 2);
-        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt*(qtrait(s, 'hardy') ? 0.4 : 1)*(picked(s, 'soldier', 'guardian') ? 0.5 : 1)*(has(s, 'honourguard') ? 0.5 : 1); s.queenHitT = s.t; if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
+        if (!guarded && s.queen.placed && !s.lost && a.raidT < 10){ s.queen.hp -= 0.8*dt*(homeGuards(s) >= 3 ? 0.5 : 1)* /* build 80: workers at home stand round her */(qtrait(s, 'hardy') ? 0.4 : 1)*(picked(s, 'soldier', 'guardian') ? 0.5 : 1)*(has(s, 'honourguard') ? 0.5 : 1); s.queenHitT = s.t; if (s.queen.hp < 99 && !s.queenWarned){ s.queenWarned = true; s.events.push('queenhit'); P.msg = 'Raiders are attacking the queen!'; } continue; }
         const take = guarded && picked(s, 'soldier', 'doorkeeper') ? 0 : Math.min(guarded ? 1 : 2, c.store); c.store -= take; c.stolen += take; a.carry = take; a.kind = 'food'; a.state = 'return'; a.raidT = 0; continue; }
       if (stepTo(a, a.tx, a.ty, C.speed, dt)) chooseToward(s, a, gx, gy);
       continue;
