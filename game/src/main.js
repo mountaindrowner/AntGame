@@ -9,6 +9,7 @@ import { createUI } from './ui/ui.js';
 import { Callout } from './ui/callout.js';
 import { TitleMenu, loadOptions } from './ui/title.js';
 import { BossIntro } from './ui/bossIntro.js';
+import { PerfHud } from './ui/perfHud.js';
 import { sfx } from './audio/sfx.js';
 import { soundWatch, tapSounds } from './audio/watch.js';
 import { music, renderMusicWav } from './audio/music.js';
@@ -27,6 +28,7 @@ const STEP = 0.05; // the sim's fixed tick (20 Hz)
 const canvas = document.getElementById('c');
 const pipeline = new PS1Pipeline(canvas);
 useSnapUniforms(pipeline.uniforms);
+const perf = new PerfHud(pipeline.renderer); // build 80: F3 shows where each frame goes
 
 const s0 = loadGame();
 if (takeNewColonyFlag() && !s0.queen.placed) s0.seen.film = true; // build 76: a new colony in a slot skips the film (it's had its showing)
@@ -319,6 +321,7 @@ function daughterApp(app, s, key) {
 }
 
 function frame(now) {
+  perf.begin(now);
   let dt = (now - last) / 1000;
   last = now;
   if (dt > 0.25) dt = 0.25;
@@ -347,7 +350,7 @@ function frame(now) {
   if (app.evFor !== s) { app.evFor = s; app.evShift = 0; app.evMark = s.events.length; }
   if (!app.paused) {
     acc += dt;
-    while (acc >= STEP) { snapshot(s); SIM.tick(s, STEP); acc -= STEP; }
+    while (acc >= STEP) { snapshot(s); SIM.tick(s, STEP); acc -= STEP; perf.tick(); }
     // New sim events since last heard (before the HUD's explainers take them). Build 79: counted from where the
     // last frame left off (the explainers take events off the front), so ones a button raised between frames
     // (Retreat, a great evolution) are heard too.
@@ -370,10 +373,13 @@ function frame(now) {
   // Build 50: inside a daughter's nest the nest view draws hers: her chambers, her queen, her ants.
   const dkey = view === views.nest && s.player.inNest && s.player.nestKey, vapp = dkey ? daughterApp(app, s, dkey) : app;
   // Draw creatures part way between the last two sim steps, then put them back.
+  perf.lap('sim');
   const restore = blend(s, app.paused ? 1 : acc / STEP);
   view.update(vapp, clock, pipeline.aspect);
+  perf.lap('update');
   if (boot) stepBoot();
   if (!boot) pipeline.render(view.scene, view.camera); // (drawing while it loads would only compile shaders the slow way)
+  perf.lap('draw');
   restore();
   if (!app.titleOpen) { hear(s, newEvents); if (newEvents.length && app.events) app.events(newEvents); }
   else hear.quiet();
@@ -431,6 +437,7 @@ function frame(now) {
   if (hudT > 0.2) { hudT = 0; ui.checkExplainers(); ui.update(); measureHud(); }
   saveT += dt;
   if (saveT > 10) { saveT = 0; const ok = saveGame(app.s); saveMapIfNew(); if (ok) touchActive(app.s); if (ok && !app.titleOpen && app.s.queen.placed) ui.saved(); }
+  perf.end(app, pipeline);
   requestAnimationFrame(frame);
 }
 
@@ -447,4 +454,4 @@ requestAnimationFrame(frame);
 // For automated tests and debugging in the console.
 // filmStep(dt) advances the opening film by exactly dt and draws it, for recording.
 const filmStep = (dt) => { if (!cine) return false; clock += dt; views.surface.update(app, clock, pipeline.aspect); cine.step(dt); if (cine) cine.render(); return !!cine; };
-window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep, bossIntro };
+window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep, bossIntro, perf };

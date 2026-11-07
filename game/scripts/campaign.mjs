@@ -37,7 +37,7 @@ let plan = { phase: 'out', target: null, since: 0, lastPick: 0 };
 
 function wantItem(f) {
   if (f.amt <= 0 || f.carried || (SIM.FOODS[f.type] && SIM.FOODS[f.type].crew)) return 0;
-  if (f.kind === 'food') return c.store < c.cap - 3 ? 1 : 0;
+  if (f.kind === 'food') return c.store < c.cap - 3 ? (c.store < 6 ? 2 : 1) : 0; // (build 80: food first when eggs can't be paid: a lone ant fetching meat never rebuilt)
   if (f.kind === 'water') return c.water < c.waterCap * 0.7 ? 1.4 : 0;
   if (f.kind === 'protein') return 1.6;
   if (f.kind === 'grit') { const up = SIM.QUEEN_UP[s.queen.level]; return c.grit < Math.max(20, up && up.grit || 0) ? 0.8 : 0; }

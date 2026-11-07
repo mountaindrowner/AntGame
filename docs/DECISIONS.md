@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: the balance changes re-simulated, and performance (build 80)
+
+- **The six changes** (more food per trip; room upkeep scaling with the colony; workers at home halving raiders' bite; Trophic eggs with the Barracks; eating at outposts; Store II without a full store) re-ran in the same 12 colonies. The full results are in [`SIMULATION.md`](SIMULATION.md).
+  - **Worked:** the economy now breaks even (1.01 from 0.92), zones fall sooner and fewer fighters starve.
+  - **Didn't:** raids still kill the queen: repeated raids outpace her healing. A colony down to one ant still can't climb back, because an egg needs food and a lone ant nets none.
+  - Three fixes for those are proposed there, as Mark's call.
+- **Fixed:** "Queen under attack" warned only once until she healed to full, so the raid that killed her never warned. It now re-arms after half a minute without a hit.
+- **The test bot** fetches food before meat when eggs can't be paid. Its lone ant used to hoard meat.
+- **Performance** (Mark: "keep on looking into what the devs of those games say"). The full write-up is in [`PERFORMANCE.md`](PERFORMANCE.md).
+  - The simulation already does what Total War, Supreme Commander, Factorio and Hitman describe, and costs about 1.5% of a core.
+  - The flat ground was drawn at 115,000 triangles. It's now drawn at a sixteenth of that, with the same picture; the yard dropped from about 152,000 triangles a frame to about 80,000.
+  - **F3** (or `?perf`) shows where each frame goes, so the next step comes from numbers on real machines.
+
 ## Nov 7: a check of builds 69–78 (build 79)
 
 Mark: "Make sure that all the features work well, that there's no weird clashes between features or effects, buttons, things that work together." Two code reviews (the nest, and the UI, sound and saves), long bot games on both builds and old saves loaded. 15 bugs were found and fixed, each reproduced first and checked after:

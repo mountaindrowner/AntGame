@@ -1320,8 +1320,11 @@ export class YardScenery {
     const F = out.F;
     yield* paintGround(w, F, b, out);
     const tex = textureFrom(out.canvas);
-    const gg = new THREE.PlaneGeometry(AREA * T, AREA * T, AREA, AREA).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T);
     const cut = this.holes.filter((h) => h.x + h.r > b.x0 && h.x - h.r < b.x0 + AREA && h.y + h.r > b.y0 && h.y - h.r < b.y0 + AREA);
+    // Build 80: the ground is flat, so a square per tile (12,800 triangles a region) only matters where a hole is
+    // cut out of it; elsewhere a square per 4×4 tiles draws the same picture with a sixteenth of the triangles.
+    const seg = cut.length ? AREA : AREA / 4;
+    const gg = new THREE.PlaneGeometry(AREA * T, AREA * T, seg, seg).rotateX(-Math.PI / 2).translate((b.x0 + AREA / 2) * T, 0, (b.y0 + AREA / 2) * T);
     if (cut.length) { // drop the cells wholly inside a hole (cell ix, iy is tile b.x0 + ix, b.y0 + iy)
       const idx = gg.index.array, keep = [], inside = (x, y) => cut.some((h) => Math.hypot(x - h.x, y - h.y) <= h.r);
       for (let iy = 0; iy < AREA; iy++) for (let ix = 0; ix < AREA; ix++) { const tx = b.x0 + ix, ty = b.y0 + iy;

@@ -164,7 +164,7 @@ export function tickColony(s, c, dt){
     // The queen heals slowly; if raiders kill her, the colony is lost.
     const q = s.queen;
     if (q.placed && q.hp <= 0 && qtrait(s, 'eternal') && !c.eternalUsed){ c.eternalUsed = true; q.hp = 60; P.msg = 'The queen fell, but a daughter takes her place. The line goes on.'; }
-    if (q.placed && !s.lost){ q.hp = Math.min(100, q.hp + 0.1*dt); if (q.hp >= 99) s.queenWarned = false;
+    if (q.placed && !s.lost){ q.hp = Math.min(100, q.hp + 0.1*dt); if (q.hp >= 99 || s.t - (s.queenHitT || 0) > 30) s.queenWarned = false; // (build 80: each raid on her warns, not just the first since she was last whole)
       if (q.hp <= 0){ q.hp = 0; s.lost = true; c.queenAlive = false; s.events.push('lost'); P.msg = 'The queen is dead. The colony is lost.'; } }
     // The queen sitting idle with food to spare: say so (build 15).
     if (s.queen.placed && !c.eggs.length && !c.eggQueue.length && !P.pending && c.store >= 8 && c.water >= 1 && !overCap){ c.idleT = (c.idleT || 0) + dt;

@@ -82,3 +82,40 @@ A bot isn't a player: it never uses abilities or crew orders, rarely finds the r
   - `OUT=run.json node scripts/campaign.mjs sensible <seed> 480` for one colony;
   - `SMART=1` for the competent player;
   - `node scripts/campaign-report.mjs <dir>` prints the milestone table above.
+
+## After build 80: the same runs on the new rules
+
+Eleven of the twelve colonies have finished; the last standard one (sensible, seed 11) was still running when this was written.
+
+| | Build 79 | Build 80 |
+|---|---|---|
+| Income for each food eaten, at 50+ ants (median) | 0.92 | **1.01** |
+| Time below break-even | 58% | 49% |
+| Standard: queen killed | 6 of 8, at 2–5 h | **7 of 7**, at 2.5–4 h |
+| Standard: three zones (Patio, Flowerbed, Garden) by | 30 min–3.5 h | 50 min–3 h, in 6 of 7 |
+| "No meat" deaths | 831 | 630 |
+| Competent: collapsed to a single ant | 4 of 4 | 4 of 4 |
+
+**What worked:**
+- **The economy now breaks even.** Income is at or above break-even half the time, where before it was below most of the time.
+- **The zones fall sooner.**
+- **Fewer fighters starve of meat.**
+
+**What didn't:**
+- **Raids still kill the queen.**
+  - The halving works: with workers home, a raider takes 0.4 health a second, up to 4 a raid.
+  - But once three rivals are awake the raids come every few minutes. Each costs her 40–60 health, and she heals 6 a minute.
+  - So the second raid, before she's whole, kills her.
+- **The warning was silent for the second raid.** "Queen under attack" only re-armed once she was back above 99 health, so the raid that killed her never warned. **Fixed:** it now re-arms after half a minute without a hit.
+- **A colony at one ant still can't climb back.**
+  - Room upkeep now drops to almost nothing (checked: 0.05 food a minute with no workers).
+  - But your lone ant eats 1 food a minute and brings 1.25 a trip. With food more than a short walk away it nets nothing, and an egg needs 2 food.
+  - Meat piles up (hundreds), but eggs can't use it.
+- **The bot collapsing was partly the bot.**
+  - Its lone ant fetched meat before food. That's fixed in `campaign.mjs`.
+  - Re-run for 4 hours, one colony of three climbed back from 1 ant to 33. The other two, with food farther off, didn't.
+
+**What would fix the rest (Mark's call):**
+- **The queen's founding reserves.** A real founding queen raises her first workers from her own body, without food. While the colony has no workers, she could lay one forager a minute for free, up to four.
+- **Eggs paid with meat when food is short.** Real larvae are fed protein.
+- **A breather after a raid on the queen.** No raid on her for 5 minutes after one, or have her heal three times faster while no raider is in the nest.
