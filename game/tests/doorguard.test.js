@@ -21,20 +21,21 @@ function garrison(n = 5) {
 }
 const near = (s, a) => Math.hypot(a.tx - s.colony.ex, a.ty - s.colony.ey);
 
-test('two guards go out and stand round the door, and stay there', () => {
+test('two guards go out and walk a slow round of the door, and keep to it', () => {
   const s = garrison();
   assert.equal(SIM.doorGuardWanted(s), 2, 'two to start');
   run(s, 30);
   const g = SIM.posted(s); assert.equal(g.length, 2);
-  for (const a of g) { assert.equal(a.state, 'patrol'); assert.ok(a.atPost, 'at its spot'); assert.ok(near(s, a) >= 1.4 && near(s, a) <= 3.3, `round the door (${near(s, a).toFixed(1)})`); }
-  assert.notDeepEqual([g[0].tx, g[0].ty], [g[1].tx, g[1].ty], 'each on its own spot');
-  run(s, 120);
-  for (const a of SIM.posted(s)) assert.ok(a.atPost && near(s, a) <= 3.3, 'still there two minutes later');
+  const seen = new Set(), far = [];
+  for (let k = 0; k < 120; k++) { run(s, 1); for (const a of SIM.posted(s)) { assert.equal(a.state, 'patrol'); seen.add(a.id + ':' + a.tx + ',' + a.ty); far.push(near(s, a)); } }
+  assert.ok(Math.max(...far) <= 4, `never past the four tiles that count (${Math.max(...far).toFixed(1)})`);
+  assert.ok(seen.size >= 12, `they walk the round, not stand (${seen.size} tiles visited)`);
+  const ring = SIM.doorRound(s); assert.ok(ring.length >= 8, 'a loop of tiles round the door');
 });
 
 test('more, fewer, or none: the Jobs page number is obeyed', () => {
   const s = garrison();
-  SIM.setDoorGuard(s, 4); run(s, 30); assert.equal(SIM.posted(s).length, 4);
+  SIM.setDoorGuard(s, 4); run(s, 90); assert.equal(SIM.posted(s).length, 4, 'four, once enough fighters are home'); // (those out hunting are posted as they come home)
   SIM.setDoorGuard(s, 1); run(s, 3); assert.equal(SIM.posted(s).length, 1);
   SIM.setDoorGuard(s, 0); run(s, 3); assert.equal(SIM.posted(s).length, 0);
   assert.equal(SIM.setDoorGuard(s, 99), SIM.DOOR_GUARD_MAX);

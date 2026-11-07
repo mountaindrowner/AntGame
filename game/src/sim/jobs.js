@@ -138,22 +138,23 @@ export function setDoorGuard(s, n){ s.colony.doorGuard = Math.max(0, Math.min(DO
 const postable = (a) => !a.team && !a.isPlayer && !a.dh && a.state !== 'dead' && CASTES[a.caste].fight >= 3 && !a.follow && !a.muster && !a.zombie;
 const guardOn = (s, a) => jobsOf(s, a.caste).some(([d, on]) => d === 'guard' && on);
 export const posted = (s) => s.ants.filter((a) => a.post != null && postable(a));
-// The spots round the door: walkable tiles two out, spread round the circle (a slot's spot is fixed while n is).
-export function doorPost(s, slot, n){
-  const c = s.colony, k = s.doorPosts && s.doorPosts.n === n && s.doorPosts.ex === c.ex && s.doorPosts.ey === c.ey ? s.doorPosts : null;
-  if (k) return k.at[slot] || k.at[0];
+// Build 81.1 (Mark: "they could just patrol around that area… walking around, patrolling slowly"): the guards walk a
+// slow round of the door: a loop of walkable tiles two to three out, in order round the circle. Each starts its own
+// part of the loop so they stay spread out, pauses now and then to look out, and never strays past the four tiles
+// within which it counts as guarding the queen.
+export function doorRound(s){
+  const c = s.colony, k = s.doorRing;
+  if (k && k.ex === c.ex && k.ey === c.ey) return k.at;
   const at = [];
-  for (let i = 0; i < n; i++){
-    const ang = -Math.PI/2 + i*2*Math.PI/n; let best = null, bd = 1e9;
-    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++){ const r = Math.hypot(dx, dy); if (r < 1.5 || r > 3.2) continue; const x = c.ex + dx, y = c.ey + dy; if (!walk(s, x, y) || at.some((p) => p[0] === x && p[1] === y)) continue;
-      const da = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - ang), Math.cos(Math.atan2(dy, dx) - ang))), d = da*3 + Math.abs(r - 2); if (d < bd){ bd = d; best = [x, y]; } }
-    at.push(best || [c.ex, c.ey + 1]);
-  }
-  s.doorPosts = { n, ex: c.ex, ey: c.ey, at };
-  return at[slot] || at[0];
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++){ const r = Math.hypot(dx, dy); if (r < 1.8 || r > 3.0) continue; const x = c.ex + dx, y = c.ey + dy; if (walk(s, x, y)) at.push([x, y, Math.atan2(dy, dx)]); }
+  at.sort((p, q) => p[2] - q[2]);
+  if (!at.length) at.push([c.ex, c.ey + 2, 0]);
+  s.doorRing = { ex: c.ex, ey: c.ey, at };
+  return at;
 }
 // Once a second: post fighters at home until there are as many as you asked for; stand extras down.
 export function tickDoorGuard(s, dt){
+  if (dt !== true) s.roundPhase = ((s.roundPhase || 0) + dt/BEAT) % 1e6; // the guards' round keeps one beat
   if (dt !== true){ s.postT = (s.postT || 0) + dt; if (s.postT < 1) return; s.postT = 0; }
   if (!s.queen.placed || s.lost) return;
   const want = doorGuardWanted(s), on = posted(s);
@@ -169,11 +170,16 @@ export function tickDoorGuard(s, dt){
   for (const a of cand){ const i = free.shift(); if (i == null) break; a.post = i; a.duty = 'guard';
     if (a.state === 'in'){ a.goal = 'exit'; a.exitTo = 'patrol'; a.ntx = SHAFT; a.nty = 0; a.rest = 0; } }
 }
-// A posted guard's step outside (tick.js): to its spot, then stand there facing out. True while it's handled here.
+// A posted guard's step outside (tick.js): on round the door. The round keeps one beat for all the guards (a tile
+// every BEAT seconds), each starting its own share of the loop, so they stay evenly spread however many there are;
+// a guard walks a little faster than the beat, so it steps, then stands a moment looking out. 'wait' while it
+// stands; else the tile it's walking to.
+export const ROUND_PACE = 0.45, BEAT = 1.6;
 export function stepPost(s, a){
   if (a.post == null || a.team) return false;
-  const want = doorGuardWanted(s), [px, py] = doorPost(s, a.post, Math.max(want, a.post + 1)), c = s.colony;
-  a.explore = 0;
-  if (a.tx === px && a.ty === py && Math.hypot(a.x - (px + 0.5)*T, a.y - (py + 0.5)*T) < 1.5){ const dx = px - c.ex, dy = py - c.ey, d = Math.hypot(dx, dy) || 1; a.dx = dx/d; a.dy = dy/d; a.atPost = true; return 'stand'; }
-  a.atPost = false; return [px, py];
+  const ring = doorRound(s), c = s.colony, n = ring.length, k = Math.max(doorGuardWanted(s), a.post + 1);
+  const i = (Math.round(a.post*n/k) + Math.floor(s.roundPhase || 0)) % n, [px, py] = ring[i];
+  a.explore = 0; a.atPost = Math.hypot(a.tx - c.ex, a.ty - c.ey) <= 4;
+  if (a.tx === px && a.ty === py && Math.hypot(a.x - (px + 0.5)*T, a.y - (py + 0.5)*T) < 1.5){ const dx = px - c.ex, dy = py - c.ey, d = Math.hypot(dx, dy) || 1; a.dx = dx/d; a.dy = dy/d; return 'wait'; } // (stands and looks out)
+  return [px, py];
 }

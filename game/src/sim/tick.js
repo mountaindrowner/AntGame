@@ -9,7 +9,7 @@ import { daughterOf, tickDaughters } from './daughters.js';
 import { WILD_SIDE, tickWild } from './wilds.js';
 import { wakeRival } from './state.js';
 import { prizeFx, tickOutposts } from './outposts.js';
-import { DUTIES, chooseDuty, preyNear, stepPost, woodGoal } from './jobs.js';
+import { DUTIES, ROUND_PACE, chooseDuty, preyNear, stepPost, woodGoal } from './jobs.js';
 import { rivalBrain, tickMyRaid } from './raids.js';
 import { CAT_REACH, LEG_HP, SPIDER_REACH, legSlot, spiderEnter, spiderRoute, stepCat, stepSpider } from './spider.js';
 import { ATTACK_LEASH, HOLD_R, attackReach, attackTarget, stepPlayer, tickAttack, tickZones } from './player.js';
@@ -232,8 +232,8 @@ export function tick(s, dt){
       continue;
     }
     if (a.state === 'patrol' && a.post != null && !a.team){ // build 81: a guard posted at the door
-      const p = stepPost(s, a); if (p === 'stand') continue;
-      if (stepTo(a, a.tx, a.ty, fSpeed(s, a), dt) && (a.tx !== p[0] || a.ty !== p[1])) chooseToward(s, a, (p[0]+0.5)*T, (p[1]+0.5)*T);
+      const p = stepPost(s, a); if (p === 'wait') continue;
+      if (stepTo(a, a.tx, a.ty, fSpeed(s, a)*(a.atPost ? ROUND_PACE : 1), dt) && (a.tx !== p[0] || a.ty !== p[1])) chooseToward(s, a, (p[0]+0.5)*T, (p[1]+0.5)*T); /* build 81.1: a slow round once there */
       continue;
     }
     if (a.state === 'explore' || a.state === 'patrol'){

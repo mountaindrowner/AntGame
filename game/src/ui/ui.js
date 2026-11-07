@@ -427,8 +427,8 @@ export function createUI(app) {
     const fighters = s.ants.filter((a) => !a.team && !a.isPlayer && !a.dh && a.state !== 'dead' && CASTES[a.caste].fight >= 3).length;
     if (fighters || SIM.roomOf(s, 'barracks')) {
       const want = SIM.doorGuardWanted(s), at = SIM.posted(s), there = at.filter((a) => a.atPost).length;
-      const said = !want ? 'none: the door is left to the patrols' : at.length < want ? `${at.length} of ${want}: ${fighters ? 'the rest are out or with you' : 'lay Soldiers to fill the posts'}` : there < want ? `${want} posted, ${want - there} on the way` : `${want} standing guard`;
-      h += `<div class="jobrow doorguard"><div class="jt">${sicon('soldier')}<b>Guards at the door</b><i>${said}</i></div><div class="dg"><button data-doorguard="-1" ${want <= 0 ? 'disabled' : ''} title="One fewer">−</button><b>${want}</b><button data-doorguard="1" ${want >= SIM.DOOR_GUARD_MAX ? 'disabled' : ''} title="One more">+</button><span>Fighters who stand round the entrance day and night and fight what comes close. They don't join your crew or a muster. Raiders can't reach the queen past them.</span></div></div>`;
+      const said = !want ? 'none: the door is left to the patrols' : at.length < want ? `${at.length} of ${want}: ${fighters ? 'the rest are out or with you' : 'lay Soldiers to fill the posts'}` : there < want ? `${want} posted, ${want - there} on the way` : `${want} on their round`;
+      h += `<div class="jobrow doorguard"><div class="jt">${sicon('soldier')}<b>Guards at the door</b><i>${said}</i></div><div class="dg"><button data-doorguard="-1" ${want <= 0 ? 'disabled' : ''} title="One fewer">−</button><b>${want}</b><button data-doorguard="1" ${want >= SIM.DOOR_GUARD_MAX ? 'disabled' : ''} title="One more">+</button><span>Fighters who walk a slow round of the entrance, day and night, and fight what comes close. They don't join your crew or a muster. Raiders can't reach the queen past them.</span></div></div>`;
     }
     for (const k of show) {
       const o = counts[k] || { n: 0, idle: 0 }, L = SIM.jobsOf(s, k);

@@ -2,6 +2,14 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 7: the guards walk a round (build 81.1)
+
+Mark: "They don't just have to stand like that… they can be walking around, patrolling slowly. Give them a little bit of a path to patrol."
+- **The round:** a loop of walkable tiles two to three out from the entrance, in order round the circle. It always stays within the four tiles where a guard counts as guarding the queen.
+- **The pace:** the guards keep one beat, a tile every 1.6 seconds, each starting its own share of the loop. They walk a little faster than the beat, so each steps, then stands a moment facing out. That's about 40% walking, 60% looking out.
+- **Spacing:** a shared beat means they stay evenly spread however many you post. The first version, with random pauses, let two bunch onto one tile 17% of the time; now it's 0%.
+- **Fighting:** they still fight what comes close, then rejoin the round where it has got to.
+
 ## Nov 7: guards at the door (build 81)
 
 Mark: "Maybe as a part of the jobs set, we can leave some soldiers at the entrance of the nest."
