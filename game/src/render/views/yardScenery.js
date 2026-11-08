@@ -7,7 +7,7 @@
 // can stands as tall as the yard is big.
 import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { AREA, AREAS, SCALE as S, areaBounds } from '../../sim/yard.js';
+import { AREA, AREAS, SCALE as S, areaBounds, bigRockParts } from '../../sim/yard.js';
 import { psx, psxBasic } from '../ps1/materials.js';
 import { canvasTexture, rampTexture, rng, noise2, PALETTE } from '../ps1/textures.js';
 import { houseLayout, buildHouse } from '../models/house.js';
@@ -369,10 +369,10 @@ function meshLandmark(l, w, ctx) {
       case 'bigrock': {
         claim(l.x0, l.y0, l.w, l.h);
         // A big flat stone, worn smooth, with two smaller ones leaning on it.
-        for (let k = 0; k < 3; k++) {
-          const rr = smoothRock(0.31 + k * 0.17, 3, 0.16);
-          rr.scale(l.w * T * (0.5 - k * 0.12), (22 - k * 5) * S, l.h * T * (0.6 - k * 0.12));
-          stoneParts.push(at(rr, (l.x0 + l.w * (0.45 + k * 0.12)) * T, (6 + k * 7) * S, (l.y0 + l.h * (0.5 + (k === 2 ? 0.2 : 0))) * T));
+        for (const e of bigRockParts(l)) { // (build 83: the same shapes the yard makes solid)
+          const rr = smoothRock(0.31 + e.k * 0.17, 3, 0.16);
+          rr.scale(e.rx * T, (22 - e.k * 5) * S, e.rz * T);
+          stoneParts.push(at(rr, e.cx * T, (6 + e.k * 7) * S, e.cy * T));
         }
         break;
       }

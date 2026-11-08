@@ -301,14 +301,18 @@ export function builderTaskValid(s, a){
   if (a.task[0] !== 'j') a.taskCell = spot; // a neighbour may have opened up nearer
   return true;
 }
-export function pickBuilderTask(s, a){
+// Build 83 (Mark: "builders take time… they don't respond to commands too quickly"): a tunnel is dug a cell at a
+// time, and only one builder could work a cell, so a third or fifth builder only waited. Two now work each face (a
+// dig or a cave-in), side by side.
+export const FACE_CREW = 2;
+export function pickBuilderTask(s, a, face){
   a.task = null; a.taskCell = null;
   const claimed = new Map();
   for (const b of s.ants) if (b !== a && b.task) claimed.set(b.task, (claimed.get(b.task)||0) + 1);
   const cx = Math.floor(a.nx), cy = Math.floor(a.ny);
   const best = (list, prefix, goal) => {
     let pick = null, pd = Infinity;
-    for (const o of list){ const t = prefix + o.x + ',' + o.y; if (claimed.get(t)) continue;
+    for (const o of list){ const t = prefix + o.x + ',' + o.y; if ((claimed.get(t)||0) >= (prefix === 'f' ? 1 : FACE_CREW)) continue; // build 83: two to a face
       const spot = taskSpot(s, a, t); if (!spot) continue;
       const d = Math.abs(spot[0]-cx) + Math.abs(spot[1]-cy); if (d < pd){ pd = d; pick = { t, spot, goal }; } }
     return pick;
@@ -320,9 +324,19 @@ export function pickBuilderTask(s, a){
   const dig = full ? null : best(s.nest.digOrders, 'd', 'dig');
   const pick = best(s.repairs, 'r', 'repair')
     || (full ? haul : null)
-    || (room && (!dig || a.id % 2 === 1) ? room : null)
+    || (room && (!dig || (a.id % 2 === 1 && !face)) ? room : null)
     || dig || haul || best(s.nest.fillOrders, 'f', 'fill') || room;
   if (pick){ a.task = pick.t; a.taskCell = pick.spot; a.goal = pick.goal; }
+}
+// Build 83: a builder on a room it isn't alone on, every 2 s: is there an order of yours nobody has taken (a dig
+// you painted, a cave-in)? Then it leaves the room to the others and goes. Before, it kept the room till it was done.
+export function rethinkRoom(s, a, dt){
+  if (a.task !== 'j' || (a.rethinkT = (a.rethinkT || 0) + dt) < 2) return; a.rethinkT = 0;
+  let onRoom = 0; const taken = new Set(); for (const o of s.ants){ if (o.task === 'j') onRoom++; if (o.task) taken.add(o.task); }
+  if (onRoom < 2) return;
+  const waiting = s.repairs.some((r) => !taken.has('r' + r.x + ',' + r.y)) || s.nest.digOrders.some((o) => !o.plan && !taken.has('d' + o.x + ',' + o.y) && taskSpot(s, a, 'd' + o.x + ',' + o.y));
+  if (!waiting) return;
+  pickBuilderTask(s, a, true); if (!a.task) pickBuilderTask(s, a);
 }
 export function nestStep(s, a, speed, dt){
   // move a.nx,a.ny (cell coords, center = +0.5) toward a.ntx,a.nty along the dug field

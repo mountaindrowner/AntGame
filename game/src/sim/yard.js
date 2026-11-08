@@ -276,7 +276,10 @@ export function makeYard(seed) {
   at('patio');
   // Under the Rock. A big flat stone just north of our entrance.
   const big = mark('bigrock', { x0: u(54), y0: u(50), w: u(13), h: u(6) });
-  stamp(u(54), u(50), u(13), u(6));
+  // Build 83 (Mark: "the rock above nest is still passable"): solid where it's drawn. It was a square block while
+  // the stone drawn there is three rounded slabs: ants walked over its edges and round invisible corners.
+  for (const e of bigRockParts(big)) for (let y = Math.floor(e.cy - e.rz); y <= e.cy + e.rz; y++) for (let x = Math.floor(e.cx - e.rx); x <= e.cx + e.rx; x++)
+    if (inMap(x, y) && ((x + 0.5 - e.cx)/e.rx)**2 + ((y + 0.5 - e.cy)/e.rz)**2 <= 1) blocked[idx(x, y)] = 1;
   scatterRocks(u(41), u(41), u(38), u(38), 10);
 
   // The Flowerbed. Stems, strawberry plants, and the spider's web.
@@ -622,4 +625,10 @@ export function makeYard(seed) {
 export function areaBounds(i) {
   const [c, r] = AREAS[i].at, ax = (c - BLOCK.c0) * AREA, ay = (r - BLOCK.r0) * AREA;
   return { x0: ax, y0: ay, x1: ax + AREA - 1, y1: ay + AREA - 1 };
+}
+
+// Build 83: the big rock over our nest is three rounded slabs, a little smaller each, leaning east. The renderer
+// draws these and the yard makes the same shapes solid. Centres and radii in tiles.
+export function bigRockParts(l){
+  return [0, 1, 2].map((k) => ({ cx: l.x0 + l.w*(0.45 + k*0.12), cy: l.y0 + l.h*(0.5 + (k === 2 ? 0.2 : 0)), rx: l.w*(0.5 - k*0.12), rz: l.h*(0.6 - k*0.12), k }));
 }

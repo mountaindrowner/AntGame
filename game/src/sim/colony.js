@@ -3,7 +3,7 @@
 import { FAMILY, RANKS, rankOf } from './growth.js';
 import { CASTES, CASTE_ROOM, CHITIN_OF, FOODS, H, NEST_CAP, RIVALS, ROOMS, SHAFT, SPOIL_MAX, T, W, idx, nidx, roomCount, roomLevel, roomUpkeep, rspec } from './core.js';
 import { chooseExplore, chooseToward, colonyOf, itemAt, mkAnt } from './world.js';
-import { bedrockGlow, bedrockPrize, builderTaskValid, carveRoom, dig, gainGlow, nestStep, pickBuilderTask, reachable, readyJob, roomOf, tickBreach, tickNestFinds, tickPlans } from './nest.js';
+import { bedrockGlow, bedrockPrize, builderTaskValid, carveRoom, dig, gainGlow, nestStep, pickBuilderTask, reachable, rethinkRoom, readyJob, roomOf, tickBreach, tickNestFinds, tickPlans } from './nest.js';
 import { GRAIN, advise, discover, gainGenes, gainXp, has, hatchCapOf, inBand, jobMul, lvl, maxHp, picked, promo, qtrait, storeCap, workOf, youHp } from './progress.js';
 import { DSPOTS, LARDER_FOOD, LARDER_FULL, LARDER_RATE, dRoomBuilt, daughterOf, farPop, joined, killFar } from './daughters.js';
 import { heldFx, prizeFx, setDone, waterCapOf } from './outposts.js';
@@ -257,6 +257,7 @@ export function tickInside(s, a, dt){
   // nest work when Dig and build is the first of their duties that needs doing.
   if (a.caste === 'builder'){
     if (a.task && !builderTaskValid(s, a)){ a.task = null; a.taskCell = null; }
+    rethinkRoom(s, a, dt); // build 83
     if (!a.task && a.goal !== 'exit' && chooseDuty(s, a) === 'build') pickBuilderTask(s, a);
     if (a.task){ a.state = 'build'; a.duty = 'build'; a.ntx = a.taskCell[0]; a.nty = a.taskCell[1]; }
     else if (a.state === 'build'){ a.state = 'in'; a.goal = null; }

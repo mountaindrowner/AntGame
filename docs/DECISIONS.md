@@ -2,6 +2,18 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 8: builders that answer, and a solid rock (build 83)
+
+Mark: "Builders take time to build sometimes, they don't respond to commands too quickly, why? Also the rock above nest is still passable. Remove it or make it solid."
+- **Why builders were slow** (timed in a test colony):
+  - A tunnel is dug a cell at a time, and only one builder could work a cell. A 10-cell tunnel took 65 s with 3 builders, and still 65 s with 5: the rest spent half their time walking about or waiting.
+  - A builder on a room kept it until the room was done. With three on a room, a dig or cave-in you ordered waited for the whole room.
+  - Builders gathering outside come home when there's digging to do, but a loaded one finishes its trip first: a few seconds.
+- **Now:**
+  - Two builders work each face, a dig or a cave-in. The same tunnel takes 46 s with 3 builders and 35 s with 5.
+  - Every 2 s, a builder on a room it shares checks for an order of yours nobody has taken, and goes to it.
+- **The rock** was solid as a square block, but it's drawn as three rounded slabs. Ants walked over its edges and round invisible square corners. Now the yard makes exactly the drawn shapes solid; the drawing and the solid area come from one definition.
+
 ## Nov 8: the far yard (build 82)
 
 Mark: "Yes go for it" (why the simulated games stopped at 3 of 13 zones). The full write-up is in [`FAR-YARD.md`](FAR-YARD.md).
