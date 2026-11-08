@@ -14,6 +14,7 @@ import { outside } from './hazards.js';
 import { BUGS, nearAnt, playerNear } from './creatures.js';
 import { hurtAnt, spark } from './combat.js';
 import { exposed, stunned } from './abilities.js';
+import { rankOf } from './growth.js';
 
 // Three great beasts, each in its own lair. Each one wakes when ants come
 // near, shows every attack before it lands (the renderer paints the danger
@@ -149,7 +150,7 @@ export function tickBosses(s, dt){
         // Old Warty's skin is poison to bite, unless a medic is close by.
         if (key === 'toad' && !s.ants.some(m => m.caste === 'medic' && !m.team && outside(m) && Math.hypot(m.x - a.x, m.y - a.y) < 5*T)) hurtAnt(s, a, 0.35*dt, 'toad');
         if (a.state === 'dead') continue;
-        const arm = bossArmour(s, b, a)*(exposed(s, b) ? 1.5 : 1), dmg = bite(s, a, 'boss')*dt*(a.isPlayer ? 2*yb : 1)*arm;
+        const arm = bossArmour(s, b, a)*(exposed(s, b) ? 1.5 : 1)*(a.isPlayer || B.wild ? 1 : BOSS_TUNE.hide), dmg = bite(s, a, 'boss')*dt*(a.isPlayer ? 2*yb : 1)*arm;
         b.hp -= dmg; gainXp(s, a, dmg/3); b.hitT = s.t; (b.biters || (b.biters = {}))[a.id] = s.t;
         spark(s, a, a.x + (b.x - a.x)*0.6, a.y + (b.y - a.y)*0.6, arm < 0.5 ? 2 : 0);
         if (a.caste === 'venom' && picked(s, 'venom', 'neurotoxin') && Math.random() < dt*0.8) b.slowT = 1.5;
@@ -176,6 +177,7 @@ export function tickBosses(s, dt){
     else if (key === 'widow') stepWidow(s, b, B, dt);
     else if (key === 'centipede') stepCentipede(s, b, B, dt);
     else stepAntlion(s, b, B, dt);
+    crewDodge(s, b); // build 82: your ants read its tells
   }
   // Goo the hornworm spat: it slows ants that walk through it.
   s.goo = s.goo.filter(g => s.t < g.end);
@@ -208,6 +210,39 @@ function bossDies(s, b, B){
   s.report = { kind: 'boss', key: b.key, lost, t: s.t }; s.events.push('bossdown');
   s.bossDown = { key: b.key, t: s.t };
   P.msg = `${B.name} ${B.flees ? 'flies off for good' : 'is dead'}! It cost you ${lost} ant${lost === 1 ? '' : 's'}. Trophy: ${TROPHY[B.trophy].name}: ${TROPHY[B.trophy].fx}.`;
+}
+// Build 82 (docs/FAR-YARD.md): your fighters read a guardian's tells. When it shows an attack (the red ring, the
+// lane), each of your ants inside it may jump clear before it lands: half of fresh hatchlings, more with each rank,
+// nine in ten Legends. Before this only you could dodge, and the crew stood in every ring.
+export const dodgeChance = (a) => 0.5 + 0.1*rankOf(a);
+// How hard a guardian's hide is to bite through, for your fighters (not you): tuned so a fight takes about a minute.
+export const BOSS_TUNE = { hide: 0.5 }; // (Mark's call: from the fight table in docs/FAR-YARD.md)
+function crewDodge(s, b){
+  const k = b.atk; if (!k || k === b.dodgeFor) return; b.dodgeFor = k;
+  const left = Math.max(0.35, (k.at || 1) - (k.t || 0));
+  for (const a of s.ants){
+    if (a.team || a.isPlayer || a.state === 'dead' || !outside(a) || !(a.follow || CASTES[a.caste].fight >= 3)) continue;
+    if (!inAtk(k, a.x, a.y) || Math.random() > dodgeChance(a)) continue;
+    let ex, ey;
+    if (k.kind === 'lane'){ const ux = a.x - k.x, uy = a.y - k.y, across = -ux*k.dy + uy*k.dx, side = across >= 0 ? 1 : -1, push = k.w/2 + 0.9*T - Math.abs(across); ex = a.x - k.dy*side*push; ey = a.y + k.dx*side*push; }
+    else { let dx = a.x - k.x, dy = a.y - k.y, d = Math.hypot(dx, dy); if (d < 1){ const r = Math.random()*Math.PI*2; dx = Math.cos(r); dy = Math.sin(r); d = 1; } const push = k.r + 0.9*T - d; ex = a.x + dx/d*push; ey = a.y + dy/d*push; }
+    if (!walk(s, Math.floor(ex/T), Math.floor(ey/T)) || (s.world.pit && s.world.pit[idx(Math.floor(ex/T), Math.floor(ey/T))])) continue; // (not into a wall or a pit)
+    a.dodge = { x: ex, y: ey, until: s.t + left + 0.25 };
+  }
+}
+// Build 82: where your crew should go when you set it on a guardian with a trick to it. The antlion: round the rim
+// of her pit, each at its own angle (eight there draw her up; from there they bite her; nobody walks into the sand).
+// The widow on her web: the nearest anchor still standing, then her once she drops. Null: just go for it.
+export function bossAim(s, A, a){
+  if (!A || A.kind !== 'boss') return null; const b = s.bosses && s.bosses[A.ref]; if (!b || b.dead) return null;
+  if (A.ref === 'antlion'){ const p = s.world.pits[b.pit]; if (!p) return null; const px = p.x*T, py = p.y*T, R = (p.r*1.05 + 0.7)*T; const cur = Math.atan2(a.y - py, a.x - px);
+    // Each takes its own spot along the rim (not all bunched where they came in), and walks round to it a short step
+    // at a time, so nobody cuts across the sand.
+    if (!a.rim || a.rim.t !== A.t) a.rim = { t: A.t, ang: cur + ((a.id % 9) - 4)*0.32 };
+    const diff = Math.atan2(Math.sin(a.rim.ang - cur), Math.cos(a.rim.ang - cur)), ang = cur + Math.max(-0.45, Math.min(0.45, diff));
+    return { x: px + Math.cos(ang)*R, y: py + Math.sin(ang)*R, reach: 0.5*T }; }
+  if (A.ref === 'widow' && !b.grounded && b.web){ let best = null, bd = 1e9; for (const an of b.web.anchors){ if (an.hp <= 0) continue; const d = Math.hypot(an.x - a.x, an.y - a.y); if (d < bd){ bd = d; best = an; } } return best ? { x: best.x, y: best.y, reach: 0.8*T } : null; }
+  return null;
 }
 // Ants inside a telegraphed attack's shape.
 function inAtk(k, x, y){

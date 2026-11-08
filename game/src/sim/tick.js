@@ -17,7 +17,7 @@ import { outside, tickMower, tickPits, tickStings, tickStrikes } from './hazards
 import { knock, playerNear, populateBugs, stepBugs, tickSplash } from './creatures.js';
 import { DUEL_ROUND, duelGangs, hurtAnt, pinnedNow, spark, swing } from './combat.js';
 import { exposed, stunned } from './abilities.js';
-import { shove, tickBosses } from './bosses.js';
+import { bossAim, shove, tickBosses } from './bosses.js';
 import { stepZombie, tickDirector } from './events.js';
 import { tickCurios } from './curios.js';
 
@@ -105,6 +105,10 @@ export function tick(s, dt){
     if (a.state === 'away') continue; // build 28: inside a rival nest on your raid
     if (a.state === 'in' || a.state === 'build' || a.state === 'nest'){ tickInside(s, a, dt); continue; }
     if (a.knockT > 0){ knock(s, a, dt); continue; }
+    if (a.dodge){ // build 82: jumping clear of a guardian's attack
+      if (s.t > a.dodge.until) a.dodge = null;
+      else { const D = a.dodge, dx = D.x - a.x, dy = D.y - a.y, d = Math.hypot(dx, dy); if (d > 1){ const m = Math.min(d, fSpeed(s, a)*1.3*SURF*dt); a.x += dx/d*m; a.y += dy/d*m; a.dx = dx/d; a.dy = dy/d; a.tx = Math.floor(a.x/T); a.ty = Math.floor(a.y/T); } continue; }
+    }
     if (a.slowT > 0) a.slowT -= dt;
     if (a.state === 'zombie'){ stepZombie(s, a, dt); continue; }
     if (a.state === 'climb') continue; // build 57: on the Oak's bark (tickClimb moves it)
@@ -215,8 +219,8 @@ export function tick(s, dt){
         else { if (stepTo(a, a.tx, a.ty, 95, dt)) chooseToward(s, a, gx, gy); continue; } }
       if (tg){ // build 26: charging what you pointed at
         if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }
-        const td = Math.hypot(a.x - tg.x, a.y - tg.y);
-        if (td > attackReach(s, P.attack)){ if (stepTo(a, a.tx, a.ty, 95*(picked(s, 'you', 'hero') ? 1.25 : 1), dt)) chooseToward(s, a, tg.x + (Math.random()-0.5)*T, tg.y + (Math.random()-0.5)*T); }
+        const aim = bossAim(s, P.attack, a), gx = aim ? aim.x : tg.x, gy = aim ? aim.y : tg.y, td = Math.hypot(a.x - gx, a.y - gy); // (build 82: the rim, an anchor)
+        if (td > (aim ? aim.reach : attackReach(s, P.attack))){ if (stepTo(a, a.tx, a.ty, 95*(picked(s, 'you', 'hero') ? 1.25 : 1), dt)) chooseToward(s, a, gx + (Math.random()-0.5)*T*(aim ? 0.3 : 1), gy + (Math.random()-0.5)*T*(aim ? 0.3 : 1)); }
         continue;
       }
       if (s.cat && Math.hypot(a.x-s.cat.x, a.y-s.cat.y) < CAT_REACH*reachOf(s, a)){ const dmg = bite(s, a, 'cat')*dt; s.cat.hp -= dmg; s.cat.hitT = s.t; spark(s, a, (a.x + s.cat.x)/2, (a.y + s.cat.y)/2, 0); gainXp(s, a, dmg/3); stingSlow(s, a, s.cat); }

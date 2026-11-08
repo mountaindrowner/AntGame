@@ -238,7 +238,8 @@ function smart() {
 }
 
 // ---------- the campaign: the zones' guardians ----------
-const BOSS_ORDER = ['hornworm', 'beetle', 'antlion', 'robin', 'toad', 'mantis', 'widow', 'centipede'];
+// Build 82: nearest first (it was a fixed list, and the far beetle stalled every run before the near antlion).
+const BOSS_ORDER = ['hornworm', 'beetle', 'antlion', 'robin', 'toad', 'mantis', 'widow', 'centipede'].sort((p, q) => { const d = (k) => { const i = SIM.REGION[SIM.BOSSES[k].region], b = SIM.areaBounds(i); return Math.hypot((b.x0 + b.x1) / 2 - w.ex, (b.y0 + b.y1) / 2 - w.ey); }; return d(p) - d(q); });
 let hunt = null, huntCool = 0, explore = null;
 const regionCentre = (key) => { const i = SIM.REGION[key]; if (i == null) return null; const b = SIM.areaBounds(i); return { x: (b.x0 + b.x1 + 1) / 2 * T, y: (b.y0 + b.y1 + 1) / 2 * T, i }; };
 function campaign() {
@@ -248,7 +249,10 @@ function campaign() {
     const b = hunt.k === 'spider' ? s.spider : s.bosses[hunt.k];
     const won = hunt.k === 'spider' ? (c.kills.spider || 0) > hunt.kills0 : (c.kills[hunt.k] || 0) >= 1 || (b && b.dead);
     if (won) { note(`killed ${hunt.k}`); mile('killed ' + hunt.k); SIM.release(s); hunt = null; huntCool = s.t + 60; return; }
-    if (followers < 5 || s.t - hunt.t0 > 600 || P.hunger < 25) { note(`hunt on ${hunt.k} broke off (${followers} left, ${Math.round(s.t - hunt.t0)} s)`); SIM.release(s); hunt = null; huntCool = s.t + 240; home(); return; }
+    // Build 82: on the long walk, stop to eat at an outpost (the crew waits with you).
+    if (hunt.eat) { if (P.hunger >= 95) hunt.eat = null; else { tapSurface((hunt.eat.x + 0.5) * T, (hunt.eat.y + 0.5) * T); return 'busy'; } }
+    if (P.hunger < 45 && !(b && dist(a.x, a.y, b.x, b.y) < 20 * T)) { const op = s.outposts.filter((o) => o.done).sort((p, q) => dist(p.x, p.y, a.tx, a.ty) - dist(q.x, q.y, a.tx, a.ty))[0]; if (op && dist(op.x, op.y, a.tx, a.ty) < 90) { hunt.eat = op; return 'busy'; } }
+    if (followers < 5 || s.t - hunt.t0 > 900 || P.hunger < 25) { note(`hunt on ${hunt.k} broke off (${followers} left, ${Math.round(s.t - hunt.t0)} s)`); SIM.release(s); hunt = null; huntCool = s.t + 240; home(); return; }
     if (!b) { const R = regionCentre(SIM.BOSSES[hunt.k] ? SIM.BOSSES[hunt.k].region : 'flowerbed'); if (R) tapSurface(R.x, R.y); return 'busy'; } // still to find it: go to its ground
     const d = dist(a.x, a.y, b.x, b.y);
     if (d < 26 * T && !P.attack) SIM.crewAttack(s, b.x, b.y);
@@ -267,9 +271,19 @@ function campaign() {
   if (!next) return;
   const B = SIM.BOSSES[next.k];
   if (B && !s.bosses[next.k]) { // scout its ground so it shows itself (alone, when fed)
-    const R = regionCentre(B.region); if (!R || P.hunger < 60 || a.carry) return;
+    const R = regionCentre(B.region); if (!R || a.carry) return;
+    if (!explore && P.hunger < 60) return;
     if (!explore || explore.k !== next.k) { explore = { k: next.k, t0: s.t }; note(`scouting ${B.region} for ${next.k}`); }
-    if (s.t - explore.t0 > 240) { explore = null; huntCool = s.t + 120; home(); return; }
+    if (s.t - explore.t0 > 900) { explore = null; huntCool = s.t + 120; home(); return; }
+    // Build 82: far grounds are a chain of outposts away. Raise one when the last stop is well behind; stand by it
+    // while it's piled up; eat at a finished one when hungry (build 80), else head home.
+    const stops = [{ x: w.ex, y: w.ey }, ...s.outposts.filter((o) => o.done)], near = (p) => dist(p.x, p.y, a.tx, a.ty);
+    const raising = s.outposts.find((o) => !o.done && near(o) < 2.5);
+    if (raising) { P.tx = null; return 'busy'; }
+    if (explore.eat) { if (P.hunger >= 95) explore.eat = null; else { tapSurface((explore.eat.x + 0.5) * T, (explore.eat.y + 0.5) * T); return 'busy'; } }
+    const last = stops.reduce((m, p) => Math.min(m, near(p)), 1e9);
+    if (last > 70 && c.grit >= 10 && !SIM.outpostLock(s) && SIM.placeOutpost(s)) { note(`outpost on the way to ${B.region}`); return 'busy'; }
+    if (P.hunger < 45) { const op = s.outposts.filter((o) => o.done).sort((p, q) => near(p) - near(q))[0]; if (op && near(op) < 120) { explore.eat = op; return 'busy'; } explore = null; huntCool = s.t + 60; home(); return; }
     tapSurface(R.x, R.y); return 'busy';
   }
   explore = null;
