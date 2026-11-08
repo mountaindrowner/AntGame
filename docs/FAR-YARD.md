@@ -87,3 +87,15 @@ After, at a hide of 0.5 (wins out of 4, average losses):
 
 - **Crews step greedily toward a target and can't path round a wall.** At the widow, a crew on the far side of the shed wall waits there. A crew ant that's made no headway in a couple of seconds could take a real route.
 - **The rival colonies of the far yard** (the odorous ants at the Trash, the carpenter ants at the Oak, the fire ants) wake one every 30 minutes after the Patio falls, and they raid. That's the next thing the simulation should look at.
+
+## The campaigns after (4 colonies, 6 hours)
+
+| | Before (build 80–81) | Build 82 |
+|---|---|---|
+| Most zones taken | 3 (Flowerbed, Patio, Garden) | **5** (adds the Playground and the Rock Garden) |
+| Antlion killed | never | in 4 of 4 |
+| Beetle killed | never | in 2 of 4, at 54 min and 3 h |
+| Hornworm killed | 4 of 8, after 4–14 failed hunts | 3 of 4, mostly on the first or second try |
+
+- **The Great Lawn's robin was never found.** That's the bot: its scouting trips kept breaking off for its own sieges on the Patio, 59 times in one run.
+- **Queens still fall to raids at about 3.5 hours (3 of 4).** That's the earlier problem (fighters starved of meat, war parties too big for two guards), not the far yard. It's in `SIMULATION.md`, with the three fixes that are Mark's call.

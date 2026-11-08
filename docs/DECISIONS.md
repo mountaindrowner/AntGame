@@ -2,6 +2,19 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 8: the far yard (build 82)
+
+Mark: "Yes go for it" (why the simulated games stopped at 3 of 13 zones). The full write-up is in [`FAR-YARD.md`](FAR-YARD.md).
+- **The test bot** went after guardians in a fixed order and stalled at the far beetle; the antlion is as close as the Patio. It now goes nearest first, raises outposts on long trips and eats at them.
+- **The game:** guardians telegraph their big attacks for you to dodge, and the crew, which does the fighting, never dodged. A fight was decided in seconds. The crew also walked into the antlion's sand and bit the widow's web.
+- **Built:**
+  - Your fighters jump clear of a shown attack: half of fresh ants, a tenth more each rank, 9 in 10 Legends.
+  - Set on the antlion, the crew spreads round her rim and walks round it.
+  - Set on the widow in her web, it cuts the anchors first.
+  - A guardian's hide halves your fighters' bites (Mark's call: `BOSS_TUNE.hide`). Without it, the crew that no longer died killed most guardians in seconds.
+- **Result:** the simulated colonies took 5 zones in 6 hours (the most before was 3). The antlion fell in every run, the beetle for the first time ever (2 of 4), and the hornworm mostly on the first or second hunt.
+- **Not yet:** crews can't path round walls; the robin (the bot never reached the lawn); the far rival colonies.
+
 ## Nov 7: the guards walk a round (build 81.1)
 
 Mark: "They don't just have to stand like that… they can be walking around, patrolling slowly. Give them a little bit of a path to patrol."
