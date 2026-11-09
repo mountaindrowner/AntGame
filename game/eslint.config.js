@@ -2,7 +2,7 @@
 import globals from 'globals';
 
 export default [
-  { ignores: ['dist/**', 'dist-gallery/**', 'e2e-shots/**', 'node_modules/**'] },
+  { ignores: ['dist/**', 'dist-gallery/**', 'dist-phone/**', '.guard/**', 'e2e-shots/**', 'node_modules/**'] },
   {
     files: ['**/*.js', '**/*.mjs'],
     languageOptions: { ecmaVersion: 2023, sourceType: 'module', globals: { ...globals.browser, ...globals.node } },
