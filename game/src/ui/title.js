@@ -6,10 +6,11 @@ import { ICONS } from './icons.js';
 import { sfx } from '../audio/sfx.js';
 import { slotMeta, slotOf, renameSlot, storageOk } from '../game/slots.js';
 
+import { LAYOUTS, detectPhone } from '../device.js';
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
   // Build 44.2: Town Hall is the look (Mark's pick). A theme someone picked themselves stays; a saved default doesn't.
-  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'townhall' };
+  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'townhall', layout: 'auto' };
   let o = def; try { o = Object.assign(def, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { /* blocked */ }
   if (!o.skinPicked) o.skin = 'townhall';
   return o;
@@ -97,6 +98,8 @@ export class TitleMenu {
       + `<div class="t-row"><span>Effects</span>${pick('fx', 'off', 'Off')}${pick('fx', 'quiet', 'Quiet')}${pick('fx', 'loud', 'Loud')}</div>`
       + `<div class="t-row"><span>Graphics</span>${pick('graphics', 'auto', 'Auto')}${pick('graphics', 'sharp', 'Sharp')}${pick('graphics', 'fast', 'Fast')}</div>`
       + `<div class="t-note">Graphics: Auto starts sharp and eases off if your device struggles.</div>`
+      + `<div class="t-row"><span>Layout</span>${LAYOUTS.map(([k, n]) => pick('layout', k, n)).join('')}</div>`
+      + `<div class="t-note">Layout: Auto uses the phone layout on a phone. Phone: bigger buttons, made for fingers. A change takes full effect the next time the game starts.</div>`
       + `<div class="t-row t-skins"><span>Look</span>${SKINS.map(([k, n]) => pick('skin', k, n)).join('')}</div>`
       + btn('back', 'back', 'Back'));
   }
@@ -131,6 +134,7 @@ export class TitleMenu {
       const [, k, v] = a.split(':');
       app.opts[k] = v === 'true' ? true : v === 'false' ? false : v;
       if (k === 'skin') app.opts.skinPicked = true;
+      if (k === 'layout'){ app.phone = detectPhone(v); document.documentElement.classList.toggle('phone', app.phone); } // (the layout now; the renderer's phone settings at the next start)
       saveOptions(app.opts);
       this.hooks.applyOptions();
       this._options();

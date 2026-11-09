@@ -22,9 +22,12 @@ const FRAG = `
   }`;
 
 export class PS1Pipeline {
-  constructor(canvas) {
-    this.canvas = canvas;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
+  constructor(canvas, { phone = false } = {}) {
+    this.canvas = canvas; this.phone = phone;
+    // Phones (docs/PHONE.md): the default GPU mode (iPhones ran far slower asking for 'high-performance'), no MSAA (iOS
+    // bugs, and at a PS1 resolution it buys little), and the quality steps' targets kept rather than freed and rebuilt.
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: phone ? 'default' : 'high-performance', alpha: false });
+    if (phone) { this.QUALITY = PS1Pipeline.QUALITY.map(([px]) => [px, 0]); this.kept = new Map(); } else this.QUALITY = PS1Pipeline.QUALITY;
     // Build 65: checking every compiled shader for errors costs time at each new material; only while developing.
     this.renderer.debug.checkShaderErrors = !!(import.meta.env && import.meta.env.DEV);
     this.renderer.setPixelRatio(1);
@@ -32,7 +35,7 @@ export class PS1Pipeline {
     // Shared by every PS1 material: the grid vertices snap to.
     this.uniforms = { uSnap: { value: new THREE.Vector2(160, 120) } };
     this.target = new THREE.WebGLRenderTarget(4, 4, {
-      minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, type: THREE.HalfFloatType, samples: RENDER.msaa,
+      minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, depthBuffer: true, type: THREE.HalfFloatType, samples: phone ? 0 : RENDER.msaa,
     });
     this.post = new THREE.ShaderMaterial({
       uniforms: { tFrame: { value: this.target.texture }, levels: { value: RENDER.colorLevels }, dither: { value: RENDER.dither } },
@@ -52,11 +55,10 @@ export class PS1Pipeline {
   // game starts at 0 and steps down if it can't hold its frame rate.
   static QUALITY = [[1, RENDER.msaa], [1, 0], [1.5, 0], [2, 0]];
   setQuality(q) {
-    q = Math.max(0, Math.min(PS1Pipeline.QUALITY.length - 1, q));
+    q = Math.max(0, Math.min(this.QUALITY.length - 1, q));
     if (q === this.quality) return false;
     this.quality = q;
-    this.target.samples = PS1Pipeline.QUALITY[q][1];
-    this.target.dispose(); // rebuilt with the new sample count on next use
+    if (!this.phone){ this.target.samples = PS1Pipeline.QUALITY[q][1]; this.target.dispose(); } // rebuilt with the new sample count on next use
     this.width = 0; // force a resize
     if (this.cssW) this.resize(this.cssW, this.cssH);
     return true;
@@ -70,7 +72,7 @@ export class PS1Pipeline {
   resize(cssW, cssH) {
     this.cssW = cssW; this.cssH = cssH;
     const dpr = window.devicePixelRatio || 1;
-    const size = Math.max(RENDER.pixelSize * PS1Pipeline.QUALITY[this.quality][0], Math.sqrt((cssW * cssH) / RENDER.maxPixels));
+    const size = Math.max(RENDER.pixelSize * this.QUALITY[this.quality][0], Math.sqrt((cssW * cssH) / RENDER.maxPixels));
     const px = Math.max(1, Math.round(size * dpr)) / dpr;
     const w = Math.max(64, Math.round(cssW / px)), h = Math.max(64, Math.round(cssH / px));
     if (w === this.width && h === this.height) return false;
@@ -79,11 +81,19 @@ export class PS1Pipeline {
     this.renderer.setSize(w, h, false);
     this.canvas.style.width = cssW + 'px';
     this.canvas.style.height = cssH + 'px';
-    this.target.setSize(w, h);
+    if (this.phone) this.keptTarget(w, h); else this.target.setSize(w, h);
     // The vertex snap grid: the framebuffer's own pixels (snapDivisor 1), or coarser for more wobble.
     // (materials.js also reads uSnap as the framebuffer size for the see-through hole: keep snapDivisor 1.)
     this.uniforms.uSnap.value.set(w / RENDER.snapDivisor, h / RENDER.snapDivisor);
     return true;
+  }
+
+  // Phones: one target per size, kept (up to four: the quality steps at this screen); switching swaps them in.
+  keptTarget(w, h) {
+    const k = w + 'x' + h; let t = this.kept.get(k);
+    if (!t){ t = this.target.width === 4 && this.target.height === 4 ? this.target : this.target.clone(); t.setSize(w, h); this.kept.set(k, t);
+      if (this.kept.size > 4){ const [k0, t0] = this.kept.entries().next().value; if (t0 !== t){ t0.dispose(); this.kept.delete(k0); } } }
+    this.target = t; this.post.uniforms.tFrame.value = t.texture;
   }
 
   get aspect() { return this.width / Math.max(1, this.height); }

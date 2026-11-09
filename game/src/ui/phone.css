@@ -1,0 +1,26 @@
+/* The phone layout (docs/PHONE.md). Every rule here starts with html.phone, which is only set on a phone (or when
+   Options → Layout says Phone), so the desktop game is untouched (scripts/desktop-guard.mjs checks it). */
+
+/* The side column: five buttons of 44 pt (Apple's minimum), clear of the Dynamic Island in landscape. Zoom is a
+   pinch and Help is on the menu, so they step out. */
+html.phone #bar2 { right: max(8px, env(safe-area-inset-right, 0px)); gap: 8px; }
+html.phone #bar2 .ico { width: 44px; height: 44px; }
+html.phone #zoom, html.phone #help { display: none; }
+
+/* The top bar and the bottom dock keep clear of the Island and of the side column. */
+html.phone #top { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: calc(max(8px, env(safe-area-inset-right, 0px)) + 56px); }
+html.phone #bar, html.phone #barn { padding-left: max(10px, env(safe-area-inset-left, 0px)); padding-right: calc(max(8px, env(safe-area-inset-right, 0px)) + 52px); }
+
+/* Notices: the newest one only (the rest are in the feed history), and narrower, so the view stays open. */
+html.phone #feed .note:not(:first-child) { display: none; }
+html.phone #feed, html.phone #tipcard, html.phone #msg { max-width: min(330px, 56vw); }
+@media (orientation: portrait) { html.phone #feed, html.phone #tipcard, html.phone #msg { max-width: min(330px, calc(100vw - 80px)); } }
+
+/* The title on a landscape phone (about 400 pt tall): the logo beside the menu instead of above it. */
+@media (orientation: landscape) and (max-height: 500px) {
+  html.phone #title { flex-direction: row; gap: 4vw; padding: max(8px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px)); }
+  html.phone #title .t-logo .big { font-size: min(9vw, 15vh); }
+  html.phone #title .t-logo .sub { font-size: 12px; }
+  html.phone #title .t-menu { gap: 6px; width: min(280px, 40vw); max-height: 100%; overflow-y: auto; }
+  html.phone #title .t-btn { min-height: 44px; }
+}

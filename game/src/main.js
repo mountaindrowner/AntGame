@@ -19,14 +19,23 @@ import { loadGame, saveGame, clearSave, saveMap, loadMap, NEW_GAME_SEED, loadPro
 import { switchTo, newColonyIn, deleteSlot, exportFile, importFile, slotMeta, slotOf, touchActive, takeNewColonyFlag } from './game/slots.js';
 import { Cinematic, renderScoreWav } from './intro/cinematic.js';
 import { uiScale } from './config.js';
+import { detectPhone, phoneGuards } from './device.js';
 import { GROUND_TINT } from './render/views/yardScenery.js';
 import './ui/ui.css';
 import './ui/themes.css'; // UI themes, picked under Options → Look
+import './ui/phone.css'; // the phone layout: only under html.phone (docs/PHONE.md)
 
 const STEP = 0.05; // the sim's fixed tick (20 Hz)
 
 const canvas = document.getElementById('c');
-const pipeline = new PS1Pipeline(canvas);
+// The phone layer (docs/PHONE.md): decided once, here. Desktop runs exactly as before.
+const PHONE = detectPhone(loadOptions().layout);
+document.documentElement.classList.toggle('phone', PHONE);
+if (PHONE){ phoneGuards(canvas);
+  // Sound back after a call, the lock screen or another app (iOS leaves it suspended or "interrupted").
+  const wake = () => { try { if (sfx.ctx && sfx.ctx.state !== 'running') sfx.ctx.resume(); } catch (e) { /* not started yet */ } };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); }); window.addEventListener('pageshow', wake); window.addEventListener('touchend', wake, { passive: true }); }
+const pipeline = new PS1Pipeline(canvas, { phone: PHONE });
 useSnapUniforms(pipeline.uniforms);
 const perf = new PerfHud(pipeline.renderer); // build 80: F3 shows where each frame goes
 
@@ -49,6 +58,7 @@ const app = {
   confirmAction: null,
   insets: { top: 0, bottom: 0, h: 1 },
   opts: loadOptions(),
+  phone: PHONE,
   reset() {
     clearSave();
     this.mapFresh = true; // a new colony starts with an empty map
