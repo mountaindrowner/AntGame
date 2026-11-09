@@ -56,7 +56,9 @@ for (const [W, H] of SIZES) {
     document.querySelector('#title button[data-t="continue"]').click(); app.paused = true;
     const s = app.s, P = s.player, T = SIM.T; if (P.inNest) { P.inNest = false; P.ant.state = 'player'; }
     P.ant.x = (s.world.ex + 0.5) * T; P.ant.y = (s.world.ey + 4) * T; P.ant.tx = s.world.ex; P.ant.ty = s.world.ey + 4; P.tx = null; });
-  await run(450); // (and every region's map photo taken: they're made a few a frame as regions load)
+  // Until every region near you is built and photographed for the map: regions build on a time budget (real
+  // milliseconds), so how far they get in a frame varies; waiting for "settled" makes it not matter.
+  await run(150); for (let k = 0; k < 60; k++) { if (await page.evaluate(() => window.UNDERFOOT.settled ? window.UNDERFOOT.settled() : true)) break; await run(20); }
   await page.evaluate(() => window.__seed(43));
   await shot('1-yard');
   await page.evaluate(() => { const { app, SIM } = window.UNDERFOOT; SIM.recruit(app.s, 10); });
@@ -67,6 +69,7 @@ for (const [W, H] of SIZES) {
   await panel('#mapbtn', '5-map');
   await page.evaluate(() => { window.UNDERFOOT.app.s.player.inNest = true; });
   await run(60); await page.waitForTimeout(3000); await run(60); // (the nest's shaders compile in the background as you enter: let them finish)
+  for (let k = 0; k < 60; k++) { if (await page.evaluate(() => window.UNDERFOOT.settled ? window.UNDERFOOT.settled() : true)) break; await run(20); }
   await shot('6-nest');
   await ctx.close();
 }

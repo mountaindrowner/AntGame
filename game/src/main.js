@@ -468,4 +468,6 @@ requestAnimationFrame(frame);
 // For automated tests and debugging in the console.
 // filmStep(dt) advances the opening film by exactly dt and draws it, for recording.
 const filmStep = (dt) => { if (!cine) return false; clock += dt; views.surface.update(app, clock, pipeline.aspect); cine.step(dt); if (cine) cine.render(); return !!cine; };
-window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep, bossIntro, perf };
+// settled(): nothing left loading (regions, map photos): for scripts/desktop-guard.mjs, which needs a still picture.
+const settled = () => !(views.surface.scenery && views.surface.scenery.busy) && !photoQ.length && !shot.busy;
+window.UNDERFOOT = { app, SIM, views, pipeline, ui, sfx, renderScoreWav, renderMusicWav, filmStep, bossIntro, perf, settled };
