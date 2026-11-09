@@ -56,7 +56,7 @@ for (const [W, H] of SIZES) {
     document.querySelector('#title button[data-t="continue"]').click(); app.paused = true;
     const s = app.s, P = s.player, T = SIM.T; if (P.inNest) { P.inNest = false; P.ant.state = 'player'; }
     P.ant.x = (s.world.ex + 0.5) * T; P.ant.y = (s.world.ey + 4) * T; P.ant.tx = s.world.ex; P.ant.ty = s.world.ey + 4; P.tx = null; });
-  await run(150);
+  await run(450); // (and every region's map photo taken: they're made a few a frame as regions load)
   await page.evaluate(() => window.__seed(43));
   await shot('1-yard');
   await page.evaluate(() => { const { app, SIM } = window.UNDERFOOT; SIM.recruit(app.s, 10); });
