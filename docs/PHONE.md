@@ -158,3 +158,102 @@ It costs the $99/yr Apple developer account and review.
   - [touch accuracy by screen position](https://www.uxmatters.com/mt/archives/2017/07/design-for-fingers-touch-and-people-part-3.php)
   - [mobile session lengths](https://gamedevreports.substack.com/p/gameanalytics-benchmarks-in-mobile)
 - iPhone 17 points and safe areas: [Use Your Loaf](https://useyourloaf.com/blog/iphone-17-screen-sizes/) (single source).
+
+---
+
+## The deeper dive: what developers warn against and recommend (Nov 9)
+
+Two more research passes: indie developers' admissions and players' verdicts on ports, and web-game developers on iPhone Safari.
+
+**A caveat on Reddit:** this environment's network blocks reddit.com and most article sites (Game Developer, Medium, TouchArcade, the WebKit bug tracker, the three.js forum). So much of this comes from search-result snippets rather than whole threads, and I couldn't see upvotes. Where many sources say the same thing, that's noted.
+
+### What players call a bad port
+
+- **Slay the Spire is the clearest warning.** "A UI for ants"; its drag-to-play fights tap-to-read, so cards get played by accident. Its larger-text option was "not big enough".
+- **Mindustry:** "building conveyors on mobile is a huge pain". Players did like that combat auto-targets.
+- **Shapez:** "clunky… seems unfinished", inaccurate placement.
+- **Ant games on phones** (The Ants, Pocket Ants) are known for 24-hour timers and pay-to-win raids. Empires of the Undergrowth started as a mobile idea, never shipped there, and its FAQ warns of fake mobile copies, which shows the demand.
+- **What works:**
+  - Rusted Warfare: macro, not micro (groups, rally points);
+  - Polytopia: big buttons, never too much at once;
+  - C&C4: pause as a command mode;
+  - Cultist Simulator: kept pause and play;
+  - Into the Breach: short fights, "every UI window had to be redone".
+
+### What developers admit
+
+- **"Easy" ports got too little real-device testing**, and players called them lazy.
+- **Hover feedback vanished on touch** (Mini Metro). Pinch-zoom was "a pretty big breakthrough".
+- **Fixed pixel sizes:** "fine on the laptop… too small on mobile". A UI-scale slider was the cheap fix.
+- **Hearthstone's phone version took a year after the tablet**, all of it text readability.
+- **Text-wall tutorials get skipped.** Terraria built a phone-only tutorial that teaches by doing.
+- **Supporting both orientations costs about a third more layout work** (one estimate).
+- **Accessibility:** every pinch or two-finger gesture needs a tap alternative, targets should be adjustable, and actions should fire on finger lift. Nothing should demand precise timing, and orders should be possible while paused.
+
+### iPhone Safari's traps for a Three.js game
+
+1. **Memory kills without warning.** iOS caps each tab far below the phone's RAM. Over the cap, the page is killed and reloaded with no event. iOS 26 reportedly tightened this, and 26.4 has GPU crash reports. Keep the game around 300 MB or less and save often.
+2. **Rebuilding render targets or resizing the canvas has leaked on iOS.** Our adaptive quality frees and rebuilds its target at each step change.
+3. **`powerPreference: 'high-performance'` ran a three.js scene at 20 fps instead of 120 on an iPhone 12** (reportedly fixed in 2024, but the advice stands). We ask for it.
+4. **MSAA has had iOS-only bugs.** Our top quality step uses 4× MSAA on a half-float target. At 640×400 with hard pixel edges, it buys little.
+5. **Shader compiles still block on iOS, even "async"** (no parallel linking under Metal). Expect a hitch the first time each material draws, unless every one is drawn once behind the title screen.
+6. **Heat:** one scene ran at 60 fps for 30 s, then 20–25 for good. A steady 30 fps mode is the usual answer.
+7. **Audio in Home Screen web apps on iOS 26** reportedly goes silent after the first launch, and contexts get stuck "interrupted" after a call. The fix that works: on return, `resume()`; if still not running, rebuild the audio graph. Our sounds are all synthesized, so that's possible.
+8. **Safari and the Home Screen app keep separate storage.** A player who installs starts without their save. Our save export/import (build 76) is the bridge; the Home Screen app should offer it on its first launch.
+9. **Stale builds:** a Home Screen app can keep running an old version after an update. Show the build number, and add "Update now" if we ever add offline caching.
+10. **Input:**
+    - The long-press magnifier and the edge swipe-back need a non-passive `touchstart` that cancels them (CSS alone doesn't).
+    - Three-finger undo can't be stopped: never use three fingers.
+    - `pointercancel` must count as a finger lift.
+    - iOS 26 has `100dvh` gaps: size from `innerHeight` instead.
+    - There's no vibration API on iPhone.
+11. **itch.io and portals embed games in an iframe,** which Safari limits to 30 fps until the first tap. The title screen's tap fixes that.
+12. **WebGPU on iOS 26 has been buggy, and a wrapped App Store app (WKWebView) caps at 60 Hz and may be slower than Safari.** Stay on WebGL, and treat the App Store as later.
+
+### What this changes in the plan
+
+- **P3 (iOS hardening) moves first, and gains four items:**
+  - **Renderer:** `powerPreference: 'default'`, no MSAA on phones, and the quality steps as fixed, pre-made render targets (switch between them, never free and rebuild).
+  - **Shader warm-up behind the title screen:** draw every material once, including the post pass.
+  - **Audio recovery on return:** resume, else rebuild the graph.
+  - **Touch:** a non-passive `touchstart` on the canvas, and `pointercancel` treated as a lift.
+- **P1 (fit) adds:**
+  - a **UI-scale slider** (not just three sizes) and a separate **text size**;
+  - **the build number in the menu**;
+  - and, on the Home Screen app's first launch, **"Bring your save from Safari?"** with the export/import steps.
+- **P2 (fingers) adds:**
+  - **pause as a command mode:** while paused you can order the crew, queue digs and place rooms (today pausing freezes input too);
+  - **inspect and act are separate taps** (Slay the Spire's lesson): the first tap on a room or tree node shows it, a confirm button acts;
+  - **a tap alternative for every gesture** (+/- zoom buttons on phones);
+  - **bigger boss tells on phones**, with an arrow at the screen edge when a telegraphed attack is off-screen.
+- **Already right, keep it:**
+  - Nothing happens while the game is closed: no offline raids or timers, which is exactly what players resent in the ant games on phones.
+  - Crew orders are macro (recruit, attack, hold, split), not unit micro.
+  - Your fighters now auto-dodge.
+- **Sessions:** the goals board and raids already give 3–5 minute beats. A "since you were away" card is enough, with no offline progress.
+- **Expect few Home Screen installs.** Most phone players will be in a Safari tab with the bars showing, so that has to be good too. Show the install card after a satisfying moment (the first room, the first guardian), not at launch.
+
+### Sources from this pass
+
+- **Bad ports, and what worked:**
+  - [Slay the Spire on Android](https://www.androidcentral.com/slay-spire-android-game-week)
+  - [Mindustry comments](https://anuke.itch.io/mindustry/comments?after=733)
+  - [Into the Breach mobile interview](https://toucharcade.com/2022/08/08/into-the-breach-mobile-interview-subset-games-ftl-nintendo-switch-netflix-games-ipad-iphone/)
+  - [Hearthstone on phones](https://gamesbeat.com/how-hearthstones-tech-team-tackled-making-an-online-game-that-runs-on-pc-and-mobile/)
+  - [C&C4 mobile review](https://www.pocketgamer.com/command-conquer-4-tiberian-twilight/review)
+  - [Polytopia's minimalism](https://mobidictum.com/christian-lovstedt-midjiwan-polytopia-minimalism/)
+- **Accessibility and tutorials:**
+  - [Xbox touch accessibility guideline](https://learn.microsoft.com/en-us/gaming/accessibility/xbox-accessibility-guidelines/107)
+  - [mobile tutorials that work](https://shop.smashingmagazine.com/2014/04/rethinking-mobile-tutorials-which-patterns-really-work/)
+- **iPhone Safari and WebGL:**
+  - [iOS memory kills](https://bugs.webkit.org/show_bug.cgi?id=300782)
+  - [GPU crashes on iOS 26.4](https://developer.apple.com/forums/thread/822200)
+  - [power preference slowdown](https://bugs.webkit.org/show_bug.cgi?id=276959)
+  - [blocking shader compiles](https://bugs.webkit.org/show_bug.cgi?id=251514)
+  - [canvas memory limits](https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/)
+  - [iOS 26 viewport bug](https://developer.apple.com/forums/thread/800125)
+  - [separate Safari and Home Screen storage](https://bugs.webkit.org/show_bug.cgi?id=181849)
+  - [Home Screen audio on iOS 26](https://forums.macrumors.com/threads/ios-26-audio-issues-in-pwa-web-apps.2466839/)
+  - [debugging an iPhone without a Mac](https://github.com/HimbeersaftLP/ios-safari-remote-debug-kit)
+- **Installs:**
+  - [Hacker News on Home Screen installs](https://news.ycombinator.com/item?id=38913951)
