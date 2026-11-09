@@ -90,8 +90,9 @@ a=Image.open(${JSON.stringify(path.join(BASE, f))}).convert('RGB'); b=Image.open
 d=ImageChops.difference(a,b); bb=d.getbbox(); n=sum(1 for p in d.getdata() if p!=(0,0,0))
 d.point(lambda v: 255 if v else 0).save(${JSON.stringify(bp.replace('.png', '-DIFF.png'))})
 print(f"{n} pixels differ ({100*n/(a.width*a.height):.3f}%), in box {bb}")`]).toString().trim(); } catch (e) { /* no PIL */ }
-  // A speck (under 500 pixels in one small box) is reported but doesn't fail: a lone ant drawn a frame early or late.
-  const m = /^(\d+) pixels differ .*box \((\d+), (\d+), (\d+), (\d+)\)/.exec(how), small = m && +m[1] < 500 && +m[4] - +m[2] < 80 && +m[5] - +m[3] < 80;
+  // A speck (under 2000 pixels in one box under 100 px across: one ant at nest zoom) is reported but doesn't fail:
+  // a lone ant in the nest is drawn a step early or late from run to run (build 83 against itself does it too).
+  const m = /^(\d+) pixels differ .*box \((\d+), (\d+), (\d+), (\d+)\)/.exec(how), small = m && +m[1] < 2000 && +m[4] - +m[2] < 100 && +m[5] - +m[3] < 100;
   (small ? specks : bad).push(`${f}: ${how}`);
 }
 if (specks.length) console.log('desktop guard: specks (reported, not failing):\n  ' + specks.join('\n  '));
