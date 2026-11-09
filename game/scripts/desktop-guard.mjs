@@ -97,4 +97,5 @@ print(f"{n} pixels differ ({100*n/(a.width*a.height):.3f}%), in box {bb}")`]).to
 }
 if (specks.length) console.log('desktop guard: specks (reported, not failing):\n  ' + specks.join('\n  '));
 if (bad.length) { console.error('desktop guard: the desktop game changed:\n  ' + bad.join('\n  ')); process.exit(1); }
-console.log(`desktop guard: all ${fs.readdirSync(BASE).length} desktop screens identical`);
+const n = fs.readdirSync(BASE).length;
+console.log(specks.length ? `desktop guard: passed (${n - specks.length} of ${n} desktop screens identical, ${specks.length} with only a speck)` : `desktop guard: passed (all ${n} desktop screens identical)`);
