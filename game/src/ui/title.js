@@ -10,7 +10,7 @@ import { LAYOUTS, detectPhone } from '../device.js';
 const OPTS_KEY = 'underfoot-options';
 export function loadOptions() {
   // Build 44.2: Town Hall is the look (Mark's pick). A theme someone picked themselves stays; a saved default doesn't.
-  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'townhall', layout: 'auto' };
+  const def = { sound: true, music: 'quiet', fx: 'loud', graphics: 'auto', skin: 'townhall', layout: 'auto', battery: false };
   let o = def; try { o = Object.assign(def, JSON.parse(localStorage.getItem(OPTS_KEY)) || {}); } catch (e) { /* blocked */ }
   if (!o.skinPicked) o.skin = 'townhall';
   return o;
@@ -64,7 +64,17 @@ export class TitleMenu {
     const m = slotMeta(), name = slotOf(m, m.active).name;
     this._page((this.started ? btn('continue', 'play', 'Continue', 'primary') + `<div class="t-note t-playing">${esc(name)}</div>` : btn('new', 'play', 'Play', 'primary'))
       + btn('colonies', 'nest', 'Colonies')
-      + btn('help', 'help', 'How to play') + btn('options', 'gear', 'Options') + btn('film', 'film', 'Watch the intro'));
+      + btn('help', 'help', 'How to play') + btn('options', 'gear', 'Options') + btn('film', 'film', 'Watch the intro')
+      + this._homeNote());
+  }
+  // Phones (docs/PHONE.md): in Safari, how to play full screen; on the Home Screen's first launch, that its saves are
+  // its own (Safari's stay in Safari) and how to bring one over.
+  _homeNote() {
+    if (!this.app.phone) return '';
+    const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches || matchMedia('(display-mode: fullscreen)').matches;
+    if (!standalone) return `<div class="t-note t-home">Play full screen: tap <b>Share</b> <span aria-hidden="true">⎋</span>, then <b>Add to Home Screen</b>.</div>`;
+    let first = false; try { first = !localStorage.getItem('underfoot-home-seen'); localStorage.setItem('underfoot-home-seen', '1'); } catch (e) { /* blocked */ }
+    return first ? `<div class="t-note t-home">On your Home Screen now. Its saves are its own: to bring a colony from Safari, open the game there, <b>Colonies → Export</b>, then <b>Colonies → Import</b> here.</div>` : '';
   }
 
   // Build 76 (Mark: "save files… so you can have different nests"): three colonies, each a card.
@@ -99,6 +109,7 @@ export class TitleMenu {
       + `<div class="t-row"><span>Graphics</span>${pick('graphics', 'auto', 'Auto')}${pick('graphics', 'sharp', 'Sharp')}${pick('graphics', 'fast', 'Fast')}</div>`
       + `<div class="t-note">Graphics: Auto starts sharp and eases off if your device struggles.</div>`
       + `<div class="t-row"><span>Layout</span>${LAYOUTS.map(([k, n]) => pick('layout', k, n)).join('')}</div>`
+      + (this.app.phone ? `<div class="t-row"><span>Battery saver</span>${pick('battery', false, 'Off')}${pick('battery', true, 'On')}</div><div class="t-note">Battery saver draws 30 frames a second instead of 60: cooler, and the battery lasts longer.</div>` : '')
       + `<div class="t-note">Layout: Auto uses the phone layout on a phone. Phone: bigger buttons, made for fingers. A change takes full effect the next time the game starts.</div>`
       + `<div class="t-row t-skins"><span>Look</span>${SKINS.map(([k, n]) => pick('skin', k, n)).join('')}</div>`
       + btn('back', 'back', 'Back'));

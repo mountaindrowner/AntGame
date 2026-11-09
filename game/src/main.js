@@ -330,7 +330,11 @@ function daughterApp(app, s, key) {
   return v.app;
 }
 
+let drawnAt = -1e9;
 function frame(now) {
+  // Phones' Battery saver (docs/PHONE.md): draw at most 30 times a second (a frame is skipped, not slowed: dt spans it).
+  if (app.phone && app.opts.battery && now - drawnAt < 1000 / 30 - 3) { requestAnimationFrame(frame); return; }
+  drawnAt = now;
   perf.begin(now);
   let dt = (now - last) / 1000;
   last = now;

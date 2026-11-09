@@ -34,3 +34,5 @@ html.phone #dayclock { display: none; }
 /* A sheet (Jobs, the egg list, a room) takes the bottom of the screen; the dock steps away while it's open. */
 html.phone body:has(#sheet:not(.hidden)) #bar, html.phone body:has(#sheet:not(.hidden)) #barn, html.phone body:has(#sheet:not(.hidden)) #defendbtn { display: none; }
 html.phone #sheet { bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); max-height: 78%; left: max(8px, env(safe-area-inset-left, 0px)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 54px); }
+/* The title's Home Screen note (phones only). */
+html.phone #title .t-home { max-width: 300px; font-size: 13px; line-height: 1.35; color: #f4ecd8; text-shadow: 1px 1px 0 #000; }
