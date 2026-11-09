@@ -257,3 +257,37 @@ Two more research passes: indie developers' admissions and players' verdicts on 
   - [debugging an iPhone without a Mac](https://github.com/HimbeersaftLP/ios-safari-remote-debug-kit)
 - **Installs:**
   - [Hacker News on Home Screen installs](https://news.ycombinator.com/item?id=38913951)
+
+## Third pass (Nov 9, my own searches)
+
+Fetching pages is blocked in this environment beyond its allowed sites, so this is from search results only.
+
+- **Hypemasters (a mobile RTS)** found units too small to tap with a finger, and argued that phone sessions should be about 15 minutes at most, with fewer things on screen. ([Medium](https://medium.com/hypemasters/mobile-rts-interface-the-story-of-how-hypemasters-rediscovered-the-genre-dc7fbaa5b05c))
+  - **For us:** generous tap areas round ants and creatures (already in P2), and the 3–5 minute beats.
+- **A common gesture split** (Construct's RTS devlog):
+  - tap selects or moves;
+  - one finger drags;
+  - two fingers pinch.
+  - **One detail worth copying:** when one of two panning fingers lifts, the other keeps panning instead of turning into a tap. Total War: Empire on touch adds tap-to-add and tap-again-to-remove for selection, and tap on empty ground to clear. ([Construct](https://www.construct.net/en/blogs/ashleys-blog-2/rts-devlog-input-gestures-1602), [Total War: Empire manual](https://r2enc.totalwar.com/en/manual/single-player/0005_enc_page_help_keyboard_shortcuts))
+- **Direct touch beats camera-mediated control** (Human: Fall Flat on mobile). **A "Reset view" button** came out of playtest complaints about the camera (Preserve). ([Game Developer](https://gamedeveloper.com/design/designing-touch-controls-for-human-fall-flat), [Preserve](https://yani-kara.super.site/released-games/preserve))
+  - **For us:** a "back to my ant" button on phones (re-centre and reset the zoom).
+- **Orientation** ([WCAG 1.3.4](https://alphagov.github.io/guide-to-wcag/sc/1.3.4.html), [Godot forum](https://forum.godotengine.org/t/supporting-portrait-and-landscape-modes-on-web/88685)):
+  - Accessibility guidance says don't lock it. People play in portrait one-handed on a bus and landscape on a sofa.
+  - A "rotate your phone" screen is poor when the phone's rotation lock is on, and traps people.
+  - Resize on every rotation, not just at load.
+  - **For us:** both orientations work (as planned), and nothing ever demands a rotation.
+- **Pixel fonts** look sharp only at whole multiples of the size they were drawn for.
+  - **For us:** our pixel display fonts (the headers) should snap to whole steps on phones rather than scale freely.
+  - Anything you must read stays in the plain rounded font, at 15–17 pt.
+- **Home Screen web apps still work in the EU.** Apple removed them there in iOS 17.4's beta (February 2024) and reversed that before release. ([TrustedReviews](https://www.trustedreviews.com/news/iphone-web-apps-to-survive-in-ios-17-4-after-all-4430392))
+- **The install card:**
+  - iOS has no install prompt to call, so the card has to show the actual Share button and the steps.
+  - The advice is to show it after the player has engaged, and to measure when it works best (after the tutorial, or on a second visit). ([install prompts for games](https://abratabia.com/pwa-games/install-prompts.php))
+- **Anti-aliasing:** a second report of an iPhone 12 at about 20 fps with it on and 120 off. Confirms dropping MSAA on phones. ([WebKit 276959](https://bugs.webkit.org/show_bug.cgi?id=276959))
+
+**Added to the plan:**
+- **P2:**
+  - a "back to my ant" button;
+  - a lifted finger never becomes a tap mid-pan;
+  - tap-to-add and tap-again-to-remove when picking crew by hand.
+- **P1:** pixel headers snap to whole sizes on phones.
