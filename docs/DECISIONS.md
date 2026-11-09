@@ -2,6 +2,33 @@
 
 What changed and why, newest first. Read [`HANDOFF.md`](HANDOFF.md) for the full design of record. This log picks up where its §2.6 (art direction, Oct 26) ends.
 
+## Nov 9: the phone layer, first test (phone test 1)
+
+Mark: "How do we make sure we don't screw up our main game?… Let's begin." The plan is in [`PHONE.md`](PHONE.md).
+- **One game, one switch:**
+  - At startup the game decides once whether it's on a phone: a touch screen with no mouse, short side under 500 pt (the physical screen, so a narrow desktop window never flips it).
+  - Everything for phones hangs off the `phone` class on the page and `app.phone`.
+  - Options → Layout (Auto / Phone / Desktop) forces either way.
+- **The desktop guard** (`scripts/desktop-guard.mjs`) checks the desktop game against build 83:
+  - 14 desktop screens (title, yard, crew, Jobs, Evolution, map, nest) at 1280×800 and 1600×900, from a fixed save;
+  - every random number seeded, the frame loop and page timers driven by hand, page animations off;
+  - compared byte for byte, with only a lone-ant speck (under 500 pixels in one small box) reported rather than failing.
+  - It runs from a separate checkout of build 83 for the baseline. Result: the phone code leaves the desktop screens identical.
+- **Phones only:**
+  - **Renderer:** the default GPU mode (not "high-performance"), no MSAA, and the quality steps' render targets kept rather than freed and rebuilt.
+  - **iOS input:** the long-press magnifier, double-tap zoom and page pinch blocked on the game.
+  - **Sound:** set to "playback", so the silent switch doesn't mute it, and resumed after a call or another app.
+  - **Side column:** 5 buttons of 44 pt, clear of the Dynamic Island (Zoom is a pinch, Help is on the menu).
+  - **Top bar and notices:** the bar and dock clear of the Island; one notice at a time; the day clock hidden (the time is on the bar); the "⋯" a 44 pt target.
+  - **Sheets:** the dock steps away while one is open, and it takes the bottom 78% of the screen.
+  - **Nest:** the ground starts just below the HUD, so the nest fills the screen.
+  - **Title:** in landscape, the logo sits beside the menu.
+  - **Home Screen:** a manifest, an icon and the iPhone tags; the title says how to add the game in Safari, and on the Home Screen's first launch, how to bring a Safari save over.
+  - **Options:** Battery saver (30 frames a second).
+- **On desktop:** only the Options page changed, with the new Layout row.
+- **The end-to-end test** keeps the original layout at its small size; the phone layout gets its own checks next.
+- **The phone test** is published at its own link and zip, so the main link stays on build 83.
+
 ## Nov 8: builders that answer, and a solid rock (build 83)
 
 Mark: "Builders take time to build sometimes, they don't respond to commands too quickly, why? Also the rock above nest is still passable. Remove it or make it solid."

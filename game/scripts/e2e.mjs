@@ -25,6 +25,8 @@ const url = server.resolvedUrls.local[0] + '?debug'; // ?debug: the Help page's 
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true });
+// (The phone layout has its own checks; this run keeps the original layout at a small size.)
+await page.addInitScript(() => { try { if (!localStorage.getItem('underfoot-options')) localStorage.setItem('underfoot-options', JSON.stringify({ layout: 'desktop' })); } catch (e) { /* blocked */ } });
 const errors = [];
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 page.on('console', (m) => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
