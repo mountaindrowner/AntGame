@@ -24,3 +24,13 @@ html.phone #feed, html.phone #tipcard, html.phone #msg { max-width: min(330px, 5
   html.phone #title .t-menu { gap: 6px; width: min(280px, 40vw); max-height: 100%; overflow-y: auto; }
   html.phone #title .t-btn { min-height: 44px; }
 }
+
+/* One card at a time under the bars: while a tip shows, the notice waits (it's in the feed history). */
+html.phone #top:has(#tipcard:not(.hidden)) #feed { display: none; }
+/* The "⋯" (colony details) is a 44 pt target, however small it's drawn. */
+html.phone #stats .more { min-width: 44px; min-height: 44px; margin: -14px -8px; }
+/* The day clock steps out (the time is on the top bar), so the bar has the width in landscape. */
+html.phone #dayclock { display: none; }
+/* A sheet (Jobs, the egg list, a room) takes the bottom of the screen; the dock steps away while it's open. */
+html.phone body:has(#sheet:not(.hidden)) #bar, html.phone body:has(#sheet:not(.hidden)) #barn, html.phone body:has(#sheet:not(.hidden)) #defendbtn { display: none; }
+html.phone #sheet { bottom: calc(env(safe-area-inset-bottom, 0px) + 8px); max-height: 78%; left: max(8px, env(safe-area-inset-left, 0px)); right: calc(max(8px, env(safe-area-inset-right, 0px)) + 54px); }

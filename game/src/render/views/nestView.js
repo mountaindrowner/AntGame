@@ -688,7 +688,9 @@ export class NestView {
     const viewH = 2 * dist * Math.tan(vfov / 2);
     const shift = hudShift(app) * viewH;
     // Let the surface row drop below the HUD; stop before the view is all sky or all rock.
-    const minY = -viewH / 2 + 90, maxY = NH * T - viewH / 2 + 60 - shift;
+    // (On a phone, docs/PHONE.md: the ground just below the HUD, a cell and a half of sky, so the nest fills the screen.)
+    const hudTop = app.insets && app.insets.h ? (app.insets.top / app.insets.h) * viewH : 0; // (the HUD's height, in the view)
+    const minY = app.phone ? viewH / 2 - hudTop - 1.5 * T : -viewH / 2 + 90, maxY = NH * T - viewH / 2 + 60 - shift;
     const cy = maxY < minY ? (NH * T) / 2 : Math.max(minY, Math.min(maxY, fy - shift));
     const viewW = across;
     const fx = (app.focus ? app.focus.x : a ? a.nx : q.x + 0.5) * T + (app.panX || 0);

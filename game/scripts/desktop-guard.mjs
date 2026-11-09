@@ -11,7 +11,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const { chromium } = createRequire(import.meta.url)('playwright');
-const BASE = path.resolve('.guard/baseline'), NOW = path.resolve('.guard/now');
+const G = process.env.GUARD_DIR || path.resolve('.guard'), BASE = path.join(G, 'baseline'), NOW = path.join(G, 'now'); // (GUARD_DIR: to take the baseline from another checkout)
 const baseline = process.argv.includes('--baseline');
 const OUT = baseline ? BASE : NOW;
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
@@ -25,7 +25,7 @@ const errors = [];
 
 for (const [W, H] of SIZES) {
   const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1, hasTouch: false, isMobile: false, reducedMotion: 'reduce' });
-  await ctx.clock.setFixedTime(new Date('2026-11-09T12:00:00Z'));
+  await ctx.clock.install({ time: new Date('2026-11-09T12:00:00Z') }); // (timers run only as the frames do: below)
   const page = await ctx.newPage();
   page.on('pageerror', (e) => errors.push(`${W}x${H} pageerror: ${e.message}`));
   await page.addInitScript((save) => {
@@ -36,6 +36,8 @@ for (const [W, H] of SIZES) {
     window.cancelAnimationFrame = () => {};
     performance.now = () => vt;
     window.__step = (n = 1) => { for (let i = 0; i < n; i++) { vt += 1000 / 60; const cbs = q; q = []; for (const cb of cbs) cb(vt); } };
+    // Page animations off (a pulse or a fade would be caught mid-way).
+    document.addEventListener('DOMContentLoaded', () => { const st = document.createElement('style'); st.textContent = '*,*::before,*::after{animation:none!important;transition:none!important}'; document.head.appendChild(st); });
     localStorage.clear();
     localStorage.setItem('underfoot-v11', save);
     localStorage.setItem('underfoot-tips', JSON.stringify({ nest: 1, surface: 1, dig: 1 }));
@@ -43,7 +45,7 @@ for (const [W, H] of SIZES) {
   }, SAVE);
   await page.goto(server.resolvedUrls.local[0]);
   // Let it boot: frames by hand, with real pauses so shaders compile and promises settle.
-  const run = async (frames) => { for (let i = 0; i < frames; i += 20) { await page.evaluate(() => window.__step(20)); await page.waitForTimeout(5); } };
+  const run = async (frames) => { for (let i = 0; i < frames; i += 20) { await page.evaluate(() => window.__step(20)); await ctx.clock.runFor(333); await page.waitForTimeout(5); } };
   await run(240);
   // A screenshot straight from Chrome (Playwright's own waits for a browser-driven frame, which the hand-driven loop holds).
   const cdp = await ctx.newCDPSession(page);
